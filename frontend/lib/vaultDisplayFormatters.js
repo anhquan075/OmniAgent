@@ -19,7 +19,7 @@ export function fmtPrice(v) {
   return "$" + (n / 1e8).toFixed(6);
 }
 
-export function fmtUsdf(raw) {
+export function fmtWdks(raw) {
   if (raw == null) return "—";
   try {
     const n = BigInt(raw);

@@ -7,7 +7,7 @@ import {IStableSwapPool} from "./interfaces/IStableSwapPool.sol";
 
 /// @title CircuitBreaker — 3-signal auto-pause / auto-recover
 /// @notice Trips on ANY single signal. Recovers when ALL clear + cooldown elapsed.
-/// @custom:security-contact security@asterpilot.xyz
+/// @custom:security-contact security@wdkpilot.xyz
 contract CircuitBreaker is ICircuitBreaker {
     uint256 public constant BPS_DENOMINATOR = 10_000;
 
@@ -179,7 +179,7 @@ contract CircuitBreaker is ICircuitBreaker {
         if (!reserveOk || bal1 == 0) {
             sigB = true; // empty pool is a trip condition
         } else {
-            uint256 impliedPrice = (bal0 * 1e18) / bal1; // USDT per USDF
+            uint256 impliedPrice = (bal0 * 1e18) / bal1; // USDT per WDKS
             uint256 rTarget = 1e18;
             uint256 devB = impliedPrice > rTarget
                 ? impliedPrice - rTarget

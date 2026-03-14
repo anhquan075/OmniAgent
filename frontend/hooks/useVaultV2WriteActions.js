@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { engineV2Abi, erc20Abi, vaultV2Abi, pegArbAbi } from "@/lib/abi";
 
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
-const TX_HISTORY_STORAGE_KEY = "proofvault:v2:tx-history";
+const TX_HISTORY_STORAGE_KEY = "wdkvault:v2:tx-history";
 
 function readPersistedTxHistory() {
   if (typeof window === "undefined") return [];
@@ -42,7 +42,7 @@ function normalizeWriteError(error) {
   if (
     raw.includes("NotLocked") ||
     raw.includes("not locked") ||
-    raw.includes("ProofVault__NotLocked")
+    raw.includes("WDKVault__NotLocked")
   ) {
     return "Deposits are blocked: vault configuration is not locked. An admin must call lockConfiguration() before deposits can be accepted.";
   }
@@ -406,7 +406,7 @@ export function useVaultV2WriteActions({ refresh }) {
                     msg =
                       totalAssets === 0n
                         ? "Execution reverted: vault has no assets. Deposit funds first, then execute."
-                        : "Execution reverted (no revert data). On testnet: run scripts/seed-mock-pancake-router-usdt-usdf-reserves.js --network bnbTestnet. On mainnet: check circuit breaker status or wait for cycle cooldown to elapse.";
+                        : "Execution reverted (no revert data). On testnet: run scripts/seed-mock-pancake-router-usdt-wdks-reserves.js --network bnbTestnet. On mainnet: check circuit breaker status or wait for cycle cooldown to elapse.";
                   }
                 }
               } catch {

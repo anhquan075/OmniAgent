@@ -7,7 +7,7 @@ pragma solidity 0.8.24;
 /// @dev    Used by StrategyEngine to record per-cycle yield and expose analytics.
 ///         O(1) per record, O(N) for compute where N = windowSize (max 30).
 ///         recordYield is restricted to the engine address to prevent data injection.
-/// @custom:security-contact security@asterpilot.xyz
+/// @custom:security-contact security@wdkpilot.xyz
 contract SharpeTracker {
     uint8 public constant MAX_WINDOW = 30;
     uint8 public constant MIN_WINDOW = 3;

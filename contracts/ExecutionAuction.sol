@@ -25,7 +25,7 @@ import {IStrategyEngine} from "./interfaces/IStrategyEngine.sol";
  * Bid routing:    winner pays bid → this contract → vault (after successful execution).
  *
  * Works as overlay on existing StrategyEngine — no vault re-deployment needed.
- * @custom:security-contact security@asterpilot.xyz
+ * @custom:security-contact security@wdkpilot.xyz
  */
 contract ExecutionAuction is ReentrancyGuard {
     using SafeERC20 for IERC20;

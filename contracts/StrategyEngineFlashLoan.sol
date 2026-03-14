@@ -30,7 +30,7 @@ interface IManagedAdapter {
 
 /// @title StrategyEngineFlashLoan
 /// @notice Legacy standalone flash-loan helper. Superseded by StrategyEngine's integrated
-///         flash-rebalance flow (executeCycleWithFlash + ProofVault.executeFlashRebalanceStep).
+///         flash-rebalance flow (executeCycleWithFlash + WDKVault.executeFlashRebalanceStep).
 ///         Kept for reference and testnet backwards-compatibility only.
 contract StrategyEngineFlashLoan is IUniswapV3FlashCallback, ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;

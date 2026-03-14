@@ -12,7 +12,7 @@ contract MockStableSwapPool is IStableSwapPool, ERC20 {
     uint256 public feeBps; // e.g. 4 = 0.04%
 
     IERC20 public token0; // USDT
-    IERC20 public token1; // USDF
+    IERC20 public token1; // WDKS
 
     constructor(
         address _token0,
@@ -21,7 +21,7 @@ contract MockStableSwapPool is IStableSwapPool, ERC20 {
         uint256 _bal1,
         uint256 _virtualPrice,
         uint256 _feeBps
-    ) ERC20("BeamSwap USDC-USDF LP", "bsLP-USDC-USDF") {
+    ) ERC20("BeamSwap USDC-WDKS LP", "bsLP-USDC-WDKS") {
         token0 = IERC20(_token0);
         token1 = IERC20(_token1);
         balances[0] = _bal0;

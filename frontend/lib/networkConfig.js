@@ -1,5 +1,5 @@
 /**
- * Network configuration for ProofVault.
+ * Network configuration for WDKVault.
  * Single source of truth for mainnet vs testnet switching.
  * Env vars override the preset fallbacks from contractAddresses.js.
  */
@@ -42,9 +42,9 @@ export const NETWORK_CONFIGS = {
       riskPolicyAddress:
         import.meta.env.VITE_POLICY_ADDRESS ||
         V2_MAINNET_PRESET.riskPolicyAddress,
-      asterAdapterAddress:
-        import.meta.env.VITE_ASTER_ADAPTER_ADDRESS ||
-        V2_MAINNET_PRESET.asterAdapterAddress,
+      wdkAdapterAddress:
+        import.meta.env.VITE_WDK_ADAPTER_ADDRESS ||
+        V2_MAINNET_PRESET.wdkAdapterAddress,
       secondaryAdapterAddress:
         import.meta.env.VITE_SECONDARY_ADAPTER_ADDRESS ||
         V2_MAINNET_PRESET.secondaryAdapterAddress,
@@ -86,9 +86,9 @@ export const NETWORK_CONFIGS = {
       riskPolicyAddress:
         import.meta.env.VITE_TESTNET_POLICY_ADDRESS ||
         V2_TESTNET_PRESET.riskPolicyAddress,
-      asterAdapterAddress:
-        import.meta.env.VITE_TESTNET_ASTER_ADAPTER_ADDRESS ||
-        V2_TESTNET_PRESET.asterAdapterAddress,
+      wdkAdapterAddress:
+        import.meta.env.VITE_TESTNET_WDK_ADAPTER_ADDRESS ||
+        V2_TESTNET_PRESET.wdkAdapterAddress,
       secondaryAdapterAddress:
         import.meta.env.VITE_TESTNET_SECONDARY_ADAPTER_ADDRESS ||
         V2_TESTNET_PRESET.secondaryAdapterAddress,
@@ -130,9 +130,9 @@ export const NETWORK_CONFIGS = {
       riskPolicyAddress:
         import.meta.env.VITE_CREDITCOIN_POLICY_ADDRESS ||
         V2_CREDITCOIN_TESTNET_PRESET.riskPolicyAddress,
-      asterAdapterAddress:
-        import.meta.env.VITE_CREDITCOIN_ASTER_ADAPTER_ADDRESS ||
-        V2_CREDITCOIN_TESTNET_PRESET.asterAdapterAddress,
+      wdkAdapterAddress:
+        import.meta.env.VITE_CREDITCOIN_WDK_ADAPTER_ADDRESS ||
+        V2_CREDITCOIN_TESTNET_PRESET.wdkAdapterAddress,
       secondaryAdapterAddress:
         import.meta.env.VITE_CREDITCOIN_SECONDARY_ADAPTER_ADDRESS ||
         V2_CREDITCOIN_TESTNET_PRESET.secondaryAdapterAddress,
@@ -160,7 +160,7 @@ export const NETWORK_CONFIGS = {
       sharpeTrackerAddress: import.meta.env.VITE_POLKADOT_SHARPE_TRACKER_ADDRESS || POLKADOT_HUB_TESTNET_PRESET.sharpeTrackerAddress,
       pegArbExecutorAddress: import.meta.env.VITE_POLKADOT_PEG_ARB_EXECUTOR_ADDRESS || POLKADOT_HUB_TESTNET_PRESET.pegArbExecutorAddress,
       riskPolicyAddress: import.meta.env.VITE_POLKADOT_POLICY_ADDRESS || POLKADOT_HUB_TESTNET_PRESET.riskPolicyAddress,
-      asterAdapterAddress: import.meta.env.VITE_POLKADOT_ASTER_ADAPTER_ADDRESS || POLKADOT_HUB_TESTNET_PRESET.asterAdapterAddress,
+      wdkAdapterAddress: import.meta.env.VITE_POLKADOT_WDK_ADAPTER_ADDRESS || POLKADOT_HUB_TESTNET_PRESET.wdkAdapterAddress,
       secondaryAdapterAddress: import.meta.env.VITE_POLKADOT_SECONDARY_ADAPTER_ADDRESS || POLKADOT_HUB_TESTNET_PRESET.secondaryAdapterAddress,
       lpAdapterAddress: import.meta.env.VITE_POLKADOT_LP_ADAPTER_ADDRESS || POLKADOT_HUB_TESTNET_PRESET.lpAdapterAddress,
       xcmMessengerAddress: import.meta.env.VITE_POLKADOT_XCM_MESSENGER_ADDRESS || POLKADOT_HUB_TESTNET_PRESET.xcmMessengerAddress,
@@ -176,4 +176,4 @@ export const DEFAULT_NETWORK_MODE =
     ? NETWORK_MODE.TESTNET
     : NETWORK_MODE.POLKADOT_HUB;
 
-export const STORAGE_KEY = "proofvault_network_mode";
+export const STORAGE_KEY = "wdkvault_network_mode";

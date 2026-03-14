@@ -2,7 +2,7 @@ import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { bsc, bscTestnet } from 'wagmi/chains';
 
 export const wagmiConfig = getDefaultConfig({
-  appName: 'ProofVault',
+  appName: 'WDKVault',
   projectId: 'YOUR_PROJECT_ID', // Get from https://cloud.walletconnect.com
   chains: [bsc, bscTestnet],
   ssr: false,
@@ -11,7 +11,7 @@ export const wagmiConfig = getDefaultConfig({
       modalOverlay: 'blur(4px)',
     },
     colors: {
-      accentColor: '#8B5CF6',       // Aster purple
+      accentColor: '#8B5CF6',       // WDK purple
       accentColorForeground: '#FFFFFF',
       actionButtonBorder: '#8B5CF6',
       actionButtonBorderRadius: '8px',

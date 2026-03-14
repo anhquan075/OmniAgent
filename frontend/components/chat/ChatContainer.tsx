@@ -14,6 +14,7 @@ interface ChatContainerProps {
   sendMessage: (message: { text: string }) => Promise<void>;
   setMessages: React.Dispatch<React.SetStateAction<any[]>>;
   regenerate: () => Promise<void>;
+  stop: () => void;
   error?: Error;
   data?: any[];
 }
@@ -35,6 +36,7 @@ export function ChatContainer({
   sendMessage, 
   setMessages,
   regenerate,
+  stop,
   error,
   data 
 }: ChatContainerProps) {
@@ -54,6 +56,22 @@ export function ChatContainer({
     }
     return null;
   }, [messages, status]);
+
+  // Extract dynamic suggestions from the last message
+  const dynamicSuggestions = React.useMemo(() => {
+    if (status !== 'ready' || messages.length === 0) return null;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.role !== 'assistant') return null;
+    
+    const parts = (lastMsg as any).parts;
+    if (parts && Array.isArray(parts)) {
+      const suggestionPart = parts.find((p: any) => p.type === 'data-suggestions');
+      return suggestionPart?.data || null;
+    }
+    return null;
+  }, [messages, status]);
+
+  const activeSuggestions = dynamicSuggestions || (messages.length < 3 ? SUGGESTED_ACTIONS : null);
 
   // Auto-scroll to bottom on new messages or streaming content if user is near the bottom
   useEffect(() => {
@@ -169,15 +187,15 @@ export function ChatContainer({
       {/* Input Anchored Area */}
       <div className="p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent border-t border-white/5">
         {/* Suggested Actions Chips */}
-        {messages.length < 3 && (
+        {activeSuggestions && (
           <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2 scrollbar-none no-scrollbar px-1 animate-in fade-in slide-in-from-bottom-2 duration-700 delay-300">
-            {SUGGESTED_ACTIONS.map((action) => (
+            {activeSuggestions.map((action: any) => (
               <button
                 key={action.label}
                 onClick={() => sendMessage({ text: action.prompt })}
                 className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[9px] font-heading tracking-widest text-neutral-gray-light hover:bg-tether-teal/10 hover:border-tether-teal/30 hover:text-tether-teal transition-all duration-300"
               >
-                <action.icon className="w-3 h-3" />
+                {action.icon && <action.icon className="w-3 h-3" />}
                 {action.label}
               </button>
             ))}
@@ -189,6 +207,7 @@ export function ChatContainer({
           handleInputChange={handleInputChange}
           handleSubmit={handleSubmit}
           status={status}
+          stop={stop}
         />
       </div>
     </div>

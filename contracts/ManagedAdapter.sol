@@ -7,8 +7,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IManagedAdapter} from "./interfaces/IManagedAdapter.sol";
 
-/// @title ManagedAdapter — simple pass-through adapter holding idle assets on behalf of ProofVault
-/// @custom:security-contact security@asterpilot.xyz
+/// @title ManagedAdapter — simple pass-through adapter holding idle assets on behalf of WDKVault
+/// @custom:security-contact security@wdkpilot.xyz
 contract ManagedAdapter is Ownable2Step, IManagedAdapter {
     using SafeERC20 for IERC20;
 

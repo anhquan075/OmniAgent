@@ -33,7 +33,7 @@ function AlgoSummary({ pd }) {
 
   const nextStateLabel = STATE_LABELS[pd.nextState] ?? "Unknown";
   const price = fmtPrice(pd.price);
-  const targetBps = fmtBps(pd.targetAsterBps);
+  const targetBps = fmtBps(pd.targetWDKBps);
   const executable = pd.executable;
 
   return (
@@ -135,7 +135,7 @@ export function VaultCycleExecutionStatusCard({
       }, 12000),
       setTimeout(() => {
         setActiveStep(5);
-        setExecutionLog(prev => [...prev, "Rebalancing adapters (AsterDEX ↔ Secondary)..."]);
+        setExecutionLog(prev => [...prev, "Rebalancing adapters (WDKDEX ↔ Secondary)..."]);
       }, 15000),
     ];
     return () => timers.forEach(clearTimeout);
@@ -145,7 +145,7 @@ export function VaultCycleExecutionStatusCard({
     { label: "Validate conditions", detail: "cooldown, caller, contract state" },
     { label: "Evaluate risk oracle", detail: "Chainlink price + volatility BPS" },
     { label: "Compute target allocation", detail: "previewDecision() → Normal/Guarded/Drawdown" },
-    { label: "Rebalance adapters", detail: "AsterDEX Earn ↔ Secondary" },
+    { label: "Rebalance adapters", detail: "WDKDEX Earn ↔ Secondary" },
     { label: "Confirm & log", detail: "emit CycleExecuted, update lastExec" },
   ];
 

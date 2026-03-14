@@ -5,16 +5,16 @@ import { env } from '@/config/env';
 import strategyEngineAbi from '../abis/StrategyEngine.json';
 import zkOracleAbi from '../abis/ZKRiskOracle.json';
 import breakerAbi from '../abis/CircuitBreaker.json';
-import proofVaultAbi from '../abis/ProofVault.json';
+import wdkVaultAbi from '../abis/WDKVault.json';
 
 console.log(`[Ethers] Initializing provider with: ${env.BNB_RPC_URL}`);
 const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
 
 export const getContracts = () => {
-  // StrategyEngine and CircuitBreaker are full artifacts, ProofVault and ZKRiskOracle are direct ABI arrays
+  // StrategyEngine and CircuitBreaker are full artifacts, WDKVault and ZKRiskOracle are direct ABI arrays
   const engineAbi = (strategyEngineAbi as any).abi || strategyEngineAbi;
   const breakerAbiActual = (breakerAbi as any).abi || breakerAbi;
-  const vaultAbi = (proofVaultAbi as any).abi || proofVaultAbi;
+  const vaultAbi = (wdkVaultAbi as any).abi || wdkVaultAbi;
   const oracleAbi = (zkOracleAbi as any).abi || zkOracleAbi;
 
   return {

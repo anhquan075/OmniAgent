@@ -9,7 +9,7 @@ describe("StableSwapLPYieldAdapterWithFarm", function () {
     // Deploy mock tokens
     const MockERC20 = await ethers.getContractFactory("MockERC20");
     const usdt = await MockERC20.deploy("USDT", "USDT");
-    const usdf = await MockERC20.deploy("USDF", "USDF");
+    const wdks = await MockERC20.deploy("WDKS", "WDKS");
     const cake = await MockERC20.deploy("CAKE", "CAKE");
 
     // Deploy the LP-capable mock pool (self-mints LP tokens, pool IS the LP token ERC20)
@@ -17,9 +17,9 @@ describe("StableSwapLPYieldAdapterWithFarm", function () {
       "MockStableSwapPoolWithLPSupport"
     );
     const pool = await MockPool.deploy(
-      usdf.target,
+      wdks.target,
       usdt.target,
-      ethers.parseUnits("1000000", 18), // USDF balance
+      ethers.parseUnits("1000000", 18), // WDKS balance
       ethers.parseUnits("1000000", 18), // USDT balance
       ethers.parseUnits("1", 18), // virtualPrice = $1
       4 // 0.04% fee
@@ -27,7 +27,7 @@ describe("StableSwapLPYieldAdapterWithFarm", function () {
 
     // Fund pool with tokens so withdrawals work
     await usdt.mint(pool.target, ethers.parseUnits("2000000", 18));
-    await usdf.mint(pool.target, ethers.parseUnits("2000000", 18));
+    await wdks.mint(pool.target, ethers.parseUnits("2000000", 18));
 
     // Deploy MasterChef and PancakeRouter mocks
     const MockMasterChef = await ethers.getContractFactory("MockMasterChef");
@@ -69,7 +69,7 @@ describe("StableSwapLPYieldAdapterWithFarm", function () {
       vaultSigner,
       other,
       usdt,
-      usdf,
+      wdks,
       cake,
       pool,
       masterChef,

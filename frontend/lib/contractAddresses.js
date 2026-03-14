@@ -1,4 +1,4 @@
-// Hardcoded address presets for ProofVault V2.
+// Hardcoded address presets for WDKVault V2.
 // These are the canonical deployed addresses used as fallbacks
 // when environment variables are not set.
 // networkConfig.js imports these as fallback values.
@@ -12,7 +12,7 @@ export const V2_MAINNET_PRESET = {
   sharpeTrackerAddress: "0x6520D0366A43081008049CdD4c87Db3A5ec203B8",
   pegArbExecutorAddress: "0x16D0b61daF75C955784BE0ff9B484F3a095b1408",
   riskPolicyAddress: "0xE15296aB11d75A093A18a7912ad5F93Bc6313cdB",
-  asterAdapterAddress: "0x477be4B8485fA3a56Ca7eE6d025A6bDBea1Be35c",
+  wdkAdapterAddress: "0x477be4B8485fA3a56Ca7eE6d025A6bDBea1Be35c",
   secondaryAdapterAddress: "0x0E16c32De0272B24E1064C3F069F6b9AE4a13254",
   lpAdapterAddress: "0x0000000000000000000000000000000000000000",
   executionAuctionAddress: "0x6f7ba78e3916AAC9e158E266c786dFbBa99FAa24",
@@ -27,7 +27,7 @@ export const V2_TESTNET_PRESET = {
   sharpeTrackerAddress: "0xe4eB72e5d29AA868948F2a691255BAAFf4A8b479",
   pegArbExecutorAddress: "0xeE5Fd164378Dca028586ef4C72e633A7b248dC1c",
   riskPolicyAddress: "0x55D9BCB9F13Ca2d5aD3345E60234E48e6A719133",
-  asterAdapterAddress: "0x096148CE528701614dF518B217A430A88635d561",
+  wdkAdapterAddress: "0x096148CE528701614dF518B217A430A88635d561",
   secondaryAdapterAddress: "0x30d4F9f3e98BadD935872b03F64Bdb4F7AaE8628",
   executionAuctionAddress: "0x9e5763A7C11DB894A6aA1164cFDc849F9243751B",
 };

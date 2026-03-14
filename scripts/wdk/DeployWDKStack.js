@@ -2,7 +2,7 @@ const hre = require("hardhat");
 
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
-  console.log("=== ProofVault WDK Stack — Testnet Full Deploy ===");
+  console.log("=== WDKVault WDK Stack — Testnet Full Deploy ===");
   console.log("Network:", hre.network.name);
   console.log("Deployer:", deployer.address);
 
@@ -38,8 +38,8 @@ async function main() {
   // await (await xautOracle.lock()).wait();
   console.log("XAUT Price Oracle (Mock):", await xautOracle.getAddress());
 
-  // --- Phase 2: Core ProofVault Stack ---
-  console.log("\n--- Phase 2: Core ProofVault Stack ---");
+  // --- Phase 2: Core WDKVault Stack ---
+  console.log("\n--- Phase 2: Core WDKVault Stack ---");
 
   // Policy: Normal=10% XAUT, Guarded=50% XAUT, Drawdown=100% XAUT
   const RiskPolicy = await hre.ethers.getContractFactory("RiskPolicy");
@@ -50,9 +50,9 @@ async function main() {
     hre.ethers.parseUnits("0.97", 8), // depegPrice
     100,    // maxSlippageBps
     100,    // maxBountyBps
-    1000,   // normalAsterBps (10% XAUT)
-    5000,   // guardedAsterBps (50% XAUT)
-    10000,  // drawdownAsterBps (100% XAUT)
+    1000,   // normalWDKBps (10% XAUT)
+    5000,   // guardedWDKBps (50% XAUT)
+    10000,  // drawdownWDKBps (100% XAUT)
     5,      // minBountyBps
     3600,   // auctionDuration
     500,    // idleBufferBps (5%)
@@ -111,15 +111,15 @@ async function main() {
   // --- Phase 4: Vault & Engine ---
   console.log("\n--- Phase 4: Vault & Engine ---");
 
-  const ProofVault = await hre.ethers.getContractFactory("ProofVault");
-  const vault = await (await ProofVault.deploy(
+  const WDKVault = await hre.ethers.getContractFactory("WDKVault");
+  const vault = await (await WDKVault.deploy(
     await usdt.getAddress(),
     "TetherProof WDK Vault",
     "TPWDK",
     deployer.address,
     500 // 5% idle buffer
   )).waitForDeployment();
-  console.log("ProofVault:", await vault.getAddress());
+  console.log("WDKVault:", await vault.getAddress());
 
   const StrategyEngine = await hre.ethers.getContractFactory("StrategyEngine");
   const engine = await (await StrategyEngine.deploy(

@@ -53,7 +53,7 @@ function loadAbi(filePath) {
 const strategyEngineAbi = loadAbi('./StrategyEngine.json');
 const zkOracleAbi = loadAbi('./ZKRiskOracle.json');
 const breakerAbi = loadAbi('./CircuitBreaker.json');
-const proofVaultAbi = loadAbi('./ProofVault.json');
+const wdkVaultAbi = loadAbi('./WDKVault.json');
 const syndicateAbi = loadAbi('./GroupSyndicate.json');
 
 // WDK Setup
@@ -65,10 +65,10 @@ const provider = new ethers.JsonRpcProvider(bnbRpc);
 // Define Tools for the Agent
 const getVaultStatusTool = new DynamicStructuredTool({
   name: "get_vault_status",
-  description: "Get current status and health of the ProofVault.",
+  description: "Get current status and health of the WDKVault.",
   schema: z.object({}),
   func: async () => {
-    const vault = new ethers.Contract(vaultAddress, proofVaultAbi, provider);
+    const vault = new ethers.Contract(vaultAddress, wdkVaultAbi, provider);
     const totalAssets = await vault.totalAssets();
     const buffer = await vault.bufferStatus();
     return JSON.stringify({
@@ -161,7 +161,7 @@ const model = new ChatOpenAI({
   configuration: {
     baseURL: OPENROUTER_BASE_URL,
     defaultHeaders: {
-      "HTTP-Referer": "https://proofvault.agent",
+      "HTTP-Referer": "https://wdkvault.agent",
       "X-Title": "TetherProof WDK Strategist",
     }
   }
@@ -199,7 +199,7 @@ const appGraph = workflow.compile();
  */
 app.get('/api/stats', async (req, res) => {
   try {
-    const vault = new ethers.Contract(vaultAddress, proofVaultAbi, provider);
+    const vault = new ethers.Contract(vaultAddress, wdkVaultAbi, provider);
     const zkOracle = new ethers.Contract(zkOracleAddress, zkOracleAbi, provider);
     const breaker = new ethers.Contract(breakerAddress, breakerAbi, provider);
     const engine = new ethers.Contract(engineAddress, strategyEngineAbi, provider);
@@ -223,7 +223,7 @@ app.get('/api/stats', async (req, res) => {
       zkOracle.getVerifiedRiskBands().catch(() => ({ monteCarloDrawdownBps: 0, verifiedSharpeRatio: 0, timestamp: Math.floor(Date.now()/1000) })),
       breaker.isPaused().catch(() => false),
       engine.canExecute().catch(() => [false, "0x00"]),
-      engine.previewDecision().catch(() => ({ targetAsterBps: 0, state: 0 })),
+      engine.previewDecision().catch(() => ({ targetWDKBps: 0, state: 0 })),
       new ethers.Contract(usdtAddress, ['function balanceOf(address) view returns (uint256)'], provider).balanceOf(vaultAddress).catch(() => 0n),
       syndicate.getMemberCount().catch(() => 0n),
       syndicate.currentRound().catch(() => 0n),
@@ -264,7 +264,7 @@ app.get('/api/stats', async (req, res) => {
         executeReason: typeof executeReason === 'string' && executeReason.startsWith('0x') && executeReason.length > 2 
           ? (executeReason === '0x00' ? 'NONE' : (function() { try { return ethers.decodeBytes32String(executeReason); } catch { return 'UNKNOWN'; } })()) 
           : 'UNKNOWN',
-        targetAsterBps: Number(preview.targetAsterBps),
+        targetWDKBps: Number(preview.targetWDKBps),
         state: Number(preview.state),
         timeUntilNext: Number(await engine.timeUntilNextCycle())
       },

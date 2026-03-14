@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 /// @title IPegArbExecutor — permissionless atomic stableswap arb
 interface IPegArbExecutor {
-    enum ArbDirection { None, BuyUSDF, SellUSDF }
+    enum ArbDirection { None, BuyWDKS, SellWDKS }
 
     struct ArbPreview {
         ArbDirection direction;

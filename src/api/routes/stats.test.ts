@@ -30,7 +30,7 @@ vi.mock('@/contracts/clients/ethers', () => ({
       canExecute: vi.fn().mockResolvedValue([true, '0x' + '0'.repeat(64)]),
       previewDecision: vi.fn().mockResolvedValue({
         state: 1,
-        targetAsterBps: 2000,
+        targetWDKBps: 2000,
         bountyBps: 10
       })
     },

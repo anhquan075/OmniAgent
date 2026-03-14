@@ -87,7 +87,7 @@ async function main() {
   console.log("\n[5/6] Running Autonomous Agent Decision Logic...");
   const engineContract = new ethers.Contract(engineAddr, [
     "function canExecute() view returns (bool, bytes32)",
-    "function previewDecision() view returns (tuple(bool executable, bytes32 reason, uint8 nextState, uint256 price, uint256 previousPrice, uint256 volatilityBps, uint256 targetAsterBps, uint256 targetLpBps, uint256 bountyBps, bool breakerPaused, int256 meanYieldBps, uint256 yieldVolatilityBps, int256 sharpeRatio, uint256 auctionElapsedSeconds, uint256 bufferUtilizationBps))"
+    "function previewDecision() view returns (tuple(bool executable, bytes32 reason, uint8 nextState, uint256 price, uint256 previousPrice, uint256 volatilityBps, uint256 targetWDKBps, uint256 targetLpBps, uint256 bountyBps, bool breakerPaused, int256 meanYieldBps, uint256 yieldVolatilityBps, int256 sharpeRatio, uint256 auctionElapsedSeconds, uint256 bufferUtilizationBps))"
   ], provider);
 
   const preview = await engineContract.previewDecision();
@@ -95,7 +95,7 @@ async function main() {
   console.log(`Agent Detection:
   - Current Price: $${ethers.formatUnits(preview.price, 8)}
   - Predicted State: ${stateNames[Number(preview.nextState)]}
-  - Target XAU₮ Allocation: ${preview.targetAsterBps} bps (10000 = 100%)`);
+  - Target XAU₮ Allocation: ${preview.targetWDKBps} bps (10000 = 100%)`);
 
   if (Number(preview.nextState) === 2) { // 2 = Drawdown
     console.log(">>> Drawdown state detected! Executing WDK emergency rebalance to Gold...");

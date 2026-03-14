@@ -7,9 +7,9 @@ import {IStableSwapPool} from "../interfaces/IStableSwapPool.sol";
 
 /// @title MockStableSwapPoolWithLPSupport
 /// @notice Test double for PCS StableSwap that supports add/remove liquidity and LP token minting.
-/// @dev Coin index 0 = USDF, 1 = USDT. Mints an internal LP token on add_liquidity.
+/// @dev Coin index 0 = WDKS, 1 = USDT. Mints an internal LP token on add_liquidity.
 contract MockStableSwapPoolWithLPSupport is IStableSwapPool, ERC20 {
-    IERC20 public token0; // USDF (index 0)
+    IERC20 public token0; // WDKS (index 0)
     IERC20 public token1; // USDT (index 1)
 
     uint256[2] public poolBalances;
@@ -73,7 +73,7 @@ contract MockStableSwapPoolWithLPSupport is IStableSwapPool, ERC20 {
         poolBalances[idxOut] -= dy;
     }
 
-    /// @notice Accepts USDT (index 1) or USDF (index 0), mints LP tokens 1:1 with deposited value.
+    /// @notice Accepts USDT (index 1) or WDKS (index 0), mints LP tokens 1:1 with deposited value.
     function add_liquidity(uint256[2] calldata amounts, uint256 min_mint_amount) external returns (uint256 lpMinted) {
         if (amounts[0] > 0) token0.transferFrom(msg.sender, address(this), amounts[0]);
         if (amounts[1] > 0) token1.transferFrom(msg.sender, address(this), amounts[1]);

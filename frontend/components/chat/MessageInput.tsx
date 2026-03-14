@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { SendIcon, SparklesIcon, ZapIcon } from 'lucide-react';
+import { SendIcon, SparklesIcon, ZapIcon, SquareIcon } from 'lucide-react';
 import { CommandPalette, DEFI_COMMANDS, Command } from './CommandPalette';
 
 interface MessageInputProps {
@@ -7,9 +7,10 @@ interface MessageInputProps {
   handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement> | React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   status: 'submitted' | 'streaming' | 'ready' | 'error';
+  stop: () => void;
 }
 
-export function MessageInput({ input, handleInputChange, handleSubmit, status }: MessageInputProps) {
+export function MessageInput({ input, handleInputChange, handleSubmit, status, stop }: MessageInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [isHighPriority, setIsHighPriority] = useState(false);
   
@@ -149,24 +150,35 @@ export function MessageInput({ input, handleInputChange, handleSubmit, status }:
           onBlur={() => {
             setTimeout(() => setIsFocused(false), 200);
           }}
-          placeholder="Command the ProofVault Agent (type / for actions)..."
+          placeholder="Command the WDKVault Agent (type / for actions)..."
           disabled={status !== 'ready'}
           className="flex-1 max-h-[150px] min-h-[44px] py-3 px-3 bg-transparent text-gray-100 placeholder-gray-600 font-sans resize-none outline-none scrollbar-thin scrollbar-thumb-white/10"
           rows={1}
         />
 
-        <button
-          type="submit"
-          disabled={status !== 'ready' || !input.trim()}
-          aria-label="Send message"
-          className={`p-3 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
-            input.trim() && status === 'ready'
-              ? 'bg-tether-teal text-space-black hover:bg-tether-teal/90 shadow-[0_0_10px_rgba(38,161,123,0.3)]' 
-              : 'bg-white/5 text-gray-500 cursor-not-allowed'
-          }`}
-        >
-          {input.trim() ? <SendIcon className="w-5 h-5" /> : <SparklesIcon className="w-5 h-5" />}
-        </button>
+        {status === 'streaming' || status === 'submitted' ? (
+          <button
+            type="button"
+            onClick={stop}
+            aria-label="Stop generating"
+            className="p-3 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all duration-300 flex items-center justify-center shadow-[0_0_10px_rgba(239,68,68,0.2)]"
+          >
+            <SquareIcon className="w-5 h-5 fill-red-400" />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={status !== 'ready' || !input.trim()}
+            aria-label="Send message"
+            className={`p-3 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
+              input.trim() && status === 'ready'
+                ? 'bg-tether-teal text-space-black hover:bg-tether-teal/90 shadow-[0_0_10px_rgba(38,161,123,0.3)]' 
+                : 'bg-white/5 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {input.trim() ? <SendIcon className="w-5 h-5" /> : <SparklesIcon className="w-5 h-5" />}
+          </button>
+        )}
       </div>
     </form>
   );

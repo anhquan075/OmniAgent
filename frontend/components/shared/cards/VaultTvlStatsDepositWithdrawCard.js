@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { RobotRouteProgress } from "../ui/RobotRouteProgress";
-function computeSafeWithdrawable(totalAssetsRaw, asterManagedAssets, decimals) {
+function computeSafeWithdrawable(totalAssetsRaw, wdkManagedAssets, decimals) {
   try {
     const total = BigInt(totalAssetsRaw ?? 0);
-    const aster = BigInt(asterManagedAssets ?? 0);
-    const safe = total > aster ? total - aster : 0n;
+    const wdk = BigInt(wdkManagedAssets ?? 0);
+    const safe = total > wdk ? total - wdk : 0n;
     const d = BigInt(10) ** BigInt(decimals ?? 18);
     const whole = safe / d;
     const frac = safe % d;
@@ -31,7 +31,7 @@ export function VaultTvlStatsDepositWithdrawCard({
   assets, riskState, shares, cycleCountVal,
   depositAmount, setDepositAmount, withdrawAmount, setWithdrawAmount,
   onDeposit, onWithdraw, canOperate, busyAction, isConnected,
-  totalAssetsRaw, asterManagedAssets, decimals, userTokenBalance,
+  totalAssetsRaw, wdkManagedAssets, decimals, userTokenBalance,
 }) {
   const [toast, setToast] = useState(null);
   
@@ -40,7 +40,7 @@ export function VaultTvlStatsDepositWithdrawCard({
     : riskState === "Drawdown" ? "statePill--drawdown"
     : "statePill--idle";
 
-  const safeMax = computeSafeWithdrawable(totalAssetsRaw, asterManagedAssets, decimals);
+  const safeMax = computeSafeWithdrawable(totalAssetsRaw, wdkManagedAssets, decimals);
   const safeMaxNum = safeMax != null ? parseFloat(safeMax) : null;
   const withdrawNum = parseFloat(withdrawAmount);
   const withdrawExceedsSafe = safeMaxNum != null && withdrawAmount && withdrawNum > safeMaxNum;
@@ -136,7 +136,7 @@ export function VaultTvlStatsDepositWithdrawCard({
                 className="vaultMaxBtn"
                 onClick={() => setWithdrawAmount(safeMax)}
                 disabled={!canOperate}
-                title="Maximum instantly withdrawable (excludes AsterDEX locked funds)"
+                title="Maximum instantly withdrawable (excludes WDKDEX locked funds)"
               >
                 Max {safeMax}
               </button>

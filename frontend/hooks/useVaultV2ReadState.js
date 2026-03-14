@@ -53,7 +53,7 @@ export function useVaultV2ReadState() {
   const [configLocked, setConfigLocked] = useState(null);
   const [totalAssetsRaw, setTotalAssetsRaw] = useState(null);
   const [userTokenBalance, setUserTokenBalance] = useState(null);
-  const [asterManagedAssets, setAsterManagedAssets] = useState(null);
+  const [wdkManagedAssets, setWDKManagedAssets] = useState(null);
   const [secondaryManagedAssets, setSecondaryManagedAssets] = useState(null);
   const [lpManagedAssets, setLpManagedAssets] = useState(null);
   const [lpAdapterAddress, setLpAdapterAddress] = useState(null);
@@ -117,12 +117,12 @@ export function useVaultV2ReadState() {
     guardedVolatilityBps: null,
     drawdownVolatilityBps: null,
     depegPrice: null,
-    targetAsterBps: null,
+    targetWDKBps: null,
     previewState: "-",
     previewReason: "-",
-    normalAsterBps: null,
-    guardedAsterBps: null,
-    drawdownAsterBps: null,
+    normalWDKBps: null,
+    guardedWDKBps: null,
+    drawdownWDKBps: null,
   });
 
   const refresh = useCallback(
@@ -202,7 +202,7 @@ export function useVaultV2ReadState() {
           rawTimeUntilNext,
           rawCycleCount,
           isLocked,
-          asterAdapterAddress,
+          wdkAdapterAddress,
           secondaryAdapterAddress,
           rawLpAdapterAddress,
           userTokenBal,
@@ -222,13 +222,13 @@ export function useVaultV2ReadState() {
           engine.timeUntilNextCycle().catch(() => null),
           engine.cycleCount().catch(() => null),
           vault.configurationLocked().catch(() => null),
-          vault.asterAdapter().catch(() => null),
+          vault.wdkAdapter().catch(() => null),
           vault.secondaryAdapter().catch(() => null),
           vault.lpAdapter().catch(() => null),
           user ? token.balanceOf(user).catch(() => 0n) : Promise.resolve(0n),
           vault.idleBufferBps().catch(() => null),
           vault.bufferStatus().catch(() => null),
-          vault.pendingAsterWithdrawals().catch(() => null),
+          vault.pendingWDKWithdrawals().catch(() => null),
         ]);
 
         // V2 extended preview decision (contract function is previewDecision, not previewDecisionV2)
@@ -241,7 +241,7 @@ export function useVaultV2ReadState() {
             price: pd.price,
             previousPrice: pd.previousPrice,
             volatilityBps: pd.volatilityBps,
-            targetAsterBps: pd.targetAsterBps,
+            targetWDKBps: pd.targetWDKBps,
             targetLpBps: pd.targetLpBps,
             bountyBps: pd.bountyBps,
             breakerPaused: pd.breakerPaused,
@@ -388,10 +388,10 @@ export function useVaultV2ReadState() {
           guardedVolatilityBps = null,
           drawdownVolatilityBps = null;
         let depegPrice = null,
-          normalAsterBps = null,
-          guardedAsterBps = null,
-          drawdownAsterBps = null;
-        let rawAsterManaged = null,
+          normalWDKBps = null,
+          guardedWDKBps = null,
+          drawdownWDKBps = null;
+        let rawWDKManaged = null,
           rawSecondaryManaged = null,
           rawLpManaged = null;
 
@@ -411,27 +411,27 @@ export function useVaultV2ReadState() {
             guardedVolatilityBps,
             drawdownVolatilityBps,
             depegPrice,
-            normalAsterBps,
-            guardedAsterBps,
-            drawdownAsterBps,
+            normalWDKBps,
+            guardedWDKBps,
+            drawdownWDKBps,
           ] = await Promise.all([
             oracle.getPrice().catch(() => null),
             policy.guardedVolatilityBps().catch(() => null),
             policy.drawdownVolatilityBps().catch(() => null),
             policy.depegPrice().catch(() => null),
-            policy.normalAsterBps().catch(() => null),
-            policy.guardedAsterBps().catch(() => null),
-            policy.drawdownAsterBps().catch(() => null),
+            policy.normalWDKBps().catch(() => null),
+            policy.guardedWDKBps().catch(() => null),
+            policy.drawdownWDKBps().catch(() => null),
           ]);
         }
 
-        if (!isZeroAddr(asterAdapterAddress)) {
-          const asterAdapterContract = new ethersLib.Contract(
-            asterAdapterAddress,
+        if (!isZeroAddr(wdkAdapterAddress)) {
+          const wdkAdapterContract = new ethersLib.Contract(
+            wdkAdapterAddress,
             managedAdapterAbi,
             runner
           );
-          rawAsterManaged = await asterAdapterContract
+          rawWDKManaged = await wdkAdapterContract
             .managedAssets()
             .catch(() => null);
         }
@@ -505,7 +505,7 @@ export function useVaultV2ReadState() {
 
         let previewState = "Normal";
         let previewReason = "Volatility below guarded threshold";
-        let targetAsterBps = normalAsterBps;
+        let targetWDKBps = normalWDKBps;
 
         if (
           currentPrice != null &&
@@ -518,7 +518,7 @@ export function useVaultV2ReadState() {
             volatilityBps >= drawdownVolatilityBps
           ) {
             previewState = "Drawdown";
-            targetAsterBps = drawdownAsterBps;
+            targetWDKBps = drawdownWDKBps;
             previewReason =
               currentPrice < depegPrice
                 ? "Price below depeg threshold"
@@ -528,7 +528,7 @@ export function useVaultV2ReadState() {
             volatilityBps >= guardedVolatilityBps
           ) {
             previewState = "Guarded";
-            targetAsterBps = guardedAsterBps;
+            targetWDKBps = guardedWDKBps;
             previewReason = "Volatility reached guarded threshold";
           }
         }
@@ -540,14 +540,14 @@ export function useVaultV2ReadState() {
           guardedVolatilityBps,
           drawdownVolatilityBps,
           depegPrice,
-          targetAsterBps,
+          targetWDKBps,
           previewState,
           previewReason,
-          normalAsterBps,
-          guardedAsterBps,
-          drawdownAsterBps,
+          normalWDKBps,
+          guardedWDKBps,
+          drawdownWDKBps,
         });
-        setAsterManagedAssets(rawAsterManaged);
+        setWDKManagedAssets(rawWDKManaged);
         setSecondaryManagedAssets(rawSecondaryManaged);
         setLpManagedAssets(rawLpManaged);
         setTotalAssetsRaw(totalAssets);
@@ -637,7 +637,7 @@ export function useVaultV2ReadState() {
     algoMetrics,
     previewDecision,
     totalAssetsRaw,
-    asterManagedAssets,
+    wdkManagedAssets,
     secondaryManagedAssets,
     lpManagedAssets,
     lpAdapterAddress,

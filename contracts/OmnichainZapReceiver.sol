@@ -16,17 +16,17 @@ interface IStargateReceiver {
     ) external;
 }
 
-interface IProofVault {
+interface IWDKVault {
     function deposit(uint256 assets, address receiver) external returns (uint256);
 }
 
 /// @title OmnichainZapReceiver - LayerZero/Stargate Omnichain Zap Integration
-/// @notice Accepts bridged stables from any EVM via Stargate and zaps them directly into ProofVault
+/// @notice Accepts bridged stables from any EVM via Stargate and zaps them directly into WDKVault
 contract OmnichainZapReceiver is IStargateReceiver, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     address public immutable stargateRouter;
-    IProofVault public immutable vault;
+    IWDKVault public immutable vault;
     IERC20 public immutable usdt;
 
     error OmnichainZapReceiver__Unauthorized();
@@ -40,7 +40,7 @@ contract OmnichainZapReceiver is IStargateReceiver, ReentrancyGuard {
             revert OmnichainZapReceiver__ZeroAddress();
         }
         stargateRouter = _stargateRouter;
-        vault = IProofVault(_vault);
+        vault = IWDKVault(_vault);
         usdt = IERC20(_usdt);
     }
 

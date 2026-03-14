@@ -43,7 +43,7 @@ function loadAbi(filePath) {
 const strategyEngineAbi = loadAbi('./StrategyEngine.json');
 const zkOracleAbi = loadAbi('./ZKRiskOracle.json');
 const breakerAbi = loadAbi('./CircuitBreaker.json');
-const proofVaultAbi = loadAbi('./ProofVault.json');
+const wdkVaultAbi = loadAbi('./WDKVault.json');
 const syndicateAbi = loadAbi('./GroupSyndicate.json');
 const auctionAbi = loadAbi('./ExecutionAuction.json');
 
@@ -71,7 +71,7 @@ const AgentState = Annotation.Root({
   }),
   decision: Annotation({
     reducer: (x, y) => ({ ...x, ...y }),
-    default: () => ({ state: 0, targetAsterBps: 0 })
+    default: () => ({ state: 0, targetWDKBps: 0 })
   }),
   actionTaken: Annotation({
     reducer: (x, y) => y,
@@ -181,7 +181,7 @@ async function checkStrategy(state) {
     canExecute: canExec,
     decision: {
       state: Number(preview.state),
-      targetAsterBps: Number(preview.targetAsterBps),
+      targetWDKBps: Number(preview.targetWDKBps),
       bountyBps: Number(preview.bountyBps)
     },
     messages: [`Strategy checked. Executable: ${canExec}`]
@@ -398,7 +398,7 @@ async function yieldSweep(state) {
   const spendingAddress = await spendingAccount.getAddress();
 
   const provider = new ethers.JsonRpcProvider(bnbRpc);
-  const vault = new ethers.Contract(process.env.WDK_VAULT_ADDRESS || "0xMockVault", proofVaultAbi, provider);
+  const vault = new ethers.Contract(process.env.WDK_VAULT_ADDRESS || "0xMockVault", wdkVaultAbi, provider);
   
   try {
     const myAddress = await bnbAccount.getAddress();
@@ -408,7 +408,7 @@ async function yieldSweep(state) {
     if (maxWithdrawable > principal && (maxWithdrawable - principal) > ethers.parseUnits("10", 6)) {
       console.log(`- Yield found! Sweeping accrued interest to Spending Wallet (${spendingAddress})...`);
       
-      const iface = new ethers.Interface(proofVaultAbi);
+      const iface = new ethers.Interface(wdkVaultAbi);
       const data = iface.encodeFunctionData("withdrawYield", [spendingAddress]);
       
       const tx = await bnbAccount.sendTransaction({

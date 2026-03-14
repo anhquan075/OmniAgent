@@ -27,9 +27,9 @@ contract RiskPolicy {
     uint256 public immutable depegPrice;
     uint256 public immutable maxSlippageBps;
     uint256 public immutable maxBountyBps;
-    uint256 public immutable normalAsterBps;
-    uint256 public immutable guardedAsterBps;
-    uint256 public immutable drawdownAsterBps;
+    uint256 public immutable normalWDKBps;
+    uint256 public immutable guardedWDKBps;
+    uint256 public immutable drawdownWDKBps;
 
     // ── v2 params ───────────────────────────────────────────────
     uint256 public immutable minBountyBps;
@@ -52,9 +52,9 @@ contract RiskPolicy {
         uint256 depegPrice_,
         uint256 maxSlippageBps_,
         uint256 maxBountyBps_,
-        uint256 normalAsterBps_,
-        uint256 guardedAsterBps_,
-        uint256 drawdownAsterBps_,
+        uint256 normalWDKBps_,
+        uint256 guardedWDKBps_,
+        uint256 drawdownWDKBps_,
         uint256 minBountyBps_,
         uint256 auctionDurationSeconds_,
         uint256 idleBufferBps_,
@@ -69,11 +69,11 @@ contract RiskPolicy {
         if (depegPrice_ == 0) revert RiskPolicy__ZeroDepegPrice();
         if (maxSlippageBps_ > 1000) revert RiskPolicy__SlippageTooHigh();
         if (maxBountyBps_ > 200) revert RiskPolicy__BountyTooHigh();
-        if (normalAsterBps_ > BPS_DENOMINATOR) revert RiskPolicy__AllocationTooHigh();
-        if (guardedAsterBps_ > BPS_DENOMINATOR) revert RiskPolicy__AllocationTooHigh();
-        if (drawdownAsterBps_ > BPS_DENOMINATOR) revert RiskPolicy__AllocationTooHigh();
+        if (normalWDKBps_ > BPS_DENOMINATOR) revert RiskPolicy__AllocationTooHigh();
+        if (guardedWDKBps_ > BPS_DENOMINATOR) revert RiskPolicy__AllocationTooHigh();
+        if (drawdownWDKBps_ > BPS_DENOMINATOR) revert RiskPolicy__AllocationTooHigh();
 
-        if (normalAsterBps_ > guardedAsterBps_ || guardedAsterBps_ > drawdownAsterBps_) {
+        if (normalWDKBps_ > guardedWDKBps_ || guardedWDKBps_ > drawdownWDKBps_) {
             revert RiskPolicy__AllocsNotMonotonic();
         }
 
@@ -82,9 +82,9 @@ contract RiskPolicy {
         if (idleBufferBps_ > 2000) revert RiskPolicy__IdleBufferTooHigh();
         if (sharpeWindowSize_ < 3 || sharpeWindowSize_ > 30) revert RiskPolicy__SharpeWindowOutOfRange();
 
-        if (normalLpBps_ + normalAsterBps_ > BPS_DENOMINATOR) revert RiskPolicy__CombinedAllocationTooHigh();
-        if (guardedLpBps_ + guardedAsterBps_ > BPS_DENOMINATOR) revert RiskPolicy__CombinedAllocationTooHigh();
-        if (drawdownLpBps_ + drawdownAsterBps_ > BPS_DENOMINATOR) revert RiskPolicy__CombinedAllocationTooHigh();
+        if (normalLpBps_ + normalWDKBps_ > BPS_DENOMINATOR) revert RiskPolicy__CombinedAllocationTooHigh();
+        if (guardedLpBps_ + guardedWDKBps_ > BPS_DENOMINATOR) revert RiskPolicy__CombinedAllocationTooHigh();
+        if (drawdownLpBps_ + drawdownWDKBps_ > BPS_DENOMINATOR) revert RiskPolicy__CombinedAllocationTooHigh();
 
         if (normalLpBps_ < guardedLpBps_ || guardedLpBps_ < drawdownLpBps_) {
             revert RiskPolicy__AllocsNotMonotonic();
@@ -96,9 +96,9 @@ contract RiskPolicy {
         depegPrice = depegPrice_;
         maxSlippageBps = maxSlippageBps_;
         maxBountyBps = maxBountyBps_;
-        normalAsterBps = normalAsterBps_;
-        guardedAsterBps = guardedAsterBps_;
-        drawdownAsterBps = drawdownAsterBps_;
+        normalWDKBps = normalWDKBps_;
+        guardedWDKBps = guardedWDKBps_;
+        drawdownWDKBps = drawdownWDKBps_;
         minBountyBps = minBountyBps_;
         auctionDurationSeconds = auctionDurationSeconds_;
         idleBufferBps = idleBufferBps_;

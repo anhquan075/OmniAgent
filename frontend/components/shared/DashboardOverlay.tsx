@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { XIcon } from 'lucide-react';
-import ProofVaultV2Client from '../ProofVaultV2Client';
+import WDKVaultV2Client from '../WDKVaultV2Client';
 
 interface DashboardOverlayProps {
   isOpen: boolean;
@@ -43,7 +43,7 @@ export const DashboardOverlay: React.FC<DashboardOverlayProps> = ({ isOpen, onCl
           <div className="flex-1 min-h-0 glass-dark rounded-[2.5rem] border border-white/10 overflow-hidden relative shadow-2xl">
             <div className="absolute inset-0 bg-[url('/imgs/grid.svg')] opacity-5 pointer-events-none"></div>
             <div className="h-full w-full overflow-y-auto custom-scrollbar p-8">
-              <ProofVaultV2Client />
+              <WDKVaultV2Client />
             </div>
           </div>
         </motion.div>

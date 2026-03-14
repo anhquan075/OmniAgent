@@ -19,7 +19,7 @@ interface IVToken {
 /// @title VenusYieldAdapter — Yield-bearing buffer integrating Venus Protocol (vUSDT)
 /// @notice 2nd yield rail: park excess idle in Venus to earn supply APY.
 /// @dev Note: Venus mint/redeem returns 0 on success, non-zero error codes on failure.
-/// @custom:security-contact security@asterpilot.xyz
+/// @custom:security-contact security@wdkpilot.xyz
 contract VenusYieldAdapter is Ownable2Step, IManagedAdapter {
     using SafeERC20 for IERC20;
 

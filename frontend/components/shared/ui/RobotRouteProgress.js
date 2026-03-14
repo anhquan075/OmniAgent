@@ -3,9 +3,9 @@ import { CheckCircle2, CircleDashed, Loader2, Route } from 'lucide-react';
 
 const STEPS = [
   "Depositing USDT to Vault",
-  "Engine swapping USDT → USDF via PancakeSwap",
-  "Depositing USDF → AsterDEX Earn (asUSDF)",
-  "Adding liquidity to USDF/USDT pool",
+  "Engine swapping USDT → WDKS via PancakeSwap",
+  "Depositing WDKS → WDKDEX Earn (asWDKS)",
+  "Adding liquidity to WDKS/USDT pool",
   "Staking LP tokens in MasterChef",
   "Auto-harvesting CAKE & redeploying yield"
 ];

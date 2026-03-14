@@ -6,11 +6,11 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IPegArbExecutor} from "./interfaces/IPegArbExecutor.sol";
 import {IStableSwapPool} from "./interfaces/IStableSwapPool.sol";
-import {IUSDFMinting} from "./interfaces/IUSDFMinting.sol";
+import {IWDKSMinting} from "./interfaces/IWDKSMinting.sol";
 
-/// @title PegArbExecutor — permissionless atomic USDF/USDT arb
+/// @title PegArbExecutor — permissionless atomic WDKS/USDT arb
 /// @notice Detects peg deviation, executes arb, pays bounty, returns profit to vault.
-/// @custom:security-contact security@asterpilot.xyz
+/// @custom:security-contact security@wdkpilot.xyz
 contract PegArbExecutor is IPegArbExecutor, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -31,8 +31,8 @@ contract PegArbExecutor is IPegArbExecutor, ReentrancyGuard {
     // ── immutables ──
     address public immutable vault;
     IERC20  public immutable usdt;
-    IERC20  public immutable usdf;
-    IUSDFMinting    public immutable usdfMinting;
+    IERC20  public immutable wdks;
+    IWDKSMinting    public immutable wdksMinting;
     IStableSwapPool public immutable stableSwapPool;
     uint256 public immutable minProfitBps;
     uint256 public immutable maxArbBps;
@@ -42,16 +42,16 @@ contract PegArbExecutor is IPegArbExecutor, ReentrancyGuard {
     constructor(
         address _vault,
         address _usdt,
-        address _usdf,
-        address _usdfMinting,
+        address _wdks,
+        address _wdksMinting,
         address _stableSwapPool,
         uint256 _minProfitBps,
         uint256 _maxArbBps,
         uint256 _arbBountyBps,
         uint256 _deviationThresholdBps
     ) {
-        if (_vault == address(0) || _usdt == address(0) || _usdf == address(0)
-            || _usdfMinting == address(0) || _stableSwapPool == address(0))
+        if (_vault == address(0) || _usdt == address(0) || _wdks == address(0)
+            || _wdksMinting == address(0) || _stableSwapPool == address(0))
         {
             revert PegArbExecutor__ZeroAddress();
         }
@@ -62,8 +62,8 @@ contract PegArbExecutor is IPegArbExecutor, ReentrancyGuard {
 
         vault                 = _vault;
         usdt                  = IERC20(_usdt);
-        usdf                  = IERC20(_usdf);
-        usdfMinting           = IUSDFMinting(_usdfMinting);
+        wdks                  = IERC20(_wdks);
+        wdksMinting           = IWDKSMinting(_wdksMinting);
         stableSwapPool        = IStableSwapPool(_stableSwapPool);
         minProfitBps          = _minProfitBps;
         maxArbBps             = _maxArbBps;
@@ -110,10 +110,10 @@ contract PegArbExecutor is IPegArbExecutor, ReentrancyGuard {
 
         uint256 usdtBefore = usdt.balanceOf(address(this));
 
-        if (dir == ArbDirection.BuyUSDF) {
-            _executeBuyUSDF(tradeSize, poolPrice);
+        if (dir == ArbDirection.BuyWDKS) {
+            _executeBuyWDKS(tradeSize, poolPrice);
         } else {
-            _executeSellUSDF(tradeSize, poolPrice);
+            _executeSellWDKS(tradeSize, poolPrice);
         }
 
         uint256 usdtAfter = usdt.balanceOf(address(this));
@@ -148,14 +148,14 @@ contract PegArbExecutor is IPegArbExecutor, ReentrancyGuard {
     {
         (bool ok, uint256 bal0, uint256 bal1) = _readPoolBalances();
         if (!ok || bal1 == 0) revert PegArbExecutor__EmptyPool();
-        poolPrice = bal0 * 1e18 / bal1; // USDT per USDF
+        poolPrice = bal0 * 1e18 / bal1; // USDT per WDKS
 
         uint256 threshold = 1e18 * deviationThresholdBps / BPS_DENOMINATOR;
 
         if (poolPrice < 1e18 - threshold) {
-            dir = ArbDirection.BuyUSDF;  // USDF cheap → buy on pool, redeem at par
+            dir = ArbDirection.BuyWDKS;  // WDKS cheap → buy on pool, redeem at par
         } else if (poolPrice > 1e18 + threshold) {
-            dir = ArbDirection.SellUSDF; // USDF expensive → mint at par, sell on pool
+            dir = ArbDirection.SellWDKS; // WDKS expensive → mint at par, sell on pool
         } else {
             dir = ArbDirection.None;
         }
@@ -189,10 +189,10 @@ contract PegArbExecutor is IPegArbExecutor, ReentrancyGuard {
         return (false, 0, 0);
     }
 
-    /// @dev Path A: USDT → buy cheap USDF on pool → redeem at par → USDT
+    /// @dev Path A: USDT → buy cheap WDKS on pool → redeem at par → USDT
     ///      min_dy is derived from current pool price with slippage tolerance
-    function _executeBuyUSDF(uint256 usdtAmount, uint256 poolPrice) internal {
-        // Expected USDF out ≈ usdtAmount / poolPrice; apply 1% slippage tolerance
+    function _executeBuyWDKS(uint256 usdtAmount, uint256 poolPrice) internal {
+        // Expected WDKS out ≈ usdtAmount / poolPrice; apply 1% slippage tolerance
         uint256 expectedUsdf = usdtAmount * 1e18 / poolPrice;
         uint256 minUsdfOut   = expectedUsdf * 9900 / BPS_DENOMINATOR; // 1% slippage
 
@@ -200,26 +200,26 @@ contract PegArbExecutor is IPegArbExecutor, ReentrancyGuard {
         stableSwapPool.exchange(0, 1, usdtAmount, minUsdfOut);
         usdt.forceApprove(address(stableSwapPool), 0);
 
-        uint256 usdfBal = usdf.balanceOf(address(this));
-        usdf.forceApprove(address(usdfMinting), usdfBal);
-        usdfMinting.redeem(usdfBal);
-        usdf.forceApprove(address(usdfMinting), 0);
+        uint256 wdksBal = wdks.balanceOf(address(this));
+        wdks.forceApprove(address(wdksMinting), wdksBal);
+        wdksMinting.redeem(wdksBal);
+        wdks.forceApprove(address(wdksMinting), 0);
     }
 
-    /// @dev Path B: USDT → mint USDF at par → sell expensive USDF on pool → USDT
+    /// @dev Path B: USDT → mint WDKS at par → sell expensive WDKS on pool → USDT
     ///      min_dy is derived from current pool price with slippage tolerance
-    function _executeSellUSDF(uint256 usdtAmount, uint256 poolPrice) internal {
-        usdt.forceApprove(address(usdfMinting), usdtAmount);
-        usdfMinting.mint(usdtAmount);
-        usdt.forceApprove(address(usdfMinting), 0);
+    function _executeSellWDKS(uint256 usdtAmount, uint256 poolPrice) internal {
+        usdt.forceApprove(address(wdksMinting), usdtAmount);
+        wdksMinting.mint(usdtAmount);
+        usdt.forceApprove(address(wdksMinting), 0);
 
-        uint256 usdfBal = usdf.balanceOf(address(this));
-        // Expected USDT out ≈ usdfBal * poolPrice / 1e18; apply 1% slippage tolerance
-        uint256 expectedUsdt = usdfBal * poolPrice / 1e18;
+        uint256 wdksBal = wdks.balanceOf(address(this));
+        // Expected USDT out ≈ wdksBal * poolPrice / 1e18; apply 1% slippage tolerance
+        uint256 expectedUsdt = wdksBal * poolPrice / 1e18;
         uint256 minUsdtOut   = expectedUsdt * 9900 / BPS_DENOMINATOR; // 1% slippage
 
-        usdf.forceApprove(address(stableSwapPool), usdfBal);
-        stableSwapPool.exchange(1, 0, usdfBal, minUsdtOut);
-        usdf.forceApprove(address(stableSwapPool), 0);
+        wdks.forceApprove(address(stableSwapPool), wdksBal);
+        stableSwapPool.exchange(1, 0, wdksBal, minUsdtOut);
+        wdks.forceApprove(address(stableSwapPool), 0);
     }
 }

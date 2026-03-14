@@ -14,7 +14,7 @@ import {IChainlinkAggregator} from "./interfaces/IChainlinkAggregator.sol";
 ///      Decimal normalisation: Chainlink feeds vary (8 dec, 18 dec, etc.).
 ///      This contract converts all feeds to a uniform 8-decimal representation so
 ///      the StrategyEngine and RiskPolicy can use a consistent fixed-point format.
-/// @custom:security-contact security@asterpilot.xyz
+/// @custom:security-contact security@wdkpilot.xyz
 contract ChainlinkPriceOracle is IPriceOracle {
     // ── errors ──
     error ChainlinkPriceOracle__ZeroAddress();

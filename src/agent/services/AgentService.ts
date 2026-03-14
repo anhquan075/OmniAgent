@@ -24,7 +24,7 @@ const AgentState = Annotation.Root({
   }),
   decision: Annotation<any>({
     reducer: (x, y) => ({ ...x, ...y }),
-    default: () => ({ state: 0, targetAsterBps: 0 })
+    default: () => ({ state: 0, targetWDKBps: 0 })
   }),
   actionTaken: Annotation<string>({
     reducer: (x, y) => y,
@@ -107,7 +107,7 @@ async function checkStrategy(state: any) {
     canExecute: canExec,
     decision: {
       state: Number(preview.state),
-      targetAsterBps: Number(preview.targetAsterBps),
+      targetWDKBps: Number(preview.targetWDKBps),
       bountyBps: Number(preview.bountyBps)
     },
     messages: [new AIMessage({ content: `Strategy checked. Executable: ${canExec}`, id: `strategy-${Date.now()}` })]

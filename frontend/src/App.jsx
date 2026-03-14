@@ -114,7 +114,7 @@ export default function App() {
     loadHistory();
     
     return () => { isMounted = false; };
-  }, [activeSessionId, setMessages, status]);
+  }, [activeSessionId, setMessages]);
 
   const initialUpdatedRef = useRef(false);
 
@@ -191,7 +191,7 @@ export default function App() {
     setInput('');
     
     try {
-      await sendMessage({ text });
+      await sendMessage({ text, id: activeSessionId });
     } catch (err) {
       console.error("[App] Failed to send message:", err);
     }
@@ -287,6 +287,7 @@ export default function App() {
                 sendMessage={sendMessage}
                 setMessages={setMessages}
                 regenerate={regenerate}
+                stop={stop}
                 error={error}
                 data={data}
               />
@@ -315,12 +316,12 @@ export default function App() {
                   </div>
                   <div className="flex items-center justify-between text-[10px] font-mono">
                     <span className="text-neutral-gray lowercase">Strategy Exposure</span>
-                    <span className="text-cyber-cyan">{((Number(stats?.system?.targetAsterBps || 0) / 10000) * 100).toFixed(1)}%</span>
+                    <span className="text-cyber-cyan">{((Number(stats?.system?.targetWDKBps || 0) / 10000) * 100).toFixed(1)}%</span>
                   </div>
                   <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
                     <motion.div 
                       className="h-full bg-cyber-cyan"
-                      animate={{ width: `${(Number(stats?.system?.targetAsterBps || 0) / 10000) * 100}%` }}
+                      animate={{ width: `${(Number(stats?.system?.targetWDKBps || 0) / 10000) * 100}%` }}
                     />
                   </div>
                 </div>

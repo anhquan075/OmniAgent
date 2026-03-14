@@ -6,7 +6,7 @@ export function VaultPegArbOpportunityAndHistoryCard({ arbPreview, onExecuteArb,
   const hasData = !!arbPreview;
   const { direction = 0, estimatedProfitBps = 0n, tradeSize = 0n, poolPrice = 0n } = arbPreview || {};
 
-  const directionLabels = { 0: 'None', 1: 'Buy USDF', 2: 'Sell USDF' };
+  const directionLabels = { 0: 'None', 1: 'Buy WDKS', 2: 'Sell WDKS' };
   const directionLabel = directionLabels[Number(direction)] || 'Unknown';
   const hasOpportunity = Number(direction) !== 0;
 

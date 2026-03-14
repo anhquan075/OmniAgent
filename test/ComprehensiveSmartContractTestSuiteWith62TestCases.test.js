@@ -14,12 +14,12 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
     const token = await MockERC20.deploy("Mock USDT", "mUSDT");
     await token.waitForDeployment();
 
-    const MockAsterEarnAdapterF = await ethers.getContractFactory("MockAsterEarnAdapter");
-    const asterAdapter = await MockAsterEarnAdapterF.deploy(
+    const MockWDKEarnAdapterF = await ethers.getContractFactory("MockWDKEarnAdapter");
+    const wdkAdapter = await MockWDKEarnAdapterF.deploy(
       await token.getAddress(),
       deployer.address
     );
-    await asterAdapter.waitForDeployment();
+    await wdkAdapter.waitForDeployment();
     const ManagedAdapter = await ethers.getContractFactory("ManagedAdapter");
     const secondaryAdapter = await ManagedAdapter.deploy(
       await token.getAddress(),
@@ -33,10 +33,10 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
     );
     await lpAdapter.waitForDeployment();
 
-    const ProofVault = await ethers.getContractFactory("ProofVault");
-    const vault = await ProofVault.deploy(
+    const WDKVault = await ethers.getContractFactory("WDKVault");
+    const vault = await WDKVault.deploy(
       await token.getAddress(),
-      "AsterPilot ProofVault Share",
+      "OmniWDK WDKVault Share",
       "rpUSDT",
       deployer.address,
       0 // idleBufferBps
@@ -51,9 +51,9 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       ethers.parseUnits("0.97", 8), // depegPrice_
       100, // maxSlippageBps_
       40, // maxBountyBps_
-      7000, // normalAsterBps_
-      9000, // guardedAsterBps_
-      10000, // drawdownAsterBps_
+      7000, // normalWDKBps_
+      9000, // guardedWDKBps_
+      10000, // drawdownWDKBps_
       0, // minBountyBps_
       60, // auctionDurationSeconds_
       0, // idleBufferBps_
@@ -97,15 +97,15 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
     await (await vault.setEngine(await engine.getAddress())).wait();
     await (
       await vault.setAdapters(
-        await asterAdapter.getAddress(),
+        await wdkAdapter.getAddress(),
         await secondaryAdapter.getAddress(),
         await lpAdapter.getAddress()
       )
     ).wait();
-    await (await asterAdapter.setVault(await vault.getAddress())).wait();
+    await (await wdkAdapter.setVault(await vault.getAddress())).wait();
     await (await secondaryAdapter.setVault(await vault.getAddress())).wait();
     await (await lpAdapter.setVault(await vault.getAddress())).wait();
-    await (await asterAdapter.lockConfiguration()).wait();
+    await (await wdkAdapter.lockConfiguration()).wait();
     await (await secondaryAdapter.lockConfiguration()).wait();
     await (await lpAdapter.lockConfiguration()).wait();
     await (await vault.lockConfiguration()).wait();
@@ -139,7 +139,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       attacker,
       token,
       vault,
-      asterAdapter,
+      wdkAdapter,
       secondaryAdapter,
       lpAdapter,
       engine,
@@ -156,12 +156,12 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
     const token = await MockERC20.deploy("Mock USDT", "mUSDT");
     await token.waitForDeployment();
 
-    const MockAsterEarnAdapterF = await ethers.getContractFactory("MockAsterEarnAdapter");
-    const asterAdapter = await MockAsterEarnAdapterF.deploy(
+    const MockWDKEarnAdapterF = await ethers.getContractFactory("MockWDKEarnAdapter");
+    const wdkAdapter = await MockWDKEarnAdapterF.deploy(
       await token.getAddress(),
       deployer.address
     );
-    await asterAdapter.waitForDeployment();
+    await wdkAdapter.waitForDeployment();
     const ManagedAdapter = await ethers.getContractFactory("ManagedAdapter");
     const secondaryAdapter = await ManagedAdapter.deploy(
       await token.getAddress(),
@@ -175,10 +175,10 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
     );
     await lpAdapter.waitForDeployment();
 
-    const ProofVault = await ethers.getContractFactory("ProofVault");
-    const vault = await ProofVault.deploy(
+    const WDKVault = await ethers.getContractFactory("WDKVault");
+    const vault = await WDKVault.deploy(
       await token.getAddress(),
-      "AsterPilot ProofVault Share",
+      "OmniWDK WDKVault Share",
       "rpUSDT",
       deployer.address,
       0
@@ -250,7 +250,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       user1,
       token,
       vault,
-      asterAdapter,
+      wdkAdapter,
       secondaryAdapter,
       lpAdapter,
       engine,
@@ -261,10 +261,10 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
   }
 
   // ==============================================================================
-  // PROOFVAULT TESTS
+  // WDKVAULT TESTS
   // ==============================================================================
 
-  describe("ProofVault4626", function () {
+  describe("WDKVault4626", function () {
     describe("Configuration & Locking", function () {
       it("should prevent deposit before configuration is locked", async function () {
         const { user1, vault } = await deployUnlockedFixture();
@@ -272,25 +272,25 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
           vault
             .connect(user1)
             .deposit(ethers.parseUnits("100", 18), user1.address)
-        ).to.be.revertedWithCustomError(vault, "ProofVault__NotLocked");
+        ).to.be.revertedWithCustomError(vault, "WDKVault__NotLocked");
       });
 
       it("should allow deposit after configuration is locked", async function () {
-        const { user1, vault, asterAdapter, secondaryAdapter } =
+        const { user1, vault, wdkAdapter, secondaryAdapter } =
           await deployUnlockedFixture();
         await (await vault.setEngine(user1.address)).wait();
         await (
           await vault.setAdapters(
-            await asterAdapter.getAddress(),
+            await wdkAdapter.getAddress(),
             await secondaryAdapter.getAddress(),
             ethers.ZeroAddress
           )
         ).wait();
-        await (await asterAdapter.setVault(await vault.getAddress())).wait();
+        await (await wdkAdapter.setVault(await vault.getAddress())).wait();
         await (
           await secondaryAdapter.setVault(await vault.getAddress())
         ).wait();
-        await (await asterAdapter.lockConfiguration()).wait();
+        await (await wdkAdapter.lockConfiguration()).wait();
         await (await secondaryAdapter.lockConfiguration()).wait();
         await (await vault.lockConfiguration()).wait();
 
@@ -305,14 +305,14 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
         await (await vault.setEngine(await engine.getAddress())).wait();
         await expect(
           vault.connect(deployer).lockConfiguration()
-        ).to.be.revertedWithCustomError(vault, "ProofVault__AsterNotSet");
+        ).to.be.revertedWithCustomError(vault, "WDKVault__WDKNotSet");
       });
 
       it("should zero owner after lockConfiguration", async function () {
-        const { vault, asterAdapter, secondaryAdapter } =
+        const { vault, wdkAdapter, secondaryAdapter } =
           await deployFullFixture();
         expect(await vault.owner()).to.equal(ethers.ZeroAddress);
-        expect(await asterAdapter.owner()).to.equal(ethers.ZeroAddress);
+        expect(await wdkAdapter.owner()).to.equal(ethers.ZeroAddress);
         expect(await secondaryAdapter.owner()).to.equal(ethers.ZeroAddress);
       });
 
@@ -324,13 +324,13 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       });
 
       it("should prevent setAdapters after lock", async function () {
-        const { deployer, vault, asterAdapter } = await deployFullFixture();
+        const { deployer, vault, wdkAdapter } = await deployFullFixture();
         await expect(
           vault
             .connect(deployer)
             .setAdapters(
-              await asterAdapter.getAddress(),
-              await asterAdapter.getAddress(),
+              await wdkAdapter.getAddress(),
+              await wdkAdapter.getAddress(),
               ethers.ZeroAddress
             )
         ).to.be.reverted;
@@ -338,8 +338,8 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
     });
 
     describe("Total Assets Calculation", function () {
-      it("should correctly sum idle + aster + secondary balances", async function () {
-        const { user1, vault, token, asterAdapter, secondaryAdapter, engine } =
+      it("should correctly sum idle + wdk + secondary balances", async function () {
+        const { user1, vault, token, wdkAdapter, secondaryAdapter, engine } =
           await deployFullFixture();
 
         const depositAmount = ethers.parseUnits("1000", 18);
@@ -350,12 +350,12 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
 
         const total = await vault.totalAssets();
         const idle = await token.balanceOf(await vault.getAddress());
-        const aster = await asterAdapter.managedAssets();
+        const wdk = await wdkAdapter.managedAssets();
         const secondary = await secondaryAdapter.managedAssets();
         const lpAdapterAddr = await vault.lpAdapter();
         const lp = lpAdapterAddr !== ethers.ZeroAddress ? await (await ethers.getContractAt("ManagedAdapter", lpAdapterAddr)).managedAssets() : 0n;
 
-        expect(total).to.equal(idle + aster + secondary + lp);
+        expect(total).to.equal(idle + wdk + secondary + lp);
       });
 
       it("should return 0 before any deposits", async function () {
@@ -369,7 +369,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
         const { user1, vault } = await deployFullFixture();
         await expect(
           vault.connect(user1).rebalance(7000, 100, user1.address, 10, 0)
-        ).to.be.revertedWithCustomError(vault, "ProofVault__CallerNotEngine");
+        ).to.be.revertedWithCustomError(vault, "WDKVault__CallerNotEngine");
       });
 
       it("should revert if configuration not locked", async function () {
@@ -379,8 +379,8 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
         ).to.be.reverted;
       });
 
-      it("should accept valid asterTargetBps and update allocations", async function () {
-        const { user1, vault, engine, asterAdapter } =
+      it("should accept valid wdkTargetBps and update allocations", async function () {
+        const { user1, vault, engine, wdkAdapter } =
           await deployFullFixture();
 
         await (
@@ -390,11 +390,11 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
         ).wait();
         await (await engine.executeCycle()).wait();
 
-        const aster = await asterAdapter.managedAssets();
-        expect(aster).to.be.greaterThan(0);
+        const wdk = await wdkAdapter.managedAssets();
+        expect(wdk).to.be.greaterThan(0);
       });
 
-      it("should revert on asterTargetBps > 10000", async function () {
+      it("should revert on wdkTargetBps > 10000", async function () {
         const { vault, engine } = await deployFullFixture();
         const engineAddr = await engine.getAddress();
         expect(await vault.engine()).to.equal(engineAddr);
@@ -437,7 +437,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
 
     describe("Withdrawal and _ensureLiquid", function () {
       it("should pull from secondary first on withdraw", async function () {
-        const { user1, vault, token, asterAdapter, secondaryAdapter, engine } =
+        const { user1, vault, token, wdkAdapter, secondaryAdapter, engine } =
           await deployFullFixture();
 
         await (
@@ -465,8 +465,8 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
         expect(secondaryAfter).to.be.lessThanOrEqual(ethers.parseUnits("1500", 18));
       });
 
-      it("should pull from aster if secondary insufficient", async function () {
-        const { user1, token, vault, asterAdapter, secondaryAdapter, engine } =
+      it("should pull from wdk if secondary insufficient", async function () {
+        const { user1, token, vault, wdkAdapter, secondaryAdapter, engine } =
           await deployFullFixture();
 
         await (
@@ -476,10 +476,10 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
         ).wait();
         await (await engine.executeCycle()).wait();
 
-        const asterBefore = await asterAdapter.managedAssets();
+        const wdkBefore = await wdkAdapter.managedAssets();
 
-        // Ensure asterAdapter has enough for the pull
-        await (await token.mint(await asterAdapter.getAddress(), ethers.parseUnits("1000", 18))).wait();
+        // Ensure wdkAdapter has enough for the pull
+        await (await token.mint(await wdkAdapter.getAddress(), ethers.parseUnits("1000", 18))).wait();
 
         await (
           await vault
@@ -491,8 +491,8 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
             )
         ).wait();
 
-        const asterAfter = await asterAdapter.managedAssets();
-        expect(asterAfter).to.be.lessThan(ethers.parseUnits("1200", 18));
+        const wdkAfter = await wdkAdapter.managedAssets();
+        expect(wdkAfter).to.be.lessThan(ethers.parseUnits("1200", 18));
       });
 
       it("should revert with insufficient liquidity", async function () {
@@ -511,7 +511,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       });
 
       it("should work with redeem and ensure liquidity", async function () {
-        const { user1, token, vault, asterAdapter, secondaryAdapter, engine } = await deployFullFixture();
+        const { user1, token, vault, wdkAdapter, secondaryAdapter, engine } = await deployFullFixture();
 
         await (
           await vault
@@ -521,7 +521,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
         await (await engine.executeCycle()).wait();
 
         // Fund adapters to satisfy redeem
-        await (await token.mint(await asterAdapter.getAddress(), ethers.parseUnits("1000", 18))).wait();
+        await (await token.mint(await wdkAdapter.getAddress(), ethers.parseUnits("1000", 18))).wait();
         await (await token.mint(await secondaryAdapter.getAddress(), ethers.parseUnits("1000", 18))).wait();
 
         const shares = await vault.balanceOf(user1.address);
@@ -536,25 +536,25 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
         const { user1, vault } = await deployUnlockedFixture();
         await expect(
           vault.connect(user1).mint(ethers.parseUnits("100", 6), user1.address)
-        ).to.be.revertedWithCustomError(vault, "ProofVault__NotLocked");
+        ).to.be.revertedWithCustomError(vault, "WDKVault__NotLocked");
       });
 
       it("should allow mint after configuration lock", async function () {
-        const { user1, vault, asterAdapter, secondaryAdapter } =
+        const { user1, vault, wdkAdapter, secondaryAdapter } =
           await deployUnlockedFixture();
         await (await vault.setEngine(user1.address)).wait();
         await (
           await vault.setAdapters(
-            await asterAdapter.getAddress(),
+            await wdkAdapter.getAddress(),
             await secondaryAdapter.getAddress(),
             ethers.ZeroAddress
           )
         ).wait();
-        await (await asterAdapter.setVault(await vault.getAddress())).wait();
+        await (await wdkAdapter.setVault(await vault.getAddress())).wait();
         await (
           await secondaryAdapter.setVault(await vault.getAddress())
         ).wait();
-        await (await asterAdapter.lockConfiguration()).wait();
+        await (await wdkAdapter.lockConfiguration()).wait();
         await (await secondaryAdapter.lockConfiguration()).wait();
         await (await vault.lockConfiguration()).wait();
 
@@ -703,11 +703,11 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
   });
 
   // ==============================================================================
-  // ASTEREARNADAPTER TESTS
+  // WDKEARNADAPTER TESTS
   // ==============================================================================
 
-  describe("AsterEarnAdapter", function () {
-    async function deployAsterAdapterFixture() {
+  describe("WDKEarnAdapter", function () {
+    async function deployWDKAdapterFixture() {
       const [deployer, vaultAddr] = await ethers.getSigners();
       const MockERC20 = await ethers.getContractFactory("MockERC20");
       const token = await MockERC20.deploy("Test Token", "TEST");
@@ -717,10 +717,10 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       const minter = await MockMinter.deploy();
       await minter.waitForDeployment();
 
-      const AsterEarnAdapter = await ethers.getContractFactory(
-        "AsterEarnAdapter"
+      const WDKEarnAdapter = await ethers.getContractFactory(
+        "WDKEarnAdapter"
       );
-      const adapter = await AsterEarnAdapter.deploy(
+      const adapter = await WDKEarnAdapter.deploy(
         await token.getAddress(),
         await minter.getAddress(),
         "0x00000000", // depositSelector
@@ -738,28 +738,28 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
     }
 
     it("should have immutable selectors and minter", async function () {
-      const { adapter, minter } = await deployAsterAdapterFixture();
+      const { adapter, minter } = await deployWDKAdapterFixture();
 
-      expect(await adapter.asterMinter()).to.equal(await minter.getAddress());
+      expect(await adapter.wdkMinter()).to.equal(await minter.getAddress());
       expect(await adapter.depositSelector()).to.equal("0x00000000");
     });
 
     it("should revert onVaultDeposit with zero amount", async function () {
-      const { adapter, vaultAddr } = await deployAsterAdapterFixture();
+      const { adapter, vaultAddr } = await deployWDKAdapterFixture();
       await expect(
         adapter.connect(vaultAddr).onVaultDeposit(0)
-      ).to.be.revertedWithCustomError(adapter, "AsterEarnAdapter__ZeroAmount");
+      ).to.be.revertedWithCustomError(adapter, "WDKEarnAdapter__ZeroAmount");
     });
 
     it("should revert onVaultDeposit from non-vault", async function () {
-      const { adapter, deployer } = await deployAsterAdapterFixture();
+      const { adapter, deployer } = await deployWDKAdapterFixture();
       await expect(
         adapter.connect(deployer).onVaultDeposit(ethers.parseUnits("100", 18))
-      ).to.be.revertedWithCustomError(adapter, "AsterEarnAdapter__OnlyVault");
+      ).to.be.revertedWithCustomError(adapter, "WDKEarnAdapter__OnlyVault");
     });
 
     it("should lock configuration and renounce ownership", async function () {
-      const { deployer, adapter } = await deployAsterAdapterFixture();
+      const { deployer, adapter } = await deployWDKAdapterFixture();
 
       expect(await adapter.configurationLocked()).to.equal(false);
       await (await adapter.lockConfiguration()).wait();
@@ -768,7 +768,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
     });
 
     it("should revert setVault after lock", async function () {
-      const { deployer, adapter } = await deployAsterAdapterFixture();
+      const { deployer, adapter } = await deployWDKAdapterFixture();
       await (await adapter.lockConfiguration()).wait();
 
       const [newAddr] = await ethers.getSigners();
@@ -782,10 +782,10 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       const token = await MockERC20.deploy("Test", "TEST");
       await token.waitForDeployment();
 
-      const AsterEarnAdapter = await ethers.getContractFactory(
-        "AsterEarnAdapter"
+      const WDKEarnAdapter = await ethers.getContractFactory(
+        "WDKEarnAdapter"
       );
-      const adapter = await AsterEarnAdapter.deploy(
+      const adapter = await WDKEarnAdapter.deploy(
         await token.getAddress(),
         deployer.address,
         "0x00000000",
@@ -799,7 +799,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
 
       await expect(adapter.lockConfiguration()).to.be.revertedWithCustomError(
         adapter,
-        "AsterEarnAdapter__VaultNotSet"
+        "WDKEarnAdapter__VaultNotSet"
       );
     });
   });
@@ -882,7 +882,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
 
         const preview = await engine.previewDecision();
         expect(preview.nextState).to.equal(0); // Normal state
-        expect(preview.targetAsterBps).to.equal(7000n);
+        expect(preview.targetWDKBps).to.equal(7000n);
         expect(preview.executable).to.equal(false); // Within cooldown period
       });
 
@@ -902,7 +902,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
 
         const preview = await engine.previewDecision();
         expect(preview.nextState).to.equal(1); // Guarded state
-        expect(preview.targetAsterBps).to.equal(9000n);
+        expect(preview.targetWDKBps).to.equal(9000n);
       });
 
       it("should return Drawdown state on depeg", async function () {
@@ -921,7 +921,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
 
         const preview = await engine.previewDecision();
         expect(preview.nextState).to.equal(2); // Drawdown state
-        expect(preview.targetAsterBps).to.equal(10000n);
+        expect(preview.targetWDKBps).to.equal(10000n);
       });
 
       it("should return Drawdown state on high volatility", async function () {
@@ -1125,15 +1125,15 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       expect(await policy.depegPrice()).to.equal(ethers.parseUnits("0.97", 8));
       expect(await policy.maxSlippageBps()).to.equal(100);
       expect(await policy.maxBountyBps()).to.equal(40);
-      expect(await policy.normalAsterBps()).to.equal(7000);
-      expect(await policy.guardedAsterBps()).to.equal(9000);
-      expect(await policy.drawdownAsterBps()).to.equal(10000);
+      expect(await policy.normalWDKBps()).to.equal(7000);
+      expect(await policy.guardedWDKBps()).to.equal(9000);
+      expect(await policy.drawdownWDKBps()).to.equal(10000);
     });
 
     it("should validate monotonic allocation constraints", async function () {
       const RiskPolicy = await ethers.getContractFactory("RiskPolicy");
 
-      // guardedAsterBps < normalAsterBps should fail (Aster must be non-decreasing with risk)
+      // guardedWDKBps < normalWDKBps should fail (WDK must be non-decreasing with risk)
       await expect(
         RiskPolicy.deploy(
           300,
@@ -1201,7 +1201,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
           ).to.be.reverted;
         });
 
-      // drawdownAsterBps < guardedAsterBps should fail
+      // drawdownWDKBps < guardedWDKBps should fail
       await expect(
         RiskPolicy.deploy(
           300,
@@ -1535,7 +1535,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
         token,
         vault,
         engine,
-        asterAdapter,
+        wdkAdapter,
         secondaryAdapter,
         lpAdapter,
         oracle,
@@ -1557,11 +1557,11 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
 
       await (await engine.executeCycle()).wait();
 
-      let aster = await asterAdapter.managedAssets();
+      let wdk = await wdkAdapter.managedAssets();
       let secondary = await secondaryAdapter.managedAssets();
       const lpAdapterAddr = await vault.lpAdapter();
       let lp = await (await ethers.getContractAt("ManagedAdapter", lpAdapterAddr)).managedAssets();
-      let total = aster + secondary + lp;
+      let total = wdk + secondary + lp;
       expect(total).to.be.closeTo(totalBefore, ethers.parseUnits("5", 18));
 
       await (await oracle.setPrice(ethers.parseUnits("1.03", 8))).wait();
@@ -1569,10 +1569,10 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       await ethers.provider.send("evm_mine", []);
       await (await engine.executeCycle()).wait();
 
-      aster = await asterAdapter.managedAssets();
-      expect(aster).to.be.greaterThan(ethers.parseUnits("700", 18));
+      wdk = await wdkAdapter.managedAssets();
+      expect(wdk).to.be.greaterThan(ethers.parseUnits("700", 18));
 
-      await (await token.mint(await asterAdapter.getAddress(), ethers.parseUnits("10000", 18))).wait();
+      await (await token.mint(await wdkAdapter.getAddress(), ethers.parseUnits("10000", 18))).wait();
       await (await token.mint(await secondaryAdapter.getAddress(), ethers.parseUnits("10000", 18))).wait();
       await (await token.mint(await lpAdapter.getAddress(), ethers.parseUnits("10000", 18))).wait();
 

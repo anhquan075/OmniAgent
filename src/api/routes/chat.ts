@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { streamText, createUIMessageStream, createUIMessageStreamResponse, UIMessage } from 'ai';
+import { streamText, createUIMessageStream, createUIMessageStreamResponse, UIMessage, generateId, convertToModelMessages, wrapLanguageModel } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { env } from '@/config/env';
 
@@ -8,6 +8,8 @@ import { appGraph } from '../../agent/services/AgentService';
 import { HumanMessage, AIMessage } from '@langchain/core/messages';
 
 import { loadChat, saveChat } from '../../utils/chat-store';
+import { cacheMiddleware } from '../middleware/cache';
+import { strategicGuardrail } from '../middleware/guardrails';
 
 const chat = new Hono();
 
@@ -20,7 +22,13 @@ chat.post('/', async (c) => {
     baseURL: process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
   });
 
-  const model = openai.chat(process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-001");
+  const baseModel = openai.chat(process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-001");
+  
+  // Apply Middleware: First check cache, then apply safety guardrails
+  const model = wrapLanguageModel({
+    model: baseModel,
+    middleware: [cacheMiddleware, strategicGuardrail]
+  });
 
   // Convert messages to LangChain format
   const langChainMessages = messages.map((m: any) => {
@@ -39,6 +47,14 @@ chat.post('/', async (c) => {
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       try {
+        // Assign a unique server-side ID for the upcoming assistant response
+        const assistantMessageId = generateId();
+
+        writer.write({
+          type: 'start',
+          messageId: assistantMessageId,
+        });
+
         // 1. Send initial status (transient)
         writer.write({
           type: 'data-notification',
@@ -65,11 +81,14 @@ chat.post('/', async (c) => {
           data: { status: 'Formulating Strategy', progress: 60 },
         });
 
-        // Get the last assistant message
-        const lastMsg = result.messages[result.messages.length - 1];
-        const text = typeof lastMsg.content === 'string' 
-          ? lastMsg.content 
-          : (Array.isArray(lastMsg.content) ? lastMsg.content.map((p: any) => p.text || '').join('') : '');
+        // Format the programmatic findings for the LLM context
+        const agentIntel = {
+          riskProfile: result.riskProfile,
+          strategyDecision: result.decision,
+          actionTaken: result.actionTaken,
+          transactionHash: result.txHash,
+          canExecute: result.canExecute
+        };
 
         // 3. Final completion status
         writer.write({
@@ -80,13 +99,46 @@ chat.post('/', async (c) => {
 
         const textStream = await streamText({
           model,
-          system: 'You are the TetherProof AFOS Strategist. Focus on USD₮ and XAU₮ yield optimization.',
-          messages: [{ role: 'assistant', content: text } as any],
+          temperature: 0, // Deterministic for consistent DeFi advisory
+          abortSignal: c.req.raw.signal,
+          system: `You are the TetherProof AFOS (Autonomous Fixed-income Optimization Strategy) Strategist. 
+Your core directive is yield optimization for USD₮ and XAU₮ assets via the Tether WDK (Wallet Development Kit) and ProofVault infrastructure.
+
+OPERATIONAL INTEL:
+${JSON.stringify(agentIntel, null, 2)}
+
+STANCE & PERSONA:
+- Professional, analytical, and security-focused DeFi strategist.
+- Use tactical terminology: "settlement rails", "buffer utilization", "ZK-risk bands", "drawdown bps", "cross-chain liquidity".
+- Synthesize the above OPERATIONAL INTEL with the user's request. 
+- If an action was taken (e.g., REBALANCED), provide the transaction hash details.
+- Always prioritize capital preservation and ZK-verified safety layers.`,
+          messages: await convertToModelMessages(messages),
         });
 
         // Merge the text generation stream into our UI stream
-        writer.merge(textStream.toUIMessageStream());
+        await writer.merge(textStream.toUIMessageStream({ sendStart: false }));
+
+        // 4. Send dynamic suggestions based on context
+        const suggestions = [
+          { label: 'Analyze Drawdown', prompt: 'Show me the Monte Carlo drawdown analysis for this strategy.' },
+          { label: 'Check Rails', prompt: 'Are the settlement rails active on Solana and TON?' },
+          { label: 'Verify ZK-Proof', prompt: 'Provide the latest ZK-risk band verification hash.' }
+        ];
+
+        if (agentIntel.actionTaken === 'REBALANCED') {
+          suggestions.push({ label: 'View Tx', prompt: `Show details for transaction ${agentIntel.transactionHash}` });
+        }
+
+        writer.write({
+          type: 'data-suggestions',
+          data: suggestions
+        });
       } catch (error: any) {
+        if (error.name === 'AbortError') {
+          console.log('Stream aborted by client');
+          return;
+        }
         console.error('Execution Error:', error);
         writer.write({
           type: 'data-notification',
@@ -96,7 +148,11 @@ chat.post('/', async (c) => {
       }
     },
     originalMessages: messages,
-    onFinish: ({ responseMessage }) => {
+    onFinish: ({ responseMessage, isAborted }) => {
+      if (isAborted) {
+        console.log('Chat stream aborted, skipping persistence');
+        return;
+      }
       // Create full message array including new AI response
       const allMessages = [...messages, responseMessage];
       saveChat({ chatId, messages: allMessages });

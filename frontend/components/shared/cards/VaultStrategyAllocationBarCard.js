@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PieChart } from "lucide-react";
-import { toSafeNumber, fmtBps, fmtUsdf } from "@/lib/vaultDisplayFormatters";
+import { toSafeNumber, fmtBps, fmtWdks } from "@/lib/vaultDisplayFormatters";
 import { formatUnits } from "ethers";
 
 function toBigIntSafe(v) {
@@ -12,7 +12,7 @@ function toBigIntSafe(v) {
 }
 
 export function VaultStrategyAllocationBarCard({
-  asterManagedAssets,
+  wdkManagedAssets,
   secondaryManagedAssets,
   lpManagedAssets,
   lpStakingInfo,
@@ -70,18 +70,18 @@ export function VaultStrategyAllocationBarCard({
     };
   }, [rpcUrl, vUSDTAddress]);
   const total = toSafeNumber(totalAssetsRaw) ?? 0;
-  const asterRaw = toBigIntSafe(asterManagedAssets);
+  const wdkRaw = toBigIntSafe(wdkManagedAssets);
   const secondaryRaw = toBigIntSafe(secondaryManagedAssets);
-  const pendingAsterRaw = toBigIntSafe(pendingWithdrawals?.totalAmount ?? 0n);
-  const asterStakedRaw =
-    asterRaw > pendingAsterRaw ? asterRaw - pendingAsterRaw : 0n;
+  const pendingWDKRaw = toBigIntSafe(pendingWithdrawals?.totalAmount ?? 0n);
+  const wdkStakedRaw =
+    wdkRaw > pendingWDKRaw ? wdkRaw - pendingWDKRaw : 0n;
   const bufferCurrentRaw = toBigIntSafe(bufferStatus?.current ?? 0n);
   const bufferRaw = secondaryRaw + bufferCurrentRaw;
-  const aster = toSafeNumber(asterManagedAssets) ?? 0;
+  const wdk = toSafeNumber(wdkManagedAssets) ?? 0;
   const lp = toSafeNumber(lpManagedAssets) ?? 0;
   const buffer = toSafeNumber(bufferRaw) ?? 0;
 
-  const asterPct = total > 0 ? Math.round((aster / total) * 100) : 0;
+  const wdkPct = total > 0 ? Math.round((wdk / total) * 100) : 0;
   const lpPct = total > 0 ? Math.round((lp / total) * 100) : 0;
   const bufferPct = total > 0 ? Math.round((buffer / total) * 100) : 0;
 
@@ -95,9 +95,9 @@ export function VaultStrategyAllocationBarCard({
 
       <div className="allocationBar">
         <div
-          className="allocationSegment allocationSegment--aster"
-          style={{ width: `${asterPct}%` }}
-          title={`AsterDEX ${asterPct}%`}
+          className="allocationSegment allocationSegment--wdk"
+          style={{ width: `${wdkPct}%` }}
+          title={`WDKDEX ${wdkPct}%`}
         />
         <div
           className="allocationSegment allocationSegment--lp"
@@ -111,8 +111,8 @@ export function VaultStrategyAllocationBarCard({
         />
       </div>
       <div className="allocationLegend">
-        <span className="allocationLegendItem allocationLegendItem--aster">
-          AsterDEX {asterPct}%
+        <span className="allocationLegendItem allocationLegendItem--wdk">
+          WDKDEX {wdkPct}%
         </span>
         <span className="allocationLegendItem allocationLegendItem--lp">
           StableSwap LP {lpPct}%
@@ -134,26 +134,26 @@ export function VaultStrategyAllocationBarCard({
         </thead>
         <tbody>
           <tr>
-            <td>AsterDEX</td>
-            <td>{fmtUsdf(asterManagedAssets)}</td>
-            <td>{fmtUsdf(asterStakedRaw)}</td>
-            <td>{fmtUsdf(pendingAsterRaw)}</td>
+            <td>WDKDEX</td>
+            <td>{fmtWdks(wdkManagedAssets)}</td>
+            <td>{fmtWdks(wdkStakedRaw)}</td>
+            <td>{fmtWdks(pendingWDKRaw)}</td>
             <td>0.0000</td>
           </tr>
           <tr>
             <td>StableSwap LP</td>
-            <td>{fmtUsdf(lpManagedAssets)}</td>
-            <td>{fmtUsdf(lpStakingInfo?.staked ?? 0n)}</td>
-            <td>{fmtUsdf(lpStakingInfo?.unstaked ?? 0n)}</td>
+            <td>{fmtWdks(lpManagedAssets)}</td>
+            <td>{fmtWdks(lpStakingInfo?.staked ?? 0n)}</td>
+            <td>{fmtWdks(lpStakingInfo?.unstaked ?? 0n)}</td>
             <td>{`${parseFloat(
               formatUnits(lpStakingInfo?.pending ?? 0n, 18)
             ).toFixed(4)} CAKE`}</td>
           </tr>
           <tr>
             <td>Buffer (vUSDT)</td>
-            <td>{fmtUsdf(bufferRaw)}</td>
-            <td>{fmtUsdf(secondaryRaw)}</td>
-            <td>{fmtUsdf(bufferCurrentRaw)}</td>
+            <td>{fmtWdks(bufferRaw)}</td>
+            <td>{fmtWdks(secondaryRaw)}</td>
+            <td>{fmtWdks(bufferCurrentRaw)}</td>
             <td>0.0000</td>
           </tr>
         </tbody>
@@ -171,10 +171,10 @@ export function VaultStrategyAllocationBarCard({
           </thead>
           <tbody>
             <tr>
-              <td>AsterDEX Target BPS</td>
-              <td>{fmtBps(algoMetrics?.normalAsterBps)}</td>
-              <td>{fmtBps(algoMetrics?.guardedAsterBps)}</td>
-              <td>{fmtBps(algoMetrics?.drawdownAsterBps)}</td>
+              <td>WDKDEX Target BPS</td>
+              <td>{fmtBps(algoMetrics?.normalWDKBps)}</td>
+              <td>{fmtBps(algoMetrics?.guardedWDKBps)}</td>
+              <td>{fmtBps(algoMetrics?.drawdownWDKBps)}</td>
             </tr>
           </tbody>
         </table>
@@ -231,7 +231,7 @@ export function VaultStrategyAllocationBarCard({
           <span style={{ color: "var(--text-muted)" }}>Active Protocols</span>
           <span style={{ color: "var(--text)", fontWeight: 600 }}>
             {[
-              asterPct > 0 && "AsterDEX",
+              wdkPct > 0 && "WDKDEX",
               lpPct > 0 && "StableSwap LP",
               bufferPct > 0 && "Buffer",
             ]

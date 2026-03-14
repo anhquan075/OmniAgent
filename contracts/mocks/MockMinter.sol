@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 /// @title MockMinter
-/// @notice Mock implementation of AsterDEX minter for testing AsterEarnAdapter
+/// @notice Mock implementation of WDKDEX minter for testing WDKEarnAdapter
 contract MockMinter {
     mapping(address => uint256) public balances;
 

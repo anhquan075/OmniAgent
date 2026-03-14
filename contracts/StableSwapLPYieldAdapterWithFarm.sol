@@ -13,13 +13,13 @@ import {IPancakeRouter} from "./interfaces/IPancakeRouter.sol";
 
 /// @title StableSwapLPYieldAdapterWithFarm
 /// @notice 3rd yield rail: deposits USDT into PCS StableSwap pool, stakes LP in MasterChef, harvests CAKE rewards.
-/// @dev Coin index 0 = USDF, 1 = USDT in the PCS pool.
+/// @dev Coin index 0 = WDKS, 1 = USDT in the PCS pool.
 ///      Implements full "robot route": LP deposit → MasterChef staking → CAKE harvest → swap → redeploy.
 ///
 ///      SECURITY NOTE: harvestRewards() is permissionless — anyone may trigger it.
 ///      All harvested USDT is forwarded to vault, never to the caller.
 ///      This is intentional: StrategyEngine calls it via low-level call during executeCycle().
-/// @custom:security-contact security@asterpilot.xyz
+/// @custom:security-contact security@wdkpilot.xyz
 contract StableSwapLPYieldAdapterWithFarm is Ownable2Step, ReentrancyGuard, IManagedAdapter {
     using SafeERC20 for IERC20;
 

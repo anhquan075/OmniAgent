@@ -28,7 +28,7 @@ stats.get('/', async (c) => {
       })),
       breaker.isPaused().catch(() => false),
       engine.canExecute().catch(() => [false, "0x00"]),
-      engine.previewDecision().catch(() => ({ targetAsterBps: 0, state: 0 })),
+      engine.previewDecision().catch(() => ({ targetWDKBps: 0, state: 0 })),
       usdt.balanceOf(vault.getAddress()).catch(() => 0n)
     ]);
 
@@ -55,7 +55,7 @@ stats.get('/', async (c) => {
         executeReason: typeof executeReason === 'string' && executeReason.startsWith('0x') && executeReason.length > 2 
           ? (executeReason === '0x00' ? 'NONE' : (function() { try { return ethers.decodeBytes32String(executeReason); } catch { return 'UNKNOWN'; } })()) 
           : 'UNKNOWN',
-        targetAsterBps: Number(preview.targetAsterBps),
+        targetWDKBps: Number(preview.targetWDKBps),
         state: Number(preview.state)
       },
       timestamp: Date.now()

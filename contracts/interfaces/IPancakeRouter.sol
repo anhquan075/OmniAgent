@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 /// @title IPancakeRouter — PancakeSwap V2/V3 Router interface for token swaps
-/// @notice Minimal interface for swapping USDT → USDF and CAKE → USDT
+/// @notice Minimal interface for swapping USDT → WDKS and CAKE → USDT
 interface IPancakeRouter {
     /// @notice Swap exact tokens for tokens with deadline protection
     /// @param amountIn Exact amount of input tokens

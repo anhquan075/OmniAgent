@@ -136,7 +136,7 @@
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "targetAsterBps",
+          "name": "targetWDKBps",
           "type": "uint256"
         },
         {
@@ -582,7 +582,7 @@
             },
             {
               "internalType": "uint256",
-              "name": "targetAsterBps",
+              "name": "targetWDKBps",
               "type": "uint256"
             },
             {
@@ -707,7 +707,7 @@
         },
         {
           "internalType": "uint256",
-          "name": "asterBps",
+          "name": "wdkBps",
           "type": "uint256"
         },
         {
@@ -765,7 +765,7 @@
       "name": "vault",
       "outputs": [
         {
-          "internalType": "contract ProofVault",
+          "internalType": "contract WDKVault",
           "name": "",
           "type": "address"
         }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Gavel } from "lucide-react";
 
 import { executionAuctionAbi, erc20Abi } from "@/lib/abi";
-import { fmtUsdf } from "@/lib/vaultDisplayFormatters";
+import { fmtWdks } from "@/lib/vaultDisplayFormatters";
 
 const PHASE_LABELS = ["NotOpen", "BidPhase", "ExecutePhase", "FallbackPhase"];
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
@@ -372,11 +372,11 @@ export function VaultExecutionAuctionRraBidCard({
         ? roundStatus.winningBid
         : null;
     if (!base || !auctionParams.minBidIncrementBps)
-      return fmtUsdf(auctionParams.minBid);
+      return fmtWdks(auctionParams.minBid);
     // base * (10000 + minBidIncrementBps) / 10000
     const inc =
       (base * (10000n + BigInt(auctionParams.minBidIncrementBps))) / 10000n;
-    return fmtUsdf(inc);
+    return fmtWdks(inc);
   })();
 
   return (
@@ -534,7 +534,7 @@ export function VaultExecutionAuctionRraBidCard({
               label="Execute Window"
               value={fmtMinutes(auctionParams.executeWindow)}
             />
-            <InfoRow label="Min Bid" value={fmtUsdf(auctionParams.minBid)} />
+            <InfoRow label="Min Bid" value={fmtWdks(auctionParams.minBid)} />
             <InfoRow
               label="Min Bid Increment"
               value={
@@ -583,7 +583,7 @@ export function VaultExecutionAuctionRraBidCard({
                 Lifetime bid revenue
               </span>
               <span style={{ color: "var(--accent)", fontWeight: 600 }}>
-                {fmtUsdf(auctionStats.bidRevenue)}
+                {fmtWdks(auctionStats.bidRevenue)}
               </span>
             </div>
           )}
@@ -603,7 +603,7 @@ export function VaultExecutionAuctionRraBidCard({
         >
           <InfoRow
             label="Winning bid"
-            value={fmtUsdf(roundStatus?.winningBid)}
+            value={fmtWdks(roundStatus?.winningBid)}
           />
           <InfoRow
             label="Winner"
@@ -629,7 +629,7 @@ export function VaultExecutionAuctionRraBidCard({
           {auctionStats?.bidRevenue != null && (
             <InfoRow
               label="Lifetime bid revenue"
-              value={fmtUsdf(auctionStats.bidRevenue)}
+              value={fmtWdks(auctionStats.bidRevenue)}
             />
           )}
           {minNextBid && phase === 1 && (
@@ -703,7 +703,7 @@ export function VaultExecutionAuctionRraBidCard({
         )}
         {hasPendingRefund && (
           <button onClick={handleClaimRefund} disabled={isBusy || !canOperate}>
-            Claim Refund ({fmtUsdf(pendingRefund)})
+            Claim Refund ({fmtWdks(pendingRefund)})
           </button>
         )}
       </div>
