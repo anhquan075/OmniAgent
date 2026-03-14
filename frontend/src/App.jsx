@@ -3,6 +3,7 @@ import { ShieldAlertIcon, ActivityIcon, CoinsIcon, BarChart3Icon, ZapIcon, Walle
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { ChatContainer } from "../components/chat/ChatContainer";
@@ -28,36 +29,39 @@ const BentoCard = ({ title, icon: Icon, children, className = "" }) => (
   </div>
 );
 
+const INITIAL_SESSION_ID = 'session-' + Date.now();
+
 export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAssetSelectorOpen, setIsAssetSelectorOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState(null);
   const { address, isConnected } = useAccount();
 
+  // Local state for input as per modern ai-sdk best practices
+  const [input, setInput] = useState('');
+
   // Live Stats Fetching
-  const { data: stats, isLoading: isStatsLoading } = useQuery({
+  const { data: stats } = useQuery({
     queryKey: ['agent-stats'],
     queryFn: async () => {
       const res = await fetch('/api/stats');
       if (!res.ok) throw new Error('Stats fetch failed');
       return res.json();
     },
-    refetchInterval: 10000, // Poll every 10s
+    refetchInterval: 10000,
   });
 
-  const agentState = stats?.system?.isPaused ? 'IDLE' : (stats?.system?.canExecute ? 'EXECUTING' : 'SCANNING');
+  const agentState = stats?.system?.isPaused ? 'IDLE' : (stats?.system?.canExecute ? 'EXECUTING' : (stats?.system ? 'SCANNING' : 'IDLE'));
   
-  // Chat Session Management
-  const initialSessionId = 'session-' + Date.now();
   const [sessions, setSessions] = useState([
-    { id: initialSessionId, title: 'Strategy Setup', lastMessage: 'WDK Monitoring Active', timestamp: new Date() }
+    { id: INITIAL_SESSION_ID, title: 'Strategy Setup', lastMessage: 'WDK Monitoring Active', timestamp: new Date() }
   ]);
-  const [activeSessionId, setActiveSessionId] = useState(initialSessionId);
+  const [activeSessionId, setActiveSessionId] = useState(INITIAL_SESSION_ID);
 
-  const initialUpdatedRef = useRef(false);
-
-  const { messages, input, setInput, append, isLoading, setMessages, data, handleSubmit } = useChat({
-    api: '/api/chat',
+  const { messages, sendMessage, status, setMessages, data, stop, regenerate, error } = useChat({
+    transport: new DefaultChatTransport({
+      api: '/api/chat',
+    }),
     id: activeSessionId,
     initialMessages: [
       {
@@ -65,33 +69,60 @@ export default function App() {
         role: "assistant",
         content: "System initialized. I am your **Tether WDK Strategist**. I am currently monitoring cross-chain liquidity for USD₮ and XAU₮ yield optimization.",
       }
-    ]
+    ],
+    onData: (dataPart) => {
+      if (dataPart.type === 'data-notification') {
+        console.log(`[Notification] ${dataPart.data.level}: ${dataPart.data.message}`);
+      }
+    },
+    onError: (err) => {
+      console.error("[App] useChat Error:", err);
+    }
   });
 
-  // Manual fallback for initial messages if useChat fails to set them
-  useEffect(() => {
-    if (messages.length === 0) {
-      console.log("[App] Manually initializing messages...");
-      setMessages([
-        {
-          id: "initial-1",
-          role: "assistant",
-          content: "System initialized. I am your **Tether WDK Strategist**. I am currently monitoring cross-chain liquidity for USD₮ and XAU₮ yield optimization.",
-        }
-      ]);
-    }
-  }, [messages.length, setMessages]);
+  const isLoading = status === 'submitted' || status === 'streaming';
 
-  console.log("[App] Active Session ID:", activeSessionId);
-  console.log("[App] Messages Count:", messages.length);
-  console.log("[App] First Message ID:", messages[0]?.id);
+  // Fetch chat history when session changes
+  useEffect(() => {
+    let isMounted = true;
+    const loadHistory = async () => {
+      try {
+        const res = await fetch(`/api/chat/${activeSessionId}`);
+        if (res.ok) {
+          const history = await res.json();
+          if (isMounted && history && history.length > 0) {
+            setMessages(history);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load chat history", err);
+      }
+      // Fallback to initial message if no history
+      if (isMounted && messages.length === 0 && status === 'ready') {
+        setMessages([
+          {
+            id: "initial-" + activeSessionId,
+            role: "assistant",
+            content: "System initialized. I am your **Tether WDK Strategist**. I am currently monitoring cross-chain liquidity for USD₮ and XAU₮ yield optimization.",
+          }
+        ]);
+      }
+    };
+    
+    // Only load if not already populated correctly
+    loadHistory();
+    
+    return () => { isMounted = false; };
+  }, [activeSessionId, setMessages, status]);
+
+  const initialUpdatedRef = useRef(false);
 
   // Update initial message when wallet connects or stats arrive
   useEffect(() => {
-    // Only update if we are in the initial state (1 message) and haven't updated yet in this connection
     if (isConnected && address && messages.length === 1 && messages[0].id === "initial-1" && !initialUpdatedRef.current) {
-      const portfolioMsg = stats 
-        ? ` My sensors indicate a total vault value of **${stats.vault.totalAssets} USD₮** with **${stats.risk.drawdownBps / 100}%** expected drawdown.`
+      const portfolioMsg = stats?.vault?.totalAssets 
+        ? ` My sensors indicate a total vault value of **${stats.vault.totalAssets} USD₮** with **${(stats.risk?.drawdownBps || 0) / 100}%** expected drawdown.`
         : "";
 
       initialUpdatedRef.current = true;
@@ -114,16 +145,10 @@ export default function App() {
     const newId = Date.now().toString();
     const newSession = { id: newId, title: 'New Command', lastMessage: 'No commands yet', timestamp: new Date() };
     
-    // 1. Update sessions first
     setSessions(prev => [newSession, ...prev]);
-    
-    // 2. Set the active ID
     setActiveSessionId(newId);
-    
-    // 3. Reset the "updated" flag so the first message effect can run for the new session
     initialUpdatedRef.current = false;
     
-    // 4. Clear current messages and set the new initial one
     setMessages([
       {
         id: "initial-" + newId,
@@ -140,41 +165,52 @@ export default function App() {
     if (messages.length > 1) {
       const lastMsg = messages[messages.length - 1];
       if (lastMsg.role === 'user') {
-        setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, lastMessage: lastMsg.content } : s));
+        let content = "Command sent";
+        if (typeof lastMsg.content === 'string') {
+          content = lastMsg.content;
+        } else if (lastMsg.parts) {
+          content = lastMsg.parts
+            .filter((p) => p.type === 'text')
+            .map((p) => p.text)
+            .join('');
+        }
+        setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, lastMessage: content } : s));
       }
     }
   }, [messages, activeSessionId]);
 
-  const sendMessage = async (content) => {
-    console.log("Sending message:", content);
+  const onInputChange = (e) => {
+    setInput(e.target.value);
+  };
+
+  const onHandleSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!input.trim() || status !== 'ready') return;
+
+    const text = input.trim();
+    setInput('');
+    
     try {
-      // Clear input and send via append (more control than handleSubmit for non-event triggers)
-      await append({
-        role: 'user',
-        content
-      });
-    } catch (error) {
-      console.error("Failed to send message:", error);
+      await sendMessage({ text });
+    } catch (err) {
+      console.error("[App] Failed to send message:", err);
     }
   };
 
   return (
-    <div className="h-screen w-full bg-space-black text-white font-sans flex items-center justify-center selection:bg-tether-teal/30">
+    <div className="h-screen w-full bg-space-black text-white font-sans flex flex-col items-center selection:bg-tether-teal/30 overflow-hidden">
       
-      {/* Background Ambient Effects */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] bg-tether-teal/5 rounded-full blur-[120px] animate-float"></div>
         <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] bg-xaut-gold/5 rounded-full blur-[120px] animate-float" style={{ animationDelay: '2s' }}></div>
       </div>
 
-      {/* Main Unified Shell */}
-      <div className="w-full max-w-[2200px] h-full flex flex-col relative z-10 p-3 md:p-6 overflow-hidden">
+      <div className="w-full h-full flex flex-col relative z-10 p-3 md:p-6 overflow-hidden">
         
-        {/* Global Header */}
         <header className="h-16 md:h-20 flex-shrink-0 flex items-center justify-between px-4 md:px-6 glass rounded-2xl border border-white/10 mb-4 md:mb-6 shadow-glow-sm relative z-50">
           <div className="flex items-center gap-3 md:gap-4">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-space-black flex items-center justify-center shadow-glow-md overflow-hidden border border-tether-teal/20">
-              <img src="/imgs/logo.png" alt="ProofVault Logo" className="w-full h-full object-cover" />
+              <img src="/imgs/logo.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col">
               <h1 className="text-sm md:text-lg font-heading font-bold tracking-tight bg-clip-text text-transparent bg-[linear-gradient(135deg,#26A17B,#00D1FF)] uppercase truncate max-w-[150px] md:max-w-none">TetherProof WDK</h1>
@@ -205,15 +241,13 @@ export default function App() {
           </div>
         </header>
 
-        {/* Responsive Layout Container */}
-        <div className="flex-1 flex flex-col lg:flex-row gap-4 md:gap-6 min-h-0 overflow-hidden relative">
-          
-          {/* Column 1: Monitoring (Hidden on small mobile unless toggled) */}
+        <div className="flex-1 flex flex-col lg:flex-row gap-4 md:gap-6 relative overflow-hidden">
+
+          {/* Column 1: Monitoring */}
           <div className={`
             ${isMobileMenuOpen ? 'fixed inset-0 top-[88px] z-40 bg-space-black/95 p-6 overflow-y-auto' : 'hidden'} 
-            lg:relative lg:inset-auto lg:flex lg:flex-[2] lg:flex-col lg:gap-6 lg:min-w-0 lg:overflow-y-auto lg:custom-scrollbar lg:pr-1 lg:bg-transparent
+            lg:relative lg:inset-auto lg:flex lg:flex-[2] lg:flex-col lg:gap-6 lg:min-w-0 lg:min-h-0 lg:bg-transparent lg:overflow-hidden
           `}>
-            {/* Performance Card */}
             <BentoCard title="WDK Performance" icon={BarChart3Icon} className="h-[140px] shrink-0">
               <div className="flex flex-col h-full justify-center">
                 <div className="text-3xl md:text-4xl font-heading font-bold text-tether-teal">
@@ -229,8 +263,7 @@ export default function App() {
               </div>
             </BentoCard>
 
-            {/* History Sidebar - Moved inside this column for mobile toggle */}
-            <div className="flex-1 min-h-[300px] lg:min-h-0 glass-dark rounded-3xl overflow-hidden border border-white/10 relative mt-4 lg:mt-0">
+            <div className="flex-1 min-h-0 glass-dark rounded-3xl overflow-hidden border border-white/10 relative mt-4 lg:mt-0">
               <ChatHistorySidebar 
                 sessions={sessions}
                 activeSessionId={activeSessionId}
@@ -241,24 +274,30 @@ export default function App() {
             </div>
           </div>
 
-          {/* Column 2: Premium Agent Terminal (Main Column) */}
-          <div className={`flex-[6] flex flex-col min-w-0 glass-dark rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative ${isMobileMenuOpen ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
-            <div className="flex-1 overflow-hidden">
-              <ChatContainer 
-                messages={messages} 
-                isLoading={isLoading} 
+          {/* Column 2: Agent Terminal */}
+          <div className={`flex-[6] flex flex-col min-w-0 min-h-0 glass-dark rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative ${isMobileMenuOpen ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
+            <div className="flex-1 flex flex-col min-h-0">
+              <ChatContainer
+                messages={messages}
+                isLoading={isLoading}
+                status={status}
+                input={input}
+                handleInputChange={onInputChange}
+                handleSubmit={onHandleSubmit}
                 sendMessage={sendMessage}
+                setMessages={setMessages}
+                regenerate={regenerate}
+                error={error}
                 data={data}
               />
             </div>
           </div>
 
-          {/* Column 3: Operational State (Hidden on tablet/mobile unless toggled) */}
+          {/* Column 3: Operational State */}
           <div className={`
             ${isMobileMenuOpen ? 'hidden' : 'hidden'} 
-            xl:flex xl:flex-[2] xl:flex-col xl:gap-6 xl:min-w-0 xl:overflow-y-auto xl:custom-scrollbar xl:pl-1
+            xl:flex xl:flex-[2] xl:flex-col xl:gap-6 xl:min-w-0 xl:min-h-0 xl:overflow-hidden xl:pl-1
           `}>
-            {/* Portfolio Status Card */}
             <BentoCard title="WDK Portfolio" icon={WalletIcon} className="min-h-[220px] shrink-0">
               <div className="flex flex-col gap-6">
                 <WDKBalance amount={Number(stats?.vault?.totalAssets || 0)} symbol="USD₮" />
@@ -295,63 +334,62 @@ export default function App() {
               </div>
             </BentoCard>
 
-            {/* Settlement Rails (Responsive Grid) */}
-            <BentoCard title="Settlement Rails" icon={GlobeIcon} className="min-h-[280px] shrink-0">
-              <div className="grid grid-cols-2 gap-2 px-1">
-                {[
-                  { name: 'BNB', status: stats?.system?.isPaused ? 'Paused' : 'Online', color: stats?.system?.isPaused ? 'bg-red-500' : 'bg-neon-green', logo: '/coins/bnb.png' },
-                  { name: 'ETH', status: 'Online', color: 'bg-neon-green', logo: '/coins/eth.png' },
-                  { name: 'SOL', status: 'Online', color: 'bg-neon-green', logo: '/coins/sol.png' },
-                  { name: 'TON', status: 'Online', color: 'bg-neon-green', logo: '/coins/ton.png', isGasless: true },
-                  { name: 'POL', status: 'Online', color: 'bg-neon-green', logo: '/coins/pol.png' },
-                  { name: 'ARB', status: 'Optimal', color: 'bg-cyber-cyan', logo: '/coins/arb.png' }
-                ].map((rail) => (
-                  <div key={rail.name} className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-1.5 hover:bg-white/10 transition-all group relative">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <div className="w-5 h-5 rounded-full bg-black p-0.5 border border-white/5 flex items-center justify-center overflow-hidden flex-shrink-0 group-hover:scale-110 transition-transform">
-                          <img src={rail.logo} alt={rail.name} className="w-full h-full object-contain" />
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-6 pr-1">
+              <BentoCard title="Settlement Rails" icon={GlobeIcon} className="min-h-[280px] shrink-0">
+                <div className="grid grid-cols-2 gap-2 px-1">
+                  {[
+                    { name: 'BNB', status: stats?.system?.isPaused ? 'Paused' : 'Online', color: stats?.system?.isPaused ? 'bg-red-500' : 'bg-neon-green', logo: '/coins/bnb.png' },
+                    { name: 'ETH', status: 'Online', color: 'bg-neon-green', logo: '/coins/eth.png' },
+                    { name: 'SOL', status: 'Online', color: 'bg-neon-green', logo: '/coins/sol.png' },
+                    { name: 'TON', status: 'Online', color: 'bg-neon-green', logo: '/coins/ton.png', isGasless: true },
+                    { name: 'POL', status: 'Online', color: 'bg-neon-green', logo: '/coins/pol.png' },
+                    { name: 'ARB', status: 'Optimal', color: 'bg-cyber-cyan', logo: '/coins/arb.png' }
+                  ].map((rail) => (
+                    <div key={rail.name} className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-1.5 hover:bg-white/10 transition-all group relative">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <div className="w-5 h-5 rounded-full bg-black p-0.5 border border-white/5 flex items-center justify-center overflow-hidden flex-shrink-0 group-hover:scale-110 transition-transform">
+                            <img src={rail.logo} alt={rail.name} className="w-full h-full object-contain" />
+                          </div>
+                          <span className="text-[10px] font-bold text-white truncate">{rail.name}</span>
                         </div>
-                        <span className="text-[10px] font-bold text-white truncate">{rail.name}</span>
+                        <div className={`w-1 h-1 rounded-full ${rail.color} shadow-glow-sm flex-shrink-0`}></div>
                       </div>
-                      <div className={`w-1 h-1 rounded-full ${rail.color} shadow-glow-sm flex-shrink-0`}></div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[7px] text-neutral-gray uppercase tracking-tighter truncate">{rail.status}</span>
-                      {rail.isGasless && <ZapIcon className="w-2 h-2 text-neon-green fill-neon-green" />}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </BentoCard>
-
-            {/* Transactions Ledger */}
-            <BentoCard title="WDK Activity Log" icon={ActivityIcon} className="flex-1 min-h-[300px]">
-              <div className="w-full overflow-hidden">
-                <div className="flex flex-col gap-3">
-                  {stats?.system?.canExecute ? (
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-cyber-cyan/10 border border-cyber-cyan/20 animate-pulse">
-                      <div className="flex items-center gap-3">
-                        <ZapIcon className="w-3 h-3 text-cyber-cyan" />
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-bold uppercase">Rebalance Ready</span>
-                          <span className="text-[8px] text-neutral-gray font-mono">Execute via Terminal</span>
-                        </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[7px] text-neutral-gray uppercase tracking-tighter truncate">{rail.status}</span>
+                        {rail.isGasless && <ZapIcon className="w-2 h-2 text-neon-green fill-neon-green" />}
                       </div>
                     </div>
-                  ) : (
-                    <div className="px-4 py-8 text-center border border-dashed border-white/5 rounded-xl">
-                      <span className="text-[9px] text-neutral-gray uppercase tracking-widest">Awaiting onchain events</span>
-                    </div>
-                  )}
+                  ))}
                 </div>
-              </div>
-            </BentoCard>
+              </BentoCard>
+
+              <BentoCard title="WDK Activity Log" icon={ActivityIcon} className="flex-1 min-h-[300px]">
+                <div className="w-full overflow-hidden">
+                  <div className="flex flex-col gap-3">
+                    {stats?.system?.canExecute ? (
+                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-cyber-cyan/10 border border-cyber-cyan/20 animate-pulse">
+                        <div className="flex items-center gap-3">
+                          <ZapIcon className="w-3 h-3 text-cyber-cyan" />
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-bold uppercase">Rebalance Ready</span>
+                            <span className="text-[8px] text-neutral-gray font-mono">Execute via Terminal</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="px-4 py-8 text-center border border-dashed border-white/5 rounded-xl">
+                        <span className="text-[9px] text-neutral-gray uppercase tracking-widest">Awaiting onchain events</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </BentoCard>
+            </div>
           </div>
 
         </div>
 
-        {/* Global Footer Status */}
         <footer className="h-10 md:h-12 flex-shrink-0 flex items-center justify-between mt-2 md:mt-4 px-2 opacity-40">
           <p className="text-[7px] md:text-[9px] font-heading tracking-[0.2em] md:tracking-[0.3em] text-neutral-gray uppercase truncate mr-4">
             Economic Infrastructure Powered by Tether WDK

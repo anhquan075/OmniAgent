@@ -5,7 +5,7 @@ import { SparklesIcon } from 'lucide-react';
 interface Message {
   id: string;
   role: string;
-  content: string;
+  content: any;
   toolInvocations?: any[];
   createdAt?: string | Date;
 }
@@ -14,9 +14,10 @@ interface ChatHistoryProps {
   messages: Message[];
 }
 
-export function ChatHistory({ messages }: ChatHistoryProps) {
+export function ChatHistory({ messages = [] }: ChatHistoryProps) {
+  console.log("[ChatHistory] Rendering with messages:", Array.isArray(messages) ? messages.length : 'not an array');
   return (
-    <div className="flex flex-col space-y-2">
+    <div className="flex flex-col space-y-2 border-2 border-cyan-500 min-h-[100px]">
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-center space-y-5 my-auto mt-24 opacity-80">
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-tether-teal/20 to-transparent border border-tether-teal/30 flex items-center justify-center shadow-[0_0_30px_rgba(38,161,123,0.1)] overflow-hidden">
@@ -37,6 +38,7 @@ export function ChatHistory({ messages }: ChatHistoryProps) {
               <RichMessage 
                 role={msg.role} 
                 content={msg.content} 
+                parts={(msg as any).parts}
                 toolInvocations={msg.toolInvocations}
                 timestamp={msg.createdAt}
               />

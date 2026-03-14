@@ -7,7 +7,14 @@ import { CpuIcon, ZapIcon, ShieldCheckIcon, BarChart3Icon, BrainCircuitIcon } fr
 interface ChatContainerProps {
   messages: any[];
   isLoading?: boolean;
-  sendMessage: (msg: string) => Promise<void>;
+  status: 'submitted' | 'streaming' | 'ready' | 'error';
+  input: string;
+  handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement> | React.ChangeEvent<HTMLInputElement>) => void;
+  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  sendMessage: (message: { text: string }) => Promise<void>;
+  setMessages: React.Dispatch<React.SetStateAction<any[]>>;
+  regenerate: () => Promise<void>;
+  error?: Error;
   data?: any[];
 }
 
@@ -18,18 +25,47 @@ const SUGGESTED_ACTIONS = [
   { label: 'Harvest Yield', icon: CpuIcon, prompt: 'Check for available yield to harvest.' },
 ];
 
-export function ChatContainer({ messages, sendMessage, isLoading, data }: ChatContainerProps) {
+export function ChatContainer({ 
+  messages, 
+  isLoading, 
+  status,
+  input, 
+  handleInputChange, 
+  handleSubmit, 
+  sendMessage, 
+  setMessages,
+  regenerate,
+  error,
+  data 
+}: ChatContainerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Get the latest status from the stream data
-  const latestStatus = data?.filter(d => d.type === 'status' || d.type === 'progress').pop();
+  // Extract real-time status from data parts in the last message
+  const currentAgentStatus = React.useMemo(() => {
+    if (status !== 'submitted' && status !== 'streaming') return null;
+    
+    // Find the latest status data part across all messages (usually the last one)
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const parts = (messages[i] as any).parts;
+      if (parts && Array.isArray(parts)) {
+        const statusPart = parts.find((p: any) => p.type === 'data-status');
+        if (statusPart) return statusPart.data;
+      }
+    }
+    return null;
+  }, [messages, status]);
 
-  // Auto-scroll to bottom on new messages or streaming content
+  // Auto-scroll to bottom on new messages or streaming content if user is near the bottom
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100; // 100px threshold
+      
+      if (isNearBottom) {
+        scrollRef.current.scrollTop = scrollHeight;
+      }
     }
-  }, [messages, isLoading, messages.map(m => m.content).join(''), latestStatus]);
+  }, [messages, isLoading, error]);
 
   return (
     <div className="flex flex-col h-full w-full rounded-2xl overflow-hidden bg-[#0B0E14]/80 backdrop-blur-xl border border-white/10 shadow-2xl shadow-tether-teal/5 relative">
@@ -51,6 +87,23 @@ export function ChatContainer({ messages, sendMessage, isLoading, data }: ChatCo
         </div>
         
         <div className="flex items-center gap-4">
+          {/* Progress Bar for Agent Thinking */}
+          {currentAgentStatus && (
+            <div className="flex flex-col items-end mr-4 min-w-[100px]">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[7px] font-heading text-tether-teal uppercase tracking-widest animate-pulse">{currentAgentStatus.status}</span>
+                <span className="text-[7px] font-mono text-gray-400">{currentAgentStatus.progress}%</span>
+              </div>
+              <div className="w-full h-0.5 bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
+                  className="h-full bg-tether-teal shadow-glow-sm"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${currentAgentStatus.progress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col items-end mr-2">
             <span className="text-[7px] font-heading text-neutral-gray uppercase tracking-widest">Autonomous Feed</span>
             <div className="flex items-center gap-1.5">
@@ -75,14 +128,40 @@ export function ChatContainer({ messages, sendMessage, isLoading, data }: ChatCo
         className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth scrollbar-none custom-scrollbar"
       >
         <ChatHistory messages={messages} />
-        {isLoading && !latestStatus && (
+        {isLoading && (
           <div className="flex items-center gap-2 text-gray-400 font-sans text-sm animate-pulse ml-2 mt-4">
             <div className="flex gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-tether-teal)] animate-bounce" style={{ animationDelay: '0ms' }} />
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-tether-teal)] animate-bounce" style={{ animationDelay: '150ms' }} />
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-tether-teal)] animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
-            <span className="tracking-widest text-[9px] uppercase font-heading text-[var(--color-tether-teal)]/60 ml-2">Neural Link Active...</span>
+            <span className="tracking-widest text-[9px] uppercase font-heading text-[var(--color-tether-teal)]/60 ml-2">
+              {currentAgentStatus ? `Strategist: ${currentAgentStatus.status}...` : "Neural Link Active..."}
+            </span>
+          </div>
+        )}
+
+        {error && (
+          <div className="mx-2 mt-4 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 animate-in fade-in slide-in-from-top-2 duration-500">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 rounded-lg bg-red-500/20 text-red-400">
+                <BrainCircuitIcon className="w-4 h-4" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-heading font-bold text-red-400 uppercase tracking-widest">Neural Link Severed</span>
+                <span className="text-[9px] text-red-400/60 font-mono">CODE: {error.name || 'UNKNOWN_ERR'}</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-300 mb-4 leading-relaxed">
+              {error.message || "An unexpected error occurred in the autonomous strategy bridge. Connection state unstable."}
+            </p>
+            <button
+              onClick={() => regenerate()}
+              className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[10px] font-heading font-bold transition-all shadow-glow-sm flex items-center gap-2 uppercase tracking-widest"
+            >
+              <ZapIcon className="w-3 h-3" />
+              Reconnect & Retry
+            </button>
           </div>
         )}
       </div>
@@ -95,7 +174,7 @@ export function ChatContainer({ messages, sendMessage, isLoading, data }: ChatCo
             {SUGGESTED_ACTIONS.map((action) => (
               <button
                 key={action.label}
-                onClick={() => sendMessage(action.prompt)}
+                onClick={() => sendMessage({ text: action.prompt })}
                 className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[9px] font-heading tracking-widest text-neutral-gray-light hover:bg-tether-teal/10 hover:border-tether-teal/30 hover:text-tether-teal transition-all duration-300"
               >
                 <action.icon className="w-3 h-3" />
@@ -105,7 +184,12 @@ export function ChatContainer({ messages, sendMessage, isLoading, data }: ChatCo
           </div>
         )}
         
-        <MessageInput onSend={sendMessage} disabled={isLoading} />
+        <MessageInput 
+          input={input}
+          handleInputChange={handleInputChange}
+          handleSubmit={handleSubmit}
+          status={status}
+        />
       </div>
     </div>
   );

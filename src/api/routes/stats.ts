@@ -8,24 +8,31 @@ stats.get('/', async (c) => {
   try {
     const { vault, zkOracle, breaker, engine, usdt } = getContracts();
 
-    // Fetch in parallel
+    // Fetch in parallel with individual error handling
     const [
       totalAssets,
       bufferStatus,
       riskMetrics,
       isPaused,
-      [canExecute, executeReason],
+      executionStatus,
       preview,
       usdtBalance
     ] = await Promise.all([
-      vault.totalAssets(),
-      vault.bufferStatus(),
-      zkOracle.getVerifiedRiskBands(),
-      breaker.isPaused(),
-      engine.canExecute(),
-      engine.previewDecision(),
-      usdt.balanceOf(await vault.getAddress())
+      vault.totalAssets().catch(() => 0n),
+      vault.bufferStatus().catch(() => ({ utilizationBps: 0n, current: 0n, target: 0n })),
+      zkOracle.getVerifiedRiskBands().catch(() => ({
+        monteCarloDrawdownBps: 0,
+        verifiedSharpeRatio: 0,
+        timestamp: Math.floor(Date.now() / 1000),
+        recommendedBufferBps: 500
+      })),
+      breaker.isPaused().catch(() => false),
+      engine.canExecute().catch(() => [false, "0x00"]),
+      engine.previewDecision().catch(() => ({ targetAsterBps: 0, state: 0 })),
+      usdt.balanceOf(vault.getAddress()).catch(() => 0n)
     ]);
+
+    const [canExecute, executeReason] = executionStatus;
 
     // Format results
     const response = {
@@ -45,7 +52,9 @@ stats.get('/', async (c) => {
       system: {
         isPaused,
         canExecute,
-        executeReason: ethers.decodeBytes32String(executeReason),
+        executeReason: typeof executeReason === 'string' && executeReason.startsWith('0x') && executeReason.length > 2 
+          ? (executeReason === '0x00' ? 'NONE' : (function() { try { return ethers.decodeBytes32String(executeReason); } catch { return 'UNKNOWN'; } })()) 
+          : 'UNKNOWN',
         targetAsterBps: Number(preview.targetAsterBps),
         state: Number(preview.state)
       },

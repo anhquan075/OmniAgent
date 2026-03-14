@@ -97,42 +97,15 @@ Commit directly to `main` only with explicit user approval via `AskUserQuestion`
 
 ---
 
-## Polkadot Hub (Asset Hub) Deployment Playbook
-
-**Required for Hackathon submission.**
-
-### Step 1 — Deploy full stack
-```bash
-npx hardhat run scripts/deploy-polkadot-hub-full-stack.js --network polkadotHubTestnet
-```
-This saves addresses to `frontend/lib/polkadotHubAddresses.json`.
-
-### Step 2 — Seed reserves
-```bash
-npx hardhat run scripts/seed-polkadot-hub-reserves.js --network polkadotHubTestnet
-```
-
-### Step 3 — Initial deposit
-```bash
-npx hardhat run scripts/seed-polkadot-hub-vault-deposit.js --network polkadotHubTestnet
-```
-
-### Step 4 — Verify full cycle
-```bash
-npx hardhat run scripts/verify-polkadot-hub-stack.js --network polkadotHubTestnet
-```
-
----
-
 ## Testnet Quick-Reference
 
-| Item               | Polkadot Hub (Paseo)                                      | BNB Chain Testnet                                         |
-| ------------------ | --------------------------------------------------------- | --------------------------------------------------------- |
-| Chain ID           | 420420417                                                 | 97                                                        |
-| Deploy script      | `scripts/deploy-polkadot-hub-full-stack.js`               | `scripts/deploy-testnet-full-stack-with-mocks.js`         |
-| Router seed script | `scripts/seed-polkadot-hub-reserves.js`                   | `scripts/seed-mock-pancake-router-usdt-usdf-reserves.js`  |
-| Vault seed script  | `scripts/seed-polkadot-hub-vault-deposit.js`              | `scripts/seed-testnet-vault-deposit.js`                   |
-| Frontend addresses | `frontend/lib/polkadotHubAddresses.json`                  | `frontend/lib/contractAddresses.js` → `V2_TESTNET_PRESET` |
+| Item               | BNB Chain Testnet                                         |
+| ------------------ | --------------------------------------------------------- |
+| Chain ID           | 97                                                        |
+| Deploy script      | `scripts/deploy-testnet-full-stack-with-mocks.js`         |
+| Router seed script | `scripts/seed-mock-pancake-router-usdt-usdf-reserves.js`  |
+| Vault seed script  | `scripts/seed-testnet-vault-deposit.js`                   |
+| Frontend addresses | `frontend/lib/contractAddresses.js` → `V2_TESTNET_PRESET` |
 
 ## Common Issues
 

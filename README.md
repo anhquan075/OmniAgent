@@ -10,16 +10,22 @@
 
 - **Tether WDK Foundation**: Fully non-custodial wallet management for EVM, Solana, and TON using a single seed phrase.
 - **AI-Managed Autonomy**: An autonomous AI agent loop (`agent/loop.js`) that monitors yield differentials and triggers rebalances without human intervention.
-- **Gold-Backed Safety**: Uses **XAU₮ (Tether Gold)** as a primary rebalancing target during market volatility or high-risk regimes.
-- **MCP Server**: A **Model Context Protocol** server that exposes vault status and rebalance tools to AI assistants (Claude, ChatGPT, etc.).
-- **Regime-Aware Strategy**: Dynamically shifts between `Normal`, `Guarded`, and `Drawdown` states based on price volatility and USD₮ peg stability.
+- **"Agent Brain" Dashboard**: A real-time visualization board showing the agent's thought process, risk analysis, and omnichain actions.
+- **ZK-Verified Risk Scoring**: Trustless, cryptographic verification of off-chain risk metrics via the `ZKRiskOracle`.
+- **Dutch Auction Rebalancing**: MEV-resistant execution via Rebalance Rights Auctions (RRA).
+- **Gold-Backed Safety**: Uses **XAU₮ (Tether Gold)** as a primary rebalancing target during market volatility.
+
+## Technical Whitepaper
+
+For a deep dive into our ZK-risk implementation and RRA economics, see our [HACKATHON.md](./HACKATHON.md).
 
 ## Architecture
 
 1. **ProofVault.sol**: The core ERC-4626 vault that manages USD₮ and routes it to specific adapters.
 2. **StrategyEngine.sol**: The logic layer that computes optimal allocations based on the `RiskPolicy`.
-3. **XAUTYieldAdapter.sol**: A specialized adapter that manages XAU₮ holdings and reports their value in terms of USD₮.
-4. **WDK Agent**: A Node.js agent that handles non-custodial signing of execution cycles and rebalances.
+3. **ExecutionAuction.sol**: Competitive auction layer for rebalance rights (RRA).
+4. **XAUTYieldAdapter.sol**: A specialized adapter that manages XAU₮ holdings.
+5. **WDK Omnichain Agent**: A Node.js agent that handles non-custodial signing across BNB, SOL, and TON.
 
 ## Getting Started
 
@@ -48,12 +54,22 @@ WDK_VAULT_ADDRESS=0x...
 WDK_ENGINE_ADDRESS=0x...
 ```
 
-### Running the Agent
+### Running the System
 
-Start the autonomous rebalance loop:
-```bash
-npm run start:agent
-```
+1. **Start the Agent Server** (Webhooks, API, SSE):
+   ```bash
+   node agent/server.js
+   ```
+
+2. **Start the Autonomous Loop**:
+   ```bash
+   node agent/loop.js
+   ```
+
+3. **Open the Dashboard**:
+   ```bash
+   cd frontend && npm run dev
+   ```
 
 Expose the vault tools to your AI assistant via MCP:
 ```bash

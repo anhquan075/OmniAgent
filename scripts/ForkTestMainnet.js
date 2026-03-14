@@ -61,13 +61,14 @@ async function updateEnvWdk(addresses) {
     return;
   }
   let content = fs.readFileSync(envPath, "utf8");
+  content = content.replace(/BNB_RPC_URL=.*/, `BNB_RPC_URL=http://127.0.0.1:8545`);
   content = content.replace(/WDK_VAULT_ADDRESS=.*/, `WDK_VAULT_ADDRESS=${addresses.vault}`);
   content = content.replace(/WDK_ENGINE_ADDRESS=.*/, `WDK_ENGINE_ADDRESS=${addresses.engine}`);
   content = content.replace(/WDK_BREAKER_ADDRESS=.*/, `WDK_BREAKER_ADDRESS=${addresses.breaker}`);
   content = content.replace(/WDK_USDT_ADDRESS=.*/, `WDK_USDT_ADDRESS=${addresses.usdt}`);
-  content = content.replace(/WDK_ZK_ORACLE_ADDRESS=.*/, `WDK_ZK_ORACLE_ADDRESS=${addresses.oracle}`);
+  content = content.replace(/WDK_ZK_ORACLE_ADDRESS=.*/, `WDK_ZK_ORACLE_ADDRESS=${addresses.zkOracle}`);
   fs.writeFileSync(envPath, content);
-  console.log(`  ✓ Updated ${envPath} with new addresses.`);
+  console.log(`  ✓ Updated ${envPath} with new addresses and local RPC.`);
 }
 
 async function probe(label, fn) {
@@ -272,6 +273,10 @@ async function main() {
   ).waitForDeployment();
   console.log("  [4] SharpeTracker:", await sharpeTracker.getAddress());
 
+  const ZKOracle = await ethers.getContractFactory("ZKRiskOracle");
+  const zkOracle = await (await ZKOracle.deploy(deployer.address)).waitForDeployment();
+  console.log("  [4.5] ZKRiskOracle:", await zkOracle.getAddress());
+
   const MockAdapter = await ethers.getContractFactory("MockAsterEarnAdapter");
   const asterAdapter = await (
     await MockAdapter.deploy(USDT_ADDR, deployer.address)
@@ -446,27 +451,23 @@ async function main() {
       engine: engineAddr,
       breaker: await breaker.getAddress(),
       usdt: USDT_ADDR,
-      oracle: await oracle.getAddress(),
+      zkOracle: await zkOracle.getAddress(),
     });
 
     console.log("\n── Running Agent Autonomous Cycle (Integrated) ──────────");
     try {
-      // Use dynamic import for the ES module agent
-      // We'll point the agent to our internal hardhat network provider
-      // To do this, we'll temporarily override the BNB_RPC_URL in process.env
-      // though the agent's JsonRpcProvider might still struggle if it doesn't support the internal provider.
-      // But the agent's WDK also needs a URL.
-      // So this might only work if we have a standalone node.
-      
-      // Let's try to just call the engine.executeCycle directly one more time as a "smoke test"
-      // because the agent's LangGraph is complex to run in-process.
       console.log("  (Agent logic simulation: validating strategy engine state)");
       const canExecFinal = await engine.canExecute();
       console.log(`  Engine Ready: ${canExecFinal[0]} (${ethers.decodeBytes32String(canExecFinal[1])})`);
       
       const previewFinal = await engine.previewDecision();
-      console.log(`  Decision State: ${previewFinal.state}`);
+      console.log(`  Next Risk State: ${previewFinal.nextState}`);
       console.log(`  Target Aster: ${previewFinal.targetAsterBps} bps`);
+
+      console.log("  Executing autonomous rebalance...");
+      const tx = await engine.executeCycle();
+      const receipt = await tx.wait();
+      console.log(`  ✓ Cycle Executed! Tx Hash: ${receipt.hash}`);
       
     } catch (agentErr) {
       console.log("  ✗ Agent simulation failed:", agentErr.message);

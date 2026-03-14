@@ -1,14 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { SendIcon, SparklesIcon, ZapIcon } from 'lucide-react';
 import { CommandPalette, DEFI_COMMANDS, Command } from './CommandPalette';
 
 interface MessageInputProps {
-  onSend: (message: string) => void;
-  disabled?: boolean;
+  input: string;
+  handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement> | React.ChangeEvent<HTMLInputElement>) => void;
+  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  status: 'submitted' | 'streaming' | 'ready' | 'error';
 }
 
-export function MessageInput({ onSend, disabled }: MessageInputProps) {
-  const [input, setInput] = useState('');
+export function MessageInput({ input, handleInputChange, handleSubmit, status }: MessageInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [isHighPriority, setIsHighPriority] = useState(false);
   
@@ -23,29 +24,24 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
     cmd.label.toLowerCase().includes(paletteFilter.toLowerCase())
   );
 
-  const handleSend = () => {
-    if (input.trim() && !disabled) {
-      const prefix = isHighPriority ? '[CRITICAL] ' : '';
-      onSend(prefix + input.trim());
-      setInput('');
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'; // Reset height
-      }
-      setIsPaletteOpen(false);
-    }
-  };
-
   const selectCommand = (command: Command) => {
     const lastSlashIndex = input.lastIndexOf('/');
     const newValue = input.slice(0, lastSlashIndex) + '/' + command.label + ' ';
-    setInput(newValue);
+    
+    // Create a synthetic event to trigger handleInputChange
+    const event = {
+      target: { value: newValue }
+    } as React.ChangeEvent<HTMLTextAreaElement>;
+    
+    handleInputChange(event);
     setIsPaletteOpen(false);
+    
     if (textareaRef.current) {
       textareaRef.current.focus();
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (isPaletteOpen && filteredCommands.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -74,18 +70,20 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
       }
     }
 
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !isPaletteOpen && status === 'ready') {
       e.preventDefault();
-      handleSend();
+      // Submit the form
+      const form = e.currentTarget.form;
+      if (form) {
+        form.requestSubmit();
+      }
     }
   };
 
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setInput(value);
+  const onTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    handleInputChange(e);
 
-    // Detect Slash Trigger
-    const lastChar = value[value.length - 1];
+    const value = e.target.value;
     const words = value.split(/\s+/);
     const lastWord = words[words.length - 1];
 
@@ -104,7 +102,15 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
   };
 
   return (
-    <div className="flex flex-col gap-2 relative">
+    <form 
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (status !== 'ready') return;
+        setIsPaletteOpen(false);
+        handleSubmit(e);
+      }} 
+      className="flex flex-col gap-2 relative"
+    >
       <CommandPalette 
         isOpen={isPaletteOpen}
         filter={paletteFilter}
@@ -116,6 +122,7 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-3">
           <button 
+            type="button"
             onClick={() => setIsHighPriority(!isHighPriority)}
             className={`flex items-center gap-1.5 transition-all duration-300 ${isHighPriority ? 'text-tether-teal animate-pulse' : 'text-neutral-gray-light hover:text-gray-300'}`}
           >
@@ -136,27 +143,24 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
         <textarea
           ref={textareaRef}
           value={input}
-          onChange={handleInput}
+          onChange={onTextareaChange}
           onKeyDown={handleKeyDown}
           onFocus={() => setIsFocused(true)}
           onBlur={() => {
-            // Delay closing to allow clicking the palette
             setTimeout(() => setIsFocused(false), 200);
           }}
           placeholder="Command the ProofVault Agent (type / for actions)..."
-          disabled={disabled}
+          disabled={status !== 'ready'}
           className="flex-1 max-h-[150px] min-h-[44px] py-3 px-3 bg-transparent text-gray-100 placeholder-gray-600 font-sans resize-none outline-none scrollbar-thin scrollbar-thumb-white/10"
           rows={1}
-          aria-haspopup="listbox"
-          aria-expanded={isPaletteOpen}
         />
 
         <button
-          onClick={handleSend}
-          disabled={disabled || !input.trim()}
+          type="submit"
+          disabled={status !== 'ready' || !input.trim()}
           aria-label="Send message"
           className={`p-3 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
-            input.trim() && !disabled
+            input.trim() && status === 'ready'
               ? 'bg-tether-teal text-space-black hover:bg-tether-teal/90 shadow-[0_0_10px_rgba(38,161,123,0.3)]' 
               : 'bg-white/5 text-gray-500 cursor-not-allowed'
           }`}
@@ -164,6 +168,6 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
           {input.trim() ? <SendIcon className="w-5 h-5" /> : <SparklesIcon className="w-5 h-5" />}
         </button>
       </div>
-    </div>
+    </form>
   );
 }

@@ -4,7 +4,6 @@ pragma solidity 0.8.24;
 import {ICircuitBreaker} from "./interfaces/ICircuitBreaker.sol";
 import {IChainlinkAggregator} from "./interfaces/IChainlinkAggregator.sol";
 import {IStableSwapPool} from "./interfaces/IStableSwapPool.sol";
-import {CrossChainMessenger} from "./CrossChainMessenger.sol";
 
 /// @title CircuitBreaker — 3-signal auto-pause / auto-recover
 /// @notice Trips on ANY single signal. Recovers when ALL clear + cooldown elapsed.
@@ -26,19 +25,13 @@ contract CircuitBreaker is ICircuitBreaker {
     bool public paused;
     uint256 public lastTripTimestamp;
     uint256 public lastVirtualPrice;
-    CrossChainMessenger public xcmMessenger;
     address public owner;
-
-    // ── events ──
-    event XcmMessengerSet(address indexed messenger);
-    event EmergencyXcmExitTriggered(uint256 amount, bytes32 indexed messageHash);
 
     // ── errors ──
     error CircuitBreaker__ZeroAddress();
     error CircuitBreaker__InvalidThreshold();
     error CircuitBreaker__ZeroCooldown();
     error CircuitBreaker__NotPaused();
-    error CircuitBreaker__XcmNotConfigured();
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Not owner");
@@ -81,25 +74,9 @@ contract CircuitBreaker is ICircuitBreaker {
         owner = msg.sender;
     }
 
-    function setXcmMessenger(address messenger_) external onlyOwner {
-        if (messenger_ == address(0)) revert CircuitBreaker__ZeroAddress();
-        xcmMessenger = CrossChainMessenger(messenger_);
-        emit XcmMessengerSet(messenger_);
-    }
-
     /*//////////////////////////////////////////////////////////////
                            PUBLIC MUTATIVE
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Trigger emergency XCM exit to relay chain
-    /// @dev Only callable when paused and by owner
-    function triggerEmergencyExit(uint256 amount, bytes calldata xcmMessage) external onlyOwner {
-        if (!paused) revert CircuitBreaker__NotPaused();
-        if (address(xcmMessenger) == address(0)) revert CircuitBreaker__XcmNotConfigured();
-
-        xcmMessenger.emergencyExitToRelay(amount, xcmMessage);
-        emit EmergencyXcmExitTriggered(amount, keccak256(xcmMessage));
-    }
 
     /// @notice Manually unpause the breaker (owner only)
     function unpause() external onlyOwner {

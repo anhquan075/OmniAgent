@@ -3,7 +3,11 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 
 // Load .env.wdk from parent directory
-dotenv.config({ path: path.resolve(process.cwd(), '.env.wdk') });
+const envPath = path.resolve(process.cwd(), '.env.wdk');
+dotenv.config({ path: envPath, override: true });
+
+console.log(`[Env] Loading from: ${envPath}`);
+console.log(`[Env] BNB_RPC_URL from process.env: ${process.env.BNB_RPC_URL}`);
 
 const envSchema = z.object({
   PORT: z.string().default('3001'),
@@ -19,6 +23,7 @@ const envSchema = z.object({
   WDK_BREAKER_ADDRESS: z.string(),
   WDK_USDT_ADDRESS: z.string(),
   WDK_VAULT_ADDRESS: z.string(),
+  GITHUB_WEBHOOK_SECRET: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

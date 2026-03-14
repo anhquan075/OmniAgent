@@ -1,0 +1,28 @@
+[
+  {
+    "role": "user",
+    "content": "test"
+  },
+  {
+    "id": "PA1Zj13aDyL59a6k",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Strategy Ready",
+          "progress": 100
+        }
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "text",
+        "text": " Developing yield optimization strategies for USD₮ and XAU₮. Leveraging market data, liquidity pools, and DeFi protocols to maximize returns. Targeting stablecoin strategies with minimal volatility risk. Implementing advanced hedging techniques to ensure capital preservation while enhancing yield. Monitoring key indicators and adjusting portfolios dynamically to optimize returns across market conditions. Enhancing scalability through modular integrations with DeFi ecosystems. Ready to deploy systematic strategies for USD₮ and XAU₮ yield optimization. Awaiting further parameters. Proceed?",
+        "state": "done"
+      }
+    ]
+  }
+]

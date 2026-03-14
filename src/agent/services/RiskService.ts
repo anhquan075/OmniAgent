@@ -25,20 +25,31 @@ export class RiskService {
   }
 
   async getRiskProfile(): Promise<RiskProfile> {
-    const metrics = await this.zkOracle.getVerifiedRiskBands();
-    const drawdown = Number(metrics.monteCarloDrawdownBps);
-    
-    let level: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
-    if (drawdown >= this.HIGH_RISK_DRAWDOWN_BPS) level = 'HIGH';
-    else if (drawdown >= this.MEDIUM_RISK_DRAWDOWN_BPS) level = 'MEDIUM';
+    try {
+      const metrics = await this.zkOracle.getVerifiedRiskBands();
+      const drawdown = Number(metrics.monteCarloDrawdownBps);
+      
+      let level: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
+      if (drawdown >= this.HIGH_RISK_DRAWDOWN_BPS) level = 'HIGH';
+      else if (drawdown >= this.MEDIUM_RISK_DRAWDOWN_BPS) level = 'MEDIUM';
 
-    return {
-      level,
-      drawdownBps: drawdown,
-      sharpe: Number(metrics.verifiedSharpeRatio),
-      recommendedBuffer: Number(metrics.recommendedBufferBps),
-      timestamp: Number(metrics.timestamp)
-    };
+      return {
+        level,
+        drawdownBps: drawdown,
+        sharpe: Number(metrics.verifiedSharpeRatio),
+        recommendedBuffer: Number(metrics.recommendedBufferBps),
+        timestamp: Number(metrics.timestamp)
+      };
+    } catch (error: any) {
+      console.error(`[RiskService] WARNING: Failed to fetch ZK Risk metrics: ${error.message}. Defaulting to LOW risk.`);
+      return {
+        level: 'LOW',
+        drawdownBps: 0,
+        sharpe: 0,
+        recommendedBuffer: 500,
+        timestamp: Math.floor(Date.now() / 1000)
+      };
+    }
   }
 
   async evaluateSafetyAction(currentProfile: RiskProfile) {

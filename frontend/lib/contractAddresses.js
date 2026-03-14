@@ -31,34 +31,3 @@ export const V2_TESTNET_PRESET = {
   secondaryAdapterAddress: "0x30d4F9f3e98BadD935872b03F64Bdb4F7AaE8628",
   executionAuctionAddress: "0x9e5763A7C11DB894A6aA1164cFDc849F9243751B",
 };
-
-// Creditcoin Testnet (Chain ID 102031)
-export const V2_CREDITCOIN_TESTNET_PRESET = {
-  vaultAddress: "0xD44CF9da553F6e552F6C99608Df0B319E64803ce",
-  engineAddress: "0x26bD06A5C03Be622027d3A6176B3AFEf4AF53c1b",
-  tokenAddress: "0x7cee56b267Fe556d813616b4b74e4292CA7DC4b3", // mock USDT
-  circuitBreakerAddress: "0x35db81bbC0F1A00268f94581f4B906ABd9Ef2112",
-  sharpeTrackerAddress: "0x39bC71136e93143cD0BcC0b25E64c876545b4f48",
-  pegArbExecutorAddress: "0x568f8fB62631D50F7fBA0B0630941C878144c81b",
-  riskPolicyAddress: "0x5F647E84F3C0aB83CA10112689Ad13d12F24fb45",
-  asterAdapterAddress: "0xe5722f0A4a93CF656921BB6353CA0D316178202C",
-  secondaryAdapterAddress: "0x873627C9A2788d195388dfF66b3f3406E95f00BA",
-  lpAdapterAddress: "0x0000000000000000000000000000000000000000",
-  executionAuctionAddress: "0x338A46d7C2937848530aC276a69b66E83ECecBdA",
-};
-
-// Polkadot Hub Testnet (Paseo Asset Hub, Chain ID 420420417)
-// Deployed for Polkadot Solidity Hackathon
-export const POLKADOT_HUB_TESTNET_PRESET = {
-  vaultAddress: "0x39bC71136e93143cD0BcC0b25E64c876545b4f48",
-  engineAddress: "0xe5722f0A4a93CF656921BB6353CA0D316178202C",
-  tokenAddress: "0xF9b21d4Ab253AcC09a9cd9076ec4F2eB6796E8e7", // mock USDC
-  circuitBreakerAddress: "0x5F647E84F3C0aB83CA10112689Ad13d12F24fb45",
-  sharpeTrackerAddress: "0x35db81bbC0F1A00268f94581f4B906ABd9Ef2112",
-  pegArbExecutorAddress: "0x0000000000000000000000000000000000000000", // No peg arb on Hub yet
-  riskPolicyAddress: "0x58BD323D0EAc05F9e4750a2EE1AF602BA3249bC3",
-  asterAdapterAddress: "0x338A46d7C2937848530aC276a69b66E83ECecBdA",
-  secondaryAdapterAddress: "0x1F939d268c67260a217F6b3CFAe478d7e29D09BE",
-  lpAdapterAddress: "0x44Ff293dC091Be0b59E90AFd89fDc4167E021eCa",
-  xcmMessengerAddress: "0x27e0C4ABCFE22B7368962ffF92BAE6F476E2a026",
-};

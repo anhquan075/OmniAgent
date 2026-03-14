@@ -6,6 +6,7 @@ import { env } from './config/env';
 import { bigIntReplacer } from './utils/json';
 import statsRoute from './api/routes/stats';
 import chatRoute from './api/routes/chat';
+import agentRoute from './api/routes/agent';
 import { AgentService } from './agent/services/AgentService';
 
 const app = new Hono();
@@ -18,11 +19,16 @@ app.use('*', cors());
 app.use('*', async (c, next) => {
   await next();
   if (c.res.headers.get('Content-Type')?.includes('application/json')) {
-    const body = await c.res.json();
-    c.res = new Response(JSON.stringify(body, bigIntReplacer), {
-      headers: c.res.headers,
-      status: c.res.status
-    });
+    try {
+      const clone = c.res.clone();
+      const body = await clone.json();
+      c.res = new Response(JSON.stringify(body, bigIntReplacer), {
+        headers: c.res.headers,
+        status: c.res.status
+      });
+    } catch (e) {
+      console.error('JSON parsing error in middleware:', e);
+    }
   }
 });
 
@@ -32,6 +38,7 @@ app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOStri
 // API Routes
 app.route('/api/stats', statsRoute);
 app.route('/api/chat', chatRoute);
+app.route('/api/agent', agentRoute);
 
 const port = Number(env.PORT);
 

@@ -9,7 +9,6 @@ import {IPancakeV3Pool} from "./interfaces/IPancakeV3Pool.sol";
 import {RiskPolicy} from "./RiskPolicy.sol";
 import {SharpeTracker} from "./SharpeTracker.sol";
 import {ProofVault} from "./ProofVault.sol";
-import {CrossChainMessenger} from "./CrossChainMessenger.sol";
 
 /// @title StrategyEngine — Cycle execution with circuit breaker, Dutch auction bounty, and Sharpe tracking
 contract StrategyEngine {
@@ -46,7 +45,6 @@ contract StrategyEngine {
     event DecisionProofV2(address indexed executor, RiskState indexed nextState, uint256 price, uint256 previousPrice, uint256 volatilityBps, uint256 targetAsterBps, uint256 targetLpBps, uint256 bountyBps, bool breakerPaused, int256 sharpeRatio, uint256 auctionElapsed, uint256 bufferUtilizationBps);
     event FlashRebalanceRequested(address indexed flashPool, address indexed fromAdapter, address indexed toAdapter, uint256 principal);
     event FlashRebalanceSettled(address indexed flashPool, address indexed fromAdapter, address indexed toAdapter, uint256 principal, uint256 fee);
-    event CrossChainRebalanceTriggered(uint32 indexed destinationParachainId, bytes32 indexed beneficiary, uint256 amount);
 
     error StrategyEngine__ZeroAddress();
     error StrategyEngine__ZeroPrice();
@@ -59,7 +57,6 @@ contract StrategyEngine {
     error StrategyEngine__InvalidFlashAsset();
     error StrategyEngine__NoActiveFlash();
     error StrategyEngine__YieldOverflow();
-    error StrategyEngine__XcmNotConfigured();
 
     ProofVault public immutable vault;
     RiskPolicy public immutable policy;
@@ -74,7 +71,6 @@ contract StrategyEngine {
     uint256 public cycleCount;
     uint256 public ewmaVolatilityBps;
     bytes32 private activeFlashContextHash;
-    CrossChainMessenger public xcmMessenger;
     address public owner;
 
     modifier onlyOwner() {
@@ -99,20 +95,8 @@ contract StrategyEngine {
         owner = msg.sender;
     }
 
-    function setXcmMessenger(address messenger_) external onlyOwner {
-        if (messenger_ == address(0)) revert StrategyEngine__ZeroAddress();
-        xcmMessenger = CrossChainMessenger(messenger_);
-    }
-
     function executeCycle() external {
         _executeCycleInternal(msg.sender, false, FlashRebalanceData(address(0), address(0), address(0), 0));
-    }
-
-    function executeCycleWithXcm(uint32 destinationParachainId, bytes32 beneficiary, uint256 amount, bytes calldata xcmMessage) external onlyOwner {
-        if (address(xcmMessenger) == address(0)) revert StrategyEngine__XcmNotConfigured();
-        _executeCycleInternal(msg.sender, false, FlashRebalanceData(address(0), address(0), address(0), 0));
-        xcmMessenger.transferToParachain(destinationParachainId, beneficiary, amount, xcmMessage);
-        emit CrossChainRebalanceTriggered(destinationParachainId, beneficiary, amount);
     }
 
     function executeCycleWithFlashRebalance(address flashPool, address fromAdapter, address toAdapter, uint256 flashAmount) external {

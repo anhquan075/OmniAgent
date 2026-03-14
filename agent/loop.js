@@ -5,6 +5,7 @@ import WalletSolana from '@tetherto/wdk-wallet-solana';
 import WalletTON from '@tetherto/wdk-wallet-ton';
 import { RiskManager } from './risk-manager.js';
 import { X402Client } from './x402-client.js';
+import { BridgeService } from './bridge-manager.js';
 import { StateGraph, Annotation, MemorySaver, END, START } from "@langchain/langgraph";
 import * as dotenv from 'dotenv';
 import * as path from 'path';
@@ -23,6 +24,10 @@ const zkOracleAddress = process.env.WDK_ZK_ORACLE_ADDRESS;
 const breakerAddress = process.env.WDK_BREAKER_ADDRESS;
 const usdtAddress = process.env.WDK_USDT_ADDRESS;
 
+console.log(`[Config] BNB RPC: ${bnbRpc}`);
+console.log(`[Config] Engine: ${engineAddress}`);
+console.log(`[Config] ZK Oracle: ${zkOracleAddress}`);
+
 if (!seed || !engineAddress || !zkOracleAddress || !breakerAddress) {
   console.error('ERROR: Missing configuration in .env.wdk');
   process.exit(1);
@@ -40,6 +45,13 @@ const zkOracleAbi = loadAbi('./ZKRiskOracle.json');
 const breakerAbi = loadAbi('./CircuitBreaker.json');
 const proofVaultAbi = loadAbi('./ProofVault.json');
 const syndicateAbi = loadAbi('./GroupSyndicate.json');
+const auctionAbi = loadAbi('./ExecutionAuction.json');
+
+const ERC20_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function allowance(address,address) view returns (uint256)",
+  "function approve(address,uint256) returns (bool)"
+];
 
 // Initialize WDK
 const wdk = new WDK(seed);
@@ -82,8 +94,27 @@ function getContracts() {
     engine: new ethers.Contract(engineAddress, strategyEngineAbi, provider),
     zkOracle: new ethers.Contract(zkOracleAddress, zkOracleAbi, provider),
     breaker: new ethers.Contract(breakerAddress, breakerAbi, provider),
-    syndicate: new ethers.Contract(process.env.WDK_SYNDICATE_ADDRESS || ethers.ZeroAddress, syndicateAbi, provider)
+    syndicate: new ethers.Contract(process.env.WDK_SYNDICATE_ADDRESS || ethers.ZeroAddress, syndicateAbi, provider),
+    auction: new ethers.Contract(process.env.WDK_AUCTION_ADDRESS || ethers.ZeroAddress, auctionAbi, provider)
   };
+}
+
+/**
+ * Helper to report agent state to the dashboard server
+ */
+async function reportToDashboard(node, state, details = {}) {
+  const serverUrl = `http://localhost:3001/api/agent/report`;
+  try {
+    await axios.post(serverUrl, {
+      node,
+      riskLevel: state.riskProfile?.level || 'UNKNOWN',
+      drawdown: state.riskProfile?.drawdownBps || 0,
+      action: state.actionTaken || 'PROCESSING',
+      details
+    }, { timeout: 2000 });
+  } catch (e) {
+    // Silently ignore if server is down
+  }
 }
 
 /**
@@ -97,10 +128,12 @@ async function analyzeRisk(state) {
   const profile = await riskManager.getRiskProfile();
   console.log(`- Risk Level: ${profile.level} (${profile.drawdownBps} bps drawdown)`);
   
-  return { 
+  const result = { 
     riskProfile: profile,
     messages: [`Risk analyzed: ${profile.level}`]
   };
+  await reportToDashboard('analyzeRisk', { ...state, ...result });
+  return result;
 }
 
 /**
@@ -115,17 +148,21 @@ async function handleEmergency(state) {
   if (!isPaused) {
     const reason = `Emergency shutdown triggered by risk node: ${state.riskProfile.drawdownBps} bps drawdown proven by ZK.`;
     const tx = await riskManager.triggerEmergencyPause(reason);
-    return { 
+    const res = { 
       actionTaken: 'EMERGENCY_PAUSE',
       txHash: tx.hash,
       messages: [`Emergency pause executed: ${tx.hash}`]
     };
+    await reportToDashboard('handleEmergency', { ...state, ...res });
+    return res;
   }
   
-  return { 
+  const res = { 
     actionTaken: 'ALREADY_PAUSED',
     messages: ["Vault already paused."]
   };
+  await reportToDashboard('handleEmergency', { ...state, ...res });
+  return res;
 }
 
 /**
@@ -140,7 +177,7 @@ async function checkStrategy(state) {
   
   console.log(`- Executable: ${canExec} (${ethers.decodeBytes32String(reason)})`);
   
-  return { 
+  const result = { 
     canExecute: canExec,
     decision: {
       state: Number(preview.state),
@@ -149,6 +186,8 @@ async function checkStrategy(state) {
     },
     messages: [`Strategy checked. Executable: ${canExec}`]
   };
+  await reportToDashboard('checkStrategy', { ...state, ...result });
+  return result;
 }
 
 /**
@@ -156,8 +195,78 @@ async function checkStrategy(state) {
  */
 async function executeRebalance(state) {
   console.log("--- NODE: EXECUTE REBALANCE ---");
+  const { engine, auction } = getContracts();
   const bnbAccount = await wdk.getAccount('bnb');
   const fromAddress = await bnbAccount.getAddress();
+  
+  // RRA Logic Integration
+  const auctionAddr = process.env.WDK_AUCTION_ADDRESS;
+  if (auctionAddr && auctionAddr !== ethers.ZeroAddress) {
+    console.log(`- ExecutionAuction detected: ${auctionAddr}`);
+    try {
+      const status = await auction.roundStatus();
+      const phase = Number(status.currentPhase);
+      console.log(`  Current Phase: ${['NotOpen', 'BidPhase', 'ExecutePhase', 'FallbackPhase'][phase]}`);
+
+      if (phase === 0 || phase === 1) { // NotOpen or BidPhase
+        console.log("- Placing bid for execution rights...");
+        const minBid = await auction.minBid();
+        const currentBid = status.winningBid;
+        const myBid = currentBid > 0n 
+          ? currentBid + (currentBid * 500n / 10000n) // 5% increment
+          : minBid;
+
+        // Check allowance
+        const usdt = new ethers.Contract(usdtAddress, ERC20_ABI, bnbAccount.getRunner());
+        const allowance = await usdt.allowance(fromAddress, auctionAddr);
+        if (allowance < myBid) {
+          console.log(`  Approving ${myBid} USDT for auction...`);
+          await bnbAccount.sendTransaction({
+            to: usdtAddress,
+            data: new ethers.Interface(ERC20_ABI).encodeFunctionData("approve", [auctionAddr, ethers.MaxUint256])
+          });
+        }
+
+        const bidData = new ethers.Interface(auctionAbi).encodeFunctionData("bid", [myBid]);
+        const bidTx = await bnbAccount.sendTransaction({ to: auctionAddr, data: bidData });
+        console.log(`  ✓ Bid placed: ${bidTx.hash}`);
+        const res = { actionTaken: 'AUCTION_BID_PLACED', txHash: bidTx.hash, messages: ["Bid for rebalance rights placed."] };
+        await reportToDashboard('executeRebalance', { ...state, ...res });
+        return res;
+      } 
+      
+      if (phase === 2) { // ExecutePhase
+        if (status.winner.toLowerCase() === fromAddress.toLowerCase()) {
+          console.log("- Winner executing rights...");
+          const execData = new ethers.Interface(auctionAbi).encodeFunctionData("winnerExecute", []);
+          const execTx = await bnbAccount.sendTransaction({ to: auctionAddr, data: execData });
+          console.log(`  ✓ Winner Execution: ${execTx.hash}`);
+          const res = { actionTaken: 'AUCTION_EXECUTED_WINNER', txHash: execTx.hash, messages: ["Winner rebalance executed."] };
+          await reportToDashboard('executeRebalance', { ...state, ...res });
+          return res;
+        } else {
+          console.log(`  Winner is ${status.winner}. Waiting for fallback or next round.`);
+          const res = { actionTaken: 'AUCTION_WAITING', messages: ["Waiting for winner execution."] };
+          await reportToDashboard('executeRebalance', { ...state, ...res });
+          return res;
+        }
+      }
+
+      if (phase === 3) { // FallbackPhase
+        console.log("- Fallback execution...");
+        const fbData = new ethers.Interface(auctionAbi).encodeFunctionData("fallbackExecute", []);
+        const fbTx = await bnbAccount.sendTransaction({ to: auctionAddr, data: fbData });
+        console.log(`  ✓ Fallback Execution: ${fbTx.hash}`);
+        const res = { actionTaken: 'AUCTION_EXECUTED_FALLBACK', txHash: fbTx.hash, messages: ["Fallback rebalance executed."] };
+        await reportToDashboard('executeRebalance', { ...state, ...res });
+        return res;
+      }
+    } catch (e) {
+      console.error(`  ✗ Auction logic failed: ${e.message}. Falling back to direct execution.`);
+    }
+  }
+
+  // Direct Execution Fallback (if no auction or auction logic fails)
   const iface = new ethers.Interface(strategyEngineAbi);
   const data = iface.encodeFunctionData("executeCycle", []);
   
@@ -182,10 +291,12 @@ async function executeRebalance(state) {
 
   if (aiScore.score > threshold || !simResult.success) {
     console.log(`- REJECTED: AI Score ${aiScore.score} > ${threshold} OR Simulation Failed.`);
-    return {
-      actionTaken: 'REJECTED_BY_SAFETY_LAYER',
+    const res = {
+      actionTaken: 'REBALANCED_REJECTED',
       messages: [`Rejected. AI Score: ${aiScore.score}. Reason: ${aiScore.explanation}. Sim Success: ${simResult.success}`]
     };
+    await reportToDashboard('executeRebalance', { ...state, ...res }, { aiScore });
+    return res;
   }
 
   // 3. Execute
@@ -197,11 +308,13 @@ async function executeRebalance(state) {
   
   console.log(`- Success: ${tx.hash}`);
   
-  return { 
+  const res = { 
     actionTaken: 'REBALANCED',
     txHash: tx.hash,
     messages: [`Rebalance hash: ${tx.hash}`]
   };
+  await reportToDashboard('executeRebalance', { ...state, ...res });
+  return res;
 }
 
 /**
@@ -209,24 +322,32 @@ async function executeRebalance(state) {
  */
 async function checkCrossChainYields(state) {
   console.log("--- NODE: CROSS-CHAIN YIELD ANALYSIS ---");
-  const { BridgeService } = await import('./bridge-manager.js');
-  
   const bridgeService = new BridgeService(wdk, bnbRpc, solanaRpc, tonRpc);
+  
+  // 1. Scout yields on SOL/TON
   const opportunity = await bridgeService.analyzeBridgeOpportunity('bnb', 2.0);
 
   if (opportunity.shouldBridge) {
-    console.log(`- Executing bridge to ${opportunity.targetChain} for ${opportunity.expectedYield}% yield...`);
-    // Assuming 100 USDT threshold for test
-    const tx = await bridgeService.executeBridge('bnb', opportunity.targetChain, 100, usdtAddress);
-    return { 
-      actionTaken: 'BRIDGED_CAPITAL',
-      txHash: tx.hash,
-      messages: [`Capital bridged to ${opportunity.targetChain}. Hash: ${tx.hash}`]
-    };
+    console.log(`- Executing WDK Omnichain Transfer to ${opportunity.targetChain} (+${(opportunity.expectedYield - 5.2).toFixed(2)}% alpha)...`);
+    
+    // Bridging 100 USD₮ as a demo amount from Idle Buffer
+    const bridgeResult = await bridgeService.executeBridge('bnb', opportunity.targetChain, 100, usdtAddress);
+    
+    if (bridgeResult.success) {
+      const res = { 
+        actionTaken: 'BRIDGED_CAPITAL',
+        txHash: bridgeResult.hash,
+        messages: [`Capital moved to ${opportunity.targetChain} spoke for yield optimization. Hash: ${bridgeResult.hash}`]
+      };
+      await reportToDashboard('checkCrossChainYields', { ...state, ...res }, { opportunity });
+      return res;
+    }
   }
 
-  console.log("- No better yields found cross-chain.");
-  return { messages: ["Cross-chain check completed."] };
+  console.log("- Local yields remain optimal or Alpha threshold not met.");
+  const res = { messages: ["Omnichain scouting completed."] };
+  await reportToDashboard('checkCrossChainYields', { ...state, ...res });
+  return res;
 }
 
 /**
@@ -236,15 +357,34 @@ async function processX402Payment(state) {
   console.log("--- NODE: X402 PAYMENT ---");
   const x402 = new X402Client(wdk, usdtAddress);
   
-  // Every rebalance cycle or standby, pay for infrastructure
-  // Mock provider and service for now
+  // Every rebalance cycle or standby, pay for infrastructure insights
+  const serviceUrl = process.env.X402_SERVICE_URL || "https://api.tetherproof.xyz/insights";
+  const providerAddress = process.env.X402_PROVIDER_ADDRESS || "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+  const paymentAmount = "0.1"; // 0.1 USDT for one insight report
+
   try {
-    const mockProvider = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
-    console.log("- x402 payment ready for market insight processing.");
-    return { messages: ["x402 payment layer verified."] };
+    console.log(`- Requesting market insights via x402...`);
+    // In demo mode, we might just simulate the call or hit a real endpoint if configured
+    if (process.env.DEMO_MODE === 'true') {
+      console.log(`- [Demo] Skipping real x402 payment, simulating success.`);
+      const res = { messages: ["x402 payment simulated successfully."] };
+      await reportToDashboard('processX402Payment', { ...state, ...res });
+      return res;
+    }
+
+    const insightData = await x402.payAndFetch(serviceUrl, providerAddress, paymentAmount);
+    console.log("- x402 payment successful. Insight received.");
+    
+    const res = { 
+      messages: [`x402 payment confirmed. Insight: ${insightData.signal || 'Neutral'}`] 
+    };
+    await reportToDashboard('processX402Payment', { ...state, ...res });
+    return res;
   } catch (e) {
-    console.warn("- x402 failed, continuing as secondary function.");
-    return { messages: [`x402 warning: ${e.message}`] };
+    console.warn(`- x402 payment failed: ${e.message}`);
+    const res = { messages: [`x402 notice: ${e.message}`] };
+    await reportToDashboard('processX402Payment', { ...state, ...res });
+    return res;
   }
 }
 
@@ -254,16 +394,13 @@ async function processX402Payment(state) {
 async function yieldSweep(state) {
   console.log("--- NODE: YIELD SWEEP ---");
   const bnbAccount = await wdk.getAccount('bnb');
-  // Derive a separate "spending" wallet using a different index/path
   const spendingAccount = await wdk.getAccount('bnb', 1); 
   const spendingAddress = await spendingAccount.getAddress();
 
-  // Use a regular provider for calls to ensure contract logic works correctly
   const provider = new ethers.JsonRpcProvider(bnbRpc);
   const vault = new ethers.Contract(process.env.WDK_VAULT_ADDRESS || "0xMockVault", proofVaultAbi, provider);
   
   try {
-    // Check max withdraw vs principal locally before calling to save gas
     const myAddress = await bnbAccount.getAddress();
     const principal = await vault.userPrincipal(myAddress);
     const maxWithdrawable = await vault.maxWithdraw(myAddress);
@@ -280,7 +417,9 @@ async function yieldSweep(state) {
         data: data
       });
       
-      return { messages: [`Yield swept to hot wallet. Hash: ${tx.hash}`] };
+      const res = { messages: [`Yield swept to hot wallet. Hash: ${tx.hash}`] };
+      await reportToDashboard('yieldSweep', { ...state, ...res });
+      return res;
     } else {
       console.log("- No significant yield accrued to sweep.");
     }
@@ -288,7 +427,9 @@ async function yieldSweep(state) {
     console.warn(`- Yield sweep check failed/skipped: ${e.message}`);
   }
   
-  return { messages: ["Yield sweep check completed."] };
+  const res = { messages: ["Yield sweep check completed."] };
+  await reportToDashboard('yieldSweep', { ...state, ...res });
+  return res;
 }
 
 // Define the Graph
@@ -360,7 +501,7 @@ export async function runCycle() {
 // Only run standalone if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   const INTERVAL = 5 * 60 * 1000;
-  console.log('--- TetherProof WDK LangGraph-Driven Agent Started (Standalone) ---');
+  console.log('--- TetherProof WDK Omnichain Agent Started ---');
   runCycle();
   setInterval(runCycle, INTERVAL);
 }

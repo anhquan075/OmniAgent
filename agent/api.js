@@ -5,8 +5,6 @@ import { StateGraph, Annotation, MemorySaver, messagesStateReducer, START, END }
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
-import { streamText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
 import { ethers } from "ethers";
 import WDK from '@tetherto/wdk';
 import WalletEVM from '@tetherto/wdk-wallet-evm';
@@ -213,24 +211,25 @@ app.get('/api/stats', async (req, res) => {
       bufferStatus,
       riskMetrics,
       isPaused,
-      [canExecute, executeReason],
+      executionStatus,
       preview,
       usdtBalance,
       memberCount,
       currentRound,
       lastPayoutTime
     ] = await Promise.all([
-      vault.totalAssets(),
-      vault.bufferStatus(),
-      zkOracle.getVerifiedRiskBands(),
-      breaker.isPaused(),
-      engine.canExecute(),
-      engine.previewDecision(),
-      new ethers.Contract(usdtAddress, ['function balanceOf(address) view returns (uint256)'], provider).balanceOf(vaultAddress),
-      syndicate.getMemberCount(),
-      syndicate.currentRound(),
-      syndicate.lastPayoutTime()
+      vault.totalAssets().catch(() => 0n),
+      vault.bufferStatus().catch(() => ({ utilizationBps: 0n, current: 0n, target: 0n })),
+      zkOracle.getVerifiedRiskBands().catch(() => ({ monteCarloDrawdownBps: 0, verifiedSharpeRatio: 0, timestamp: Math.floor(Date.now()/1000) })),
+      breaker.isPaused().catch(() => false),
+      engine.canExecute().catch(() => [false, "0x00"]),
+      engine.previewDecision().catch(() => ({ targetAsterBps: 0, state: 0 })),
+      new ethers.Contract(usdtAddress, ['function balanceOf(address) view returns (uint256)'], provider).balanceOf(vaultAddress).catch(() => 0n),
+      syndicate.getMemberCount().catch(() => 0n),
+      syndicate.currentRound().catch(() => 0n),
+      syndicate.lastPayoutTime().catch(() => 0n)
     ]);
+    const [canExecute, executeReason] = executionStatus;
 
     // AI Pre-flight simulation
     const iface = new ethers.Interface(strategyEngineAbi);
@@ -262,7 +261,9 @@ app.get('/api/stats', async (req, res) => {
       system: {
         isPaused,
         canExecute,
-        executeReason: ethers.decodeBytes32String(executeReason),
+        executeReason: typeof executeReason === 'string' && executeReason.startsWith('0x') && executeReason.length > 2 
+          ? (executeReason === '0x00' ? 'NONE' : (function() { try { return ethers.decodeBytes32String(executeReason); } catch { return 'UNKNOWN'; } })()) 
+          : 'UNKNOWN',
         targetAsterBps: Number(preview.targetAsterBps),
         state: Number(preview.state),
         timeUntilNext: Number(await engine.timeUntilNextCycle())
@@ -291,7 +292,17 @@ app.post('/api/chat', async (req, res) => {
   console.error(`[API] Received chat request`);
   
   try {
-    const userMessage = messages[messages.length - 1].content;
+    const lastMessage = messages[messages.length - 1];
+    let userMessage = "";
+    
+    if (typeof lastMessage.content === 'string') {
+      userMessage = lastMessage.content;
+    } else if (Array.isArray(lastMessage.content)) {
+      userMessage = lastMessage.content
+        .map(part => (typeof part === 'string' ? part : (part.text || "")))
+        .join("");
+    }
+    
     const prompt = `You are the TetherProof AFOS Strategist. 
 Commands: /status (get_vault_status), /risk (check_risk), /rebalance (execute_rebalance), /payout (execute_syndicate_payout).
 User: ${userMessage}`;
@@ -316,6 +327,11 @@ User: ${userMessage}`;
     if (userMessage.startsWith('/rebalance')) tool_choice = { type: 'function', function: { name: 'execute_rebalance' } };
     if (userMessage.startsWith('/payout')) tool_choice = { type: 'function', function: { name: 'execute_syndicate_payout' } };
 
+    // Set headers for streaming
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('x-vercel-ai-data-stream', 'v1');
+    res.setHeader('Transfer-Encoding', 'chunked');
+
     // 1. Initial Call
     const initialRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
       model: OPENROUTER_MODEL,
@@ -325,17 +341,12 @@ User: ${userMessage}`;
     }, { headers });
 
     const choice = initialRes.data.choices[0].message;
-    console.error(`[API] Initial response choice: ${JSON.stringify(choice)}`);
     
-    let finalContent = choice.content || "";
-
     if (choice.tool_calls) {
       const tc = choice.tool_calls[0];
-      console.error(`[API] Executing: ${tc.function.name}`);
       const tool = tools.find(t => t.name === tc.function.name);
       if (tool) {
         const toolResult = await tool.func({});
-        console.error(`[API] Tool result: ${toolResult}`);
         // 2. Final Summary
         const finalRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
           model: OPENROUTER_MODEL,
@@ -345,14 +356,23 @@ User: ${userMessage}`;
             { role: 'tool', tool_call_id: tc.id, content: toolResult }
           ]
         }, { headers });
-        finalContent = finalRes.data.choices[0].message.content;
+        const finalContent = finalRes.data.choices[0].message.content;
+        res.write(`0:${JSON.stringify(finalContent)}\n`);
       }
+    } else {
+      res.write(`0:${JSON.stringify(choice.content || "")}\n`);
     }
 
-    res.json({ content: finalContent });
+    res.end();
   } catch (error) {
     console.error("Chat Error:", error.message);
-    res.status(500).json({ error: error.message });
+    // Even on error, try to send something valid to the stream if headers were sent
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message });
+    } else {
+      res.write(`3:${JSON.stringify(error.message)}\n`); // Error part
+      res.end();
+    }
   }
 });
 

@@ -77,20 +77,39 @@ Respond in JSON: { "score": Number, "explanation": "String" }`;
   }
 
   async getRiskProfile() {
-    const metrics = await this.zkOracle.getVerifiedRiskBands();
-    const drawdown = Number(metrics.monteCarloDrawdownBps);
-    
-    let level = 'LOW';
-    if (drawdown >= this.HIGH_RISK_DRAWDOWN_BPS) level = 'HIGH';
-    else if (drawdown >= this.MEDIUM_RISK_DRAWDOWN_BPS) level = 'MEDIUM';
+    try {
+      const address = await this.zkOracle.getAddress();
+      const runner = this.zkOracle.runner;
+      const code = await runner.provider.getCode(address);
+      if (code === '0x') {
+        console.error(`[RiskManager] WARNING: ZK Oracle at ${address} is not a contract. Defaulting to LOW risk.`);
+        return { level: 'LOW', drawdownBps: 0, sharpe: 0, recommendedBuffer: 500, timestamp: Math.floor(Date.now() / 1000) };
+      }
 
-    return {
-      level,
-      drawdownBps: drawdown,
-      sharpe: Number(metrics.verifiedSharpeRatio),
-      recommendedBuffer: Number(metrics.recommendedBufferBps),
-      timestamp: Number(metrics.timestamp)
-    };
+      const metrics = await this.zkOracle.getVerifiedRiskBands();
+      const drawdown = Number(metrics.monteCarloDrawdownBps);
+      
+      let level = 'LOW';
+      if (drawdown >= this.HIGH_RISK_DRAWDOWN_BPS) level = 'HIGH';
+      else if (drawdown >= this.MEDIUM_RISK_DRAWDOWN_BPS) level = 'MEDIUM';
+
+      return {
+        level,
+        drawdownBps: drawdown,
+        sharpe: Number(metrics.verifiedSharpeRatio),
+        recommendedBuffer: Number(metrics.recommendedBufferBps),
+        timestamp: Number(metrics.timestamp)
+      };
+    } catch (error) {
+      console.error(`[RiskManager] WARNING: Failed to fetch ZK Risk metrics: ${error.message}. Defaulting to LOW risk.`);
+      return {
+        level: 'LOW',
+        drawdownBps: 0,
+        sharpe: 0,
+        recommendedBuffer: 500,
+        timestamp: Math.floor(Date.now() / 1000)
+      };
+    }
   }
 
   async evaluateSafetyAction(currentProfile) {
