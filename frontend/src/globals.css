@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme inline {
+  /* Tether / WDK Official Brand Colors */
+  --color-tether-teal: #26A17B;
+  --color-tether-dark: #1A7A5E;
+  --color-xaut-gold: #D4AF37;
+  --color-xaut-brass: #AA8A2E;
+  --color-cyber-cyan: #00D1FF;
+
+  /* WDK Functional Colors */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+
+  /* WDK Dark Mode Surface Tokens */
+  --color-space-black: #0B0E11; /* colors.background */
+  --color-space-dark: #1E2329;  /* colors.surface */
+  --color-surface-variant: #2A2F36;
+  --color-surface-elevated: #3A3F46;
+
+  /* WDK Typography Tokens */
+  --color-neutral-gray: #6B7280; /* colors.textSecondary */
+  --color-neutral-gray-light: #9CA3AF; /* colors.textDisabled */
+  --color-text-primary: #F8F9FA;
+  --color-text-muted: #4B5563;
+
+  /* WDK Spacing & Radius (4px grid) */
+  --spacing-wdk-xs: 4px;
+  --spacing-wdk-sm: 8px;
+  --spacing-wdk-base: 12px;
+  --spacing-wdk-md: 16px;
+  --spacing-wdk-lg: 24px;
+  --spacing-wdk-xl: 32px;
+
+  --radius-wdk-sm: 4px;
+  --radius-wdk-md: 8px;
+  --radius-wdk-lg: 16px;
+  --radius-wdk-xl: 24px;
+  --radius-wdk-xxl: 32px;
+
+  /* Fonts */
+  --font-sans: 'Exo 2', var(--font-inter), system-ui, sans-serif;
+  --font-heading: 'Orbitron', sans-serif;
+
+  /* Shadows & Effects */
+  --shadow-glow-sm: 0 0 10px rgba(38, 161, 123, 0.2);
+  --shadow-glow-md: 0 0 20px rgba(38, 161, 123, 0.3);
+  --shadow-glow-lg: 0 0 40px rgba(38, 161, 123, 0.4);
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(38, 161, 123, 0.2); }
+  50% { box-shadow: 0 0 40px rgba(38, 161, 123, 0.5), 0 0 80px rgba(38, 161, 123, 0.1); }
+}
+
+.animate-float { animation: float 3.5s ease-in-out infinite; }
+.animate-glow-pulse { animation: glow-pulse 2s ease-in-out infinite; }
+
+/* Base dark styles */
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #0B0E11;
+  color: #F8F9FA;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* WDK Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(38, 161, 123, 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(38, 161, 123, 0.5);
+}
+
+/* WDK Selection */
+::selection {
+  background: rgba(38, 161, 123, 0.25);
+  color: white;
+}
+
+/* WDK Gradient Utilities */
+.gradient-text {
+  background: linear-gradient(135deg, #26A17B, #00D1FF);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #D4AF37, #AA8A2E);
+}
+
+.teal-gradient {
+  background: linear-gradient(135deg, #26A17B, #1A7A5E);
+}
+
+/* WDK Glassmorphism Standard */
+.glass {
+  background: rgba(30, 35, 41, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-dark {
+  background: rgba(11, 14, 17, 0.7);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(38, 161, 123, 0.2);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(38, 161, 123, 0.4);
+}
+
+/* Prose/Markdown Adjustments */
+.prose-invert {
+  --tw-prose-body: #F8F9FA;
+  --tw-prose-headings: #F8F9FA;
+  --tw-prose-links: #26A17B;
+  --tw-prose-bold: #F8F9FA;
+  --tw-prose-pre-bg: rgba(0, 0, 0, 0.3);
+}

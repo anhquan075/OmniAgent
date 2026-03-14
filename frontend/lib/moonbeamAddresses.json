@@ -1,0 +1,24 @@
+{
+  "network": "moonbaseAlpha",
+  "timestamp": "2026-03-12T07:58:19.462Z",
+  "contracts": {
+    "usdc": "0x81C81c5695003c9F80c3Ac2861eFaaeBc52F2c0F",
+    "glint": "0xb81ae2fE0f631b45e233ef77b2442e487d651a28",
+    "oracle": "0x108C3CD14248369c2fD60950376e6e179d1897c3",
+    "breaker": "0x79738d601171f59CD850EFDF69afF0087C5D1ed9",
+    "policy": "0xcC85B348f90843B2b07139dE82508276935Dd508",
+    "sharpeTracker": "0x3FC7112A680a1Cad34d25b6e397b7F419A62Abe1",
+    "vault": "0x3F37741147c43cf44F56f171E23bf0666F5D09C2",
+    "strategyEngine": "0x3b06a7C68F5BcD92B4eAD098E67b569D4e474Cd8",
+    "moonwellERC4626Adapter": "0x338246343893A62FD1bE79772E4c2305BC41eF46",
+    "moonwellLendingAdapter": "0xC78fFB2eE72963DDF10ec8B2b9c3ff7c00F27303",
+    "beamSwapFarmAdapter": "0xBc5d032895EA4F9166b3738EBd312e2c22bB867c",
+    "mocks": {
+      "moonwellVault": "0x7D9F689D0A9eBC32FfA5FAAe433C794e4407Db65",
+      "mToken": "0x1e48368dAE8d37AC11ec577159f1bf360262F749",
+      "stableSwap": "0x49b0211687aF852Ec62f8cDEA23A08d4304de498",
+      "masterChef": "0xc611571eB10173f1b3025583d844375D3EaDcB87",
+      "chainlink": "0xc97E92a24883Ca3e2eF85Ef0cFd1B30422f35877"
+    }
+  }
+}

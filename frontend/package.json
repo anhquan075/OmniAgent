@@ -1,0 +1,39 @@
+{
+  "name": "asterpilot-proofvault-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@ai-sdk/react": "^3.0.118",
+    "@ai-sdk/ui-utils": "^1.2.11",
+    "@rainbow-me/rainbowkit": "^2.2.8",
+    "@tailwindcss/typography": "^0.5.19",
+    "@tailwindcss/vite": "^4.2.1",
+    "@tanstack/react-query": "^5.66.0",
+    "@tippyjs/react": "^4.2.6",
+    "ai": "^6.0.116",
+    "clsx": "^2.1.1",
+    "ethers": "6.13.4",
+    "framer-motion": "^12.36.0",
+    "lucide-react": "^0.575.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1",
+    "tailwindcss": "^4.2.1",
+    "tippy.js": "^6.3.7",
+    "viem": "^2.17.4",
+    "wagmi": "^2.12.15"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.7"
+  }
+}
