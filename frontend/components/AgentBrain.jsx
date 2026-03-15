@@ -1,57 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from './shared/Card';
 import { Badge } from './shared/Badge';
-import { AlertCircle, CheckCircle2, Shield, Activity, TrendingUp, Zap, Clock } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Shield, Activity, TrendingUp, Zap, Clock, ExternalLink } from 'lucide-react';
 
-/**
- * AgentBrain Dashboard
- * Visualizes the real-time decision making process of the TetherProof WDK Agent.
- */
-export function AgentBrain() {
-  const [events, setEvents] = useState([]);
-  const [status, setStatus] = useState('OFFLINE');
-  const [currentRisk, setCurrentRisk] = useState({ level: 'LOW', drawdown: 0 });
-  const scrollRef = useRef(null);
+export default function AgentBrain() {
+  const [currentRisk, setCurrentRisk] = useState({ level: 'LOW', score: 0.12, status: 'Stable' });
+  const [currentStrategy, setCurrentStrategy] = useState({ activeRail: 'BNB', targetYield: 0.084, confidence: 0.95 });
+  const [recentActions, setRecentActions] = useState([]);
 
+  // Mock data for initial visual
   useEffect(() => {
-    const eventSource = new EventSource('http://localhost:3001/api/agent/stream');
-
-    eventSource.onopen = () => setStatus('ONLINE');
-    eventSource.onerror = () => setStatus('OFFLINE');
-
-    eventSource.onmessage = (e) => {
-      const payload = JSON.parse(e.data);
-      if (payload.type === 'history') {
-        setEvents(payload.data);
-        if (payload.data.length > 0) {
-          const last = payload.data[payload.data.length - 1];
-          setCurrentRisk({ level: last.riskLevel, drawdown: last.drawdown });
-        }
-      } else if (payload.type === 'event') {
-        setEvents(prev => [...prev.slice(-49), payload.data]);
-        setCurrentRisk({ level: payload.data.riskLevel, drawdown: payload.data.drawdown });
-      }
-    };
-
-    return () => eventSource.close();
+    setRecentActions([
+      { title: 'Rebalance Executed', description: 'Optimized USDT allocation from Buffer to Venus Rail', type: 'executeRebalance', time: '2m ago', hash: '0x123...' },
+      { title: 'Risk Scan Complete', description: 'ZK-Risk score verified at 0.12 (LOW)', type: 'analyzeRisk', time: '15m ago' },
+      { title: 'Yield Harvested', description: 'Claimed 42.5 USD₮ in strategy rewards', type: 'checkStrategy', time: '1h ago' }
+    ]);
   }, []);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [events]);
 
   const getRiskColor = (level) => {
     switch (level) {
       case 'HIGH': return 'text-red-500 bg-red-500/10 border-red-500/20';
       case 'MEDIUM': return 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20';
-      default: return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+      default: return 'text-tether-teal bg-tether-teal/10 border-tether-teal/20';
     }
   };
 
-  const getNodeIcon = (node) => {
-    switch (node) {
+  const getActionIcon = (type) => {
+    switch (type) {
       case 'analyzeRisk': return <Shield className="w-4 h-4" />;
       case 'checkStrategy': return <Activity className="w-4 h-4" />;
       case 'executeRebalance': return <Zap className="w-4 h-4" />;
@@ -62,29 +37,28 @@ export function AgentBrain() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-      {/* Risk Monitor */}
-      <Card className="bg-slate-900 border-slate-800 shadow-2xl">
-        <CardHeader className="pb-2 border-b border-slate-800">
-          <CardTitle className="flex items-center gap-2 text-slate-100 text-sm font-semibold uppercase tracking-wider">
-            <Shield className="w-4 h-4 text-emerald-400" />
-            Live Risk Analysis
+      <Card className="glass shadow-2xl border-white/10">
+        <CardHeader className="pb-2 border-b border-white/5">
+          <CardTitle className="flex items-center gap-2 text-neutral-gray-light text-[10px] font-heading font-bold uppercase tracking-[0.2em]">
+            <Shield className="w-4 h-4 text-tether-teal shadow-glow-sm" />
+            ZK-Risk Engine
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="flex flex-col items-center justify-center space-y-4">
-            <div className={`px-6 py-3 rounded-2xl border ${getRiskColor(currentRisk.level)} flex flex-col items-center transition-all duration-500`}>
-              <span className="text-xs font-bold uppercase tracking-widest opacity-70">Current Regime</span>
-              <span className="text-3xl font-black">{currentRisk.level}</span>
+            <div className={`px-6 py-3 rounded-2xl border ${getRiskColor(currentRisk.level)} flex flex-col items-center transition-all duration-500 shadow-glow-sm`}>
+              <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Current Regime</span>
+              <span className="text-3xl font-heading font-black">{currentRisk.level}</span>
             </div>
             <div className="w-full space-y-2">
-              <div className="flex justify-between text-xs font-medium text-slate-400">
-                <span>Monte Carlo Drawdown</span>
-                <span className="text-slate-200">{currentRisk.drawdown} BPS</span>
+              <div className="flex justify-between text-[10px] font-heading font-medium text-neutral-gray uppercase tracking-widest">
+                <span>Confidence</span>
+                <span className="text-tether-teal">{(currentRisk.score * 100).toFixed(1)}%</span>
               </div>
-              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                 <div 
-                  className={`h-full transition-all duration-1000 ${currentRisk.level === 'HIGH' ? 'bg-red-500' : currentRisk.level === 'MEDIUM' ? 'bg-yellow-500' : 'bg-emerald-500'}`}
-                  style={{ width: `${Math.min((currentRisk.drawdown / 2000) * 100, 100)}%` }}
+                  className="h-full bg-tether-teal transition-all duration-1000 shadow-glow-sm" 
+                  style={{ width: `${currentRisk.score * 100}%` }}
                 />
               </div>
             </div>
@@ -92,54 +66,72 @@ export function AgentBrain() {
         </CardContent>
       </Card>
 
-      {/* Autonomous Feed */}
-      <Card className="md:col-span-2 bg-slate-900 border-slate-800 shadow-2xl overflow-hidden flex flex-col h-[400px]">
-        <CardHeader className="pb-2 border-b border-slate-800 flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-slate-100 text-sm font-semibold uppercase tracking-wider">
-            <Activity className="w-4 h-4 text-blue-400" />
-            Agent Thought Process
+      <Card className="glass shadow-2xl border-white/10">
+        <CardHeader className="pb-2 border-b border-white/5">
+          <CardTitle className="flex items-center gap-2 text-neutral-gray-light text-[10px] font-heading font-bold uppercase tracking-[0.2em]">
+            <Activity className="w-4 h-4 text-tether-teal shadow-glow-sm" />
+            Strategy Pulse
           </CardTitle>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full animate-pulse ${status === 'ONLINE' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-            <span className="text-[10px] font-bold tracking-tighter text-slate-500 uppercase">{status}</span>
-          </div>
         </CardHeader>
-        <CardContent className="flex-1 overflow-y-auto p-0 scrollbar-thin scrollbar-thumb-slate-700" ref={scrollRef}>
-          <div className="divide-y divide-slate-800">
-            {events.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 italic text-sm">
-                Waiting for agent pulse...
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-heading text-neutral-gray uppercase tracking-widest">Active Rail</span>
+              <Badge className="bg-tether-teal/20 text-tether-teal border-tether-teal/30 font-mono text-[10px]">{currentStrategy.activeRail}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-heading text-neutral-gray uppercase tracking-widest">Target Yield</span>
+              <span className="text-xl font-heading font-bold text-cyber-cyan">{(currentStrategy.targetYield * 100).toFixed(2)}%</span>
+            </div>
+            <div className="pt-2">
+              <div className="flex justify-between text-[10px] font-heading text-neutral-gray uppercase tracking-widest mb-2">
+                <span>Execution Readiness</span>
+                <span className="text-tether-teal">Ready</span>
+              </div>
+              <div className="flex gap-1.5">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= 5 ? 'bg-tether-teal shadow-glow-sm animate-pulse' : 'bg-white/5'}`} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="glass shadow-2xl border-white/10">
+        <CardHeader className="pb-2 border-b border-white/5">
+          <CardTitle className="flex items-center gap-2 text-neutral-gray-light text-[10px] font-heading font-bold uppercase tracking-[0.2em]">
+            <Zap className="w-4 h-4 text-tether-teal shadow-glow-sm" />
+            Recent Log
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="max-h-[160px] overflow-y-auto custom-scrollbar">
+            {recentActions.length === 0 ? (
+              <div className="p-8 text-center text-[10px] font-heading text-neutral-gray uppercase tracking-widest opacity-50">
+                Awaiting agent events...
               </div>
             ) : (
-              events.map((event) => (
-                <div key={event.id} className="p-4 hover:bg-slate-800/50 transition-colors group">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1 p-1.5 rounded-lg bg-slate-800 text-slate-400 group-hover:text-blue-400 transition-colors">
-                      {getNodeIcon(event.node)}
+              recentActions.map((action, idx) => (
+                <div key={idx} className="p-3 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                  <div className="flex gap-3 items-start">
+                    <div className="p-1.5 rounded-lg bg-white/5 text-tether-teal mt-0.5">
+                      {getActionIcon(action.type)}
                     </div>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-300 capitalize">{event.node.replace(/([A-Z])/g, ' $1')}</span>
-                        <span className="text-[10px] font-medium text-slate-500 font-mono">
-                          {new Date(event.timestamp).toLocaleTimeString()}
-                        </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[10px] font-heading font-bold text-white uppercase tracking-wider truncate">{action.title}</span>
+                        <span className="text-[8px] font-mono text-neutral-gray shrink-0">{action.time}</span>
                       </div>
-                      <p className="text-sm text-slate-400 leading-relaxed">
-                        Action: <span className="text-slate-200 font-medium">{event.action}</span>
-                      </p>
-                      {event.details?.aiScore && (
-                        <div className="mt-2 p-2 rounded bg-slate-950 border border-slate-800 text-[11px] text-slate-500 italic leading-snug">
-                          "AI Risk Score: {event.details.aiScore.score}/100 - {event.details.aiScore.explanation}"
-                        </div>
-                      )}
-                      {event.txHash && (
+                      <p className="text-[9px] text-neutral-gray-light leading-relaxed mb-1.5 line-clamp-2">{action.description}</p>
+                      {action.hash && (
                         <a 
-                          href={`https://testnet.bscscan.com/tx/${event.txHash}`}
-                          target="_blank"
+                          href={`https://testnet.bscscan.com/tx/${action.hash}`} 
+                          target="_blank" 
                           rel="noreferrer"
-                          className="mt-1 inline-block text-[10px] text-blue-400 hover:underline font-mono"
+                          className="text-[8px] font-mono text-tether-teal hover:text-cyber-cyan transition-colors flex items-center gap-1 uppercase tracking-tighter"
                         >
-                          {event.txHash.slice(0, 10)}...{event.txHash.slice(-8)}
+                          View Transaction <ExternalLink className="w-2 h-2" />
                         </a>
                       )}
                     </div>

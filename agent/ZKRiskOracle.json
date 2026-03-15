@@ -1,302 +1,311 @@
-[
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_zkVerifier",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      }
-    ],
-    "name": "OwnableInvalidOwner",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "name": "OwnableUnauthorizedAccount",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "ZKRiskOracle__UnauthorizedVerifier",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "ZKRiskOracle__ZeroAddress",
-    "type": "error"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "previousOwner",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "newOwner",
-        "type": "address"
-      }
-    ],
-    "name": "OwnershipTransferStarted",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "previousOwner",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "newOwner",
-        "type": "address"
-      }
-    ],
-    "name": "OwnershipTransferred",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "uint32",
-        "name": "sharpe",
-        "type": "uint32"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint32",
-        "name": "drawdown",
-        "type": "uint32"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint32",
-        "name": "buffer",
-        "type": "uint32"
-      }
-    ],
-    "name": "RiskMetricsVerified",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "oldVerifier",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "newVerifier",
-        "type": "address"
-      }
-    ],
-    "name": "ZkVerifierUpdated",
-    "type": "event"
-  },
-  {
-    "inputs": [],
-    "name": "acceptOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      },
-      {
-        "internalType": "uint32",
-        "name": "_computedSharpe",
-        "type": "uint32"
-      },
-      {
-        "internalType": "uint32",
-        "name": "_computedDrawdownBps",
-        "type": "uint32"
-      },
-      {
-        "internalType": "uint32",
-        "name": "_recommendedBufferBps",
-        "type": "uint32"
-      }
-    ],
-    "name": "fulfillRiskCalculation",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getVerifiedRiskBands",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "uint32",
-            "name": "timestamp",
-            "type": "uint32"
-          },
-          {
-            "internalType": "uint32",
-            "name": "verifiedSharpeRatio",
-            "type": "uint32"
-          },
-          {
-            "internalType": "uint32",
-            "name": "monteCarloDrawdownBps",
-            "type": "uint32"
-          },
-          {
-            "internalType": "uint32",
-            "name": "recommendedBufferBps",
-            "type": "uint32"
-          }
-        ],
-        "internalType": "struct ZKRiskOracle.RiskMetrics",
-        "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "latestMetrics",
-    "outputs": [
-      {
-        "internalType": "uint32",
-        "name": "timestamp",
-        "type": "uint32"
-      },
-      {
-        "internalType": "uint32",
-        "name": "verifiedSharpeRatio",
-        "type": "uint32"
-      },
-      {
-        "internalType": "uint32",
-        "name": "monteCarloDrawdownBps",
-        "type": "uint32"
-      },
-      {
-        "internalType": "uint32",
-        "name": "recommendedBufferBps",
-        "type": "uint32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "owner",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "pendingOwner",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "renounceOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_newVerifier",
-        "type": "address"
-      }
-    ],
-    "name": "setZkVerifier",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "newOwner",
-        "type": "address"
-      }
-    ],
-    "name": "transferOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "zkVerifier",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-]
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "ZKRiskOracle",
+  "sourceName": "contracts/ZKRiskOracle.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_zkVerifier",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnableInvalidOwner",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "OwnableUnauthorizedAccount",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ZKRiskOracle__UnauthorizedVerifier",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ZKRiskOracle__ZeroAddress",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferStarted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint32",
+          "name": "sharpe",
+          "type": "uint32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint32",
+          "name": "drawdown",
+          "type": "uint32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint32",
+          "name": "buffer",
+          "type": "uint32"
+        }
+      ],
+      "name": "RiskMetricsVerified",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "oldVerifier",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newVerifier",
+          "type": "address"
+        }
+      ],
+      "name": "ZkVerifierUpdated",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "acceptOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes",
+          "name": "",
+          "type": "bytes"
+        },
+        {
+          "internalType": "uint32",
+          "name": "_computedSharpe",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "_computedDrawdownBps",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "_recommendedBufferBps",
+          "type": "uint32"
+        }
+      ],
+      "name": "fulfillRiskCalculation",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getVerifiedRiskBands",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint32",
+              "name": "timestamp",
+              "type": "uint32"
+            },
+            {
+              "internalType": "uint32",
+              "name": "verifiedSharpeRatio",
+              "type": "uint32"
+            },
+            {
+              "internalType": "uint32",
+              "name": "monteCarloDrawdownBps",
+              "type": "uint32"
+            },
+            {
+              "internalType": "uint32",
+              "name": "recommendedBufferBps",
+              "type": "uint32"
+            }
+          ],
+          "internalType": "struct ZKRiskOracle.RiskMetrics",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "latestMetrics",
+      "outputs": [
+        {
+          "internalType": "uint32",
+          "name": "timestamp",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "verifiedSharpeRatio",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "monteCarloDrawdownBps",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "recommendedBufferBps",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pendingOwner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_newVerifier",
+          "type": "address"
+        }
+      ],
+      "name": "setZkVerifier",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "zkVerifier",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x6080346100e257601f61065738819003918201601f19168301916001600160401b038311848410176100e6578084926020946040528339810103126100e257516001600160a01b03808216918290036100e25733156100ca5760018060a01b03199081600154166001555f5433838216175f55604051913391167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e05f80a382156100bb5750600254161760025560405161055c90816100fb8239f35b6392c88a1560e01b8152600490fd5b604051631e4fbdf760e01b81525f6004820152602490fd5b5f80fd5b634e487b7160e01b5f52604160045260245ffdfe604060808152600480361015610013575f80fd5b5f3560e01c9081631e6a712114610440578163715018a6146103dd57816379ba50971461035c5781638da5cb5b1461033557816396913528146102b3578163c8e3f9e914610189578163d6df096d14610161578163e30c397814610139578163f2fde38b146100d2575063f7b92fcd1461008b575f80fd5b346100ce575f3660031901126100ce5760809060035463ffffffff908251928282168452828260201c1660208501528282821c169084015260601c166060820152f35b5f80fd5b346100ce5760203660031901126100ce57356001600160a01b03818116918290036100ce576100ff6104fb565b8160018060a01b031960015416176001555f54167f38d16b8cac22d99fc7c124b9cd0de2d3fa1faef420bfe791d8c362d765e227005f80a3005b82346100ce575f3660031901126100ce5760015490516001600160a01b039091168152602090f35b82346100ce575f3660031901126100ce5760025490516001600160a01b039091168152602090f35b9050346100ce5760a03660031901126100ce5760243567ffffffffffffffff8082116100ce57366023830112156100ce57818301359081116100ce57369101602401116100ce5763ffffffff60443581811693918482036100ce57606435818116928382036100ce5760843592808416968785036100ce576002546001600160a01b031633036102a5577fd1cfd70374a3b0ed86f6eac9b3deb5c0c2685a58821434c0255317159c710d0560608a8a8a8a8a8a8a67ffffffff000000008b4216878a6102536104c7565b8381528b6020820152888a82015201526003549463ffffffff8b1b908b1b169460018060801b031916179160201b16179063ffffffff60401b90851b16171760035581519384526020840152820152a1005b86516366248f5b60e01b8152fd5b82346100ce5760203660031901126100ce576001600160a01b038235818116939192908490036100ce576102e56104fb565b8315610328575050600280546001600160a01b031981168417909155167ff335fdec5c467dfdc8bca7991b97cb3bc62c88c8467dedce3044baff0527cad65f80a3005b516392c88a1560e01b8152fd5b82346100ce575f3660031901126100ce575f5490516001600160a01b039091168152602090f35b82346100ce575f3660031901126100ce57600154916001600160a01b039133838516036103c657505060018060a01b03198092166001555f549133908316175f553391167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e05f80a3005b60249250519063118cdaa760e01b82523390820152fd5b346100ce575f3660031901126100ce576103f56104fb565b600180546001600160a01b03199081169091555f80549182168155906001600160a01b03167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08280a3005b82346100ce575f3660031901126100ce576080905f606061045f6104c7565b828152826020820152828482015201526104776104c7565b9060035463ffffffff9182808316948581528160208201818660201c168152816060868501948289891c168652019660601c16865284519788525116602087015251169084015251166060820152f35b604051906080820182811067ffffffffffffffff8211176104e757604052565b634e487b7160e01b5f52604160045260245ffd5b5f546001600160a01b0316330361050e57565b60405163118cdaa760e01b8152336004820152602490fdfea2646970667358221220c56db003ccd6be2935f7f24a64cee940f86782de4dfe2f44346204f9e4170ece64736f6c63430008180033",
+  "deployedBytecode": "0x604060808152600480361015610013575f80fd5b5f3560e01c9081631e6a712114610440578163715018a6146103dd57816379ba50971461035c5781638da5cb5b1461033557816396913528146102b3578163c8e3f9e914610189578163d6df096d14610161578163e30c397814610139578163f2fde38b146100d2575063f7b92fcd1461008b575f80fd5b346100ce575f3660031901126100ce5760809060035463ffffffff908251928282168452828260201c1660208501528282821c169084015260601c166060820152f35b5f80fd5b346100ce5760203660031901126100ce57356001600160a01b03818116918290036100ce576100ff6104fb565b8160018060a01b031960015416176001555f54167f38d16b8cac22d99fc7c124b9cd0de2d3fa1faef420bfe791d8c362d765e227005f80a3005b82346100ce575f3660031901126100ce5760015490516001600160a01b039091168152602090f35b82346100ce575f3660031901126100ce5760025490516001600160a01b039091168152602090f35b9050346100ce5760a03660031901126100ce5760243567ffffffffffffffff8082116100ce57366023830112156100ce57818301359081116100ce57369101602401116100ce5763ffffffff60443581811693918482036100ce57606435818116928382036100ce5760843592808416968785036100ce576002546001600160a01b031633036102a5577fd1cfd70374a3b0ed86f6eac9b3deb5c0c2685a58821434c0255317159c710d0560608a8a8a8a8a8a8a67ffffffff000000008b4216878a6102536104c7565b8381528b6020820152888a82015201526003549463ffffffff8b1b908b1b169460018060801b031916179160201b16179063ffffffff60401b90851b16171760035581519384526020840152820152a1005b86516366248f5b60e01b8152fd5b82346100ce5760203660031901126100ce576001600160a01b038235818116939192908490036100ce576102e56104fb565b8315610328575050600280546001600160a01b031981168417909155167ff335fdec5c467dfdc8bca7991b97cb3bc62c88c8467dedce3044baff0527cad65f80a3005b516392c88a1560e01b8152fd5b82346100ce575f3660031901126100ce575f5490516001600160a01b039091168152602090f35b82346100ce575f3660031901126100ce57600154916001600160a01b039133838516036103c657505060018060a01b03198092166001555f549133908316175f553391167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e05f80a3005b60249250519063118cdaa760e01b82523390820152fd5b346100ce575f3660031901126100ce576103f56104fb565b600180546001600160a01b03199081169091555f80549182168155906001600160a01b03167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08280a3005b82346100ce575f3660031901126100ce576080905f606061045f6104c7565b828152826020820152828482015201526104776104c7565b9060035463ffffffff9182808316948581528160208201818660201c168152816060868501948289891c168652019660601c16865284519788525116602087015251169084015251166060820152f35b604051906080820182811067ffffffffffffffff8211176104e757604052565b634e487b7160e01b5f52604160045260245ffd5b5f546001600160a01b0316330361050e57565b60405163118cdaa760e01b8152336004820152602490fdfea2646970667358221220c56db003ccd6be2935f7f24a64cee940f86782de4dfe2f44346204f9e4170ece64736f6c63430008180033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

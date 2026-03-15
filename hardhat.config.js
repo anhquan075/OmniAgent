@@ -44,7 +44,7 @@ module.exports = {
     version: "0.8.24",
     settings: {
       viaIR: true,
-      evmVersion: "paris", // Required for Creditcoin L1 (does not support PUSH0 opcode yet)
+      evmVersion: "cancun", 
       optimizer: {
         enabled: true,
         // runs=50: smaller bytecode than 200 → cheaper deployment.

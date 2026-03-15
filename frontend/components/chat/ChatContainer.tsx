@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChatHistory } from './ChatHistory';
 import { MessageInput } from './MessageInput';
 import { CpuIcon, ZapIcon, ShieldCheckIcon, BarChart3Icon, BrainCircuitIcon } from 'lucide-react';
+import { OperationalPlan, TaskStatus } from './TaskStep';
+import { Conversation } from '../../src/components/ai-elements/conversation.jsx';
 
 interface ChatContainerProps {
   messages: any[];
@@ -73,6 +75,23 @@ export function ChatContainer({
 
   const activeSuggestions = dynamicSuggestions || (messages.length < 3 ? SUGGESTED_ACTIONS : null);
 
+  // Roadmap steps for the autonomous loop following AI SDK Elements pattern
+  const roadmapSteps = React.useMemo(() => {
+    const currentProgress = currentAgentStatus?.progress || 0;
+
+    const getStatus = (targetProgress: number): TaskStatus => {
+      if (currentProgress >= targetProgress) return 'completed';
+      if (currentProgress > targetProgress - 40) return 'in-progress';
+      return 'pending';
+    };
+
+    return [
+      { label: 'Risk Analysis', status: getStatus(40), details: 'ZK-verified Monte Carlo simulations' },
+      { label: 'Strategy Formulation', status: getStatus(80), details: 'Yield scout on Solana & TON' },
+      { label: 'Tactical Execution', status: getStatus(100), details: 'ProofVault settlement & rebalance' }
+    ];
+  }, [currentAgentStatus]);
+
   // Auto-scroll to bottom on new messages or streaming content if user is near the bottom
   useEffect(() => {
     if (scrollRef.current) {
@@ -88,17 +107,17 @@ export function ChatContainer({
   return (
     <div className="flex flex-col h-full w-full rounded-2xl overflow-hidden bg-[#0B0E14]/80 backdrop-blur-xl border border-white/10 shadow-2xl shadow-tether-teal/5 relative">
       {/* Premium Header with Telemetry */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/20 relative z-10">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-2.5 sm:py-3 border-b border-white/10 bg-black/20 relative z-10">
         <div className="flex flex-col">
-          <h2 className="font-heading text-tether-teal text-sm font-semibold tracking-wider flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-tether-teal animate-pulse"></div>
-            WDK Strategist Terminal
+          <h2 className="font-heading text-tether-teal text-[11px] sm:text-sm font-semibold tracking-wider flex items-center gap-2 sm:gap-3">
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-tether-teal animate-pulse"></div>
+            Strategist Terminal
           </h2>
-          <div className="flex items-center gap-3 mt-1.5 opacity-60">
-            <div className="flex items-center gap-1 text-[8px] font-heading tracking-widest text-neutral-gray-light uppercase">
+          <div className="flex items-center gap-3 mt-1 opacity-60">
+            <div className="flex items-center gap-1 text-[7px] sm:text-[8px] font-heading tracking-widest text-neutral-gray-light uppercase">
               <span className="text-cyber-blue">Lat:</span> 24ms
             </div>
-            <div className="flex items-center gap-1 text-[8px] font-heading tracking-widest text-neutral-gray-light uppercase">
+            <div className="flex items-center gap-1 text-[7px] sm:text-[8px] font-heading tracking-widest text-neutral-gray-light uppercase">
               <span className="text-neon-green">TPS:</span> 1.4k
             </div>
           </div>
@@ -141,21 +160,26 @@ export function ChatContainer({
       </div>
 
       {/* Messages Scroll Area */}
-      <div 
+      <Conversation 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth scrollbar-none custom-scrollbar"
+        className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 scroll-smooth scrollbar-none custom-scrollbar"
       >
         <ChatHistory messages={messages} />
+        
         {isLoading && (
-          <div className="flex items-center gap-2 text-gray-400 font-sans text-sm animate-pulse ml-2 mt-4">
-            <div className="flex gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-tether-teal)] animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-tether-teal)] animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-tether-teal)] animate-bounce" style={{ animationDelay: '300ms' }} />
+          <div className="mx-2 mt-4 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <OperationalPlan steps={roadmapSteps} />
+            
+            <div className="flex items-center gap-2 text-gray-400 font-sans text-sm animate-pulse ml-2">
+              <div className="flex gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-tether-teal)] animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-tether-teal)] animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-tether-teal)] animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+              <span className="tracking-widest text-[9px] uppercase font-heading text-[var(--color-tether-teal)]/60 ml-2">
+                {currentAgentStatus ? `Strategist: ${currentAgentStatus.status}...` : "Neural Link Active..."}
+              </span>
             </div>
-            <span className="tracking-widest text-[9px] uppercase font-heading text-[var(--color-tether-teal)]/60 ml-2">
-              {currentAgentStatus ? `Strategist: ${currentAgentStatus.status}...` : "Neural Link Active..."}
-            </span>
           </div>
         )}
 
@@ -182,7 +206,7 @@ export function ChatContainer({
             </button>
           </div>
         )}
-      </div>
+      </Conversation>
 
       {/* Input Anchored Area */}
       <div className="p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent border-t border-white/5">

@@ -101,7 +101,7 @@ chat.post('/', async (c) => {
           model,
           temperature: 0, // Deterministic for consistent DeFi advisory
           abortSignal: c.req.raw.signal,
-          system: `You are the TetherProof AFOS (Autonomous Fixed-income Optimization Strategy) Strategist. 
+          system: `You are the OmniWDK AFOS (Autonomous Fixed-income Optimization Strategy) Strategist. 
 Your core directive is yield optimization for USD₮ and XAU₮ assets via the Tether WDK (Wallet Development Kit) and ProofVault infrastructure.
 
 OPERATIONAL INTEL:

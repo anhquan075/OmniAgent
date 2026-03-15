@@ -26,6 +26,12 @@ export class RiskService {
 
   async getRiskProfile(): Promise<RiskProfile> {
     try {
+      const oracleAddress = await this.zkOracle.getAddress();
+      // Known configuration error: WDK_ZK_ORACLE_ADDRESS pointing to SharpeTracker
+      if (oracleAddress.toLowerCase() === "0x6520D0366A43081008049CdD4c87Db3A5ec203B8".toLowerCase()) {
+        throw new Error("Configuration Error: WDK_ZK_ORACLE_ADDRESS is pointing to SharpeTracker instead of ZKRiskOracle.");
+      }
+
       const metrics = await this.zkOracle.getVerifiedRiskBands();
       const drawdown = Number(metrics.monteCarloDrawdownBps);
       

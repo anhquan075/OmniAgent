@@ -1,9 +1,9 @@
-# TetherProof-WDK 🧱🏦
+# OmniWDK 🧱🏦
 
-**TetherProof-WDK** is an autonomous, non-custodial yield routing stack built on BNB Chain and powered by **Tether WDK** (Wallet Development Kit). It manages USD₮-denominated capital by dynamically routing it between high-yield staking pools and "Safe Haven" assets like XAU₮ (Tether Gold).
+**OmniWDK** is an autonomous, non-custodial yield routing stack built on BNB Chain and powered by **Tether WDK** (Wallet Development Kit). It manages USD₮-denominated capital by dynamically routing it between high-yield staking pools and "Safe Haven" assets like XAU₮ (Tether Gold).
 
 <p align="center">
-  <img src="frontend/public/logo.svg" alt="TetherProof Logo" width="120" height="120" />
+  <img src="frontend/public/logo.svg" alt="OmniWDK Logo" width="120" height="120" />
 </p>
 
 ## Key Features
@@ -21,7 +21,7 @@ For a deep dive into our ZK-risk implementation and RRA economics, see our [HACK
 
 ## Architecture
 
-1. **ProofVault.sol**: The core ERC-4626 vault that manages USD₮ and routes it to specific adapters.
+1. **WDKVault.sol**: The core ERC-4626 vault that manages USD₮ and routes it to specific adapters.
 2. **StrategyEngine.sol**: The logic layer that computes optimal allocations based on the `RiskPolicy`.
 3. **ExecutionAuction.sol**: Competitive auction layer for rebalance rights (RRA).
 4. **XAUTYieldAdapter.sol**: A specialized adapter that manages XAU₮ holdings.
@@ -56,9 +56,9 @@ WDK_ENGINE_ADDRESS=0x...
 
 ### Running the System
 
-1. **Start the Agent Server** (Webhooks, API, SSE):
+1. **Start the Agent API** (Webhooks, API, SSE):
    ```bash
-   node agent/server.js
+   node agent/api.js
    ```
 
 2. **Start the Autonomous Loop**:

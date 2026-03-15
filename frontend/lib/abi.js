@@ -65,10 +65,13 @@ export const vaultV2Abi = [
   "function lpAdapter() view returns (address)",
   "function rebalance(uint256 wdkTargetBps, uint256 maxSlippageBps, address executor, uint256 bountyBps, uint256 lpTargetBps) external",
   "function idleBufferBps() view returns (uint256)",
-  // Contract returns (target, current, utilizationBps) — named to match contract
   "function bufferStatus() view returns (uint256 bufferTarget, uint256 idleBalance, uint256 utilizationBps)",
-  "function pendingWDKWithdrawals() view returns (uint256 count, uint256 totalAmount)",
   "function pegArbExecutor() view returns (address)",
+  "function rawTotalAssets() view returns (uint256)",
+  "function calculateLockedProfit() view returns (uint256)",
+  "function lockedProfit() view returns (uint256)",
+  "function lastReport() view returns (uint256)",
+  "function withdrawYield(address receiver) returns (uint256)",
   "event AutoHarvestTriggered(uint256 harvested)",
 ];
 
@@ -76,15 +79,12 @@ export const engineV2Abi = [
   ...engineAbi.filter(f => !f.includes("previewDecision")),
   "function circuitBreaker() view returns (address)",
   "function sharpeTracker() view returns (address)",
-  // V2 previewDecision — includes targetLpBps at correct position (between targetWDKBps and bountyBps)
   "function previewDecision() view returns (tuple(bool executable, bytes32 reason, uint8 nextState, uint256 price, uint256 previousPrice, uint256 volatilityBps, uint256 targetWDKBps, uint256 targetLpBps, uint256 bountyBps, bool breakerPaused, int256 meanYieldBps, uint256 yieldVolatilityBps, int256 sharpeRatio, uint256 auctionElapsedSeconds, uint256 bufferUtilizationBps) preview)",
   "function previewAuction() view returns (uint256 currentBountyBps, uint256 elapsedSeconds, uint256 remainingSeconds, uint256 minBountyBps, uint256 maxBountyBps)",
   "function previewSharpe() view returns (int256 mean, uint256 volatility, int256 sharpe)",
   "function previewBreaker() view returns (tuple(bool paused, bool signalA, bool signalB, bool signalC, uint256 lastTripTimestamp, uint256 recoveryTimestamp) status)",
-  // Composite vault health score — returns 0-100 score + human-readable label
-  "function vaultHealthScore() view returns (uint256 score, bytes32 label)",
-  // Rail breakdown — returns all 3 rails + totals + allocation bps
-  "function previewAllRails() view returns (uint256 idleUsdt, uint256 wdkManaged, uint256 secondaryManaged, uint256 lpManaged, uint256 totalAssets_, uint256 wdkShareBps, uint256 lpShareBps, uint256 targetWDKBps_, uint256 targetLpBps_)",
+  "function checkUpkeep(bytes calldata) view returns (bool upkeepNeeded, bytes memory performData)",
+  "function performUpkeep(bytes calldata)",
 ];
 
 export const executionAuctionAbi = [

@@ -55,7 +55,7 @@ export function ChatHistory({ messages = [] }: ChatHistoryProps) {
           const isFirstInGroup = index === 0 || visibleMessages[index - 1].role !== msg.role;
           
           return (
-            <div key={msg.id} className={isFirstInGroup ? 'mt-6' : 'mt-1'}>
+            <div key={msg.id} className={isFirstInGroup ? 'mt-4 sm:mt-6' : 'mt-1'}>
               <RichMessage 
                 role={msg.role} 
                 content={msg.content} 

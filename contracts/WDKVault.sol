@@ -6,21 +6,22 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IManagedAdapter} from "./interfaces/IManagedAdapter.sol";
 import {IVenusVToken} from "./interfaces/IVenusVToken.sol";
+import {TransientReentrancyGuard} from "./TransientReentrancyGuard.sol";
 
 /**
  * @title WDKVault
  * @notice OmniWDK WDKVault V2 (Polkadot Hub Adaptation)
  */
-contract WDKVault is ERC4626, Ownable, ReentrancyGuard {
+contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
     using SafeERC20 for IERC20;
 
     uint256 public constant BPS_DENOMINATOR = 10_000;
+    uint256 public constant PROFIT_UNLOCK_TIME = 6 hours;
 
     // --- Immutables ---
     uint256 public immutable idleBufferBps;
@@ -34,6 +35,9 @@ contract WDKVault is ERC4626, Ownable, ReentrancyGuard {
     uint256 public venusExchangeRateScale;
     bool public configurationLocked;
     address public pegArbExecutor;
+    
+    uint256 public lockedProfit;
+    uint256 public lastReport;
     
     mapping(address => uint256) public userPrincipal;
 
@@ -117,7 +121,29 @@ contract WDKVault is ERC4626, Ownable, ReentrancyGuard {
 
     function totalAssets() public view override returns (uint256) {
         (uint256 total, ) = _totalAssetsInternal();
+        uint256 currentlyLocked = calculateLockedProfit();
+        if (total < currentlyLocked) return 0;
+        return total - currentlyLocked;
+    }
+
+    /**
+     * @notice Returns the raw total assets without subtracting locked profit.
+     */
+    function rawTotalAssets() public view returns (uint256) {
+        (uint256 total, ) = _totalAssetsInternal();
         return total;
+    }
+
+    function calculateLockedProfit() public view returns (uint256) {
+        uint256 locked = lockedProfit;
+        if (locked == 0) return 0;
+
+        uint256 timeSinceReport = block.timestamp - lastReport;
+        if (timeSinceReport >= PROFIT_UNLOCK_TIME) {
+            return 0;
+        }
+
+        return locked - (locked * timeSinceReport / PROFIT_UNLOCK_TIME);
     }
 
     function _totalAssetsInternal() internal view returns (uint256 total, address failingAdapter) {
@@ -155,6 +181,13 @@ contract WDKVault is ERC4626, Ownable, ReentrancyGuard {
         uint256 lpTargetBps
     ) external nonReentrant onlyEngine {
         if (!configurationLocked) revert WDKVault__NotLocked();
+
+        uint256 preRawAssets = rawTotalAssets();
+        uint256 preLocked = calculateLockedProfit();
+
+        // Optional: trigger adapter harvest before measuring deltas
+        _maybeHarvest();
+
         (uint256 total, address failingStart) = _totalAssetsInternal();
         if (failingStart != address(0)) revert WDKVault__AdapterReportingFailure(failingStart);
 
@@ -182,6 +215,25 @@ contract WDKVault is ERC4626, Ownable, ReentrancyGuard {
         _payExecutorBounty(executor, bountyBps, total);
         _rebalanceSecondary(buffer);
 
+        uint256 postRawAssets = rawTotalAssets();
+        
+        // Profit Locking Logic: Capture any jump in raw assets during rebalance (harvests, etc)
+        // preRawAssets IS the raw total (totalInternal) at the start.
+        // postRawAssets IS the raw total (totalInternal) at the end.
+        if (postRawAssets > preRawAssets) {
+            uint256 profit = postRawAssets - preRawAssets;
+            lockedProfit = preLocked + profit;
+            lastReport = block.timestamp;
+        } else if (preRawAssets > postRawAssets) {
+            uint256 loss = preRawAssets - postRawAssets;
+            if (preLocked > loss) {
+                lockedProfit = preLocked - loss;
+            } else {
+                lockedProfit = 0;
+            }
+            lastReport = block.timestamp;
+        }
+
         emit Rebalanced(
             wdkTarget,
             address(wdkAdapter) != address(0) ? wdkAdapter.managedAssets() : 0,
@@ -189,6 +241,14 @@ contract WDKVault is ERC4626, Ownable, ReentrancyGuard {
             address(secondaryAdapter) != address(0) ? secondaryAdapter.managedAssets() : 0,
             address(lpAdapter) != address(0) ? lpAdapter.managedAssets() : 0
         );
+    }
+
+    function _maybeHarvest() internal {
+        if (address(lpAdapter) == address(0)) return;
+        (bool ok, ) = address(lpAdapter).call(
+            abi.encodeWithSignature("harvestRewards()")
+        );
+        // Best effort
     }
 
     function _availableIdle(uint256 buffer) internal view returns (uint256) {
@@ -381,4 +441,6 @@ contract WDKVault is ERC4626, Ownable, ReentrancyGuard {
         emit YieldWithdrawn(msg.sender, receiver, yieldAmount);
         return yieldAmount;
     }
+
+    receive() external payable {}
 }

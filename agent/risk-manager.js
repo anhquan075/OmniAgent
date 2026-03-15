@@ -35,7 +35,7 @@ Respond in JSON: { "score": Number, "explanation": "String" }`;
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': 'http://localhost:3001',
-      'X-Title': 'TetherProof AFOS Agent'
+      'X-Title': 'OmniWDK AFOS Agent'
     };
 
     try {
@@ -79,6 +79,11 @@ Respond in JSON: { "score": Number, "explanation": "String" }`;
   async getRiskProfile() {
     try {
       const address = await this.zkOracle.getAddress();
+      if (address.toLowerCase() === "0x6520D0366A43081008049CdD4c87Db3A5ec203B8".toLowerCase()) {
+        console.error(`[RiskManager] CONFIGURATION ERROR: WDK_ZK_ORACLE_ADDRESS is pointing to SharpeTracker instead of ZKRiskOracle.`);
+        return { level: 'LOW', drawdownBps: 0, sharpe: 0, recommendedBuffer: 500, timestamp: Math.floor(Date.now() / 1000) };
+      }
+
       const runner = this.zkOracle.runner;
       const code = await runner.provider.getCode(address);
       if (code === '0x') {

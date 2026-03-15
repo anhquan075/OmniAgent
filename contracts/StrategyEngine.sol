@@ -78,7 +78,7 @@ contract StrategyEngine {
         _;
     }
 
-    constructor(address vault_, address policy_, address oracle_, address breaker_, address sharpeTracker_, uint256 initialPrice_) {
+    constructor(address payable vault_, address policy_, address oracle_, address breaker_, address sharpeTracker_, uint256 initialPrice_) {
         if (vault_ == address(0)) revert StrategyEngine__ZeroAddress();
         if (policy_ == address(0)) revert StrategyEngine__ZeroAddress();
         if (oracle_ == address(0)) revert StrategyEngine__ZeroAddress();
@@ -176,6 +176,32 @@ contract StrategyEngine {
         nextState = _selectState(price, volatility);
         (wdkBps, lpBps) = _selectAllocation(nextState);
         bountyBps = _auctionBountyBps();
+    }
+
+    /**
+     * @notice Chainlink Automation: Check if upkeep is needed.
+     * @dev Upkeep is needed when the cycle is executable AND the bounty has reached 
+     *      at least 50% of its maximum value (to ensure profitable execution for the keeper).
+     */
+    function checkUpkeep(bytes calldata) external view returns (bool upkeepNeeded, bytes memory performData) {
+        if (circuitBreaker.isPaused()) return (false, "");
+        (bool canExec, ) = _canExecuteInternal();
+        if (!canExec) return (false, "");
+
+        uint256 currentBounty = _auctionBountyBps();
+        uint256 maxBounty = policy.maxBountyBps();
+        
+        // Only trigger if bounty is at least 50% of max
+        upkeepNeeded = currentBounty >= (maxBounty / 2);
+        return (upkeepNeeded, "");
+    }
+
+    /**
+     * @notice Chainlink Automation: Perform the upkeep (execute cycle).
+     */
+    function performUpkeep(bytes calldata) external {
+        // We just call executeCycle. Internal checks will handle the rest.
+        _executeCycleInternal(msg.sender, false, FlashRebalanceData(address(0), address(0), address(0), 0));
     }
 
     function _executeCycleInternal(address executor, bool useFlash, FlashRebalanceData memory flashData) internal {

@@ -7,6 +7,7 @@ import '@rainbow-me/rainbowkit/styles.css';
 import "./globals.css";
 import App from "./App.jsx";
 import { wagmiConfig } from "../lib/wagmiConfig.js";
+import { TooltipProvider } from "../components/ui/tooltip";
 
 const queryClient = new QueryClient();
 
@@ -19,7 +20,7 @@ const tetherTheme = darkTheme({
   overlayBlur: 'small',
 });
 
-// Customizing colors to match TetherProof (WDK Edition) palette
+// Customizing colors to match OmniWDK (WDK Edition) palette
 tetherTheme.colors.modalBackground = '#0B0E11';
 tetherTheme.colors.modalBorder = 'rgba(38, 161, 123, 0.2)';
 tetherTheme.colors.modalText = '#F8F9FA';
@@ -40,7 +41,9 @@ createRoot(document.getElementById("root")).render(
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider theme={tetherTheme}>
-          <App />
+          <TooltipProvider>
+            <App />
+          </TooltipProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

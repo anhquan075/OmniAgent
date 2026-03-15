@@ -10,7 +10,7 @@ import path from 'path';
 dotenv.config({ path: '.env.wdk' });
 
 async function main() {
-  console.log("🚀 Starting TetherProof-WDK E2E Test Flow...");
+  console.log("🚀 Starting OmniWDK-WDK E2E Test Flow...");
 
   // 1. Deploy Stack
   console.log("\n[1/6] Deploying Tether WDK Stack to Local Network...");

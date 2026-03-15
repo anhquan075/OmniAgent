@@ -44,7 +44,7 @@ const port = Number(env.PORT);
 
 // Only start the server if this file is executed directly
 if (import.meta.url.endsWith('src/index.ts') || import.meta.url.endsWith('src/index.js')) {
-  console.log(`🚀 TetherProof WDK Strategist API starting on port ${port}`);
+  console.log(`🚀 OmniWDK WDK Strategist API starting on port ${port}`);
 
   serve({
     fetch: app.fetch,

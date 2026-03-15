@@ -21,15 +21,23 @@ export const DEFI_COMMANDS: Command[] = [
 
 interface CommandPaletteProps {
   isOpen: boolean;
-  filter: string;
-  selectedIndex: number;
+  filterText?: string;
+  selectedIndex?: number;
   onSelect: (command: Command) => void;
+  onClose: () => void;
 }
 
-export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, filter, selectedIndex, onSelect }) => {
-  const filteredCommands = DEFI_COMMANDS.filter(cmd => 
-    cmd.label.toLowerCase().includes(filter.toLowerCase())
-  );
+export const CommandPalette: React.FC<CommandPaletteProps> = ({ 
+  isOpen, 
+  filterText = '', 
+  selectedIndex = 0, 
+  onSelect 
+}) => {
+  const filteredCommands = DEFI_COMMANDS.filter(cmd => {
+    const label = cmd.label || '';
+    const filter = filterText || '';
+    return label.toLowerCase().includes(filter.toLowerCase());
+  });
 
   const scrollRef = useRef<HTMLDivElement>(null);
 

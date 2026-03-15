@@ -113,19 +113,29 @@ body {
   background: linear-gradient(135deg, #26A17B, #1A7A5E);
 }
 
-/* WDK Glassmorphism Standard */
+/* OmniWDK Glassmorphism Standard */
 .glass {
   background: rgba(30, 35, 41, 0.4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(38, 161, 123, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
 .glass-dark {
-  background: rgba(11, 14, 17, 0.7);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 14, 17, 0.85);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.5);
+}
+
+.shadow-glow-teal {
+  box-shadow: 0 0 20px rgba(38, 161, 123, 0.3);
+}
+
+.shadow-glow-cyan {
+  box-shadow: 0 0 20px rgba(0, 209, 255, 0.3);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {

@@ -1,10 +1,10 @@
-# DoraHacks Submission Template: TetherProof-WDK
+# DoraHacks Submission Template: OmniWDK
 
-## Project Name: TetherProof-WDK
+## Project Name: OmniWDK
 **Tagline:** Autonomous Omnichain Yield Infrastructure powered by Tether WDK & ZK-Risk Scoring.
 
 ## 1. Description
-TetherProof-WDK is an institutional-grade "Self-Driving Vault" that manages USD₮ and XAU₮ (Tether Gold) across multiple chains (BNB, Solana, TON). It uses Zero-Knowledge risk proofs to verify market conditions trustlessly and executes rebalances via a competitive Rebalance Rights Auction (RRA), turning vault automation into a revenue source.
+OmniWDK is an institutional-grade "Self-Driving Vault" that manages USD₮ and XAU₮ (Tether Gold) across multiple chains (BNB, Solana, TON). It uses Zero-Knowledge risk proofs to verify market conditions trustlessly and executes rebalances via a competitive Rebalance Rights Auction (RRA), turning vault automation into a revenue source.
 
 ## 2. Track
 **Primary Track:** Autonomous DeFi Agent
@@ -16,7 +16,7 @@ DeFi agents today suffer from three critical flaws:
 2. **Inefficient Execution:** They use standard swaps that are prone to MEV and slippage.
 3. **Chain Silos:** They are typically restricted to a single ecosystem.
 
-TetherProof solves these by using **ZK-Verified Monte Carlo math** for risk, **Dutch Auctions** for rebalancing, and **Tether WDK** for unified omnichain management.
+OmniWDK solves these by using **ZK-Verified Monte Carlo math** for risk, **Dutch Auctions** for rebalancing, and **Tether WDK** for unified omnichain management.
 
 ## 4. Tech Stack
 - **Smart Contracts:** Solidity (BNB Chain), ERC-4626, custom RRA Auction layer.

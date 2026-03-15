@@ -358,7 +358,7 @@ async function processX402Payment(state) {
   const x402 = new X402Client(wdk, usdtAddress);
   
   // Every rebalance cycle or standby, pay for infrastructure insights
-  const serviceUrl = process.env.X402_SERVICE_URL || "https://api.tetherproof.xyz/insights";
+  const serviceUrl = process.env.X402_SERVICE_URL || "https://api.omniwdk.xyz/insights";
   const providerAddress = process.env.X402_PROVIDER_ADDRESS || "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
   const paymentAmount = "0.1"; // 0.1 USDT for one insight report
 
@@ -501,7 +501,7 @@ export async function runCycle() {
 // Only run standalone if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   const INTERVAL = 5 * 60 * 1000;
-  console.log('--- TetherProof WDK Omnichain Agent Started ---');
+  console.log('--- OmniWDK WDK Omnichain Agent Started ---');
   runCycle();
   setInterval(runCycle, INTERVAL);
 }

@@ -114,7 +114,7 @@ async function main() {
   const WDKVault = await hre.ethers.getContractFactory("WDKVault");
   const vault = await (await WDKVault.deploy(
     await usdt.getAddress(),
-    "TetherProof WDK Vault",
+    "OmniWDK WDK Vault",
     "TPWDK",
     deployer.address,
     500 // 5% idle buffer

@@ -5,15 +5,17 @@ import { useAccount } from 'wagmi';
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useQuery } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChatContainer } from "../components/chat/ChatContainer";
 import { ChatHistorySidebar } from "../components/chat/ChatHistorySidebar";
 import { MindsetIndicator } from "../components/shared/MindsetIndicator";
 import { WDKBalance } from "../components/shared/WDKBalance";
 import { WDKAssetSelector } from "../components/shared/WDKAssetSelector";
+import { GuestSplash } from "../components/shared/GuestSplash";
+import { ConnectionModal } from "../components/shared/ConnectionModal";
 
 const BentoCard = ({ title, icon: Icon, children, className = "" }) => (
-  <div className={`glass rounded-2xl p-5 flex flex-col gap-4 shadow-glow-sm hover:shadow-glow-md transition-all duration-500 group ${className}`}>
+  <div className={`glass rounded-2xl p-3 sm:p-4 md:p-5 flex flex-col gap-3 sm:gap-4 shadow-glow-sm hover:shadow-glow-md transition-all duration-500 group ${className}`}>
     <div className="flex items-center justify-between flex-shrink-0">
       <div className="flex items-center gap-2">
         <div className="p-2 rounded-lg bg-white/5 text-tether-teal group-hover:scale-110 transition-transform font-heading">
@@ -34,6 +36,7 @@ const INITIAL_SESSION_ID = 'session-' + Date.now();
 export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAssetSelectorOpen, setIsAssetSelectorOpen] = useState(false);
+  const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState(null);
   const { address, isConnected } = useAccount();
 
@@ -82,39 +85,18 @@ export default function App() {
 
   const isLoading = status === 'submitted' || status === 'streaming';
 
-  // Fetch chat history when session changes
+  // Manual initialization workaround
   useEffect(() => {
-    let isMounted = true;
-    const loadHistory = async () => {
-      try {
-        const res = await fetch(`/api/chat/${activeSessionId}`);
-        if (res.ok) {
-          const history = await res.json();
-          if (isMounted && history && history.length > 0) {
-            setMessages(history);
-            return;
-          }
+    if (messages.length === 0 && status === 'ready') {
+      setMessages([
+        {
+          id: "initial-1",
+          role: "assistant",
+          content: "System initialized. I am your **Tether WDK Strategist**. I am currently monitoring cross-chain liquidity for USD₮ and XAU₮ yield optimization.",
         }
-      } catch (err) {
-        console.error("Failed to load chat history", err);
-      }
-      // Fallback to initial message if no history
-      if (isMounted && messages.length === 0 && status === 'ready') {
-        setMessages([
-          {
-            id: "initial-" + activeSessionId,
-            role: "assistant",
-            content: "System initialized. I am your **Tether WDK Strategist**. I am currently monitoring cross-chain liquidity for USD₮ and XAU₮ yield optimization.",
-          }
-        ]);
-      }
-    };
-    
-    // Only load if not already populated correctly
-    loadHistory();
-    
-    return () => { isMounted = false; };
-  }, [activeSessionId, setMessages]);
+      ]);
+    }
+  }, [messages.length, status, setMessages]);
 
   const initialUpdatedRef = useRef(false);
 
@@ -140,6 +122,13 @@ export default function App() {
   useEffect(() => {
     initialUpdatedRef.current = false;
   }, [activeSessionId]);
+
+  // Automatically close ConnectionModal when connected
+  useEffect(() => {
+    if (isConnected) {
+      setIsConnectionModalOpen(false);
+    }
+  }, [isConnected]);
 
   const handleNewChat = () => {
     const newId = Date.now().toString();
@@ -191,29 +180,53 @@ export default function App() {
     setInput('');
     
     try {
-      await sendMessage({ text, id: activeSessionId });
+      await sendMessage({ text });
     } catch (err) {
       console.error("[App] Failed to send message:", err);
+    }
+  };
+
+  const handleRestrictedAction = (e) => {
+    if (!isConnected) {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsConnectionModalOpen(true);
     }
   };
 
   return (
     <div className="h-screen w-full bg-space-black text-white font-sans flex flex-col items-center selection:bg-tether-teal/30 overflow-hidden">
       
+      <AnimatePresence>
+        {!isConnected && <GuestSplash key="splash" />}
+      </AnimatePresence>
+
+      <ConnectionModal 
+        isOpen={isConnectionModalOpen} 
+        onClose={() => setIsConnectionModalOpen(false)} 
+      />
+
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] bg-tether-teal/5 rounded-full blur-[120px] animate-float"></div>
         <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] bg-xaut-gold/5 rounded-full blur-[120px] animate-float" style={{ animationDelay: '2s' }}></div>
       </div>
 
-      <div className="w-full h-full flex flex-col relative z-10 p-3 md:p-6 overflow-hidden">
+      {/* 
+          Dashboard Container with Action Gate 
+          When not connected, clicking anywhere on the blurred dashboard triggers the modal.
+      */}
+      <div 
+        onClick={!isConnected ? handleRestrictedAction : undefined}
+        className={`w-full h-full flex flex-col relative z-10 p-3 md:p-6 overflow-hidden transition-all duration-1000 ${!isConnected ? 'blur-2xl scale-110 opacity-30 cursor-pointer' : 'blur-0 scale-100 opacity-100'}`}
+      >
         
-        <header className="h-16 md:h-20 flex-shrink-0 flex items-center justify-between px-4 md:px-6 glass rounded-2xl border border-white/10 mb-4 md:mb-6 shadow-glow-sm relative z-50">
+        <header className="h-14 md:h-16 flex-shrink-0 flex items-center justify-between px-4 md:px-6 glass rounded-2xl border border-white/10 mb-3 md:mb-4 shadow-glow-sm relative z-50">
           <div className="flex items-center gap-3 md:gap-4">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-space-black flex items-center justify-center shadow-glow-md overflow-hidden border border-tether-teal/20">
               <img src="/imgs/logo.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col">
-              <h1 className="text-sm md:text-lg font-heading font-bold tracking-tight bg-clip-text text-transparent bg-[linear-gradient(135deg,#26A17B,#00D1FF)] uppercase truncate max-w-[150px] md:max-w-none">TetherProof WDK</h1>
+              <h1 className="text-sm md:text-lg font-heading font-bold tracking-tight bg-clip-text text-transparent bg-[linear-gradient(135deg,#26A17B,#00D1FF)] uppercase truncate max-w-[150px] md:max-w-none">OmniWDK</h1>
               <div className="flex items-center gap-2">
                 <span className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-tether-teal animate-pulse"></span>
                 <span className="text-[7px] md:text-[9px] font-heading tracking-widest text-neutral-gray-light uppercase">Strategist Active</span>
@@ -241,14 +254,14 @@ export default function App() {
           </div>
         </header>
 
-        <div className="flex-1 flex flex-col lg:flex-row gap-4 md:gap-6 relative overflow-hidden">
+        <div className="flex-1 flex flex-col lg:flex-row gap-3 md:gap-6 relative overflow-hidden">
 
           {/* Column 1: Monitoring */}
           <div className={`
-            ${isMobileMenuOpen ? 'fixed inset-0 top-[88px] z-40 bg-space-black/95 p-6 overflow-y-auto' : 'hidden'} 
-            lg:relative lg:inset-auto lg:flex lg:flex-[2] lg:flex-col lg:gap-6 lg:min-w-0 lg:min-h-0 lg:bg-transparent lg:overflow-hidden
+            ${isMobileMenuOpen ? 'fixed inset-0 top-[68px] md:top-[80px] z-40 bg-space-black/95 p-6 overflow-y-auto' : 'hidden'} 
+            lg:relative lg:inset-auto lg:flex lg:flex-[2.5] xl:flex-[2] lg:flex-col lg:gap-4 xl:gap-6 lg:min-w-0 lg:min-h-0 lg:bg-transparent lg:overflow-hidden
           `}>
-            <BentoCard title="WDK Performance" icon={BarChart3Icon} className="h-[140px] shrink-0">
+            <BentoCard title="WDK Performance" icon={BarChart3Icon} className="h-[120px] md:h-[140px] shrink-0">
               <div className="flex flex-col h-full justify-center">
                 <div className="text-3xl md:text-4xl font-heading font-bold text-tether-teal">
                   {stats?.risk?.sharpe ? stats.risk.sharpe.toFixed(2) : "---"}
@@ -275,7 +288,7 @@ export default function App() {
           </div>
 
           {/* Column 2: Agent Terminal */}
-          <div className={`flex-[6] flex flex-col min-w-0 min-h-0 glass-dark rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative ${isMobileMenuOpen ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
+          <div className={`flex-[7] xl:flex-[6] flex flex-col min-w-0 min-h-0 glass-dark rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative ${isMobileMenuOpen ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
             <div className="flex-1 flex flex-col min-h-0">
               <ChatContainer
                 messages={messages}
@@ -287,7 +300,6 @@ export default function App() {
                 sendMessage={sendMessage}
                 setMessages={setMessages}
                 regenerate={regenerate}
-                stop={stop}
                 error={error}
                 data={data}
               />
@@ -297,7 +309,7 @@ export default function App() {
           {/* Column 3: Operational State */}
           <div className={`
             ${isMobileMenuOpen ? 'hidden' : 'hidden'} 
-            xl:flex xl:flex-[2] xl:flex-col xl:gap-6 xl:min-w-0 xl:min-h-0 xl:overflow-hidden xl:pl-1
+            xl:flex xl:flex-[2.5] 2xl:flex-[2] xl:flex-col xl:gap-4 2xl:gap-6 xl:min-w-0 xl:min-h-0 xl:overflow-hidden xl:pl-1
           `}>
             <BentoCard title="WDK Portfolio" icon={WalletIcon} className="min-h-[220px] shrink-0">
               <div className="flex flex-col gap-6">
@@ -316,12 +328,12 @@ export default function App() {
                   </div>
                   <div className="flex items-center justify-between text-[10px] font-mono">
                     <span className="text-neutral-gray lowercase">Strategy Exposure</span>
-                    <span className="text-cyber-cyan">{((Number(stats?.system?.targetWDKBps || 0) / 10000) * 100).toFixed(1)}%</span>
+                    <span className="text-cyber-cyan">{((Number(stats?.system?.targetAsterBps || 0) / 10000) * 100).toFixed(1)}%</span>
                   </div>
                   <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
                     <motion.div 
                       className="h-full bg-cyber-cyan"
-                      animate={{ width: `${(Number(stats?.system?.targetWDKBps || 0) / 10000) * 100}%` }}
+                      animate={{ width: `${(Number(stats?.system?.targetAsterBps || 0) / 10000) * 100}%` }}
                     />
                   </div>
                 </div>

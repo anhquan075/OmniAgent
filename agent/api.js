@@ -162,7 +162,7 @@ const model = new ChatOpenAI({
     baseURL: OPENROUTER_BASE_URL,
     defaultHeaders: {
       "HTTP-Referer": "https://wdkvault.agent",
-      "X-Title": "TetherProof WDK Strategist",
+      "X-Title": "OmniWDK WDK Strategist",
     }
   }
 }).bindTools(tools);
@@ -303,7 +303,7 @@ app.post('/api/chat', async (req, res) => {
         .join("");
     }
     
-    const prompt = `You are the TetherProof AFOS Strategist. 
+    const prompt = `You are the OmniWDK AFOS Strategist. 
 Commands: /status (get_vault_status), /risk (check_risk), /rebalance (execute_rebalance), /payout (execute_syndicate_payout).
 User: ${userMessage}`;
 
