@@ -1,0 +1,23 @@
+name: Agent Cycle Cron
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: # Manual trigger for testing
+
+jobs:
+  trigger-cycle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger agent cycle
+        run: |
+          curl -sf -X POST \
+            -H "x-cron-secret: ${{ secrets.AGENT_CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --max-time 120 \
+            "${{ secrets.BACKEND_URL }}/api/agent/run-cycle" || true
+
+      - name: Health ping (keep-alive)
+        run: |
+          curl -sf --max-time 10 \
+            "${{ secrets.BACKEND_URL }}/health" || true
