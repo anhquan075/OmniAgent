@@ -1,5 +1,3 @@
-import { ZERO_ADDRESS } from './constants.js';
-
 export const V2_MAINNET_PRESET = {
   vaultAddress: import.meta.env.VITE_MAINNET_VAULT_ADDRESS,
   engineAddress: import.meta.env.VITE_MAINNET_ENGINE_ADDRESS,
