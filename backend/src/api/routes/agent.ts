@@ -4,6 +4,7 @@ import { env } from '@/config/env';
 import { AgentService } from '@/agent/services/AgentService';
 import crypto from 'crypto';
 import { EventEmitter } from 'events';
+import { runAutonomousCycle } from '@/agent/AutonomousLoop';
 
 const agent = new Hono();
 const agentEvents = new EventEmitter();
@@ -100,6 +101,26 @@ agent.post('/webhook', async (c) => {
   }
 
   return c.json({ success: true, message: 'Event logged' });
+});
+
+agent.post('/run-cycle', async (c) => {
+  const secret = env.AGENT_CRON_SECRET;
+  if (secret && c.req.header('x-cron-secret') !== secret) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  try {
+    const result = await runAutonomousCycle();
+    return c.json({
+      success: true,
+      summary: result.text?.slice(0, 500),
+      nextRunDelay: result.nextRunDelay,
+      schedulingReason: result.schedulingReason,
+    });
+  } catch (e: any) {
+    console.error('[RunCycle] Cron-triggered cycle failed:', e.message);
+    return c.json({ success: false, error: e.message }, 500);
+  }
 });
 
 export default agent;

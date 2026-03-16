@@ -105,14 +105,16 @@ if (isMain) {
       return;
     }
 
-    // Check if autonomous loop is explicitly allowed
+    if (env.DEPLOYMENT_MODE === 'production') {
+      console.log('☁️  Production mode: autonomous loop disabled (use POST /api/agent/run-cycle via cron)');
+      return;
+    }
+
     if (process.env.ALLOW_AGENT_RUN !== 'true') {
       console.warn('⚠️  Autonomous Agent Loop skipped (ALLOW_AGENT_RUN not set)');
-      console.warn('    To enable the autonomous agent, set ALLOW_AGENT_RUN=true in your environment');
       return;
     }
     
-    // Start the autonomous loop alongside the API
     console.log('--- Starting Integrated Autonomous Loop (Dynamic Scheduling) ---');
     
     startAutonomousLoop().catch((e: any) => {
