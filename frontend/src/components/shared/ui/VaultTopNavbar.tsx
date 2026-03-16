@@ -12,7 +12,7 @@ export function VaultTopNavbar({ busyAction }) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.svg" alt="OmniWDK" className="topNavLogo" />
         <div className="topNavBrandText">
-          <span className="topNavTitle">OmniWDK <strong>WDKVault</strong></span>
+          <span className="topNavTitle">OmniWDK <strong>Vault</strong></span>
           <span className="topNavTagline">Autonomous yield protection · on-chain</span>
         </div>
       </div>

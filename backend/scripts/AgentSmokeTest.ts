@@ -75,7 +75,7 @@ async function main() {
   const vault = await ethers.getContractAt("WDKVault", vaultAddr);
   console.log(`Checking balance at vault: ${vaultAddr} for agent: ${agentAddr}`);
   const bal = await vault.balanceOf(agentAddr);
-  console.log(`Deposit successful. Agent Vault Balance: ${ethers.formatUnits(bal, 6)} TPWDK`);
+  console.log(`Deposit successful. Agent Vault Balance: ${ethers.formatUnits(bal, 6)} OWDK`);
 
   console.log("\n[4/5] Testing Autonomous Detection (Engine Preview)...");
   const engineAddr = process.env.WDK_ENGINE_ADDRESS!;
