@@ -9,6 +9,7 @@ const env_1 = require("../../config/env");
 const AgentService_1 = require("../../agent/services/AgentService");
 const crypto_1 = __importDefault(require("crypto"));
 const events_1 = require("events");
+const AutonomousLoop_1 = require("../../agent/AutonomousLoop");
 const agent = new hono_1.Hono();
 const agentEvents = new events_1.EventEmitter();
 let agentHistory = [];
@@ -92,5 +93,35 @@ agent.post('/webhook', async (c) => {
         return c.json({ success: true, message: 'Autonomous cycle triggered' });
     }
     return c.json({ success: true, message: 'Event logged' });
+});
+let cronExecutionCount = 0;
+let lastCronTime = null;
+agent.post('/run-cycle', async (c) => {
+    const secret = env_1.env.AGENT_CRON_SECRET;
+    if (secret && c.req.header('x-cron-secret') !== secret) {
+        return c.json({ error: 'Unauthorized' }, 401);
+    }
+    try {
+        cronExecutionCount++;
+        lastCronTime = new Date().toISOString();
+        const result = await (0, AutonomousLoop_1.runAutonomousCycle)();
+        return c.json({
+            success: true,
+            summary: result.text?.slice(0, 500),
+            nextRunDelay: result.nextRunDelay,
+            schedulingReason: result.schedulingReason,
+        });
+    }
+    catch (e) {
+        console.error('[RunCycle] Cron-triggered cycle failed:', e.message);
+        return c.json({ success: false, error: e.message }, 500);
+    }
+});
+agent.get('/cron-status', (c) => {
+    return c.json({
+        totalExecutions: cronExecutionCount,
+        lastExecution: lastCronTime,
+        uptime: process.uptime(),
+    });
 });
 exports.default = agent;

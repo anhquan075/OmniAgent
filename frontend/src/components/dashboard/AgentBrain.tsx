@@ -13,7 +13,7 @@ export default function AgentBrain() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/stats`);
+        const res = await fetch('/api/stats');
         const data = await res.json();
         setStats(data);
       } catch (e) {

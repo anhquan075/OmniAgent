@@ -98,13 +98,14 @@ if (isMain) {
             console.warn('⚠️  Autonomous Agent Loop will NOT start due to missing/invalid secrets');
             return;
         }
-        // Check if autonomous loop is explicitly allowed
-        if (process.env.ALLOW_AGENT_RUN !== 'true') {
-            console.warn('⚠️  Autonomous Agent Loop skipped (ALLOW_AGENT_RUN not set)');
-            console.warn('    To enable the autonomous agent, set ALLOW_AGENT_RUN=true in your environment');
+        if (env_1.env.DEPLOYMENT_MODE === 'production') {
+            console.log('☁️  Production mode: autonomous loop disabled (use POST /api/agent/run-cycle via cron)');
             return;
         }
-        // Start the autonomous loop alongside the API
+        if (process.env.ALLOW_AGENT_RUN !== 'true') {
+            console.warn('⚠️  Autonomous Agent Loop skipped (ALLOW_AGENT_RUN not set)');
+            return;
+        }
         console.log('--- Starting Integrated Autonomous Loop (Dynamic Scheduling) ---');
         (0, AutonomousLoop_1.startAutonomousLoop)().catch((e) => {
             console.error('Failed to start Autonomous Loop:', e);

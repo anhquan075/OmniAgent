@@ -103,6 +103,9 @@ agent.post('/webhook', async (c) => {
   return c.json({ success: true, message: 'Event logged' });
 });
 
+let cronExecutionCount = 0;
+let lastCronTime: string | null = null;
+
 agent.post('/run-cycle', async (c) => {
   const secret = env.AGENT_CRON_SECRET;
   if (secret && c.req.header('x-cron-secret') !== secret) {
@@ -110,6 +113,8 @@ agent.post('/run-cycle', async (c) => {
   }
 
   try {
+    cronExecutionCount++;
+    lastCronTime = new Date().toISOString();
     const result = await runAutonomousCycle();
     return c.json({
       success: true,
@@ -121,6 +126,14 @@ agent.post('/run-cycle', async (c) => {
     console.error('[RunCycle] Cron-triggered cycle failed:', e.message);
     return c.json({ success: false, error: e.message }, 500);
   }
+});
+
+agent.get('/cron-status', (c) => {
+  return c.json({
+    totalExecutions: cronExecutionCount,
+    lastExecution: lastCronTime,
+    uptime: process.uptime(),
+  });
 });
 
 export default agent;
