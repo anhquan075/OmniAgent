@@ -107,7 +107,7 @@ export class ProfitSimulator {
     return {
       gasUsed: estimatedGas.toString(),
       gasPrice: gasPrice.toString(),
-      totalGasCost: ethers.parseUnits(gasCostUSDT.toString(), 6).toString(),
+      totalGasCost: ethers.parseUnits(gasCostUSDT.toFixed(6), 6).toString(),
       estimatedFee: ethers.parseUnits(gasCostUSDT.toFixed(2), 6).toString(),
     };
   }
@@ -134,7 +134,7 @@ export class ProfitSimulator {
     return {
       gasUsed: estimatedGas.toString(),
       gasPrice: gasPrice.toString(),
-      totalGasCost: ethers.parseUnits(gasCostUSDT.toString(), 6).toString(),
+      totalGasCost: ethers.parseUnits(gasCostUSDT.toFixed(6), 6).toString(),
       estimatedFee: ethers.parseUnits(gasCostUSDT.toFixed(2), 6).toString(),
     };
   }

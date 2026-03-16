@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.agentEvents = void 0;
 exports.runAutonomousCycle = runAutonomousCycle;
 exports.startAutonomousLoop = startAutonomousLoop;
 exports.stopAutonomousLoop = stopAutonomousLoop;
@@ -7,21 +8,29 @@ const ai_1 = require("ai");
 const openai_1 = require("@ai-sdk/openai");
 const env_1 = require("../config/env");
 const tools_1 = require("./tools");
+const events_1 = require("events");
+const RobotFleetService_1 = require("../services/RobotFleetService");
+// Event Emitter for Dashboard Stream
+exports.agentEvents = new events_1.EventEmitter();
+// Track fleet earnings across cycles
+let lastFleetTotalEarned = "0.0";
 const openai = (0, openai_1.createOpenAI)({
     apiKey: env_1.env.OPENROUTER_API_KEY,
     baseURL: env_1.env.OPENROUTER_BASE_URL,
 });
 const SYSTEM_PROMPT = `You are the OmniWDK AFOS Strategist, an autonomous AI agent managing a DeFi vault.
 Directive: Yield optimization for USD₮ and XAU₮ via Tether WDK & ProofVault.
+You are a Multi-VM Native Agent. You monitor and manage assets across EVM (BNB), Solana, and TON blockchains simultaneously.
 
 WORKFLOW:
 1. START by calling analyze_risk to get the latest proven risk metrics.
-2. EVALUATE the risk level based on the tool output.
+2. CHECK BALANCES by calling get_all_chain_balances to understand your multi-chain portfolio state.
+3. EVALUATE the risk level based on the tool output.
    - If risk is HIGH: Call handle_emergency immediately.
-   - If MEDIUM or LOW: Proceed to check_strategy or check_cross_chain_yields to find yield opportunities.
-3. OPTIMIZE: If opportunities exist, execute rebalances or bridging.
-4. SWEEP: Use yield_sweep if there's profit.
-5. FINISH: Provide a technical summary of all findings and actions.
+   - If MEDIUM or LOW: Proceed to check_strategy or check_cross_chain_yields or hire_fleet_robot to find yield opportunities or gain insights.
+4. OPTIMIZE: If opportunities exist, execute rebalances or bridging across supported chains.
+5. SWEEP: Use yield_sweep if there's profit.
+6. FINISH: Provide a technical summary of all findings and actions.
 
 SCHEDULING DECISIONS:
 At the end of your summary, MUST include a scheduling decision in this format:
@@ -46,16 +55,45 @@ async function runAutonomousCycle() {
     const modelId = env_1.env.OPENROUTER_MODEL_CRYPTO || 'deepseek/deepseek-chat';
     console.log(`[AutonomousLoop] Using crypto model: ${modelId} (Fortified Native maxSteps)`);
     console.log(`[AutonomousLoop] Starting cycle at ${new Date().toISOString()}...`);
+    exports.agentEvents.emit('cycle:start', { timestamp: new Date(), modelId });
+    // Calculate fleet earnings since last cycle
+    const fleetStatus = RobotFleetService_1.robotFleetService.getFleetStatus();
+    const currentTotal = parseFloat(fleetStatus.fleetTotalEarned || "0");
+    const lastTotal = parseFloat(lastFleetTotalEarned);
+    const cycleEarnings = Math.max(0, currentTotal - lastTotal).toFixed(4);
+    // Update last total for next cycle
+    lastFleetTotalEarned = fleetStatus.fleetTotalEarned;
+    let currentSystemPrompt = SYSTEM_PROMPT;
+    let robotEarningsDetected = false;
+    if (parseFloat(cycleEarnings) > 0) {
+        console.log(`[AutonomousLoop] 💰 Fleet earnings since last cycle: ${cycleEarnings} ETH`);
+        currentSystemPrompt += `\n\n[FLEET UPDATE]: Since your last cycle, the autonomous robot fleet has earned ${cycleEarnings} ETH. Consider this new capital in your strategy.`;
+        robotEarningsDetected = true;
+    }
+    // Listen for robot fleet earnings (real-time during cycle)
+    const fleetEmitter = RobotFleetService_1.robotFleetService.getEmitter();
+    const onFleetEarning = (event) => {
+        if (event.earnings && parseFloat(event.earnings) > 0) {
+            console.log(`[AutonomousLoop] 🤖 Robot fleet earning detected: ${event.robotId} earned ${event.earnings} ETH`);
+            robotEarningsDetected = true;
+        }
+    };
+    fleetEmitter.on('fleet:event', onFleetEarning);
     try {
         const result = await (0, ai_1.generateText)({
             model: openai.chat(modelId),
             tools: tools_1.agentTools,
             maxSteps: 10,
-            system: SYSTEM_PROMPT,
+            system: currentSystemPrompt,
             prompt: "Perform a full autonomous strategy cycle. Start with risk analysis and do not stop until you provide a final summary with NEXT_RUN_DECISION.",
             onStepFinish: (step) => {
                 const callCount = step.toolCalls?.length || 0;
                 console.log(`[AutonomousLoop] Step finished. Tool calls: ${callCount}`);
+                exports.agentEvents.emit('step:finish', {
+                    stepType: callCount > 0 ? 'tool_execution' : 'reasoning',
+                    toolCalls: step.toolCalls,
+                    text: step.text
+                });
             }
         });
         let finalResult = result;
@@ -67,7 +105,7 @@ async function runAutonomousCycle() {
             console.log('[AutonomousLoop] Agent finished on tool execution or no text. Forcing synthesis...');
             const summaryResult = await (0, ai_1.generateText)({
                 model: openai.chat(modelId),
-                system: SYSTEM_PROMPT,
+                system: currentSystemPrompt,
                 messages: [
                     { role: 'user', content: "Perform a full autonomous strategy cycle. Start with risk analysis and do not stop until you provide a final summary with NEXT_RUN_DECISION." },
                     ...messageHistory,
@@ -87,16 +125,24 @@ async function runAutonomousCycle() {
         const summaryText = finalResult.text || "";
         console.log(`[AutonomousLoop] Summary: ${summaryText}`);
         const schedulingDecision = parseSchedulingDecision(summaryText);
-        return {
+        const cycleResult = {
             text: summaryText,
             messages: finalResult.response?.messages || [],
             nextRunDelay: schedulingDecision.delay_ms,
             schedulingConfidence: schedulingDecision.confidence,
             schedulingReason: schedulingDecision.reason
         };
+        exports.agentEvents.emit('cycle:end', {
+            success: true,
+            summary: summaryText,
+            decision: schedulingDecision,
+            robotEarningsDetected
+        });
+        return cycleResult;
     }
     catch (error) {
         console.error(`[AutonomousLoop] Cycle failed:`, error);
+        exports.agentEvents.emit('cycle:error', { error: error.message });
         return {
             text: "",
             messages: [],
@@ -105,7 +151,35 @@ async function runAutonomousCycle() {
             schedulingReason: "Error occurred, using safe delay"
         };
     }
+    finally {
+        fleetEmitter.off('fleet:event', onFleetEarning);
+    }
 }
+/**
+ * Robustly parses a scheduling decision from agent output.
+ *
+ * Expected format (must appear in agent response):
+ *   NEXT_RUN_DECISION: {
+ *     "delay_ms": <number>,
+ *     "reason": "<string>",
+ *     "confidence": <number between 0 and 1>
+ *   }
+ *
+ * This function handles common LLM output quirks:
+ * - Markdown code blocks (```json ... ```)
+ * - Nested braces in comments or strings
+ * - Trailing commas
+ * - Extra whitespace and newlines
+ * - Single quotes vs double quotes (relaxed parsing)
+ *
+ * Returns safe defaults if parsing fails:
+ * - delay_ms: 900000 (15 minutes)
+ * - reason: "Default moderate delay"
+ * - confidence: 0.5
+ *
+ * @param text - The full agent output text
+ * @returns Object with delay_ms (clamped 300000-3600000), reason, and confidence (0-1)
+ */
 function parseSchedulingDecision(text) {
     const defaultDecision = {
         delay_ms: 900000,
@@ -113,16 +187,45 @@ function parseSchedulingDecision(text) {
         confidence: 0.5
     };
     try {
-        const match = text.match(/NEXT_RUN_DECISION:\s*\{([^}]+)\}/s);
-        if (!match) {
+        // Step 1: Find the NEXT_RUN_DECISION marker
+        const decisionIndex = text.indexOf('NEXT_RUN_DECISION');
+        if (decisionIndex === -1) {
             console.warn('[AutonomousLoop] No NEXT_RUN_DECISION found in summary');
             return defaultDecision;
         }
-        const jsonStr = `{${match[1]}}`;
+        // Step 2: Extract substring from marker onwards
+        const afterMarker = text.substring(decisionIndex);
+        // Step 3: Find the first '{' and last '}'
+        const firstBrace = afterMarker.indexOf('{');
+        if (firstBrace === -1) {
+            console.warn('[AutonomousLoop] No opening brace found after NEXT_RUN_DECISION');
+            return defaultDecision;
+        }
+        // Find the matching closing brace (simple approach: find last '}')
+        const lastBrace = afterMarker.lastIndexOf('}');
+        if (lastBrace === -1 || lastBrace <= firstBrace) {
+            console.warn('[AutonomousLoop] No closing brace found after NEXT_RUN_DECISION');
+            return defaultDecision;
+        }
+        // Step 4: Extract the JSON substring
+        let jsonStr = afterMarker.substring(firstBrace, lastBrace + 1);
+        // Step 5: Strip Markdown code block markers if present
+        jsonStr = jsonStr
+            .replace(/^```(?:json)?\s*/i, '') // Remove opening ```json or ```
+            .replace(/\s*```$/, ''); // Remove closing ```
+        // Step 6: Sanitize common LLM JSON quirks
+        // Remove trailing commas before } and ]
+        jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
+        // Replace single quotes with double quotes (relaxed parsing)
+        jsonStr = jsonStr.replace(/'([^']*)'/g, '"$1"');
+        // Remove comments (// and /* */ style)
+        jsonStr = jsonStr.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+        // Step 7: Parse JSON
         const parsed = JSON.parse(jsonStr);
+        // Step 8: Validate and clamp values
         const delay = Math.max(300000, Math.min(3600000, parsed.delay_ms || 900000));
-        const reason = parsed.reason || "No reason provided";
-        const confidence = Math.max(0, Math.min(1, parsed.confidence || 0.5));
+        const reason = String(parsed.reason || "No reason provided");
+        const confidence = Math.max(0, Math.min(1, Number(parsed.confidence) || 0.5));
         console.log(`[AutonomousLoop] Scheduling decision parsed: ${delay}ms (${reason})`);
         return { delay_ms: delay, reason, confidence };
     }
@@ -131,34 +234,48 @@ function parseSchedulingDecision(text) {
         return defaultDecision;
     }
 }
-let currentInterval = null;
+let currentTimeout = null;
+let isRunning = false;
 async function startAutonomousLoop(initialDelayMs) {
-    const INITIAL_DELAY = initialDelayMs || 5 * 60 * 1000;
+    if (isRunning) {
+        console.warn('[AutonomousLoop] Loop already running');
+        return;
+    }
+    isRunning = true;
+    const INITIAL_DELAY = initialDelayMs || 5000; // Start almost immediately (5s) for first run
     console.log('--- OmniWDK Autonomous AI SDK Loop Started ---');
-    let nextRunDelay = INITIAL_DELAY;
+    const scheduleNext = (delay) => {
+        if (!isRunning)
+            return;
+        console.log(`[AutonomousLoop] Sleeping for ${delay}ms...`);
+        exports.agentEvents.emit('status:sleeping', { duration: delay, wakeTime: new Date(Date.now() + delay) });
+        currentTimeout = setTimeout(async () => {
+            await run();
+        }, delay);
+    };
     const run = async () => {
+        if (!isRunning)
+            return;
         try {
             const result = await runAutonomousCycle();
-            if (result.nextRunDelay) {
-                nextRunDelay = result.nextRunDelay;
-                console.log(`[AutonomousLoop] Next run scheduled in ${nextRunDelay}ms`);
-            }
+            const nextDelay = result.nextRunDelay || 300000;
+            scheduleNext(nextDelay);
         }
         catch (e) {
             console.error("Cycle error:", e);
-            nextRunDelay = 300000;
+            scheduleNext(300000); // Safe fallback
         }
-        if (currentInterval)
-            clearInterval(currentInterval);
-        currentInterval = setInterval(run, nextRunDelay);
     };
-    await run();
+    // Initial run after short delay
+    scheduleNext(INITIAL_DELAY);
 }
 function stopAutonomousLoop() {
-    if (currentInterval) {
-        clearInterval(currentInterval);
-        currentInterval = null;
+    isRunning = false;
+    if (currentTimeout) {
+        clearTimeout(currentTimeout);
+        currentTimeout = null;
         console.log('[AutonomousLoop] Loop stopped');
+        exports.agentEvents.emit('status:stopped');
     }
 }
 const isMain = process.argv[1]?.endsWith('src/agent/AutonomousLoop.ts') ||

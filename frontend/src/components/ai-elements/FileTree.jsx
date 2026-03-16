@@ -3,8 +3,8 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../../../components/ui/Collapsible";
-import { cn } from "../../../lib/utils";
+} from "../ui/Collapsible";
+import { cn } from "../../lib/utils";
 import {
   ChevronRightIcon,
   FileIcon,

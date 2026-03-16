@@ -8,14 +8,14 @@ import {
   CommandList,
   CommandSeparator,
   CommandShortcut,
-} from "../../../components/ui/Command";
+} from "../ui/Command";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogTrigger,
-} from "../../../components/ui/Dialog";
-import { cn } from "../../../lib/utils";
+} from "../ui/Dialog";
+import { cn } from "../../lib/utils";
 
 export const ModelSelector = (props) => (
   <Dialog {...props} />

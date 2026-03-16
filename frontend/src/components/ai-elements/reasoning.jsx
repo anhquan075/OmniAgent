@@ -4,8 +4,8 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../../../components/ui/Collapsible";
-import { cn } from "../../../lib/utils";
+} from "../ui/Collapsible";
+import { cn } from "../../lib/utils";
 import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
 import { math } from "@streamdown/math";
@@ -176,6 +176,23 @@ export const ReasoningContent = memo(({
   </CollapsibleContent>
 ));
 
+export const ReasoningRawContent = memo(({
+  className,
+  children,
+  ...props
+}) => (
+  <CollapsibleContent
+    className={cn(
+      "mt-4 text-sm w-full",
+      "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-muted-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
+      className
+    )}
+    {...props}>
+    {children}
+  </CollapsibleContent>
+));
+
 Reasoning.displayName = "Reasoning";
 ReasoningTrigger.displayName = "ReasoningTrigger";
 ReasoningContent.displayName = "ReasoningContent";
+ReasoningRawContent.displayName = "ReasoningRawContent";

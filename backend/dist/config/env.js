@@ -50,6 +50,7 @@ const envSchema = zod_1.z.object({
     SOLANA_RPC_URL: zod_1.z.string().default('https://api.mainnet-beta.solana.com'),
     TON_RPC_URL: zod_1.z.string().default('https://toncenter.com/api/v2/jsonRPC'),
     AGENT_REPORT_URL: zod_1.z.string().optional(),
+    AGENT_REPORT_BASE_URL: zod_1.z.string().optional(),
     WDK_SECRET_SEED: zod_1.z.string(),
     WDK_ENGINE_ADDRESS: zod_1.z.string(),
     WDK_ZK_ORACLE_ADDRESS: zod_1.z.string(),

@@ -1,5 +1,5 @@
 "use client";;
-import { Button } from "../../../components/ui/Button";
+import { Button } from "../ui/Button";
 import {
   Card,
   CardAction,
@@ -8,13 +8,13 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../../../components/ui/Card";
+} from "../ui/Card";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../../../components/ui/Collapsible";
-import { cn } from "../../../lib/utils";
+} from "../ui/Collapsible";
+import { cn } from "../../lib/utils";
 import { ChevronsUpDownIcon } from "lucide-react";
 import { createContext, useContext, useMemo } from "react";
 

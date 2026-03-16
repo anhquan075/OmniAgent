@@ -3,14 +3,14 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../../../components/ui/Collapsible";
+} from "../ui/Collapsible";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "../../../components/ui/Tabs";
-import { cn } from "../../../lib/utils";
+} from "../ui/Tabs";
+import { cn } from "../../lib/utils";
 import { ChevronDownIcon, Code } from "lucide-react";
 
 import { getStatusBadge } from "./tool";

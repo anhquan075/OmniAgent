@@ -1,12 +1,12 @@
 "use client";;
-import { Button } from "../../../components/ui/Button";
+import { Button } from "../ui/Button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../../../components/ui/Collapsible";
-import { ScrollArea } from "../../../components/ui/ScrollArea";
-import { cn } from "../../../lib/utils";
+} from "../ui/Collapsible";
+import { ScrollArea } from "../ui/ScrollArea";
+import { cn } from "../../lib/utils";
 import { ChevronDownIcon, PaperclipIcon } from "lucide-react";
 
 export const QueueItem = ({

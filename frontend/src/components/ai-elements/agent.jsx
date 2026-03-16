@@ -4,9 +4,9 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "../../../components/ui/Accordion";
-import { Badge } from "../../../components/ui/Badge";
-import { cn } from "../../../lib/utils";
+} from "../ui/Accordion";
+import { Badge } from "../ui/Badge";
+import { cn } from "../../lib/utils";
 import { BotIcon } from "lucide-react";
 import { memo } from "react";
 

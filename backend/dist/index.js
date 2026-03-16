@@ -12,7 +12,12 @@ const json_1 = require("./utils/json");
 const stats_1 = __importDefault(require("./api/routes/stats"));
 const chat_1 = __importDefault(require("./api/routes/chat"));
 const agent_1 = __importDefault(require("./api/routes/agent"));
-const AgentService_1 = require("./agent/services/AgentService");
+const dashboard_1 = __importDefault(require("./api/routes/dashboard"));
+const robot_fleet_1 = __importDefault(require("./api/routes/robot-fleet"));
+const x402_1 = __importDefault(require("./api/routes/x402"));
+const AutonomousLoop_1 = require("./agent/AutonomousLoop");
+const security_1 = require("./config/security");
+const RobotFleetService_1 = require("./services/RobotFleetService");
 const app = new hono_1.Hono();
 // Global Error Handler
 app.onError((err, c) => {
@@ -61,6 +66,9 @@ app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOStri
 app.route('/api/stats', stats_1.default);
 app.route('/api/chat', chat_1.default);
 app.route('/api/agent', agent_1.default);
+app.route('/api/dashboard', dashboard_1.default);
+app.route('/api/robot-fleet', robot_fleet_1.default);
+app.route('/api/x402', x402_1.default);
 const port = Number(env_1.env.PORT);
 // Only start the server if this file is executed directly
 const isMain = process.argv[1]?.endsWith('src/index.ts') ||
@@ -71,21 +79,36 @@ if (isMain) {
     (0, node_server_1.serve)({
         fetch: app.fetch,
         port
-    }, (info) => {
+    }, async (info) => {
         console.log(`🌍 Server is running on http://localhost:${info.port}`);
+        // Start robot fleet simulator
+        try {
+            await RobotFleetService_1.robotFleetService.startSimulator();
+            console.log('🤖 Robot Fleet Simulator started successfully');
+        }
+        catch (e) {
+            console.warn('⚠️  Robot fleet simulator failed to start:', e);
+        }
+        // Validate critical environment variables before starting agent
+        try {
+            (0, security_1.validateEnvironment)();
+        }
+        catch (e) {
+            console.error('❌ Environment validation failed:', e.message);
+            console.warn('⚠️  Autonomous Agent Loop will NOT start due to missing/invalid secrets');
+            return;
+        }
+        // Check if autonomous loop is explicitly allowed
+        if (process.env.ALLOW_AGENT_RUN !== 'true') {
+            console.warn('⚠️  Autonomous Agent Loop skipped (ALLOW_AGENT_RUN not set)');
+            console.warn('    To enable the autonomous agent, set ALLOW_AGENT_RUN=true in your environment');
+            return;
+        }
         // Start the autonomous loop alongside the API
-        const INTERVAL = 5 * 60 * 1000;
-        console.log('--- Starting Integrated Autonomous Loop (5m interval) ---');
-        const safeRunCycle = async () => {
-            try {
-                await AgentService_1.AgentService.runCycle();
-            }
-            catch (e) {
-                console.error('Autonomous Loop Error (Non-Fatal):', e.message);
-            }
-        };
-        safeRunCycle();
-        setInterval(safeRunCycle, INTERVAL);
+        console.log('--- Starting Integrated Autonomous Loop (Dynamic Scheduling) ---');
+        (0, AutonomousLoop_1.startAutonomousLoop)().catch((e) => {
+            console.error('Failed to start Autonomous Loop:', e);
+        });
     });
 }
 exports.default = app;

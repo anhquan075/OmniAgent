@@ -5,8 +5,8 @@ import {
   InputGroupButton,
   InputGroupInput,
   InputGroupText,
-} from "../../../components/ui/InputGroup";
-import { cn } from "../../../lib/utils";
+} from "../ui/InputGroup";
+import { cn } from "../../lib/utils";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import {
   createContext,

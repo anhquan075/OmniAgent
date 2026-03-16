@@ -1,8 +1,8 @@
 "use client";;
-import { Badge } from "../../../components/ui/Badge";
-import { Button } from "../../../components/ui/Button";
-import { Switch } from "../../../components/ui/Switch";
-import { cn } from "../../../lib/utils";
+import { Badge } from "../ui/Badge";
+import { Button } from "../ui/Button";
+import { Switch } from "../ui/Switch";
+import { cn } from "../../lib/utils";
 import { CheckIcon, CopyIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 import {
   createContext,

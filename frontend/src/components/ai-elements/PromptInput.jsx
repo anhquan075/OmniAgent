@@ -7,38 +7,38 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "../../../components/ui/Command";
+} from "../ui/Command";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../../../components/ui/DropdownMenu";
+} from "../ui/DropdownMenu";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "../../../components/ui/HoverCard";
+} from "../ui/HoverCard";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupTextarea,
-} from "../../../components/ui/InputGroup";
+} from "../ui/InputGroup";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../components/ui/Select";
-import { Spinner } from "../../../components/ui/Spinner";
+} from "../ui/Select";
+import { Spinner } from "../ui/Spinner";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "../../../components/ui/Tooltip";
-import { cn } from "../../../lib/utils";
+} from "../ui/Tooltip";
+import { cn } from "../../lib/utils";
 import {
   CornerDownLeftIcon,
   ImageIcon,

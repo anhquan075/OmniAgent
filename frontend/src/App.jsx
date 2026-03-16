@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldAlertIcon, ActivityIcon, CoinsIcon, BarChart3Icon, ZapIcon, WalletIcon, LayoutDashboardIcon, ShieldCheckIcon, GlobeIcon, ServerIcon, LinkIcon, BrainCircuitIcon, MenuIcon, XIcon } from 'lucide-react';
+import { ShieldAlertIcon, ActivityIcon, CoinsIcon, BarChart3Icon, ZapIcon, LayoutDashboardIcon, ShieldCheckIcon, GlobeIcon, ServerIcon, LinkIcon, BrainCircuitIcon, MenuIcon, XIcon, BotIcon } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import { useChat } from "@ai-sdk/react";
@@ -7,25 +7,27 @@ import { lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChatContainer } from "../components/chat/ChatContainer";
-import { ChatHistorySidebar } from "../components/chat/ChatHistorySidebar";
-import { WDKBalance } from "../components/shared/WDKBalance";
-import { WDKAssetSelector } from "../components/shared/WDKAssetSelector";
-import { GuestSplash } from "../components/shared/GuestSplash";
-import { ConnectionModal } from "../components/shared/ConnectionModal";
+import { ChatContainer } from "./components/chat/ChatContainer";
+import { ChatHistorySidebar } from "./components/chat/ChatHistorySidebar";
+import { WDKBalance } from "./components/shared/WDKBalance";
+import AgentBrain from "./components/dashboard/AgentBrain";
+import FleetStatus from "./components/dashboard/FleetStatus";
+import { GuestSplash } from "./components/shared/GuestSplash";
+import { ConnectionModal } from "./components/shared/ConnectionModal";
 
 const BentoCard = ({ title, icon: Icon, children, className = "" }) => (
-  <div className={`glass rounded-2xl p-3 sm:p-4 md:p-5 flex flex-col gap-3 sm:gap-4 shadow-glow-sm hover:shadow-glow-md transition-all duration-500 group ${className}`}>
-    <div className="flex items-center justify-between flex-shrink-0">
-      <div className="flex items-center gap-2">
-        <div className="p-2 rounded-lg bg-white/5 text-tether-teal group-hover:scale-110 transition-transform font-heading">
+  <div className={`rounded-2xl p-4 md:p-6 flex flex-col gap-4 shadow-2xl transition-all duration-500 group bg-space-black/60 backdrop-blur-xl border border-white/10 hover:border-tether-teal/30 hover:shadow-[0_0_20px_rgba(38,161,123,0.1)] relative overflow-hidden ${className}`}>
+    <div className="absolute top-0 right-0 w-32 h-32 bg-tether-teal/5 rounded-full blur-[60px] pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
+    <div className="flex items-center justify-between flex-shrink-0 relative z-10">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-white/5 text-tether-teal group-hover:scale-110 transition-transform font-heading border border-white/5 group-hover:border-tether-teal/30 group-hover:bg-tether-teal/10">
           <Icon className="w-4 h-4" />
         </div>
-        <h3 className="font-heading text-[10px] tracking-[0.2em] text-neutral-gray-light uppercase">{title}</h3>
+        <h3 className="font-heading text-[10px] tracking-[0.2em] text-neutral-gray-light uppercase group-hover:text-white transition-colors">{title}</h3>
       </div>
-      <div className="w-1.5 h-1.5 rounded-full bg-tether-teal/40 shadow-[0_0_8px_rgba(38,161,123,0.4)]"></div>
+      <div className="w-1.5 h-1.5 rounded-full bg-tether-teal/40 shadow-[0_0_8px_rgba(38,161,123,0.4)] animate-pulse"></div>
     </div>
-    <div className="flex-1 min-h-0 relative">
+    <div className="flex-1 min-h-0 relative z-10">
       {children}
     </div>
   </div>
@@ -35,9 +37,7 @@ const INITIAL_SESSION_ID = 'session-' + Date.now();
 
 export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isAssetSelectorOpen, setIsAssetSelectorOpen] = useState(false);
   const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
-  const [selectedAsset, setSelectedAsset] = useState(null);
   const { address, isConnected } = useAccount();
 
   // Local state for input as per modern ai-sdk best practices
@@ -250,7 +250,7 @@ export default function App() {
 
           <div className="flex items-center gap-2 md:gap-6">
             <div className="hidden xl:block">
-              <WDKBalance amount={Number(stats?.vault?.totalAssets || 0)} symbol="USD₮" className="items-end" />
+              <WDKBalance amount={Number(stats?.vault?.totalAssets || 0)} symbol="USD₮" className="items-end" logo="/coins/bnb.png" />
             </div>
             <div className="h-8 border-l border-white/10 mx-1 md:mx-2 hidden lg:block"></div>
             
@@ -335,99 +335,14 @@ export default function App() {
             ${isMobileMenuOpen ? 'fixed inset-0 top-[68px] md:top-[80px] z-40 bg-space-black/95 p-6 overflow-y-auto' : 'hidden'} 
             xl:relative xl:inset-auto xl:flex xl:flex-[2.5] 2xl:flex-[2] xl:flex-col xl:gap-4 2xl:gap-6 xl:min-w-0 xl:min-h-0 xl:bg-transparent xl:overflow-hidden xl:pl-1
           `}>
-            <BentoCard title="WDK Portfolio" icon={WalletIcon} className="min-h-[220px] shrink-0">
-              <div className="flex flex-col gap-6">
-                <WDKBalance amount={Number(stats?.vault?.totalAssets || 0)} symbol="USD₮" />
-                
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between text-[10px] font-mono">
-                    <span className="text-neutral-gray lowercase">Buffer (USDT)</span>
-                    <span className="text-tether-teal">{((Number(stats?.vault?.bufferCurrent || 0) / Number(stats?.vault?.totalAssets || 1)) * 100).toFixed(1)}%</span>
-                  </div>
-                  <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                    <motion.div 
-                      className="h-full bg-tether-teal"
-                      animate={{ width: `${(Number(stats?.vault?.bufferCurrent || 0) / Number(stats?.vault?.totalAssets || 1)) * 100}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-[10px] font-mono">
-                    <span className="text-neutral-gray lowercase">Strategy Exposure</span>
-                    <span className="text-cyber-cyan">{((Number(stats?.system?.targetAsterBps || 0) / 10000) * 100).toFixed(1)}%</span>
-                  </div>
-                  <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                    <motion.div 
-                      className="h-full bg-cyber-cyan"
-                      animate={{ width: `${(Number(stats?.system?.targetAsterBps || 0) / 10000) * 100}%` }}
-                    />
-                  </div>
-                </div>
-
-                <button 
-                  onClick={() => setIsAssetSelectorOpen(true)}
-                  className="w-full py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-heading font-bold text-tether-teal transition-all uppercase tracking-widest cursor-pointer"
-                >
-                  Manage Settlement Rails
-                </button>
-              </div>
-            </BentoCard>
-
             <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-6 pr-1">
-              <BentoCard title="Settlement Rails" icon={GlobeIcon} className="min-h-[280px] shrink-0">
-                <div className="grid grid-cols-2 gap-2 px-1">
-                  {[
-                    { name: 'BNB', status: stats?.system?.isPaused ? 'Paused' : 'Online', color: stats?.system?.isPaused ? 'bg-red-500' : 'bg-neon-green', logo: '/coins/bnb.png' },
-                    { name: 'ETH', status: 'Online', color: 'bg-neon-green', logo: '/coins/eth.png' },
-                    { name: 'SOL', status: 'Online', color: 'bg-neon-green', logo: '/coins/sol.png' },
-                    { name: 'TON', status: 'Online', color: 'bg-neon-green', logo: '/coins/ton.png', isGasless: true },
-                    { name: 'POL', status: 'Online', color: 'bg-neon-green', logo: '/coins/pol.png' },
-                    { name: 'ARB', status: 'Optimal', color: 'bg-cyber-cyan', logo: '/coins/arb.png' }
-                  ].map((rail) => (
-                    <div key={rail.name} className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-1.5 hover:bg-white/10 transition-all group relative cursor-pointer">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 overflow-hidden">
-                          <div className="w-5 h-5 rounded-full bg-black p-0.5 border border-white/5 flex items-center justify-center overflow-hidden flex-shrink-0 group-hover:scale-110 transition-transform">
-                            <img src={rail.logo} alt={rail.name} className="w-full h-full object-contain" />
-                          </div>
-                          <span className="text-[10px] font-bold text-white truncate">{rail.name}</span>
-                        </div>
-                        <div className={`w-1 h-1 rounded-full ${rail.color} shadow-glow-sm flex-shrink-0`}></div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[7px] text-neutral-gray uppercase tracking-tighter truncate">{rail.status}</span>
-                        {rail.isGasless && <ZapIcon className="w-2 h-2 text-neon-green fill-neon-green" />}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <BentoCard title="Robot Fleet Operations" icon={BotIcon} className="min-h-[320px] shrink-0">
+                <FleetStatus />
               </BentoCard>
 
-              <BentoCard title="WDK Activity Log" icon={ActivityIcon} className="flex-1 min-h-[300px]">
-                <div className="w-full overflow-hidden">
-                  <div className="flex flex-col gap-3">
-                    {stats?.system?.canExecute ? (
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-cyber-cyan/10 border border-cyber-cyan/20">
-                          <div className="flex items-center gap-3">
-                            <ZapIcon className="w-3 h-3 text-cyber-cyan" />
-                            <div className="flex flex-col">
-                              <span className="text-[10px] font-bold uppercase">Rebalance Ready</span>
-                              <span className="text-[8px] text-neutral-gray font-mono">Execute via Terminal</span>
-                            </div>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={(e) => onHandleSubmit(e, "execute_rebalance")}
-                          className="w-full py-2.5 rounded-xl bg-cyber-cyan text-space-black text-[10px] font-heading font-bold uppercase tracking-[0.2em] hover:bg-cyber-cyan/80 transition-all shadow-glow-sm cursor-pointer"
-                        >
-                          Execute Strategy
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="px-4 py-8 text-center border border-dashed border-white/5 rounded-xl">
-                        <span className="text-[9px] text-neutral-gray uppercase tracking-widest">Awaiting onchain events</span>
-                      </div>
-                    )}
-                  </div>
+              <BentoCard title="Agent Live Strategy" icon={BrainCircuitIcon} className="flex-1 min-h-[300px]">
+                <div className="h-full overflow-y-auto custom-scrollbar pr-2">
+                  <AgentBrain />
                 </div>
               </BentoCard>
             </div>
@@ -444,13 +359,6 @@ export default function App() {
             <span>SETTLEMENT: <span className="text-cyber-cyan uppercase">{stats?.system?.isPaused ? 'PAUSED' : 'ONLINE'}</span></span>
           </div>
         </footer>
-
-        <WDKAssetSelector 
-          isOpen={isAssetSelectorOpen} 
-          onClose={() => setIsAssetSelectorOpen(false)}
-          onSelect={(asset) => setSelectedAsset(asset)}
-          selectedId={selectedAsset?.id}
-        />
 
       </div>
     </div>

@@ -1,5 +1,5 @@
 "use client";;
-import { Button } from "../../../components/ui/Button";
+import { Button } from "../ui/Button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,8 +7,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../../../components/ui/DropdownMenu";
-import { cn } from "../../../lib/utils";
+} from "../ui/DropdownMenu";
+import { cn } from "../../lib/utils";
 import {
   ChevronDownIcon,
   ExternalLinkIcon,

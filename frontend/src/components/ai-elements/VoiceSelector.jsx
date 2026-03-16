@@ -1,6 +1,6 @@
 "use client";;
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
-import { Button } from "../../../components/ui/Button";
+import { Button } from "../ui/Button";
 import {
   Command,
   CommandDialog,
@@ -11,15 +11,15 @@ import {
   CommandList,
   CommandSeparator,
   CommandShortcut,
-} from "../../../components/ui/Command";
+} from "../ui/Command";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogTrigger,
-} from "../../../components/ui/Dialog";
-import { Spinner } from "../../../components/ui/Spinner";
-import { cn } from "../../../lib/utils";
+} from "../ui/Dialog";
+import { Spinner } from "../ui/Spinner";
+import { cn } from "../../lib/utils";
 import {
   CircleSmallIcon,
   MarsIcon,

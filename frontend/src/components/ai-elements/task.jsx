@@ -3,8 +3,8 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../../../components/ui/Collapsible";
-import { cn } from "../../../lib/utils";
+} from "../ui/Collapsible";
+import { cn } from "../../lib/utils";
 import { ChevronDownIcon, SearchIcon } from "lucide-react";
 
 export const TaskItemFile = ({
@@ -70,7 +70,7 @@ export const TaskContent = ({
       className
     )}
     {...props}>
-    <div className="mt-4 space-y-2 border-muted border-l-2 pl-4">
+    <div className="mt-4 space-y-2 pl-4">
       {children}
     </div>
   </CollapsibleContent>

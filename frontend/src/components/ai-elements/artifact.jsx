@@ -1,12 +1,12 @@
 "use client";;
-import { Button } from "../../../components/ui/Button";
+import { Button } from "../ui/Button";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../../../components/ui/Tooltip";
-import { cn } from "../../../lib/utils";
+} from "../ui/Tooltip";
+import { cn } from "../../lib/utils";
 import { XIcon } from "lucide-react";
 
 export const Artifact = ({

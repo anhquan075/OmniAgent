@@ -1,6 +1,6 @@
 "use client";;
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
-import { cn } from "../../../lib/utils";
+import { cn } from "../../lib/utils";
 import { createContext, useCallback, useContext, useMemo } from "react";
 
 const TranscriptionContext = createContext(null);

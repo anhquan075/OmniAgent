@@ -14,22 +14,40 @@ const BridgeService_1 = require("./services/BridgeService");
 const SimulationService_1 = require("./services/SimulationService");
 const x402_client_1 = require("./x402-client");
 const PolicyGuard_1 = require("./middleware/PolicyGuard");
+const WdkExecutor_1 = require("./middleware/WdkExecutor");
 const ProfitSimulator_1 = require("./services/ProfitSimulator");
 const ai_1 = require("ai");
 const zod_1 = require("zod");
 const env_1 = require("../config/env");
 const ethers_2 = require("../contracts/clients/ethers");
 const axios_1 = __importDefault(require("axios"));
+function validateWDKSecretSeed() {
+    const seed = env_1.env.WDK_SECRET_SEED;
+    if (!seed) {
+        throw new Error('[Security] WDK_SECRET_SEED is not configured. ' +
+            'Cannot initialize wallet without a valid seed phrase or private key.');
+    }
+    const lowerSeed = seed.toLowerCase();
+    if (lowerSeed.includes('replace_me') ||
+        lowerSeed.includes('your_') ||
+        lowerSeed === 'xxx' ||
+        lowerSeed === '0x0') {
+        throw new Error('[Security] WDK_SECRET_SEED contains a placeholder value and is not safe for use. ' +
+            'Please set a valid BIP-39 mnemonic (12-24 words) or hex private key starting with 0x.');
+    }
+}
+validateWDKSecretSeed();
 // Initialize WDK
 exports.wdk = new wdk_1.default(env_1.env.WDK_SECRET_SEED);
 exports.wdk.registerWallet('bnb', wdk_wallet_evm_1.default, { provider: env_1.env.BNB_RPC_URL });
-exports.wdk.registerWallet('solana', wdk_wallet_solana_1.default, { rpcUrl: 'https://api.mainnet-beta.solana.com' });
-exports.wdk.registerWallet('ton', wdk_wallet_ton_1.default, { rpcUrl: 'https://toncenter.com/api/v2/jsonRPC' });
+exports.wdk.registerWallet('solana', wdk_wallet_solana_1.default, { rpcUrl: env_1.env.SOLANA_RPC_URL });
+exports.wdk.registerWallet('ton', wdk_wallet_ton_1.default, { rpcUrl: env_1.env.TON_RPC_URL });
 const { engine, vault, usdt, zkOracle, breaker, auction } = (0, ethers_2.getContracts)();
 const bridgeService = new BridgeService_1.BridgeService(exports.wdk);
 const x402 = new x402_client_1.X402Client(exports.wdk, env_1.env.WDK_USDT_ADDRESS);
 const profitSimulator = (0, ProfitSimulator_1.createProfitSimulator)(env_1.env.BNB_RPC_URL);
 const policyGuard = (0, PolicyGuard_1.getPolicyGuard)();
+const wdkExecutor = new WdkExecutor_1.WdkExecutor(exports.wdk);
 // Helper to report agent state
 async function reportToDashboard(node, details = {}) {
     const serverUrl = `http://localhost:${env_1.env.PORT}/api/agent/report`;
@@ -97,6 +115,54 @@ exports.agentTools = {
             catch (e) {
                 return { error: "Failed to fetch vault assets", message: e.message };
             }
+        },
+    }),
+    get_all_chain_balances: (0, ai_1.tool)({
+        description: 'Fetch the native token (e.g., BNB, SOL, TON) and USDT balances across all registered multi-chain wallets.',
+        parameters: zod_1.z.object({
+            context: zod_1.z.string().describe('Reason/context for this action.')
+        }),
+        // @ts-ignore
+        execute: async ({ context }) => {
+            const results = {};
+            const networks = ['bnb', 'solana', 'ton'];
+            for (const network of networks) {
+                try {
+                    const account = await exports.wdk.getAccount(network);
+                    const address = await account.getAddress();
+                    let nativeBalance = "0";
+                    try {
+                        const nativeBigInt = await account.getBalance();
+                        const decimals = network === 'bnb' ? 18 : network === 'solana' ? 9 : 9;
+                        nativeBalance = ethers_1.ethers.formatUnits(nativeBigInt, decimals);
+                    }
+                    catch (e) {
+                        console.warn(`[MultiVM] Failed to get native balance for ${network}:`, e);
+                    }
+                    let usdtBalance = "0";
+                    try {
+                        let tokenAddress = env_1.env.WDK_USDT_ADDRESS;
+                        if (account.getTokenBalance) {
+                            const usdtBigInt = await account.getTokenBalance(tokenAddress);
+                            usdtBalance = ethers_1.ethers.formatUnits(usdtBigInt, 6);
+                        }
+                    }
+                    catch (e) {
+                        console.warn(`[MultiVM] Failed to get USDT balance for ${network}:`, e);
+                    }
+                    results[network] = {
+                        address,
+                        nativeBalance,
+                        usdtBalance,
+                        status: "Connected"
+                    };
+                }
+                catch (error) {
+                    results[network] = { error: `Wallet not registered or failed: ${error.message}` };
+                }
+            }
+            await reportToDashboard('getAllChainBalances', { networks: results });
+            return results;
         },
     }),
     analyze_risk: (0, ai_1.tool)({
@@ -200,22 +266,22 @@ exports.agentTools = {
                         const myBid = currentBid > 0n ? currentBid + (currentBid * 500n / 10000n) : minBid;
                         const allowance = await usdt.allowance(fromAddress, await auction.getAddress());
                         if (allowance < myBid) {
-                            await bnbAccount.sendTransaction({
+                            await wdkExecutor.sendTransaction('bnb', {
                                 to: env_1.env.WDK_USDT_ADDRESS,
                                 data: usdt.interface.encodeFunctionData("approve", [await auction.getAddress(), ethers_1.ethers.MaxUint256])
-                            });
+                            }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
                         }
-                        const bidTx = await bnbAccount.sendTransaction({
+                        const bidTx = await wdkExecutor.sendTransaction('bnb', {
                             to: await auction.getAddress(),
                             data: auction.interface.encodeFunctionData("bid", [myBid])
-                        });
+                        }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
                         return { actionTaken: 'AUCTION_BID_PLACED', txHash: bidTx.hash };
                     }
                     if (phase === 2 && status.winner.toLowerCase() === fromAddress.toLowerCase()) {
-                        const execTx = await bnbAccount.sendTransaction({
+                        const execTx = await wdkExecutor.sendTransaction('bnb', {
                             to: await auction.getAddress(),
                             data: auction.interface.encodeFunctionData("winnerExecute", [])
-                        });
+                        }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
                         return { actionTaken: 'AUCTION_EXECUTED_WINNER', txHash: execTx.hash };
                     }
                 }
@@ -246,15 +312,23 @@ exports.agentTools = {
                 estimatedGasPerSwap: '1000000',
             });
             console.log(`[Rebalance] Profit simulation: ${JSON.stringify(profitSim)}`);
-            const tx = await bnbAccount.sendTransaction({
-                to: txRequest.to,
-                data: txRequest.data,
-                value: txRequest.value
-            });
-            policyGuard.recordTransaction('100000000');
-            const res = { actionTaken: 'REBALANCED', txHash: tx.hash, profitSimulation: profitSim };
-            await reportToDashboard('executeRebalance', res);
-            return res;
+            try {
+                const tx = await wdkExecutor.sendTransaction('bnb', {
+                    to: txRequest.to,
+                    data: txRequest.data,
+                    value: txRequest.value
+                }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: '100000000' });
+                const res = { actionTaken: 'REBALANCED', txHash: tx.hash, profitSimulation: profitSim };
+                await reportToDashboard('executeRebalance', res);
+                return res;
+            }
+            catch (error) {
+                console.warn(`[Rebalance] Execution failed: ${error.message}`);
+                return {
+                    actionTaken: 'BLOCKED_BY_POLICY_DURING_EXECUTION',
+                    reason: error.message
+                };
+            }
         },
     }),
     check_cross_chain_yields: (0, ai_1.tool)({
@@ -336,7 +410,7 @@ exports.agentTools = {
                     slippage: 0,
                 });
                 console.log(`[X402] Payment simulation: ${JSON.stringify(paymentSim)}`);
-                const insightData = await x402.payAndFetch(serviceUrl, providerAddress, "0.1");
+                const insightData = await x402.payAndFetch(serviceUrl, providerAddress, paymentAmount, profile.level, portfolioValue.toString());
                 policyGuard.recordTransaction(paymentAmount);
                 return {
                     status: "success",
@@ -374,20 +448,27 @@ exports.agentTools = {
                         slippage: 0,
                     });
                     console.log(`[YieldSweep] Yield simulation: ${JSON.stringify(yieldSim)}`);
-                    const tx = await bnbAccount.sendTransaction({
-                        to: await vault.getAddress(),
-                        data: vault.interface.encodeFunctionData("withdrawYield", [spendingAddress])
-                    });
-                    policyGuard.recordTransaction(yieldAmount.toString());
-                    const res = {
-                        actionTaken: 'YIELD_SWEPT',
-                        txHash: tx.hash,
-                        recipient: spendingAddress,
-                        yieldAmount: ethers_1.ethers.formatUnits(yieldAmount, 6),
-                        profitSimulation: yieldSim
-                    };
-                    await reportToDashboard('yieldSweep', res);
-                    return res;
+                    try {
+                        const riskService = new RiskService_1.RiskService(zkOracle, breaker, exports.wdk);
+                        const profile = await riskService.getRiskProfile();
+                        const tx = await wdkExecutor.sendTransaction('bnb', {
+                            to: await vault.getAddress(),
+                            data: vault.interface.encodeFunctionData("withdrawYield", [spendingAddress])
+                        }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: yieldAmount.toString() });
+                        const res = {
+                            actionTaken: 'YIELD_SWEPT',
+                            txHash: tx.hash,
+                            recipient: spendingAddress,
+                            yieldAmount: ethers_1.ethers.formatUnits(yieldAmount, 6),
+                            profitSimulation: yieldSim
+                        };
+                        await reportToDashboard('yieldSweep', res);
+                        return res;
+                    }
+                    catch (error) {
+                        console.warn(`[YieldSweep] Blocked by policy guard: ${error.message}`);
+                        return { actionTaken: 'BLOCKED_BY_POLICY', message: error.message };
+                    }
                 }
                 return { actionTaken: 'SKIPPED', message: "No yield to sweep." };
             }

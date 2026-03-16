@@ -1,12 +1,12 @@
 "use client";;
-import { Button } from "../../../components/ui/Button";
-import { Separator } from "../../../components/ui/Separator";
+import { Button } from "../ui/Button";
+import { Separator } from "../ui/Separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "../../../components/ui/Tooltip";
-import { cn } from "../../../lib/utils";
+} from "../ui/Tooltip";
+import { cn } from "../../lib/utils";
 import { BookmarkIcon } from "lucide-react";
 
 export const Checkpoint = ({

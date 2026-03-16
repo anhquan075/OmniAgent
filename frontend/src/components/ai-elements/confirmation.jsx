@@ -1,7 +1,7 @@
 "use client";;
-import { Alert, AlertDescription } from "../../../components/ui/Alert";
-import { Button } from "../../../components/ui/Button";
-import { cn } from "../../../lib/utils";
+import { Alert, AlertDescription } from "../ui/Alert";
+import { Button } from "../ui/Button";
+import { cn } from "../../lib/utils";
 import { createContext, useContext, useMemo } from "react";
 
 const ConfirmationContext = createContext(null);

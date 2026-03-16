@@ -1,0 +1,75 @@
+[
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "Show me the current vault status and buffer utilization."
+      }
+    ],
+    "id": "Aaul3g76utRF5QSo",
+    "role": "user"
+  },
+  {
+    "id": "QVkHpWghPDccwOOM",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Synthesizing",
+          "progress": 99,
+          "thought": "Generating strategic summary..."
+        }
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "tool-get_vault_status",
+        "toolCallId": "87b696c241994d00bfcd8c4b46b3ca6b",
+        "state": "output-available",
+        "input": {},
+        "output": {
+          "vault": "0xDb5a6b027EA60bdbec6D45212F353Ee9a6099009",
+          "totalAssets": "2500.0",
+          "bufferUtilizationBps": 40000,
+          "bufferCurrent": 125,
+          "bufferTarget": 500,
+          "status": "Healthy",
+          "assetSymbol": "USD₮"
+        }
+      },
+      {
+        "type": "text",
+        "text": "",
+        "state": "done"
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "text",
+        "text": "The vault at address `0xDb5a6b027EA60bdbec6D45212F353Ee9a6099009` currently holds **2500.0 USD₮** in total assets. The buffer utilization is **40,000 bps**, with a current buffer of **125** and a target buffer of **500**. The vault status is **Healthy**. This indicates that the vault is operating within its intended parameters and is managing its assets effectively.",
+        "state": "done"
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Best DeFi Strategies",
+            "prompt": "What are the most effective DeFi strategies for maximizing returns in the current market conditions?"
+          },
+          {
+            "label": "Yield Optimization Tools",
+            "prompt": "Which tools or platforms do you recommend for yield optimization in decentralized finance?"
+          },
+          {
+            "label": "Vault Management Tips",
+            "prompt": "Can you share some best practices for managing DeFi vaults to minimize risk and maximize efficiency?"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,11 +1,11 @@
 "use client";;
-import { Button } from "../../../components/ui/Button";
+import { Button } from "../ui/Button";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "../../../components/ui/HoverCard";
-import { cn } from "../../../lib/utils";
+} from "../ui/HoverCard";
+import { cn } from "../../lib/utils";
 import {
   FileTextIcon,
   GlobeIcon,

@@ -1,12 +1,12 @@
 "use client";;
-import { Button } from "../../../components/ui/Button";
+import { Button } from "../ui/Button";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "../../../components/ui/HoverCard";
-import { Progress } from "../../../components/ui/Progress";
-import { cn } from "../../../lib/utils";
+} from "../ui/HoverCard";
+import { Progress } from "../ui/Progress";
+import { cn } from "../../lib/utils";
 import { createContext, useContext, useMemo } from "react";
 import { getUsage } from "tokenlens";
 

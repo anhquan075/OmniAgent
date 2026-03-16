@@ -1,4 +1,4 @@
-import { cn } from "../../../lib/utils";
+import { cn } from "../../lib/utils";
 import { NodeToolbar, Position } from "@xyflow/react";
 
 export const Toolbar = ({

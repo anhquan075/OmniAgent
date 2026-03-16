@@ -1,11 +1,11 @@
 "use client";;
-import { Badge } from "../../../components/ui/Badge";
+import { Badge } from "../ui/Badge";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../../../components/ui/Collapsible";
-import { cn } from "../../../lib/utils";
+} from "../ui/Collapsible";
+import { cn } from "../../lib/utils";
 import {
   CheckCircle2Icon,
   ChevronRightIcon,

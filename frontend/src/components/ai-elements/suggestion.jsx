@@ -1,10 +1,10 @@
 "use client";;
-import { Button } from "../../../components/ui/Button";
+import { Button } from "../ui/Button";
 import {
   ScrollArea,
   ScrollBar,
-} from "../../../components/ui/ScrollArea";
-import { cn } from "../../../lib/utils";
+} from "../ui/ScrollArea";
+import { cn } from "../../lib/utils";
 import { useCallback } from "react";
 
 export const Suggestions = ({

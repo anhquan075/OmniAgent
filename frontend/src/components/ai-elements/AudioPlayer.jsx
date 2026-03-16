@@ -1,10 +1,10 @@
 "use client";;
-import { Button } from "../../../components/ui/Button";
+import { Button } from "../ui/Button";
 import {
   ButtonGroup,
   ButtonGroupText,
-} from "../../../components/ui/ButtonGroup";
-import { cn } from "../../../lib/utils";
+} from "../ui/ButtonGroup";
+import { cn } from "../../lib/utils";
 import {
   MediaControlBar,
   MediaController,

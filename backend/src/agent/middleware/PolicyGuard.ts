@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { ZERO_ADDRESS } from '@/lib/constants';
 
 export interface SafetyPolicy {
   maxRiskPercentage: number;
@@ -28,7 +29,7 @@ export class PolicyGuard {
       dailyMaxTransactions: 10,
       dailyMaxVolume: ethers.parseUnits('100000', 6).toString(), // 100k USDT
       whitelistedAddresses: new Set([
-        '0x0000000000000000000000000000000000000000', // NULL address for testing
+        ZERO_ADDRESS, // NULL address for testing
       ]),
       maxSlippageBps: 500, // 5% max slippage
       emergencyBreaker: false,
@@ -73,7 +74,83 @@ export class PolicyGuard {
   }
 
   /**
-   * Validate transaction against risk policy
+   * Validate general outbound transaction against risk policy
+   */
+  validateTransaction(params: {
+    toAddress: string;
+    amount: string; // in smallest units
+    currentRiskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    portfolioValue: string; // in smallest units
+  }): PolicyViolation {
+    this.resetDailyCountersIfNeeded();
+
+    // Check emergency breaker first
+    if (this.policy.emergencyBreaker) {
+      return {
+        violated: true,
+        reason: 'Emergency breaker is active - all transactions blocked',
+        severity: 'CRITICAL',
+      };
+    }
+
+    // Check recipient whitelist (if not zero amount)
+    const amountBigInt = BigInt(params.amount);
+    if (amountBigInt > 0n && !this.policy.whitelistedAddresses.has(params.toAddress)) {
+       return {
+         violated: true,
+         reason: `Recipient address ${params.toAddress} is NOT whitelisted for outbound volume.`,
+         severity: 'CRITICAL'
+       }
+    }
+
+    // Check risk level
+    if (params.currentRiskLevel === 'HIGH') {
+      return {
+        violated: true,
+        reason: 'Current portfolio risk is HIGH - cannot execute transaction',
+        severity: 'HIGH',
+      };
+    }
+
+    // Check daily transaction limit
+    if (this.dailyTransactionCount >= this.policy.dailyMaxTransactions) {
+      return {
+        violated: true,
+        reason: `Daily transaction limit (${this.policy.dailyMaxTransactions}) reached`,
+        severity: 'HIGH',
+      };
+    }
+
+    // Check daily volume limit
+    const maxVolume = BigInt(this.policy.dailyMaxVolume);
+    if (this.dailyVolume + amountBigInt > maxVolume) {
+      return {
+        violated: true,
+        reason: `Daily volume limit would be exceeded. Current: ${this.dailyVolume}, Max: ${maxVolume}`,
+        severity: 'HIGH',
+      };
+    }
+
+    // Check max risk percentage (trade amount vs portfolio)
+    const portfolioValue = BigInt(params.portfolioValue);
+    if (portfolioValue > 0n) {
+      const tradePercentage = (amountBigInt * 100n) / portfolioValue;
+      const maxRiskBps = BigInt(this.policy.maxRiskPercentage * 100); // Convert to basis points
+      
+      if (tradePercentage > maxRiskBps / 100n) {
+        return {
+          violated: true,
+          reason: `Trade size ${tradePercentage}% exceeds max risk ${this.policy.maxRiskPercentage}% of portfolio`,
+          severity: 'MEDIUM',
+        };
+      }
+    }
+
+    return { violated: false, reason: 'PASS', severity: 'LOW' };
+  }
+
+  /**
+   * Validate swap transaction against risk policy
    */
   validateSwapTransaction(params: {
     fromToken: string;
@@ -201,10 +278,13 @@ export class PolicyGuard {
   /**
    * Record successful transaction (update daily counters)
    */
-  recordTransaction(amount: string): void {
+  recordTransaction(amount: string, toAddress?: string): void {
     this.resetDailyCountersIfNeeded();
     this.dailyTransactionCount++;
     this.dailyVolume += BigInt(amount);
+    if (toAddress && !this.policy.whitelistedAddresses.has(toAddress)) {
+      this.policy.whitelistedAddresses.add(toAddress); // Auto-whitelist if the first tx passed other checks
+    }
     console.log(
       `[PolicyGuard] Transaction recorded. Daily count: ${this.dailyTransactionCount}/${this.policy.dailyMaxTransactions}`
     );

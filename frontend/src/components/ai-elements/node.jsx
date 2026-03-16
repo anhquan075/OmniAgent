@@ -6,8 +6,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../../../components/ui/Card";
-import { cn } from "../../../lib/utils";
+} from "../ui/Card";
+import { cn } from "../../lib/utils";
 import { Handle, Position } from "@xyflow/react";
 
 export const Node = ({

@@ -1,6 +1,6 @@
 "use client";;
-import { Badge } from "../../../components/ui/Badge";
-import { cn } from "../../../lib/utils";
+import { Badge } from "../ui/Badge";
+import { cn } from "../../lib/utils";
 import { ArrowRightIcon, MinusIcon, PackageIcon, PlusIcon } from "lucide-react";
 import { createContext, useContext, useMemo } from "react";
 

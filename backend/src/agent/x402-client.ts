@@ -1,4 +1,8 @@
 import WDK from '@tetherto/wdk';
+import { WdkExecutor } from './middleware/WdkExecutor';
+import { getPolicyGuard } from './middleware/PolicyGuard';
+import { getContracts } from '@/contracts/clients/ethers';
+import { env } from '@/config/env';
 
 /**
  * X402Client handles machine-to-machine payments for infrastructure.
@@ -12,27 +16,27 @@ export class X402Client {
     this.usdtAddress = usdtAddress;
   }
 
-  async payAndFetch(serviceUrl: string, providerAddress: string, amount: string) {
+  async payAndFetch(serviceUrl: string, providerAddress: string, amount: string, currentRiskLevel: 'LOW' | 'MEDIUM' | 'HIGH', portfolioValue: string) {
     console.log(`[X402Client] Requesting gated service: ${serviceUrl}`);
     console.log(`[X402Client] Paying ${amount} USD₮ to ${providerAddress}...`);
 
-    const bnbAccount = await this.wdk.getAccount('bnb');
+    const wdkExecutor = new WdkExecutor(this.wdk);
+    const { usdt } = getContracts();
     
-    // Execute Transfer
-    const result = await (bnbAccount as any).transfer({
-      token: this.usdtAddress,
-      recipient: providerAddress,
-      amount: amount
-    });
+    // Execute Transfer using WdkExecutor (which enforces PolicyGuard)
+    const tx = await wdkExecutor.sendTransaction('bnb', {
+      to: this.usdtAddress,
+      data: usdt.interface.encodeFunctionData("transfer", [providerAddress, amount])
+    }, { riskLevel: currentRiskLevel, portfolioValue: portfolioValue, estimatedAmount: amount });
 
-    console.log(`[X402Client] Payment Sent! Proof (Hash): ${result.hash}`);
+    console.log(`[X402Client] Payment Sent! Proof (Hash): ${tx.hash}`);
 
     // Call Gated API with Proof
     const response = await fetch(serviceUrl, {
       method: 'GET',
       headers: {
-        'Authorization': `x402 ${result.hash}`,
-        'X-402-Payment-Hash': result.hash
+        'Authorization': `x402 ${tx.hash}`,
+        'X-402-Payment-Hash': tx.hash
       }
     });
 

@@ -7,7 +7,13 @@ import { bigIntReplacer } from './utils/json';
 import statsRoute from './api/routes/stats';
 import chatRoute from './api/routes/chat';
 import agentRoute from './api/routes/agent';
+import dashboardRoute from './api/routes/dashboard';
+import robotFleetRoute from './api/routes/robot-fleet';
+import x402Route from './api/routes/x402';
 import { AgentService } from './agent/services/AgentService';
+import { startAutonomousLoop } from './agent/AutonomousLoop';
+import { validateEnvironment } from './config/security';
+import { robotFleetService } from './services/RobotFleetService';
 
 const app = new Hono();
 
@@ -62,6 +68,9 @@ app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOStri
 app.route('/api/stats', statsRoute);
 app.route('/api/chat', chatRoute);
 app.route('/api/agent', agentRoute);
+app.route('/api/dashboard', dashboardRoute);
+app.route('/api/robot-fleet', robotFleetRoute);
+app.route('/api/x402', x402Route);
 
 const port = Number(env.PORT);
 
@@ -76,23 +85,39 @@ if (isMain) {
   serve({
     fetch: app.fetch,
     port
-  }, (info) => {
+  }, async (info) => {
     console.log(`🌍 Server is running on http://localhost:${info.port}`);
     
-    // Start the autonomous loop alongside the API
-    const INTERVAL = 5 * 60 * 1000;
-    console.log('--- Starting Integrated Autonomous Loop (5m interval) ---');
+    // Start robot fleet simulator
+    try {
+      await robotFleetService.startSimulator();
+      console.log('🤖 Robot Fleet Simulator started successfully');
+    } catch (e) {
+      console.warn('⚠️  Robot fleet simulator failed to start:', e);
+    }
     
-    const safeRunCycle = async () => {
-      try {
-        await AgentService.runCycle();
-      } catch (e: any) {
-        console.error('Autonomous Loop Error (Non-Fatal):', e.message);
-      }
-    };
+    // Validate critical environment variables before starting agent
+    try {
+      validateEnvironment();
+    } catch (e: any) {
+      console.error('❌ Environment validation failed:', e.message);
+      console.warn('⚠️  Autonomous Agent Loop will NOT start due to missing/invalid secrets');
+      return;
+    }
 
-    safeRunCycle();
-    setInterval(safeRunCycle, INTERVAL);
+    // Check if autonomous loop is explicitly allowed
+    if (process.env.ALLOW_AGENT_RUN !== 'true') {
+      console.warn('⚠️  Autonomous Agent Loop skipped (ALLOW_AGENT_RUN not set)');
+      console.warn('    To enable the autonomous agent, set ALLOW_AGENT_RUN=true in your environment');
+      return;
+    }
+    
+    // Start the autonomous loop alongside the API
+    console.log('--- Starting Integrated Autonomous Loop (Dynamic Scheduling) ---');
+    
+    startAutonomousLoop().catch((e: any) => {
+      console.error('Failed to start Autonomous Loop:', e);
+    });
   });
 }
 

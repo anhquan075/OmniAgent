@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
-import { Button } from "../../../components/ui/Button";
-import { cn } from "../../../lib/utils";
+import { Button } from "../ui/Button";
+import { cn } from "../../lib/utils";
 import { ArrowDownIcon, DownloadIcon } from "lucide-react";
 import { useCallback } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
