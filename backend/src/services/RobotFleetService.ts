@@ -39,12 +39,14 @@ class RobotFleetService {
 
   private loadSimulator() {
     try {
-      // Use relative path resolution that works with ts-node and build
-      const simulatorPath = '../../scripts/robot-simulator';
-      this.simulator = require(simulatorPath);
+      try {
+        this.simulator = require('../../scripts/robot-simulator');
+      } catch (e1) {
+        this.simulator = require('../../../scripts/robot-simulator');
+      }
       console.log('[RobotFleetService] Simulator module loaded (not started)');
-    } catch (error) {
-      console.warn('[RobotFleetService] Simulator not loaded:', error);
+    } catch (error: any) {
+      console.warn('[RobotFleetService] Simulator not loaded:', error.message);
     }
   }
 

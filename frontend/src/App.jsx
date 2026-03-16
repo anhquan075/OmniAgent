@@ -260,12 +260,12 @@ export default function App() {
               </div>
               <div className="flex flex-col leading-none">
                 <span className="text-[9px] font-bold text-[#F3BA2F] uppercase">BNB Chain</span>
-                <span className="text-[7px] text-neutral-gray uppercase tracking-wider">Testnet</span>
+                <span className="text-[7px] text-neutral-gray uppercase tracking-wider">{import.meta.env.VITE_DEFAULT_NETWORK?.includes('mainnet') || import.meta.env.VITE_DEFAULT_NETWORK?.includes('bsc') && !import.meta.env.VITE_DEFAULT_NETWORK?.includes('testnet') ? 'Mainnet' : 'Testnet'}</span>
               </div>
             </div>
 
             <div className="scale-75 md:scale-100 origin-right">
-              <ConnectButton chainStatus="icon" showBalance={false} accountStatus="address" />
+              <ConnectButton chainStatus="none" showBalance={false} accountStatus="address" />
             </div>
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

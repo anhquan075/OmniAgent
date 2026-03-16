@@ -37,6 +37,9 @@ const envSchema = z.object({
   OPENROUTER_BASE_URL: z.string().default('https://openrouter.ai/api/v1'),
   OPENROUTER_MODEL_GENERAL: z.string().default('google/gemini-2.0-flash-exp:free'),
   OPENROUTER_MODEL_CRYPTO: z.string().default('deepseek/deepseek-chat'),
+
+  DEPLOYMENT_MODE: z.enum(['local', 'production']).default('local'),
+  AGENT_CRON_SECRET: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
