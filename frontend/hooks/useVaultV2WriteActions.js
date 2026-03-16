@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
 import { engineV2Abi, erc20Abi, vaultV2Abi, pegArbAbi } from "@/lib/abi";
-
-const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
+import { ZERO_ADDRESS as ZERO_ADDR } from "@/lib/constants";
 const TX_HISTORY_STORAGE_KEY = "wdkvault:v2:tx-history";
 
 function readPersistedTxHistory() {

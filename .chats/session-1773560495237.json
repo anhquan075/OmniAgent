@@ -1,0 +1,31 @@
+[
+  {
+    "id": "initial-1",
+    "role": "assistant",
+    "content": "System initialized. Welcome back, Commander **0xCd0B...1C1E**. I am your **WDK Autonomous Strategist**. All settlement rails are hot. My sensors indicate a total vault value of **0.0 USD₮** with **0%** expected drawdown."
+  },
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "hi"
+      }
+    ],
+    "id": "Ps9SM0D8NwNgoMSU",
+    "role": "user"
+  },
+  {
+    "id": "Kh0smgCifICFallE",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "text",
+        "text": "Greetings. Ready to optimize your AFOS strategy.\n",
+        "state": "done"
+      }
+    ]
+  }
+]

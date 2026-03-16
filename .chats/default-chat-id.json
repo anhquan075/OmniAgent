@@ -1,0 +1,30 @@
+[
+  {
+    "id": "iLxxJc6LBlBHj1Cv",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Connecting",
+          "progress": 10,
+          "thought": "Initializing neural bridge to WDK settlement rails..."
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      }
+    ]
+  }
+]

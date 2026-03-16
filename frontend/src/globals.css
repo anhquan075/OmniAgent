@@ -52,19 +52,9 @@
   --shadow-glow-lg: 0 0 40px rgba(38, 161, 123, 0.4);
 }
 
-/* Animations */
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
-}
-
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(38, 161, 123, 0.2); }
-  50% { box-shadow: 0 0 40px rgba(38, 161, 123, 0.5), 0 0 80px rgba(38, 161, 123, 0.1); }
-}
-
-.animate-float { animation: float 3.5s ease-in-out infinite; }
-.animate-glow-pulse { animation: glow-pulse 2s ease-in-out infinite; }
+/* Animations Removed for CPU Optimization */
+.animate-float { }
+.animate-glow-pulse { }
 
 /* Base dark styles */
 :root {
@@ -143,6 +133,13 @@ body {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(38, 161, 123, 0.4);
+}
+
+/* Suppress InputGroup focus ring inside PromptInput (outer form handles focus styling) */
+form [data-slot="input-group"]:has([data-slot="input-group-control"]:focus-visible) {
+  box-shadow: none !important;
+  border-color: transparent !important;
+  --tw-ring-shadow: none !important;
 }
 
 /* Prose/Markdown Adjustments */

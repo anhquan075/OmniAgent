@@ -1,0 +1,57 @@
+[
+  {
+    "role": "user",
+    "content": "Show me the current vault status"
+  },
+  {
+    "id": "29TtHDEni1PgpD9o",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Processing",
+          "progress": 50,
+          "thought": "Analyzing tactical data..."
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "tool-get_vault_status",
+        "toolCallId": "tool_get_vault_status_AyuCVuvpN7GNmDCe1bUA",
+        "state": "output-available",
+        "input": {},
+        "output": {
+          "vault": "0xDb5a6b027EA60bdbec6D45212F353Ee9a6099009",
+          "totalAssets": "2500.0",
+          "bufferUtilizationBps": 40000,
+          "bufferCurrent": 125,
+          "bufferTarget": 500,
+          "status": "Healthy",
+          "assetSymbol": "USD₮"
+        }
+      },
+      {
+        "type": "text",
+        "text": "",
+        "state": "done"
+      }
+    ]
+  }
+]

@@ -1,11 +1,11 @@
 "use client";;
-import { Avatar, AvatarFallback } from "../../../components/ui/avatar";
-import { Button } from "../../../components/ui/button";
+import { Avatar, AvatarFallback } from "../../../components/ui/Avatar";
+import { Button } from "../../../components/ui/Button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../../../components/ui/collapsible";
+} from "../../../components/ui/Collapsible";
 import { cn } from "../../../lib/utils";
 import {
   CheckIcon,

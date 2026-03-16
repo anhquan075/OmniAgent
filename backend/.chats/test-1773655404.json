@@ -1,0 +1,56 @@
+[
+  {
+    "role": "user",
+    "content": "Analyze risk for the current strategy"
+  },
+  {
+    "id": "STaZRS2jBjlqgcYP",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Risk Analysis",
+          "progress": 40,
+          "thought": "Scanning ZK-Risk Oracle for Monte Carlo verification..."
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "text",
+        "text": "1. **Action Taken**: I initiated a risk analysis for the current strategy to evaluate the risk profile level (LOW, MEDIUM, HIGH) and the drawdown basis points (bps).  \n2. **Waiting for Results**: The analysis will provide insights into the current risk exposure of the vault's strategy.  \n\nOnce the results are in, I will summarize the findings, explain the risk level, and recommend any necessary actions.",
+        "state": "done"
+      },
+      {
+        "type": "tool-analyze_risk",
+        "toolCallId": "460ed4eb631749d9b632ec14f0c369b8",
+        "state": "output-available",
+        "input": {},
+        "output": {
+          "level": "LOW",
+          "drawdownBps": 0,
+          "sharpe": 0,
+          "recommendedBuffer": 500,
+          "timestamp": 1773655404,
+          "message": "ZK-Proven Metrics"
+        }
+      }
+    ]
+  }
+]

@@ -14,6 +14,7 @@ import { useVaultV2ReadState } from "@/hooks/useVaultV2ReadState";
 import { useVaultV2WriteActions } from "@/hooks/useVaultV2WriteActions";
 import { useNetworkMode } from "@/hooks/useNetworkMode";
 import { NETWORK_CONFIGS, NETWORK_MODE } from "@/lib/networkConfig";
+import { ZERO_ADDRESS as ZERO_ADDR } from "@/lib/constants";
 import {
   AlertTriangle,
   ExternalLink,
@@ -23,8 +24,6 @@ import {
 } from "lucide-react";
 import { VaultTestnetDevPanel } from "@/components/shared/ui/VaultTestnetDevPanel";
 import { useCallback, useEffect, useMemo, useState } from "react";
-
-const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
 function shortAddr(addr) {
   if (!addr || addr === ZERO_ADDR) return "not deployed";
@@ -137,13 +136,10 @@ export default function WDKVaultV2Client() {
   );
 
   // Auto-sync UI network mode when wallet switches chains.
-  // Chain 56 → mainnet, Chain 97 → testnet, Chain 102031 -> creditcoin_testnet
+  // Chain 97 → testnet
   useEffect(() => {
-    if (wallet.networkChainId === 56n) setNetworkMode(NETWORK_MODE.MAINNET);
-    else if (wallet.networkChainId === 97n)
+    if (wallet.networkChainId === 97n)
       setNetworkMode(NETWORK_MODE.TESTNET);
-    else if (wallet.networkChainId === 102031n)
-      setNetworkMode(NETWORK_MODE.CREDITCOIN_TESTNET);
   }, [wallet.networkChainId, setNetworkMode]);
 
   // Clear transaction history when wallet disconnects
@@ -315,14 +311,10 @@ export default function WDKVaultV2Client() {
     }
   }, [wallet.provider, publicProvider, wallet.signer, refreshArgs, vaultState]);
 
-  // Unsupported = connected to a chain that is neither mainnet (56) nor testnet (97).
-  // mainnet/testnet mismatch is handled by the auto-sync effect above, so this
-  // strip only fires for genuinely unknown chains (e.g., local hardhat, Polygon).
+  // Unsupported = connected to a chain that is not BNB testnet.
   const networkSupported =
     wallet.networkChainId === null ||
-    wallet.networkChainId === 56n ||
-    wallet.networkChainId === 97n ||
-    wallet.networkChainId === 102031n;
+    wallet.networkChainId === 97n;
   const depositsBlocked = vaultState.configLocked === false;
   const latestTx = actions.txHistory?.[0] ?? null;
   const latestTxId = latestTx?.id;
@@ -447,25 +439,7 @@ export default function WDKVaultV2Client() {
             }}
           />
           Unsupported network ({wallet.networkLabel}). Switch your wallet to{" "}
-          <strong>BNB Mainnet (56)</strong>, <strong>BNB Testnet (97)</strong> or{" "}
-          <strong>Creditcoin Testnet (102031)</strong>.
-        </div>
-      )}
-
-      {/* V2 contracts not yet deployed on mainnet — show notice */}
-      {!isTestnet && circuitBreakerAddress === ZERO_ADDR && (
-        <div className="networkStrip">
-          <AlertTriangle
-            size={14}
-            style={{
-              display: "inline",
-              verticalAlign: "middle",
-              marginRight: 6,
-            }}
-          />
-          V2 enhanced contracts (CircuitBreaker, SharpeTracker, PegArb) are not
-          yet deployed on mainnet. Core vault operations are available — V2
-          analytics coming soon.
+          <strong>BNB Testnet (97)</strong>.
         </div>
       )}
 

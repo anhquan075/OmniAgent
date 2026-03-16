@@ -1,0 +1,31 @@
+[
+  {
+    "id": "initial-1",
+    "role": "assistant",
+    "content": "System initialized. Welcome back, Commander **0xCd0B...1C1E**. I am your **WDK Autonomous Strategist**. All settlement rails are hot."
+  },
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "hi"
+      }
+    ],
+    "id": "fF5F4YhG7jftp2iv",
+    "role": "user"
+  },
+  {
+    "id": "2viCFabwDxVbdtIO",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "text",
+        "text": "Greetings. I am ready to assist with your AFOS needs.\n",
+        "state": "done"
+      }
+    ]
+  }
+]

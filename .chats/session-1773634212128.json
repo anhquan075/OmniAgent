@@ -1,0 +1,202 @@
+[
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "What are the current ZK-risk parameters?"
+      }
+    ],
+    "id": "p2rBl6cL6qssCN9K",
+    "role": "user"
+  },
+  {
+    "id": "f9A6KmCsj688aTXz",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Connecting",
+          "progress": 10,
+          "thought": "Initializing neural bridge to WDK settlement rails..."
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "aH0pgVEYS3sDA3yr",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Risk Analysis",
+          "progress": 40,
+          "thought": "Scanning ZK-Risk Oracle for Monte Carlo verification..."
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "tool-analyze_risk",
+        "toolCallId": "tool_analyze_risk_n6j76KKQFYdEOivftgIm",
+        "state": "output-available",
+        "input": {},
+        "output": {
+          "level": "LOW",
+          "drawdownBps": 0,
+          "sharpe": 0,
+          "recommendedBuffer": 500,
+          "timestamp": 1773634237,
+          "message": "Safe Fallback: Contract Revert: execution reverted (no data present; likely require(false) occurred (action=\"call\", data=\"0x\", reason=\"require(false)\", transaction={ \"data\": \"0x1e6a7121\", \"to\": \"0x39bC71136e93143cD0BcC0b25E64c876545b4f48\" }, invocation=null, revert=null, code=CALL_EXCEPTION, version=6.16.0)"
+        }
+      },
+      {
+        "type": "text",
+        "text": "",
+        "state": "done"
+      }
+    ]
+  },
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "Are the settlement rails active on Solana and TON?"
+      }
+    ],
+    "id": "gLWDKqujwq39QyT2",
+    "role": "user"
+  },
+  {
+    "id": "Hh9EzfdmGANfoale",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Connecting",
+          "progress": 10,
+          "thought": "Initializing neural bridge to WDK settlement rails..."
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "igINujSw4elKZ8Lu",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Connecting",
+          "progress": 10,
+          "thought": "Initializing neural bridge to WDK settlement rails..."
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "text",
+        "text": "\n",
+        "state": "done"
+      }
+    ]
+  },
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "Are the settlement rails active on Solana and TON?"
+      }
+    ],
+    "id": "2kuVJ1EKrgCpw4Gs",
+    "role": "user"
+  },
+  {
+    "id": "u5lkjAeZ6KGi00eO",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Connecting",
+          "progress": 10,
+          "thought": "Initializing neural bridge to WDK settlement rails..."
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      }
+    ]
+  }
+]

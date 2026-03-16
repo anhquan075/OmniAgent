@@ -1,0 +1,71 @@
+[
+  {
+    "role": "user",
+    "content": "Analyze risk for the current strategy"
+  },
+  {
+    "id": "cqOH7GL6KyZfLugr",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Processing",
+          "progress": 50,
+          "thought": "Analyzing tactical data..."
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "text",
+        "text": "1. **Analyzing Risk**: Calling the risk analysis tool to evaluate the current ZK-risk parameters and determine the risk profile level (LOW, MEDIUM, HIGH) along with drawdown bps.\n\nWhile the risk analysis is underway, I'll also retrieve the current vault status to ensure all systems are operational before proceeding with any recommendations.\n\nStand by for results and a full explanatory summary.",
+        "state": "done"
+      },
+      {
+        "type": "tool-analyze_risk",
+        "toolCallId": "e42109f52d534456ba300ed7f57e1784",
+        "state": "output-available",
+        "input": {},
+        "output": {
+          "level": "LOW",
+          "drawdownBps": 0,
+          "sharpe": 0,
+          "recommendedBuffer": 500,
+          "timestamp": 1773654071,
+          "message": "ZK-Proven Metrics"
+        }
+      },
+      {
+        "type": "tool-get_vault_status",
+        "toolCallId": "3c80db7c29924f4c8e55fd092dbfe03f",
+        "state": "output-available",
+        "input": {},
+        "output": {
+          "vault": "0xDb5a6b027EA60bdbec6D45212F353Ee9a6099009",
+          "totalAssets": "2500.0",
+          "bufferUtilizationBps": 40000,
+          "bufferCurrent": 125,
+          "bufferTarget": 500,
+          "status": "Healthy",
+          "assetSymbol": "USD₮"
+        }
+      }
+    ]
+  }
+]

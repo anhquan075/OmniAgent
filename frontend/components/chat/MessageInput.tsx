@@ -10,18 +10,19 @@ import {
   PromptInputActionMenuTrigger,
   PromptInputActionMenuContent,
   PromptInputActionMenuItem
-} from '../../src/components/ai-elements/prompt-input';
+} from '../../src/components/ai-elements/PromptInput';
 import { cn } from "@/lib/utils";
 
 interface MessageInputProps {
   input: string;
   handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement> | React.ChangeEvent<HTMLInputElement>) => void;
-  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  handleSubmit: (e: React.FormEvent<HTMLFormElement>, overrideText?: string) => void;
   status: 'submitted' | 'streaming' | 'ready' | 'error';
   stop: () => void;
+  isActuallyStreaming?: boolean;
 }
 
-export function MessageInput({ input, handleInputChange, handleSubmit, status, stop }: MessageInputProps) {
+export function MessageInput({ input, handleInputChange, handleSubmit, status, stop, isActuallyStreaming }: MessageInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [isHighPriority, setIsHighPriority] = useState(false);
   
@@ -77,8 +78,12 @@ export function MessageInput({ input, handleInputChange, handleSubmit, status, s
     }
   };
 
+  // Final UI state based on refined streaming detection
+  const showActiveLink = isActuallyStreaming;
+  const effectiveStatus = isActuallyStreaming ? status : 'ready';
+
   return (
-    <div className="relative w-full max-w-4xl mx-auto">
+    <div className="relative w-full max-w-full mx-auto">
       <CommandPalette 
         isOpen={isPaletteOpen} 
         onSelect={selectCommand} 
@@ -88,10 +93,10 @@ export function MessageInput({ input, handleInputChange, handleSubmit, status, s
       />
 
       <PromptInput
-        onSubmit={(_data, e) => handleSubmit(e as any)}
+        onSubmit={(data, e) => handleSubmit(e as any, data.text)}
         className={cn(
           "relative flex items-end gap-2 p-2 rounded-2xl bg-[#161B22]/80 backdrop-blur-xl border transition-all duration-300",
-          isFocused ? "border-tether-teal/50 shadow-[0_0_20px_rgba(38,161,123,0.15)] bg-[#161B22]" : "border-white/10 shadow-lg",
+          isFocused ? "border-tether-teal/50 shadow-[0_0_20px_rgba(38,161,123,0.15)] bg-[#161B22]" : "border-transparent shadow-lg",
           isHighPriority && "border-neon-green/40 shadow-[0_0_15px_rgba(57,255,20,0.1)]"
         )}
       >
@@ -123,20 +128,21 @@ export function MessageInput({ input, handleInputChange, handleSubmit, status, s
         </PromptInputBody>
 
         <div className="flex items-center gap-2 self-center pr-1">
-          {status !== 'ready' && status !== 'error' && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-tether-teal/5 border border-tether-teal/10 animate-pulse">
-              <div className="w-1 h-1 rounded-full bg-tether-teal"></div>
+          {showActiveLink && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-tether-teal/5 border border-tether-teal/10">
+              <div className="w-1 h-1 rounded-full bg-tether-teal animate-pulse"></div>
               <span className="text-[8px] font-heading font-black text-tether-teal uppercase tracking-widest">Link Active</span>
             </div>
           )}
           
-          <PromptInputSubmit 
-            status={status} 
+          <PromptInputSubmit
+            status={effectiveStatus}
             onStop={stop}
+            disabled={!input.trim() && !isActuallyStreaming}
             className={cn(
-              "h-9 w-9 rounded-xl transition-all duration-300 flex items-center justify-center",
-              input.trim() || status !== 'ready'
-                ? "bg-tether-teal text-space-black hover:scale-105 active:scale-95 shadow-glow-sm" 
+              "h-9 w-9 rounded-xl transition-all duration-300 flex items-center justify-center focus-visible:ring-0 focus:outline-none",
+              (input.trim() || isActuallyStreaming)
+                ? "bg-tether-teal text-space-black hover:scale-105 active:scale-95 shadow-glow-sm"
                 : "bg-white/5 text-neutral-gray/40 grayscale opacity-50"
             )}
           />

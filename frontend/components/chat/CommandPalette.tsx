@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ZapIcon, ActivityIcon, ShieldCheckIcon, WalletIcon, BarChart3Icon, GlobeIcon } from 'lucide-react';
+import { ZapIcon, ActivityIcon, ShieldCheckIcon, WalletIcon, BarChart3Icon, GlobeIcon, PlusCircle, TrendingUp } from 'lucide-react';
 
 export interface Command {
   id: string;
@@ -14,9 +14,11 @@ export const DEFI_COMMANDS: Command[] = [
   { id: 'status', label: 'status', description: 'Get full vault and rail status', icon: BarChart3Icon, prompt: '/status' },
   { id: 'rebalance', label: 'rebalance', description: 'Trigger an autonomous rebalance cycle', icon: ZapIcon, prompt: '/rebalance' },
   { id: 'risk', label: 'risk', description: 'Analyze current risk parameters', icon: ShieldCheckIcon, prompt: '/risk' },
-  { id: 'bridge', label: 'bridge', description: 'Move assets across settlement rails', icon: GlobeIcon, prompt: '/bridge' },
-  { id: 'harvest', label: 'harvest', description: 'Harvest all accrued yield', icon: ActivityIcon, prompt: '/harvest' },
+  { id: 'yield', label: 'yield', description: 'View current yield opportunities', icon: TrendingUp, prompt: '/yield' },
+  { id: 'deposit', label: 'deposit', description: 'Initiate a secure deposit', icon: PlusCircle, prompt: '/deposit' },
   { id: 'withdraw', label: 'withdraw', description: 'Initiate a secure withdrawal', icon: WalletIcon, prompt: '/withdraw' },
+  { id: 'harvest', label: 'harvest', description: 'Harvest all accrued yield', icon: ActivityIcon, prompt: '/harvest' },
+  { id: 'bridge', label: 'bridge', description: 'Move assets across settlement rails', icon: GlobeIcon, prompt: '/bridge' },
 ];
 
 interface CommandPaletteProps {
@@ -61,7 +63,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         >
           <div className="p-2 border-b border-white/5 bg-white/5">
             <span className="text-[8px] font-heading font-bold text-tether-teal tracking-[0.2em] uppercase px-2">
-              Available Commands
+              Command Center
             </span>
           </div>
           

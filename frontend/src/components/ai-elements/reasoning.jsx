@@ -4,7 +4,7 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../../../components/ui/collapsible";
+} from "../../../components/ui/Collapsible";
 import { cn } from "../../../lib/utils";
 import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
@@ -125,14 +125,11 @@ export const Reasoning = memo(({
   );
 });
 
-const defaultGetThinkingMessage = (isStreaming, duration) => {
-  if (isStreaming || duration === 0) {
-    return <Shimmer duration={1}>Thinking...</Shimmer>;
+const defaultGetThinkingMessage = (isStreaming) => {
+  if (isStreaming) {
+    return <Shimmer duration={1}>Strategist Reasoning...</Shimmer>;
   }
-  if (duration === undefined) {
-    return <p>Thought for a few seconds</p>;
-  }
-  return <p>Thought for {duration} seconds</p>;
+  return <p>Strategist Reasoning</p>;
 };
 
 export const ReasoningTrigger = memo(({
@@ -146,16 +143,15 @@ export const ReasoningTrigger = memo(({
   return (
     <CollapsibleTrigger
       className={cn(
-        "flex w-full items-center gap-2 text-muted-foreground text-sm transition-colors hover:text-foreground",
+        "flex items-center gap-2 text-tether-teal/60 text-[10px] font-heading tracking-widest uppercase transition-colors hover:text-tether-teal",
         className
       )}
       {...props}>
       {children ?? (
         <>
-          <BrainIcon className="size-4" />
           {getThinkingMessage(isStreaming, duration)}
           <ChevronDownIcon
-            className={cn("size-4 transition-transform", isOpen ? "rotate-180" : "rotate-0")} />
+            className={cn("size-3 transition-transform opacity-50", isOpen ? "rotate-180" : "rotate-0")} />
         </>
       )}
     </CollapsibleTrigger>

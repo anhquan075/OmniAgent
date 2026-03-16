@@ -12,9 +12,11 @@ interface Message {
 
 interface ChatHistoryProps {
   messages: Message[];
+  isStreaming?: boolean;
+  addToolOutput?: (output: any) => void;
 }
 
-export function ChatHistory({ messages = [] }: ChatHistoryProps) {
+export function ChatHistory({ messages = [], isStreaming = false, addToolOutput }: ChatHistoryProps) {
   // Filter out data-only messages that don't have text content or tool invocations
   const visibleMessages = messages.filter(msg => {
     // Always show user messages immediately
@@ -34,15 +36,18 @@ export function ChatHistory({ messages = [] }: ChatHistoryProps) {
       return (msg as any).parts.some((p: any) => p.type === 'text' && p.text && p.text.trim().length > 0);
     }
     
+    // Also show if it's currently streaming thinking/data (to show reasoning component)
+    if (isStreaming && msg === messages[messages.length - 1]) return true;
+    
     return false;
   });
 
   return (
-    <div className="flex flex-col space-y-2 border-2 border-cyan-500 min-h-[100px]">
+    <div className="flex flex-col space-y-2 min-h-[100px]">
       {visibleMessages.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-center space-y-5 my-auto mt-24 opacity-80">
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-tether-teal/20 to-transparent border border-tether-teal/30 flex items-center justify-center shadow-[0_0_30px_rgba(38,161,123,0.1)] overflow-hidden">
-            <img src="/imgs/mascot-avatar.png" alt="WDK Strategist" className="w-full h-full object-cover" />
+            <img src="/imgs/mascot-owl-no-bg.png" alt="AFOS Strategist" className="w-full h-full object-contain" />
           </div>
           <div className="font-heading tracking-widest text-sm text-tether-teal">SYSTEM ONLINE</div>
           <p className="font-sans text-xs text-gray-400 max-w-xs leading-relaxed">
@@ -62,6 +67,8 @@ export function ChatHistory({ messages = [] }: ChatHistoryProps) {
                 parts={(msg as any).parts}
                 toolInvocations={msg.toolInvocations}
                 timestamp={msg.createdAt}
+                isStreaming={isStreaming && index === visibleMessages.length - 1}
+                addToolOutput={addToolOutput}
               />
             </div>
           );

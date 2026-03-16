@@ -1,0 +1,167 @@
+[
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "What are the current ZK-risk parameters?"
+      }
+    ],
+    "id": "hy3Jf1CAzPGZG4H4",
+    "role": "user"
+  },
+  {
+    "id": "FbVLFUMWj8qeR5cT",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Connecting",
+          "progress": 10,
+          "thought": "Initializing neural bridge to WDK settlement rails..."
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "aNL3KOSQaJqg4ovY",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Connecting",
+          "progress": 10,
+          "thought": "Initializing neural bridge to WDK settlement rails..."
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "tool-analyze_risk",
+        "toolCallId": "tool_analyze_risk_NiTFfBrKyfvt5Xe8rnsW",
+        "state": "output-available",
+        "input": {},
+        "output": {
+          "level": "LOW",
+          "drawdownBps": 0,
+          "sharpe": 0,
+          "recommendedBuffer": 500,
+          "timestamp": 1773646745,
+          "message": "ZK-Proven Metrics"
+        }
+      },
+      {
+        "type": "text",
+        "text": "",
+        "state": "done"
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "text",
+        "text": "The current risk profile is LOW with a drawdown bps of 0. Recommended buffer is 500. Message: ZK-Proven Metrics.",
+        "state": "done"
+      }
+    ]
+  },
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "Are the settlement rails active on Solana and TON?"
+      }
+    ],
+    "id": "lLa4ykpJdgxz31dj",
+    "role": "user"
+  },
+  {
+    "id": "AdtqpCpS56BKgeiF",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Yield Scout",
+          "progress": 75,
+          "thought": "Evaluating yield spreads across Solana, TON, and BSC rails..."
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "tool-check_cross_chain_yields",
+        "toolCallId": "tool_check_cross_chain_yields_Snios7wembRV4tO3cxoE",
+        "state": "output-available",
+        "input": {},
+        "output": {
+          "actionTaken": "SCOUTING_COMPLETED",
+          "message": "Omnichain scouting completed."
+        }
+      },
+      {
+        "type": "text",
+        "text": "",
+        "state": "done"
+      }
+    ]
+  }
+]

@@ -1,8 +1,8 @@
 import React from 'react';
 import { CheckCircle2Icon, CircleIcon, Loader2Icon, AlertCircleIcon, ChevronRightIcon } from 'lucide-react';
 import clsx from 'clsx';
-import { Plan, PlanHeader, PlanTitle, PlanDescription, PlanContent } from '../../src/components/ai-elements/plan';
-import { Task, TaskTrigger, TaskContent, TaskItem } from '../../src/components/ai-elements/task';
+import { Plan, PlanHeader, PlanTitle, PlanDescription, PlanContent } from '../../src/components/ai-elements/Plan';
+import { Task, TaskTrigger, TaskContent, TaskItem } from '../../src/components/ai-elements/Task';
 
 export type TaskStatus = 'pending' | 'in-progress' | 'completed' | 'failed';
 

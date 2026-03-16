@@ -1,10 +1,10 @@
 "use client";;
-import { Badge } from "../../../components/ui/badge";
+import { Badge } from "../../../components/ui/Badge";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../../../components/ui/collapsible";
+} from "../../../components/ui/Collapsible";
 import { cn } from "../../../lib/utils";
 import {
   CheckCircleIcon,

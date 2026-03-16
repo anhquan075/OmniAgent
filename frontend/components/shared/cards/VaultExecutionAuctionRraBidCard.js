@@ -3,9 +3,9 @@ import { Gavel } from "lucide-react";
 
 import { executionAuctionAbi, erc20Abi } from "@/lib/abi";
 import { fmtWdks } from "@/lib/vaultDisplayFormatters";
+import { ZERO_ADDRESS as ZERO_ADDR } from "@/lib/constants";
 
 const PHASE_LABELS = ["NotOpen", "BidPhase", "ExecutePhase", "FallbackPhase"];
-const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
 function shortAddr(addr) {
   if (!addr || addr === ZERO_ADDR) return "none";

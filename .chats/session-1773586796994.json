@@ -1,0 +1,287 @@
+[
+  {
+    "id": "initial-1",
+    "role": "assistant",
+    "content": "System initialized. Welcome back, Commander **0xCd0B...1C1E**. I am your **WDK Autonomous Strategist**. All settlement rails are hot."
+  },
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "What are the current ZK-risk parameters?"
+      }
+    ],
+    "id": "UH3zacDej3fEolMI",
+    "role": "user"
+  },
+  {
+    "id": "H9K6Y18p6pvv04MX",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Strategy Ready",
+          "progress": 100
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "text",
+        "text": "```json\n{\n  \"riskProfile\": {\n    \"level\": \"LOW\",\n    \"drawdownBps\": 0,\n    \"sharpe\": 0,\n    \"recommendedBuffer\": 500,\n    \"timestamp\": 1773587864\n  },\n  \"strategyDecision\": {\n    \"state\": null,\n    \"targetWDKBps\": 1000,\n    \"bountyBps\": 100\n  },\n  \"actionTaken\": \"SKIPPED_NO_GAS\",\n  \"transactionHash\": null,\n  \"canExecute\": true\n}\n```\n\nAnalysis:\n\nThe current ZK-risk parameters indicate a \"LOW\" risk profile. Drawdown is at 0 bps, Sharpe ratio is 0, and the recommended buffer is 500 bps. The system is currently configured for a target WDK of 1000 bps with a bounty of 100 bps. No action was taken due to insufficient gas. The system is ready for execution pending gas availability.\n",
+        "state": "done"
+      }
+    ]
+  },
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "Show me the best yield opportunities right now."
+      }
+    ],
+    "id": "ztLeLM3ydKIu1bM0",
+    "role": "user"
+  },
+  {
+    "id": "4u5rVlh4NwDPqDUN",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Strategy Ready",
+          "progress": 100
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "Show me the best yield opportunities right now."
+      }
+    ],
+    "id": "XPVvR8lnBYBKZePr",
+    "role": "user"
+  },
+  {
+    "id": "Uf1jaqYEC6LcueDJ",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Strategy Ready",
+          "progress": 100
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "3PK7x6cHKs9nmSYp",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Strategy Ready",
+          "progress": 100
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      }
+    ]
+  },
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "Show me the best yield opportunities right now."
+      }
+    ],
+    "id": "gyh7gZx8BHBnIsMF",
+    "role": "user"
+  },
+  {
+    "id": "UO632BMuwLK7zCqB",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Strategy Ready",
+          "progress": 100
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "3VcXIXOk0LyFc2ZN",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Strategy Ready",
+          "progress": 100
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      }
+    ]
+  },
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "hi"
+      }
+    ],
+    "id": "cY3dO073ZdPNYdRF",
+    "role": "user"
+  },
+  {
+    "id": "TlJEOV5J1NZV7QsM",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Connecting",
+          "progress": 10
+        }
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "text",
+        "text": "Querying optimal yield opportunities.\n",
+        "state": "done"
+      }
+    ]
+  },
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "hi"
+      }
+    ],
+    "id": "YYjdO3de5iI3tqeO",
+    "role": "user"
+  },
+  {
+    "id": "MFG4qU7QA9v004Y8",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Connecting",
+          "progress": 10
+        }
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "text",
+        "text": "Greetings. How may I assist?\n",
+        "state": "done"
+      }
+    ]
+  }
+]

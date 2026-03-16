@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { Button } from "../../../components/ui/button";
+import { Button } from "../../../components/ui/Button";
 import { cn } from "../../../lib/utils";
 import { ArrowDownIcon, DownloadIcon } from "lucide-react";
 import { useCallback } from "react";
@@ -80,7 +80,7 @@ export const ConversationScrollButton = ({
   </Button>));
 };
 
-const getMessageText = message => message.parts
+const getMessageText = message => (message.parts || [])
   .filter((part) => part.type === "text")
   .map((part) => part.text)
   .join("");
@@ -91,7 +91,7 @@ const defaultFormatMessage = message => {
   return `**${roleLabel}:** ${getMessageText(message)}`;
 };
 
-export const messagesToMarkdown = (messages, formatMessage = defaultFormatMessage) => messages.map((msg, i) => formatMessage(msg, i)).join("\n\n");
+export const messagesToMarkdown = (messages, formatMessage = defaultFormatMessage) => (messages || []).map((msg, i) => formatMessage(msg, i)).join("\n\n");
 
 export const ConversationDownload = ({
   messages,

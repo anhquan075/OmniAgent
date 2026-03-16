@@ -1,0 +1,809 @@
+export const StrategyEngineAbi = [
+  {
+    "inputs": [
+      {
+        "internalType": "address payable",
+        "name": "vault_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "policy_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "oracle_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "breaker_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "sharpeTracker_",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "initialPrice_",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "StrategyEngine__BreakerPaused",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "StrategyEngine__InvalidFlashAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "StrategyEngine__InvalidFlashAsset",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "StrategyEngine__InvalidFlashCaller",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "StrategyEngine__InvalidFlashData",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "StrategyEngine__InvalidFlashPool",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "StrategyEngine__NoActiveFlash",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "reason",
+        "type": "bytes32"
+      }
+    ],
+    "name": "StrategyEngine__NotExecutable",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "StrategyEngine__YieldOverflow",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "StrategyEngine__ZeroAddress",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "StrategyEngine__ZeroPrice",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "executor",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "enum StrategyEngine.RiskState",
+        "name": "nextState",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "price",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "previousPrice",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "volatilityBps",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "targetWDKBps",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "targetLpBps",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "bountyBps",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "breakerPaused",
+        "type": "bool"
+      },
+      {
+        "indexed": false,
+        "internalType": "int256",
+        "name": "sharpeRatio",
+        "type": "int256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "auctionElapsed",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "bufferUtilizationBps",
+        "type": "uint256"
+      }
+    ],
+    "name": "DecisionProofV2",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "flashPool",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "fromAdapter",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "toAdapter",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "principal",
+        "type": "uint256"
+      }
+    ],
+    "name": "FlashRebalanceRequested",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "flashPool",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "fromAdapter",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "toAdapter",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "principal",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "fee",
+        "type": "uint256"
+      }
+    ],
+    "name": "FlashRebalanceSettled",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "BPS_DENOMINATOR",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "EWMA_ALPHA",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "canExecute",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "name": "checkUpkeep",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "upkeepNeeded",
+        "type": "bool"
+      },
+      {
+        "internalType": "bytes",
+        "name": "performData",
+        "type": "bytes"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "circuitBreaker",
+    "outputs": [
+      {
+        "internalType": "contract ICircuitBreaker",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "currentState",
+    "outputs": [
+      {
+        "internalType": "enum StrategyEngine.RiskState",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "cycleCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "ewmaVolatilityBps",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "executeCycle",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "flashPool",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "fromAdapter",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "toAdapter",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "flashAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "executeCycleWithFlashRebalance",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "lastExecution",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "lastPrice",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "lastTotalAssets",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "fee0",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "fee1",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      }
+    ],
+    "name": "pancakeV3FlashCallback",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "name": "performUpkeep",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "policy",
+    "outputs": [
+      {
+        "internalType": "contract RiskPolicy",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "previewAuction",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "currentBountyBps",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "elapsedSeconds",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "remainingSeconds",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "minBountyBps",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "maxBountyBps",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "previewBreaker",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "bool",
+            "name": "paused",
+            "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "signalA",
+            "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "signalB",
+            "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "signalC",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lastTripTimestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "recoveryTimestamp",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct ICircuitBreaker.BreakerStatus",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "previewDecision",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "bool",
+            "name": "executable",
+            "type": "bool"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "reason",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "enum StrategyEngine.RiskState",
+            "name": "nextState",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "previousPrice",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "volatilityBps",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "targetWDKBps",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "targetLpBps",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "bountyBps",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "breakerPaused",
+            "type": "bool"
+          },
+          {
+            "internalType": "int256",
+            "name": "meanYieldBps",
+            "type": "int256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "yieldVolatilityBps",
+            "type": "uint256"
+          },
+          {
+            "internalType": "int256",
+            "name": "sharpeRatio",
+            "type": "int256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "auctionElapsedSeconds",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "bufferUtilizationBps",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct StrategyEngine.DecisionPreviewV2",
+        "name": "preview",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "previewSharpe",
+    "outputs": [
+      {
+        "internalType": "int256",
+        "name": "mean",
+        "type": "int256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "volatility",
+        "type": "uint256"
+      },
+      {
+        "internalType": "int256",
+        "name": "sharpe",
+        "type": "int256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "priceOracle",
+    "outputs": [
+      {
+        "internalType": "contract IPriceOracle",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "riskScore",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "sharpeTracker",
+    "outputs": [
+      {
+        "internalType": "contract SharpeTracker",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "simulateCycle",
+    "outputs": [
+      {
+        "internalType": "enum StrategyEngine.RiskState",
+        "name": "nextState",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "wdkBps",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "lpBps",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "bountyBps",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "timeUntilNextCycle",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "fee0",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "fee1",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      }
+    ],
+    "name": "uniswapV3FlashCallback",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "vault",
+    "outputs": [
+      {
+        "internalType": "contract WDKVault",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+] as const;

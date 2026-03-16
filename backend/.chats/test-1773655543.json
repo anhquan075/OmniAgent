@@ -1,0 +1,65 @@
+[
+  {
+    "role": "user",
+    "content": "What is the current vault status?"
+  },
+  {
+    "id": "3dUI79vcf81ZNCoQ",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Synthesizing",
+          "progress": 99,
+          "thought": "Generating strategic summary..."
+        }
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "tool-get_vault_status",
+        "toolCallId": "18b4b47a8d354f649ab6f247d1859ea0",
+        "state": "output-available",
+        "input": {},
+        "output": {
+          "vault": "0xDb5a6b027EA60bdbec6D45212F353Ee9a6099009",
+          "totalAssets": "2500.0",
+          "bufferUtilizationBps": 40000,
+          "bufferCurrent": 125,
+          "bufferTarget": 500,
+          "status": "Healthy",
+          "assetSymbol": "USD₮"
+        }
+      },
+      {
+        "type": "text",
+        "text": "",
+        "state": "done"
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "text",
+        "text": "The vault at address `0xDb5a6b027EA60bdbec6D45212F353Ee9a6099009` holds **2,500 USD₮** in total assets.  \n\n### Key Metrics:  \n- **Buffer Utilization:** 40,000 bps (400%)  \n- **Current Buffer:** 125 USD₮  \n- **Target Buffer:** 500 USD₮  \n- **Status:** **Healthy**  \n\n### Interpretation:  \nThe vault is operating efficiently with a **healthy status**, though its buffer utilization is high (400%). This means the current buffer (125 USD₮) is below the target (500 USD₮), but the system remains stable.  \n\nLet me know if you'd like further details!",
+        "state": "done"
+      }
+    ]
+  }
+]

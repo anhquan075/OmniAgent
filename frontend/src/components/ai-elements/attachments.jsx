@@ -1,10 +1,10 @@
 "use client";;
-import { Button } from "../../../components/ui/button";
+import { Button } from "../../../components/ui/Button";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "../../../components/ui/hover-card";
+} from "../../../components/ui/HoverCard";
 import { cn } from "../../../lib/utils";
 import {
   FileTextIcon,

@@ -1,0 +1,114 @@
+[
+  {
+    "id": "initial-1",
+    "role": "assistant",
+    "content": "System initialized. Welcome back, Commander **0xCd0B...1C1E**. I am your **WDK Autonomous Strategist**. All settlement rails are hot."
+  },
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "Simulate a rebalance to Tether Gold (XAU₮)."
+      }
+    ],
+    "id": "UrGfR3X3SOhpylgh",
+    "role": "user"
+  },
+  {
+    "id": "1McsFnorMs2zsUek",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Strategy Ready",
+          "progress": 100
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "TQQW5GPSpIuxqjDv",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Strategy Ready",
+          "progress": 100
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      }
+    ]
+  },
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "/bridge"
+      }
+    ],
+    "id": "qM0YXKfmwmqsaVjX",
+    "role": "user"
+  },
+  {
+    "id": "EF8tQW6iHyWyY8JF",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Strategy Ready",
+          "progress": 100
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      }
+    ]
+  }
+]

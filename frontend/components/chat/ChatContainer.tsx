@@ -1,10 +1,10 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatHistory } from './ChatHistory';
 import { MessageInput } from './MessageInput';
 import { CpuIcon, ZapIcon, ShieldCheckIcon, BarChart3Icon, BrainCircuitIcon } from 'lucide-react';
 import { OperationalPlan, TaskStatus } from './TaskStep';
-import { Conversation } from '../../src/components/ai-elements/conversation.jsx';
+import { Conversation } from '../../src/components/ai-elements/Conversation';
 
 interface ChatContainerProps {
   messages: any[];
@@ -14,6 +14,7 @@ interface ChatContainerProps {
   handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement> | React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   sendMessage: (message: { text: string }) => Promise<void>;
+  addToolOutput: (output: any) => void;
   setMessages: React.Dispatch<React.SetStateAction<any[]>>;
   regenerate: () => Promise<void>;
   stop: () => void;
@@ -29,39 +30,50 @@ const SUGGESTED_ACTIONS = [
 ];
 
 export function ChatContainer({ 
-  messages, 
+  messages = [], 
   isLoading, 
-  status,
+  status, 
   input, 
   handleInputChange, 
   handleSubmit, 
   sendMessage, 
-  setMessages,
-  regenerate,
-  stop,
+  addToolOutput,
+  setMessages, 
+  regenerate,  stop,
   error,
   data 
-}: ChatContainerProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+}: ChatContainerProps) {  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
 
-  // Extract real-time status from data parts in the last message
+  // Extract real-time status from data parts
   const currentAgentStatus = React.useMemo(() => {
-    if (status !== 'submitted' && status !== 'streaming') return null;
-    
-    // Find the latest status data part across all messages (usually the last one)
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const parts = (messages[i] as any).parts;
-      if (parts && Array.isArray(parts)) {
-        const statusPart = parts.find((p: any) => p.type === 'data-status');
-        if (statusPart) return statusPart.data;
+    // 1. Check the 'data' array from useChat (preferred for writeData in v6)
+    if (data && Array.isArray(data) && data.length > 0) {
+      for (let i = data.length - 1; i >= 0; i--) {
+        const d = data[i];
+        if (d && typeof d === 'object' && d.type === 'data-status') return d.data;
+      }
+    }
+
+    // 2. Fallback to checking messages parts (for merged streams)
+    if (messages && messages.length > 0) {
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const parts = (messages[i] as any).parts;
+        if (parts && Array.isArray(parts)) {
+          for (let j = parts.length - 1; j >= 0; j--) {
+            const p = parts[j];
+            if (p.type === 'data-status') return p.data;
+            if (p.type === 'data' && p.data?.type === 'data-status') return p.data.data;
+          }
+        }
       }
     }
     return null;
-  }, [messages, status]);
+  }, [data, messages]);
 
   // Extract dynamic suggestions from the last message
   const dynamicSuggestions = React.useMemo(() => {
-    if (status !== 'ready' || messages.length === 0) return null;
+    if (status !== 'ready' || !messages || messages.length === 0) return null;
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.role !== 'assistant') return null;
     
@@ -73,11 +85,12 @@ export function ChatContainer({
     return null;
   }, [messages, status]);
 
-  const activeSuggestions = dynamicSuggestions || (messages.length < 3 ? SUGGESTED_ACTIONS : null);
+  const activeSuggestions = dynamicSuggestions || (messages && messages.length < 3 ? SUGGESTED_ACTIONS : null);
 
-  // Roadmap steps for the autonomous loop following AI SDK Elements pattern
+  // Roadmap steps for the autonomous loop
   const roadmapSteps = React.useMemo(() => {
     const currentProgress = currentAgentStatus?.progress || 0;
+    const currentThought = currentAgentStatus?.thought;
 
     const getStatus = (targetProgress: number): TaskStatus => {
       if (currentProgress >= targetProgress) return 'completed';
@@ -85,32 +98,63 @@ export function ChatContainer({
       return 'pending';
     };
 
+    const getDetails = (label: string, defaultDetails: string, targetProgress: number) => {
+      if (getStatus(targetProgress) === 'in-progress' && currentThought) {
+        return currentThought;
+      }
+      return defaultDetails;
+    };
+
     return [
-      { label: 'Risk Analysis', status: getStatus(40), details: 'ZK-verified Monte Carlo simulations' },
-      { label: 'Strategy Formulation', status: getStatus(80), details: 'Yield scout on Solana & TON' },
-      { label: 'Tactical Execution', status: getStatus(100), details: 'ProofVault settlement & rebalance' }
+      { label: 'Risk Analysis', status: getStatus(40), details: getDetails('Risk Analysis', 'ZK-verified Monte Carlo simulations', 40) },
+      { label: 'Strategy Formulation', status: getStatus(80), details: getDetails('Strategy Formulation', 'Yield scout on Solana & TON', 80) },
+      { label: 'Tactical Execution', status: getStatus(100), details: getDetails('Tactical Execution', 'ProofVault settlement & rebalance', 100) }
     ];
   }, [currentAgentStatus]);
 
-  // Auto-scroll to bottom on new messages or streaming content if user is near the bottom
-  useEffect(() => {
-    if (scrollRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100; // 100px threshold
-      
-      if (isNearBottom) {
-        scrollRef.current.scrollTop = scrollHeight;
-      }
+  // Check if the agent has started streaming text content
+  const hasStartedText = React.useMemo(() => {
+    if (!messages || messages.length === 0) return false;
+    const assistantMessages = messages.filter(m => m.role === 'assistant');
+    if (assistantMessages.length === 0) return false;
+    
+    const lastAssistantMsg = assistantMessages[assistantMessages.length - 1];
+    
+    if (typeof lastAssistantMsg.content === 'string' && lastAssistantMsg.content.trim().length > 0) return true;
+    const parts = (lastAssistantMsg as any).parts;
+    return Array.isArray(parts) && parts.some((p: any) => p.type === 'text' && p.text && p.text.trim().length > 0);
+  }, [messages]);
+
+  // A refined streaming status that knows when to "finish" visually
+  const isActuallyStreaming = React.useMemo(() => {
+    return status === 'streaming' || status === 'submitted';
+  }, [status]);
+
+  // Smart Scroll: Track if user is at bottom
+  const handleScroll = useCallback(() => {
+    const container = scrollRef.current;
+    if (container) {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // If user is within 100px of bottom, consider it "at bottom"
+      const isBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setIsAtBottom(isBottom);
     }
-  }, [messages, isLoading, error]);
+  }, []);
+
+  // Force scroll to bottom on every update IF we are already at bottom
+  useEffect(() => {
+    if (isAtBottom && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isAtBottom, isActuallyStreaming]);
 
   return (
-    <div className="flex flex-col h-full w-full rounded-2xl overflow-hidden bg-[#0B0E14]/80 backdrop-blur-xl border border-white/10 shadow-2xl shadow-tether-teal/5 relative">
+    <div className="flex flex-col h-full w-full rounded-2xl overflow-hidden bg-[#0B0E14]/80 backdrop-blur-xl shadow-2xl shadow-tether-teal/5 relative">
       {/* Premium Header with Telemetry */}
       <div className="flex items-center justify-between px-4 sm:px-6 py-2.5 sm:py-3 border-b border-white/10 bg-black/20 relative z-10">
         <div className="flex flex-col">
           <h2 className="font-heading text-tether-teal text-[11px] sm:text-sm font-semibold tracking-wider flex items-center gap-2 sm:gap-3">
-            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-tether-teal animate-pulse"></div>
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-tether-teal"></div>
             Strategist Terminal
           </h2>
           <div className="flex items-center gap-3 mt-1 opacity-60">
@@ -126,10 +170,17 @@ export function ChatContainer({
         <div className="flex items-center gap-4">
           {/* Progress Bar for Agent Thinking */}
           {currentAgentStatus && (
-            <div className="flex flex-col items-end mr-4 min-w-[100px]">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[7px] font-heading text-tether-teal uppercase tracking-widest animate-pulse">{currentAgentStatus.status}</span>
-                <span className="text-[7px] font-mono text-gray-400">{currentAgentStatus.progress}%</span>
+            <div className="flex flex-col items-end mr-4 min-w-[150px] max-w-[250px]">
+              <div className="flex items-center gap-2 mb-1 overflow-hidden w-full justify-end">
+                <span className="text-[7px] font-heading text-tether-teal uppercase tracking-widest whitespace-nowrap">
+                  [{currentAgentStatus.status}]
+                </span>
+                <span className="text-[7px] text-gray-400 font-mono truncate">
+                  {currentAgentStatus.thought || 'Processing...'}
+                </span>
+                <span className="text-[7px] font-mono text-cyber-cyan shrink-0">
+                  (progress: {currentAgentStatus.progress}%)
+                </span>
               </div>
               <div className="w-full h-0.5 bg-white/5 rounded-full overflow-hidden">
                 <motion.div 
@@ -151,7 +202,6 @@ export function ChatContainer({
           <div className="h-8 border-l border-white/10 hidden sm:block"></div>
           <div className="text-xs font-sans text-gray-400 flex items-center gap-2">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
             <span className="hidden sm:inline font-heading text-[10px] tracking-widest">Active</span>
@@ -162,22 +212,29 @@ export function ChatContainer({
       {/* Messages Scroll Area */}
       <Conversation 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 scroll-smooth scrollbar-none custom-scrollbar"
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 scroll-smooth scrollbar-none custom-scrollbar pb-32"
+        style={{ overflowAnchor: 'auto' }}
       >
-        <ChatHistory messages={messages} />
+        <ChatHistory messages={messages} isStreaming={isActuallyStreaming} addToolOutput={addToolOutput} />
         
-        {isLoading && (
+        {isActuallyStreaming && (
           <div className="mx-2 mt-4 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <OperationalPlan steps={roadmapSteps} />
+            {/* Only show roadmap during the thinking phase */}
+            {!hasStartedText && <OperationalPlan steps={roadmapSteps} />}
             
-            <div className="flex items-center gap-2 text-gray-400 font-sans text-sm animate-pulse ml-2">
+            <div className="flex items-center gap-2 text-gray-400 font-sans text-sm ml-2">
               <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-tether-teal)] animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-tether-teal)] animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-tether-teal)] animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-tether-teal" />
+                <span className="w-1.5 h-1.5 rounded-full bg-tether-teal" />
+                <span className="w-1.5 h-1.5 rounded-full bg-tether-teal" />
               </div>
-              <span className="tracking-widest text-[9px] uppercase font-heading text-[var(--color-tether-teal)]/60 ml-2">
-                {currentAgentStatus ? `Strategist: ${currentAgentStatus.status}...` : "Neural Link Active..."}
+              <span className="tracking-widest text-[9px] uppercase font-heading text-tether-teal/60 ml-2">
+                {hasStartedText
+                  ? "Strategist: Responding..."
+                  : (currentAgentStatus 
+                      ? `[${currentAgentStatus.status}] ${currentAgentStatus.thought || 'Processing...'} (progress: ${currentAgentStatus.progress}%)` 
+                      : "Neural Link Active...")}
               </span>
             </div>
           </div>
@@ -232,6 +289,7 @@ export function ChatContainer({
           handleSubmit={handleSubmit}
           status={status}
           stop={stop}
+          isActuallyStreaming={isActuallyStreaming}
         />
       </div>
     </div>

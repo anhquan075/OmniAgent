@@ -1,0 +1,52 @@
+[
+  {
+    "parts": [
+      {
+        "type": "text",
+        "text": "/rebalance"
+      }
+    ],
+    "id": "VpWhNIVnAhY2IxdE",
+    "role": "user"
+  },
+  {
+    "id": "b5eDkOsPGIqN7A8U",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Connecting",
+          "progress": 10,
+          "thought": "Initializing neural bridge to WDK settlement rails..."
+        }
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "text",
+        "text": "",
+        "state": "done"
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "DeFi yield tips",
+            "prompt": "What are some effective DeFi strategies for maximizing yield while minimizing risk?"
+          },
+          {
+            "label": "Vault management",
+            "prompt": "How can I efficiently manage multiple DeFi vaults to optimize returns?"
+          },
+          {
+            "label": "Settlement rail tools",
+            "prompt": "What are the best tools or platforms for automating settlement rails in DeFi transactions?"
+          }
+        ]
+      }
+    ]
+  }
+]

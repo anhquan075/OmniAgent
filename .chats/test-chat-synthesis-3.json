@@ -1,0 +1,86 @@
+[
+  {
+    "role": "user",
+    "content": "Give me a complete health check: vault status, risk level, and strategy readiness. Explain everything clearly."
+  },
+  {
+    "id": "oeyzI0W7AfOAF5mn",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Yield Scout",
+          "progress": 75,
+          "thought": "Evaluating yield spreads across Solana, TON, and BSC rails..."
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "tool-get_vault_status",
+        "toolCallId": "tool_get_vault_status_a83swRyLV4WarYZvrIKS",
+        "state": "output-available",
+        "input": {},
+        "output": {
+          "vault": "0xDb5a6b027EA60bdbec6D45212F353Ee9a6099009",
+          "totalAssets": "2500.0",
+          "bufferUtilizationBps": 40000,
+          "bufferCurrent": 125,
+          "bufferTarget": 500,
+          "status": "Healthy",
+          "assetSymbol": "USD₮"
+        }
+      },
+      {
+        "type": "tool-analyze_risk",
+        "toolCallId": "tool_analyze_risk_64KwRF9Y9D0XjMmyQI5U",
+        "state": "output-available",
+        "input": {},
+        "output": {
+          "level": "LOW",
+          "drawdownBps": 0,
+          "sharpe": 0,
+          "recommendedBuffer": 500,
+          "timestamp": 1773653388,
+          "message": "ZK-Proven Metrics"
+        }
+      },
+      {
+        "type": "tool-check_strategy",
+        "toolCallId": "tool_check_strategy_l8KGJZXQGRbCmD6so1oU",
+        "state": "output-available",
+        "input": {},
+        "output": {
+          "canExecute": true,
+          "reason": "",
+          "decision": {
+            "state": null,
+            "targetWDKBps": 1000,
+            "bountyBps": 100
+          }
+        }
+      },
+      {
+        "type": "text",
+        "text": "",
+        "state": "done"
+      }
+    ]
+  }
+]

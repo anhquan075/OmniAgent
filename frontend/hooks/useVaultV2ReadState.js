@@ -11,6 +11,7 @@ import {
 import { useCallback, useState } from "react";
 import { useNetworkMode } from "./useNetworkMode.js";
 import { NETWORK_CONFIGS } from "../lib/networkConfig.js";
+import { ZERO_ADDRESS as ZERO_ADDR } from "../lib/constants.js";
 
 function toSafeNumber(value) {
   if (value === null || value === undefined) return null;

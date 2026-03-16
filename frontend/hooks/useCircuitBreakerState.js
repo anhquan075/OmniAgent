@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
 import { circuitBreakerAbi } from "@/lib/abi";
-
-const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
+import { ZERO_ADDRESS as ZERO_ADDR } from "@/lib/constants";
 
 export function useCircuitBreakerState() {
   const [paused, setPaused] = useState(false);

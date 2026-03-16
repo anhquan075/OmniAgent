@@ -3,13 +3,13 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../../../components/ui/collapsible";
+} from "../../../components/ui/Collapsible";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "../../../components/ui/tabs";
+} from "../../../components/ui/Tabs";
 import { cn } from "../../../lib/utils";
 import { ChevronDownIcon, Code } from "lucide-react";
 

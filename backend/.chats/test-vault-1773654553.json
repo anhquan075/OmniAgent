@@ -1,0 +1,52 @@
+[
+  {
+    "role": "user",
+    "content": "What is the current vault status?"
+  },
+  {
+    "id": "F7RzOni3Jx2q3Aru",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "data-status",
+        "id": "agent-status",
+        "data": {
+          "status": "Processing",
+          "progress": 50,
+          "thought": "Analyzing tactical data..."
+        }
+      },
+      {
+        "type": "data-suggestions",
+        "data": [
+          {
+            "label": "Analyze Drawdown",
+            "prompt": "Show me the Monte Carlo drawdown analysis for this strategy."
+          },
+          {
+            "label": "Check Rails",
+            "prompt": "Are the settlement rails active on Solana and TON?"
+          }
+        ]
+      },
+      {
+        "type": "step-start"
+      },
+      {
+        "type": "tool-get_vault_status",
+        "toolCallId": "7c2bd18050f946268f5d3016f2ccdd3f",
+        "state": "output-available",
+        "input": {},
+        "output": {
+          "error": "Failed to fetch vault assets",
+          "message": "request timeout (code=TIMEOUT, version=6.16.0)"
+        }
+      },
+      {
+        "type": "text",
+        "text": "",
+        "state": "done"
+      }
+    ]
+  }
+]
