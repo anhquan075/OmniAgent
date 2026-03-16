@@ -23,7 +23,7 @@ import {
 } from "react";
 import { Streamdown } from "streamdown";
 
-import { Shimmer } from "./shimmer";
+import { Shimmer } from "./Shimmer";
 
 const ReasoningContext = createContext(null);
 

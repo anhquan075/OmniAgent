@@ -68,7 +68,7 @@ export default function App() {
   ]);
   const [activeSessionId, setActiveSessionId] = useState(INITIAL_SESSION_ID);
 
-  const { messages, sendMessage, status, setMessages, data, stop, regenerate, error, addToolOutput } = useChat({
+  const { messages, sendMessage, status, setMessages, stop, regenerate, error, addToolOutput } = useChat({
     api: '/api/chat',
     id: activeSessionId,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
@@ -77,26 +77,9 @@ export default function App() {
         id: "initial-1",
         role: "assistant",
         content: "System initialized. I am your **Tether WDK Strategist**. I am currently monitoring cross-chain liquidity for USD₮ and XAU₮ yield optimization.",
-        parts: [{ type: 'text', text: "System initialized. I am your **Tether WDK Strategist**. I am currently monitoring cross-chain liquidity for USD₮ and XAU₮ yield optimization." }]
-      }
+      } as any
     ],
-    dataPartSchemas: {
-      'data-status': z.object({
-        status: z.string(),
-        progress: z.number(),
-        thought: z.string().optional()
-      }),
-      'data-notification': z.object({
-        level: z.enum(['info', 'warning', 'error']),
-        message: z.string()
-      }),
-      'data-suggestions': z.array(z.object({
-        label: z.string(),
-        prompt: z.string()
-      }))
-    },
-    onData: (dataPart) => {
-
+    experimental_onData: (dataPart: any) => {
       if (dataPart.type === 'data-notification') {
         console.log(`[Notification] ${dataPart.data.level}: ${dataPart.data.message}`);
       }
@@ -104,7 +87,7 @@ export default function App() {
     onError: (err) => {
       console.error("[App] useChat Error:", err);
     }
-  });
+  } as any);
 
   const isLoading = status === 'submitted' || status === 'streaming';
 
@@ -123,8 +106,7 @@ export default function App() {
           id: "initial-1",
           role: "assistant",
           content: `System initialized. Welcome back, Commander **${address.slice(0, 6)}...${address.slice(-4)}**. I am your **WDK Autonomous Strategist**. All settlement rails are hot.${portfolioMsg}`,
-          parts: [{ type: 'text', text: `System initialized. Welcome back, Commander **${address.slice(0, 6)}...${address.slice(-4)}**. I am your **WDK Autonomous Strategist**. All settlement rails are hot.${portfolioMsg}` }]
-        }
+        } as any
       ]);
     }
   }, [isConnected, address, setMessages, stats, messages?.length]);
@@ -154,8 +136,7 @@ export default function App() {
         id: "initial-" + newId,
         role: "assistant",
         content: "New session started. Standing by for WDK instructions.",
-        parts: [{ type: 'text', text: "New session started. Standing by for WDK instructions." }]
-      }
+      } as any
     ]);
     
     setIsMobileMenuOpen(false);

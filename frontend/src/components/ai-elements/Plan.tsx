@@ -18,7 +18,7 @@ import { cn } from "../../lib/utils";
 import { ChevronsUpDownIcon } from "lucide-react";
 import { createContext, useContext, useMemo } from "react";
 
-import { Shimmer } from "./shimmer";
+import { Shimmer } from "./Shimmer";
 
 const PlanContext = createContext(null);
 

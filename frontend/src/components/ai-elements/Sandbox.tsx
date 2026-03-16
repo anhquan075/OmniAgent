@@ -13,7 +13,7 @@ import {
 import { cn } from "../../lib/utils";
 import { ChevronDownIcon, Code } from "lucide-react";
 
-import { getStatusBadge } from "./tool";
+import { getStatusBadge } from "./Tool";
 
 export const Sandbox = ({
   className,
