@@ -15,7 +15,14 @@ import FleetStatus from "./components/dashboard/FleetStatus";
 import { GuestSplash } from "./components/shared/GuestSplash";
 import { ConnectionModal } from "./components/shared/ConnectionModal";
 
-const BentoCard = ({ title, icon: Icon, children, className = "" }) => (
+interface BentoCardProps {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+  className?: string;
+}
+
+const BentoCard = ({ title, icon: Icon, children, className = "" }: BentoCardProps) => (
   <div className={`rounded-2xl p-4 md:p-6 flex flex-col gap-4 shadow-2xl transition-all duration-500 group bg-space-black/60 backdrop-blur-xl border border-white/10 hover:border-tether-teal/30 hover:shadow-[0_0_20px_rgba(38,161,123,0.1)] relative overflow-hidden ${className}`}>
     <div className="absolute top-0 right-0 w-32 h-32 bg-tether-teal/5 rounded-full blur-[60px] pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
     <div className="flex items-center justify-between flex-shrink-0 relative z-10">
@@ -173,11 +180,11 @@ export default function App() {
     }
   }, [messages, activeSessionId]);
 
-  const onInputChange = (e) => {
+  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
   };
 
-  const onHandleSubmit = async (e, overrideText) => {
+  const onHandleSubmit = async (e?: React.FormEvent | { preventDefault: () => void }, overrideText?: string) => {
     if (e && e.preventDefault) e.preventDefault();
     
     const text = (overrideText || input).trim();

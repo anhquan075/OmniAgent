@@ -6,8 +6,8 @@ import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { bscTestnet, bsc } from 'wagmi/chains';
 import '@rainbow-me/rainbowkit/styles.css';
 import "./globals.css";
-import App from "./App.jsx";
-import { wagmiConfig, getInitialChain } from "./lib/wagmiConfig.js";
+import App from "./App";
+import { wagmiConfig, getInitialChain } from "./lib/wagmiConfig";
 import { TooltipProvider } from "./components/ui/Tooltip";
 
 const queryClient = new QueryClient();
