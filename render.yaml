@@ -10,7 +10,7 @@ services:
       - key: DEPLOYMENT_MODE
         value: production
       - key: AGENT_CRON_SECRET
-        generateValue: true
+        value: 52e106571e486f8547b7428b4558fcba50a743961346b9a056957ee712ea7bc7
       - key: PORT
         value: 8000
       - key: NODE_ENV
