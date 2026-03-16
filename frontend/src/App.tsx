@@ -68,7 +68,12 @@ export default function App() {
   ]);
   const [activeSessionId, setActiveSessionId] = useState(INITIAL_SESSION_ID);
 
-  const { messages, sendMessage, status, setMessages, stop, regenerate, error, addToolOutput } = useChat({
+  const { messages, sendMessage, status, setMessages,     stop,
+    regenerate,
+    error,
+    addToolOutput,
+    data
+  } = useChat({
     api: '/api/chat',
     id: activeSessionId,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
