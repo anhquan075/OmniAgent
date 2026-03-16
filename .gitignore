@@ -52,3 +52,4 @@ pnpm-debug.log*
 .pnpm-store/
 target/
 plans/
+*/.chats/
