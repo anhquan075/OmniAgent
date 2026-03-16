@@ -4,6 +4,7 @@ import { Badge } from '../ui/Badge';
 import { Shield, Activity, Zap, Calculator, TrendingUp, Cpu, Lock, CheckCircle2, ExternalLink, BrainCircuit, ShieldAlert, Coins } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { BLOCK_EXPLORERS } from '@/lib/networkConfig';
+import { getApiUrl } from '@/lib/api';
 
 export default function AgentBrain() {
   const { isConnected } = useAccount();
@@ -13,7 +14,7 @@ export default function AgentBrain() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch('/api/stats');
+        const res = await fetch(getApiUrl('/api/stats'));
         const data = await res.json();
         setStats(data);
       } catch (e) {

@@ -5,6 +5,7 @@ import ActivityFeed from './ActivityFeed';
 import { Badge } from '../ui/Badge';
 import { cn } from '../../lib/utils';
 import { ZapIcon, Truck, Sparkles, Scan, LucideIcon } from 'lucide-react';
+import { getApiUrl } from '../../lib/api';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Delivery: Truck,
@@ -21,7 +22,7 @@ const FleetStatus: React.FC = () => {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const response = await fetch('/api/robot-fleet/status');
+        const response = await fetch(getApiUrl('/api/robot-fleet/status'));
         if (response.ok) {
           const data = await response.json();
           if (data.robots && Array.isArray(data.robots)) {

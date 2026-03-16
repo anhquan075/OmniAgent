@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Truck, Sparkles, Scan, LucideIcon } from 'lucide-react';
+import { getApiUrl } from '../lib/api';
 
 export interface RobotEvent {
   robotId: string;
@@ -31,7 +32,7 @@ export const useRobotFleetEvents = (): UseRobotFleetEventsResult => {
   useEffect(() => {
     const connect = () => {
       try {
-        const eventSource = new EventSource('/api/robot-fleet/events');
+        const eventSource = new EventSource(getApiUrl('/api/robot-fleet/events'));
         eventSourceRef.current = eventSource;
 
         eventSource.onopen = () => {
