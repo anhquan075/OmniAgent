@@ -116,7 +116,7 @@ export function ChatContainer({
     return [
       { label: 'Risk Analysis', status: getStatus(40), details: getDetails('Risk Analysis', 'ZK-verified Monte Carlo simulations', 40) },
       { label: 'Strategy Formulation', status: getStatus(80), details: getDetails('Strategy Formulation', 'Yield scout on Solana & TON', 80) },
-      { label: 'Tactical Execution', status: getStatus(100), details: getDetails('Tactical Execution', 'ProofVault settlement & rebalance', 100) }
+      { label: 'Tactical Execution', status: getStatus(100), details: getDetails('Tactical Execution', 'OmniWDK settlement & rebalance', 100) }
     ];
   }, [currentAgentStatus]);
 

@@ -49,7 +49,7 @@ graph TD
 
 - **Backend:** Node.js / Hono / Vercel AI SDK / Tether WDK
 - **Blockchain:** BNB Chain (Primary), Solana, TON
-- **Contracts:** Custom ERC4626 Vault (`WDKVault`) + Strategy Engine (`AsterEngine`)
+- **Contracts:** Custom ERC4626 Vault (`WDKVault`) + Strategy Engine (`OmniWDKEngine`)
 - **Frontend:** React / Vite / Tailwind
 
 ## 🚀 Quick Start

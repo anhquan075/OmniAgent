@@ -1,5 +1,5 @@
 {
-  "name": "tether-proof-wdk",
+  "name": "omni-wdk",
   "version": "1.0.0",
   "description": "Autonomous, non-custodial yield routing stack on BNB Chain.",
   "type": "commonjs",
@@ -50,6 +50,8 @@
     "@tetherto/wdk-wallet-evm": "^1.0.0-beta.8",
     "@tetherto/wdk-wallet-solana": "^1.0.0-beta.5",
     "@tetherto/wdk-wallet-ton": "^1.0.0-beta.7",
+    "@tetherto/wdk-protocol-openclaw": "^1.0.0-beta.1",
+    "@tetherto/wdk-protocol-swap-velora-evm": "^1.0.0-beta.1",
     "ai": "^6.0.116",
     "axios": "^1.13.6",
     "cors": "^2.8.6",

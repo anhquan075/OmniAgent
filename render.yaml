@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: proofvault-backend
+    name: omniwdk-backend
     env: docker
     dockerContext: backend
     dockerfilePath: Dockerfile

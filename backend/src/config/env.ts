@@ -38,6 +38,14 @@ const envSchema = z.object({
   OPENROUTER_MODEL_GENERAL: z.string().default('google/gemini-2.0-flash-exp:free'),
   OPENROUTER_MODEL_CRYPTO: z.string().default('deepseek/deepseek-chat'),
 
+  OPENCLAW_GATEWAY_URL: z.string().default('https://gateway.openclaw.com/api').optional(),
+  OPENCLAW_API_KEY: z.string().optional(),
+  MAX_OPENCLAW_EXPOSURE_PERCENT: z.string().default('20').transform(Number),
+  MIN_OPENCLAW_APY: z.string().default('8.5').transform(Number),
+
+  VELORA_ROUTER_ADDRESS: z.string().default('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'),
+  VELORA_FACTORY_ADDRESS: z.string().default('0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f'),
+
   DEPLOYMENT_MODE: z.enum(['local', 'production']).default('local'),
   AGENT_CRON_SECRET: z.string().optional(),
 });

@@ -53,23 +53,41 @@ const FleetStatus: React.FC = () => {
     if (events.length > 0 && isInitialized) {
       const latestEvent = events[0];
       
+      if (latestEvent.type === 'fleet:status' || (latestEvent as any).type === 'fleet:status') {
+        const data = (latestEvent as any).data || latestEvent;
+        if (data.robots) {
+          const formattedRobots = data.robots.map((r: any) => {
+            const iconName = r.icon || 'Truck';
+            return {
+              ...r,
+              icon: ICON_MAP[iconName] || Truck
+            };
+          });
+          setRobots(formattedRobots);
+          setFleetTotal(data.fleetTotalEarned || '0.0000');
+        }
+        return;
+      }
+
+      const eventData = (latestEvent as any).event || latestEvent;
+      
       setRobots(prevRobots => {
-        const exists = prevRobots.some(r => r.id === latestEvent.robotId);
+        const exists = prevRobots.some(r => r.id === eventData.robotId);
         
         if (!exists) {
-          const iconName = (latestEvent as any).iconName || 'Truck';
+          const iconName = eventData.icon || 'Truck';
           return [...prevRobots, {
-            id: latestEvent.robotId,
-            type: latestEvent.type,
-            icon: latestEvent.icon,
+            id: eventData.robotId,
+            type: eventData.type || 'Delivery',
+            icon: ICON_MAP[iconName] || Truck,
             status: 'Working',
-            totalEarned: latestEvent.earnings
+            totalEarned: eventData.earnings || '0.0000'
           }];
         }
         
         return prevRobots.map(robot => {
-          if (robot.id === latestEvent.robotId) {
-            const newTotal = (parseFloat(robot.totalEarned || '0') + parseFloat(latestEvent.earnings)).toFixed(4);
+          if (robot.id === eventData.robotId) {
+            const newTotal = (parseFloat(robot.totalEarned || '0') + parseFloat(eventData.earnings || '0')).toFixed(4);
             return {
               ...robot,
               status: 'Working',
@@ -80,24 +98,18 @@ const FleetStatus: React.FC = () => {
         });
       });
 
-      setFleetTotal(prevTotal => (parseFloat(prevTotal || '0') + parseFloat(latestEvent.earnings)).toFixed(4));
+      if (eventData.earnings) {
+        setFleetTotal(prevTotal => (parseFloat(prevTotal || '0') + parseFloat(eventData.earnings)).toFixed(4));
+      }
     }
   }, [events, isInitialized]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setRobots(prevRobots => prevRobots.map(robot => ({
-        ...robot,
-        status: Math.random() > 0.3 ? 'Working' : 'Idle'
-      })));
-    }, 8000);
-
-    return () => clearInterval(interval);
   }, []);
 
   return (
     <div className="flex flex-col gap-4 h-full">
-      <div className="flex items-center justify-between px-1">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className={cn(
             "transition-colors border h-6 px-2 text-[10px] font-medium uppercase tracking-wider",
@@ -112,15 +124,15 @@ const FleetStatus: React.FC = () => {
         </div>
         
         <div className="flex flex-col items-end">
-          <span className="text-[9px] text-neutral-gray uppercase tracking-wider">Session Earnings</span>
-          <div className="flex items-center gap-1.5 text-tether-teal font-heading font-bold text-lg leading-none">
-            <ZapIcon className="w-3 h-3 fill-current" />
-            <span className="animate-in fade-in slide-in-from-top-1 duration-500 key-[fleetTotal]">{fleetTotal} ETH</span>
+          <span className="text-[9px] text-neutral-gray uppercase tracking-wider mb-0.5">Session Earnings</span>
+          <div className="flex items-center gap-1.5 text-tether-teal font-heading font-bold text-xl leading-none">
+            <ZapIcon className="w-3.5 h-3.5 fill-current" />
+            <span className="animate-in fade-in slide-in-from-top-1 duration-500">{fleetTotal} ETH</span>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {robots.map(robot => (
           <RobotCard
             key={robot.id}

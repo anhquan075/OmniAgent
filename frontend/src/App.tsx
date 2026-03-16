@@ -81,7 +81,7 @@ export default function App() {
       {
         id: "initial-1",
         role: "assistant",
-        content: "System initialized. I am your **Tether WDK Strategist**. I am currently monitoring cross-chain liquidity for USD₮ and XAU₮ yield optimization.",
+        content: "System initialized. I am your **OmniWDK Strategist**. I am currently monitoring cross-chain liquidity for USD₮ and XAU₮ yield optimization.",
       } as any
     ],
     experimental_onData: (dataPart: any) => {
@@ -110,7 +110,7 @@ export default function App() {
         {
           id: "initial-1",
           role: "assistant",
-          content: `System initialized. Welcome back, Commander **${address.slice(0, 6)}...${address.slice(-4)}**. I am your **WDK Autonomous Strategist**. All settlement rails are hot.${portfolioMsg}`,
+          content: `System initialized. Welcome back, Commander **${address.slice(0, 6)}...${address.slice(-4)}**. I am your **OmniWDK Autonomous Strategist**. All settlement rails are hot.${portfolioMsg}`,
         } as any
       ]);
     }

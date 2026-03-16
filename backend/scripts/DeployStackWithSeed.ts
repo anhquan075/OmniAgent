@@ -60,7 +60,7 @@ async function main() {
   console.log("CircuitBreaker:", await breaker.getAddress());
 
   const WDKVault = await ethers.getContractFactory("WDKVault");
-  const vault = await (await WDKVault.deploy(usdtAddr, "OmniWDK WDK Vault", "TPWDK", deployer.address, 500)).waitForDeployment();
+  const vault = await (await WDKVault.deploy(usdtAddr, "OmniWDK WDK Vault", "OWDK", deployer.address, 500)).waitForDeployment();
   const vaultAddr = await vault.getAddress();
   console.log("WDKVault:", vaultAddr);
 

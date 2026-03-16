@@ -150,7 +150,7 @@ chat.post('/', async (c) => {
               } else if (toolName === 'execute_rebalance') {
                 status = 'Settlement';
                 progress = 95;
-                thought = 'Finalizing atomic rebalance via ProofVault settlement layer...';
+                thought = 'Finalizing atomic rebalance via OmniWDK settlement layer...';
               } else if (toolName === 'yield_sweep') {
                 status = 'Yield Harvest';
                 progress = 85;
@@ -197,7 +197,7 @@ chat.post('/', async (c) => {
           system: isSmallTalk 
             ? `You are the OmniWDK AFOS Strategist. Keep responses brief and professional. Just answer the user's question directly in natural language.`
             : `You are the OmniWDK AFOS Strategist. 
-               Directive: yield optimization for USD₮ and XAU₮ via Tether WDK & ProofVault.
+               Directive: yield optimization for USD₮ and XAU₮ via Tether WDK & OmniWDK.
                
                CRITICAL INSTRUCTION: You MUST ALWAYS provide a final text summary after using tools.
                

@@ -9,11 +9,30 @@ const envPath = path.resolve(__dirname, '../.env.wdk');
 dotenv.config({ path: envPath });
 dotenv.config(); // Fallback to .env
 
+import { robotFleetConfig as staticFleetConfig, FleetConfig as FleetConfigType } from '../src/config/robot-fleet';
+
 // Types
-interface RobotConfig {
-  id: string;
-  type: string;
-  icon: string;
+interface FleetConfig extends FleetConfigType {
+  rpcUrl?: string;
+  privateKey?: string;
+}
+
+// ... existing code ...
+
+// Load configuration
+function loadConfig(): FleetConfig {
+  const config = { ...staticFleetConfig } as FleetConfig;
+
+  // Use env vars or config values
+  config.rpcUrl = process.env.BNB_RPC_URL || config.rpcUrl || 'https://bsc-testnet.public.blastapi.io';
+  config.privateKey = process.env.PRIVATE_KEY || process.env.ROBOT_FLEET_PRIVATE_KEY || process.env.WDK_SECRET_SEED || config.privateKey;
+  
+  // Extract agent wallet address from env if not in config
+  if (!config.agentWalletAddress) {
+    config.agentWalletAddress = "0xA4c009f0541d9C7f86F12cF4470Faf60448B240B";
+  }
+
+  return config;
 }
 
 interface FleetConfig {
@@ -89,11 +108,11 @@ function loadConfig(): FleetConfig {
 
   // Use env vars or config values
   config.rpcUrl = process.env.BNB_RPC_URL || config.rpcUrl || 'https://bsc-testnet.public.blastapi.io';
-  config.privateKey = process.env.ROBOT_FLEET_PRIVATE_KEY || process.env.WDK_SECRET_SEED || config.privateKey;
+  config.privateKey = process.env.PRIVATE_KEY || process.env.ROBOT_FLEET_PRIVATE_KEY || process.env.WDK_SECRET_SEED || config.privateKey;
   
   // Extract agent wallet address from env if not in config
   if (!config.agentWalletAddress) {
-    console.warn('[RobotFleet] No agentWalletAddress in config, will use derived address from seed');
+    config.agentWalletAddress = "0xA4c009f0541d9C7f86F12cF4470Faf60448B240B";
   }
 
   return config;

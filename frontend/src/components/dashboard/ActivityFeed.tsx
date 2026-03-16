@@ -27,21 +27,22 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ events }) => {
           ) : (
             chronologicalEvents.map((event, index) => {
               const IconComponent = event.icon;
+              const eventData = (event as any).event || event;
               return (
                 <div
-                  key={`${event.robotId}-${index}`}
+                  key={`${eventData.robotId}-${eventData.timestamp}-${index}`}
                   className="text-[10px] flex items-start gap-2 animate-in fade-in slide-in-from-bottom-1 duration-300"
                 >
                   <span className="text-neutral-gray whitespace-nowrap font-mono text-[9px] mt-px">
-                    [{new Date(event.timestamp).toLocaleTimeString([], { hour12: false })}]
+                    [{new Date(eventData.timestamp).toLocaleTimeString([], { hour12: false })}]
                   </span>
                   <span className="leading-relaxed flex flex-wrap items-center gap-x-1">
                     {IconComponent && <IconComponent className="w-3 h-3 text-tether-teal inline-block" />}
-                    <span className="font-medium text-tether-teal">Robot {event.robotId}</span>
+                    <span className="font-medium text-tether-teal">Robot {eventData.robotId}</span>
                     <span className="text-neutral-gray">earned</span>
-                    <span className="font-bold text-neon-green">{event.earnings} ETH</span>
+                    <span className="font-bold text-neon-green">{eventData.earnings} ETH</span>
                     <span className="text-neutral-gray">from</span>
-                    <span className="text-white/80">{event.taskName}</span>
+                    <span className="text-white/80">{eventData.taskName}</span>
                   </span>
                 </div>
               );
