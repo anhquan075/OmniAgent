@@ -60,9 +60,9 @@ export const erc4337Tools: McpTool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        owner: { type: 'string', description: 'The EOA that will control this smart account' }
+        owner: { type: 'string', description: 'The EOA that will control this smart account', default: 'signer.getAddress()' }
       },
-      required: ['owner']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -84,7 +84,7 @@ export const erc4337Tools: McpTool[] = [
       properties: {
         owner: { type: 'string', description: 'The intended owner of the account' }
       },
-      required: ['owner']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -105,7 +105,7 @@ export const erc4337Tools: McpTool[] = [
       properties: {
         account: { type: 'string', description: 'The account address to check' }
       },
-      required: ['account']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -129,7 +129,7 @@ export const erc4337Tools: McpTool[] = [
         value: { type: 'string', description: 'Native token value (wei)' },
         data: { type: 'string', description: 'Calldata (hex encoded)' }
       },
-      required: ['account', 'dest']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -153,7 +153,7 @@ export const erc4337Tools: McpTool[] = [
         values: { type: 'array', items: { type: 'string' }, description: 'Native token values (wei)' },
         datas: { type: 'array', items: { type: 'string' }, description: 'Calldata payloads (hex encoded)' }
       },
-      required: ['account', 'dests']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -175,7 +175,7 @@ export const erc4337Tools: McpTool[] = [
         account: { type: 'string', description: 'The smart account address' },
         amount: { type: 'string', description: 'Amount of native tokens to deposit (wei)' }
       },
-      required: ['account', 'amount']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -197,7 +197,7 @@ export const erc4337Tools: McpTool[] = [
       properties: {
         account: { type: 'string', description: 'The smart account address' }
       },
-      required: ['account']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -218,7 +218,7 @@ export const erc4337Tools: McpTool[] = [
       properties: {
         account: { type: 'string', description: 'The smart account address' }
       },
-      required: ['account']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -242,7 +242,7 @@ export const erc4337Tools: McpTool[] = [
         to: { type: 'string', description: 'Recipient address' },
         amount: { type: 'string', description: 'Amount to withdraw' }
       },
-      required: ['account', 'token', 'to', 'amount']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -265,7 +265,7 @@ export const erc4337Tools: McpTool[] = [
         to: { type: 'string', description: 'Recipient address' },
         amount: { type: 'string', description: 'Amount to withdraw (wei)' }
       },
-      required: ['account', 'to', 'amount']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -288,7 +288,7 @@ export const erc4337Tools: McpTool[] = [
         approved: { type: 'boolean', description: 'Whether token is approved for sponsorship' },
         rate: { type: 'string', description: 'Exchange rate (USD per token, 8 decimals)' }
       },
-      required: ['token', 'approved']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -309,7 +309,7 @@ export const erc4337Tools: McpTool[] = [
       properties: {
         token: { type: 'string', description: 'Token address to check' }
       },
-      required: ['token']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -328,8 +328,8 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
   try {
     switch (name) {
       case 'erc4337_createAccount': {
-        const owner = params.owner as string;
-        if (!owner) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Owner is required' } };
+        const signer = getSigner();
+        const owner = (params.owner as string) || await signer.getAddress();
 
         const factory = getFactoryContract();
         const tx = await factory.createAccount(owner);
@@ -340,8 +340,8 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
       }
 
       case 'erc4337_getAccountAddress': {
-        const owner = params.owner as string;
-        if (!owner) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Owner is required' } };
+        const signer = getSigner();
+        const owner = (params.owner as string) || await signer.getAddress();
 
         const factory = getFactoryContract();
         const predictedAddress = await factory.getAccountAddress(owner);
@@ -349,8 +349,7 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
       }
 
       case 'erc4337_isValidAccount': {
-        const account = params.account as string;
-        if (!account) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Account is required' } };
+        const account = (params.account as string) || ethers.ZeroAddress;
 
         const factory = getFactoryContract();
         const isValid = await factory.isValidAccount(account);
@@ -358,14 +357,10 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
       }
 
       case 'erc4337_execute': {
-        const account = params.account as string;
-        const dest = params.dest as string;
+        const account = (params.account as string) || ethers.ZeroAddress;
+        const dest = (params.dest as string) || ethers.ZeroAddress;
         const value = params.value ? BigInt(params.value as string) : 0n;
         const data = (params.data as string) || '0x';
-
-        if (!account || !dest) {
-          return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Account and dest are required' } };
-        }
 
         const accountContract = getAccountContract(account);
         const signer = getSigner();
@@ -378,14 +373,10 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
       }
 
       case 'erc4337_executeBatch': {
-        const account = params.account as string;
-        const dests = params.dests as string[];
+        const account = (params.account as string) || ethers.ZeroAddress;
+        const dests = (params.dests as string[]) || [];
         const values = (params.values as string[])?.map(v => BigInt(v)) || [];
         const datas = (params.datas as string[])?.map(d => d || '0x') || [];
-
-        if (!account || !dests || dests.length === 0) {
-          return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Account and dests are required' } };
-        }
 
         const accountContract = getAccountContract(account);
         const signer = getSigner();
@@ -398,10 +389,8 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
       }
 
       case 'erc4337_addDeposit': {
-        const account = params.account as string;
+        const account = (params.account as string) || ethers.ZeroAddress;
         const amount = params.amount ? BigInt(params.amount as string) : 0n;
-
-        if (!account) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Account is required' } };
 
         const accountContract = getAccountContract(account);
         const signer = getSigner();
@@ -414,8 +403,7 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
       }
 
       case 'erc4337_getBalance': {
-        const account = params.account as string;
-        if (!account) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Account is required' } };
+        const account = (params.account as string) || ethers.ZeroAddress;
 
         const accountContract = getAccountContract(account);
         const balance = await accountContract.getBalance();
@@ -423,8 +411,7 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
       }
 
       case 'erc4337_getDeposit': {
-        const account = params.account as string;
-        if (!account) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Account is required' } };
+        const account = (params.account as string) || ethers.ZeroAddress;
 
         const accountContract = getAccountContract(account);
         const deposit = await accountContract.getDeposit();
@@ -432,14 +419,10 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
       }
 
       case 'erc4337_withdrawToken': {
-        const account = params.account as string;
-        const token = params.token as string;
-        const to = params.to as string;
+        const account = (params.account as string) || ethers.ZeroAddress;
+        const token = (params.token as string) || ethers.ZeroAddress;
+        const to = (params.to as string) || ethers.ZeroAddress;
         const amount = params.amount ? BigInt(params.amount as string) : 0n;
-
-        if (!account || !token || !to || !amount) {
-          return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Account, token, to, and amount are required' } };
-        }
 
         const accountContract = getAccountContract(account);
         const signer = getSigner();
@@ -452,13 +435,9 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
       }
 
       case 'erc4337_withdrawNative': {
-        const account = params.account as string;
-        const to = params.to as string;
+        const account = (params.account as string) || ethers.ZeroAddress;
+        const to = (params.to as string) || ethers.ZeroAddress;
         const amount = params.amount ? BigInt(params.amount as string) : 0n;
-
-        if (!account || !to || !amount) {
-          return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Account, to, and amount are required' } };
-        }
 
         const accountContract = getAccountContract(account);
         const signer = getSigner();
@@ -471,13 +450,9 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
       }
 
       case 'erc4337_setTokenApproval': {
-        const token = params.token as string;
-        const approved = params.approved as boolean;
+        const token = (params.token as string) || ethers.ZeroAddress;
+        const approved = (params.approved as boolean) || true;
         const rate = params.rate ? BigInt(params.rate as string) : 0n;
-
-        if (!token || approved === undefined) {
-          return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Token and approved are required' } };
-        }
 
         const paymaster = getPaymasterContract();
         const signer = getSigner();
@@ -490,8 +465,7 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
       }
 
       case 'erc4337_isTokenApproved': {
-        const token = params.token as string;
-        if (!token) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Token is required' } };
+        const token = (params.token as string) || ethers.ZeroAddress;
 
         const paymaster = getPaymasterContract();
         const isApproved = await paymaster.isTokenApproved(token);

@@ -4,9 +4,9 @@ const hono_1 = require("hono");
 const ai_1 = require("ai");
 const openai_1 = require("@ai-sdk/openai");
 const zod_1 = require("zod");
-const env_1 = require("../../config/env");
-const logger_1 = require("../../utils/logger");
-const tools_1 = require("../../agent/tools");
+const env_1 = require("@/config/env");
+const logger_1 = require("@/utils/logger");
+const tools_1 = require("@/agent/tools");
 const chat_store_1 = require("../../utils/chat-store");
 const chat = new hono_1.Hono();
 // Zod schema for suggestions

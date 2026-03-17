@@ -38,7 +38,7 @@ const zod_1 = require("zod");
 const dotenv = __importStar(require("dotenv"));
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
-const logger_1 = require("../utils/logger");
+const logger_1 = require("@/utils/logger");
 // Load .env file (primary configuration)
 const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
 const envPath = path.resolve(process.cwd(), envFile);

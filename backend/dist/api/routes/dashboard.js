@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const hono_1 = require("hono");
 const streaming_1 = require("hono/streaming");
 const AutonomousLoop_1 = require("../../agent/AutonomousLoop");
-const logger_1 = require("../../utils/logger");
+const logger_1 = require("@/utils/logger");
 const dashboard = new hono_1.Hono();
 dashboard.get('/events', async (c) => {
     return (0, streaming_1.streamSSE)(c, async (stream) => {

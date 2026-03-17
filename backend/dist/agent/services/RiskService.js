@@ -4,8 +4,8 @@ exports.RiskService = void 0;
 const ai_1 = require("ai");
 const openai_1 = require("@ai-sdk/openai");
 const zod_1 = require("zod");
-const env_1 = require("../../config/env");
-const logger_1 = require("../../utils/logger");
+const env_1 = require("@/config/env");
+const logger_1 = require("@/utils/logger");
 class RiskService {
     zkOracle;
     breaker;

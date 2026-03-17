@@ -188,12 +188,30 @@ const toolCategories = [
         { name: 'to', placeholder: 'Recipient', required: true },
         { name: 'amount', placeholder: 'Amount (wei)', required: true }
       ]},
-      { name: 'erc4337_setTokenApproval', description: 'Set paymaster token', riskLevel: 'high', blockchain: 'bnb', category: 'account-abstraction', params: [
-        { name: 'token', placeholder: 'Token address', required: true },
-        { name: 'approved', placeholder: 'true/false', required: true },
-        { name: 'rate', placeholder: 'Rate (8 decimals)', required: false }
-      ]},
-    ]
+       { name: 'erc4337_setTokenApproval', description: 'Set paymaster token', riskLevel: 'high', blockchain: 'bnb', category: 'account-abstraction', params: [
+         { name: 'token', placeholder: 'Token address', required: true },
+         { name: 'approved', placeholder: 'true/false', required: true },
+         { name: 'rate', placeholder: 'Rate (8 decimals)', required: false }
+       ]},
+       { name: 'erc4337_executeBatch', description: 'Execute batch transactions', riskLevel: 'high', blockchain: 'bnb', category: 'account-abstraction', params: [
+         { name: 'account', placeholder: 'Smart account', required: true },
+         { name: 'dests', placeholder: 'Destination addresses (comma-separated)', required: true },
+         { name: 'values', placeholder: 'Values in wei (comma-separated, optional)', required: false },
+         { name: 'datas', placeholder: 'Calldatas (comma-separated, optional)', required: false }
+       ]},
+       { name: 'erc4337_withdrawToken', description: 'Withdraw tokens', riskLevel: 'high', blockchain: 'bnb', category: 'account-abstraction', params: [
+         { name: 'account', placeholder: 'Smart account', required: true },
+         { name: 'token', placeholder: 'Token address', required: true },
+         { name: 'to', placeholder: 'Recipient', required: true },
+         { name: 'amount', placeholder: 'Amount', required: true }
+       ]},
+       { name: 'erc4337_isTokenApproved', description: 'Check token approval', riskLevel: 'low', blockchain: 'bnb', category: 'account-abstraction', params: [
+         { name: 'token', placeholder: 'Token address', required: true }
+       ]},
+       { name: 'erc4337_getDeposit', description: 'Get account deposit', riskLevel: 'low', blockchain: 'bnb', category: 'account-abstraction', params: [
+         { name: 'account', placeholder: 'Account address', required: true }
+       ]},
+     ]
   },
   {
     id: 'bridge',
@@ -206,7 +224,10 @@ const toolCategories = [
         { name: 'dstEid', placeholder: 'Destination chain ID', required: true },
         { name: 'recipientAddress', placeholder: 'Recipient (optional)', required: false }
       ]},
-      { name: 'wdk_bridge_getStatus', description: 'Get bridge quote', riskLevel: 'low', blockchain: 'bnb', category: 'bridge' },
+       { name: 'wdk_bridge_getStatus', description: 'Get bridge quote', riskLevel: 'low', blockchain: 'bnb', category: 'bridge', params: [
+         { name: 'amount', placeholder: 'Amount', required: true },
+         { name: 'dstEid', placeholder: 'Destination chain ID', required: true }
+       ]},
     ]
   }
 ];

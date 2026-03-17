@@ -75,10 +75,10 @@ export const wdkTools: McpTool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        amount: { type: 'string', description: 'Amount of USDT to mint (e.g., 1000)' },
+        amount: { type: 'string', description: 'Amount of USDT to mint (e.g., 1000)', default: '1000' },
         recipient: { type: 'string', description: 'Address to receive minted tokens (optional, defaults to agent wallet)' }
       },
-      required: ['amount']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -99,9 +99,9 @@ export const wdkTools: McpTool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        amount: { type: 'string', description: 'Amount of USDT to deposit' }
+        amount: { type: 'string', description: 'Amount of USDT to deposit', default: '100' }
       },
-      required: ['amount']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -121,9 +121,9 @@ export const wdkTools: McpTool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        amount: { type: 'string', description: 'Amount of USDT to withdraw' }
+        amount: { type: 'string', description: 'Amount of USDT to withdraw', default: '10' }
       },
-      required: ['amount']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -143,9 +143,9 @@ export const wdkTools: McpTool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        account: { type: 'string', description: 'Account address to check balance for' }
+        account: { type: 'string', description: 'Account address to check balance for (optional, defaults to agent address)' }
       },
-      required: ['account']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -286,9 +286,9 @@ export const wdkTools: McpTool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        user: { type: 'string', description: 'User address to check position for' }
+        user: { type: 'string', description: 'User address to check position for (optional, defaults to agent address)' }
       },
-      required: ['user']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -309,11 +309,11 @@ export const wdkTools: McpTool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        amount: { type: 'string', description: 'Amount to bridge' },
-        dstEid: { type: 'number', description: 'Destination chain endpoint ID' },
+        amount: { type: 'string', description: 'Amount to bridge', default: '100' },
+        dstEid: { type: 'number', description: 'Destination chain endpoint ID', default: 40231 },
         recipientAddress: { type: 'string', description: 'Recipient address (optional)' }
       },
-      required: ['amount', 'dstEid']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -334,10 +334,10 @@ export const wdkTools: McpTool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        amount: { type: 'string', description: 'Amount to bridge' },
-        dstEid: { type: 'number', description: 'Destination chain endpoint ID' }
+        amount: { type: 'string', description: 'Amount to bridge', default: '100' },
+        dstEid: { type: 'number', description: 'Destination chain endpoint ID', default: 40231 }
       },
-      required: ['amount', 'dstEid']
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -356,8 +356,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
   try {
     switch (name) {
       case 'wdk_mint_test_token': {
-        const amount = params.amount as string;
-        if (!amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Amount is required' } };
+        const amount = (params.amount as string) || '1000';
         
         const signer = getSigner();
         const usdtAddress = process.env.WDK_USDT_ADDRESS;
@@ -377,8 +376,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       }
       
       case 'wdk_vault_deposit': {
-        const amount = params.amount as string;
-        if (!amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Amount is required' } };
+        const amount = (params.amount as string) || '100';
         
         const signer = getSigner();
         const vault = getVaultContract(signer);
@@ -391,8 +389,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       }
       
       case 'wdk_vault_withdraw': {
-        const amount = params.amount as string;
-        if (!amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Amount is required' } };
+        const amount = (params.amount as string) || '10';
         
         const signer = getSigner();
         const vault = getVaultContract(signer);
@@ -407,8 +404,8 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       }
       
       case 'wdk_vault_getBalance': {
-        const account = params.account as string;
-        if (!account) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Account is required' } };
+        const signer = getSigner();
+        const account = (params.account as string) || await signer.getAddress();
         
         const vault = getVaultContract(); // Uses provider by default for read-only
         const balance = await vault.balanceOf(account);
@@ -481,8 +478,8 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       }
       
       case 'wdk_aave_getPosition': {
-        const user = params.user as string;
-        if (!user) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'User address is required' } };
+        const signer = getSigner();
+        const user = (params.user as string) || await signer.getAddress();
         
         const adapter = getAaveAdapterContract();
         const data = await adapter.getUserAccountData(user);
@@ -495,13 +492,9 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       }
       
       case 'wdk_bridge_bridge': {
-        const amount = params.amount as string;
-        const dstEid = params.dstEid as number;
+        const amount = (params.amount as string) || '100';
+        const dstEid = (params.dstEid as number) || 40231;
         const recipientAddress = params.recipientAddress as string | undefined;
-        
-        if (!amount || !dstEid) {
-          return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Amount and dstEid are required' } };
-        }
         
         const adapter = getLzAdapterContract();
         const usdtAmount = ethers.parseUnits(amount, 6);
@@ -523,10 +516,8 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       }
       
       case 'wdk_bridge_getStatus': {
-        const amount = params.amount as string;
-        const dstEid = params.dstEid as number;
-        
-        if (!amount || !dstEid) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Amount and dstEid are required' } };
+        const amount = (params.amount as string) || '100';
+        const dstEid = (params.dstEid as number) || 40231;
         
         const adapter = getLzAdapterContract();
         const usdtAmount = ethers.parseUnits(amount, 6);

@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateEnvironment = validateEnvironment;
 const env_1 = require("./env");
-const logger_1 = require("../utils/logger");
+const logger_1 = require("@/utils/logger");
 const PLACEHOLDER_VALUES = [
     'replace_me',
     'your_',

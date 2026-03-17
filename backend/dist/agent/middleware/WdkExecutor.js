@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WdkExecutor = void 0;
 const PolicyGuard_1 = require("./PolicyGuard");
-const logger_1 = require("../../utils/logger");
+const logger_1 = require("@/utils/logger");
 class WdkExecutor {
     wdk;
     constructor(wdk) {

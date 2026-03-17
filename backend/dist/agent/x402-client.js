@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.X402Client = void 0;
 const WdkExecutor_1 = require("./middleware/WdkExecutor");
-const ethers_1 = require("../contracts/clients/ethers");
-const logger_1 = require("../utils/logger");
+const ethers_1 = require("@/contracts/clients/ethers");
+const logger_1 = require("@/utils/logger");
 /**
  * X402Client handles machine-to-machine payments for infrastructure.
  */

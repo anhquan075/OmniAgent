@@ -3,8 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PolicyGuard = void 0;
 exports.getPolicyGuard = getPolicyGuard;
 exports.setPolicyGuard = setPolicyGuard;
-const constants_1 = require("../../lib/constants");
-const logger_1 = require("../../utils/logger");
+const constants_1 = require("@/lib/constants");
+const logger_1 = require("@/utils/logger");
 class PolicyGuard {
     policy;
     dailyTransactionCount = 0;

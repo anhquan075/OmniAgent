@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
-import { parseEther, formatEther } from 'viem';
+import { parseEther, formatEther, formatUnits } from 'viem';
 import { Pickaxe, LockOpen, ArrowDownToLine, Loader2, AlertCircle } from 'lucide-react';
 
 export const TestnetTools = () => {
   const { address, isConnected } = useAccount();
   const { writeContract, isPending, data: hash } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
-  const [error, setError] = useState<string | null>(null);
-  const [minting, setMinting] = useState(false);
+   const [error, setError] = useState<string | null>(null);
+   const [minting, setMinting] = useState(false);
+   const [success, setSuccess] = useState<string | null>(null);
 
   const tokenAddress = import.meta.env.VITE_TESTNET_TOKEN_ADDRESS;
   const vaultAddress = import.meta.env.VITE_TESTNET_VAULT_ADDRESS;
@@ -31,31 +32,40 @@ export const TestnetTools = () => {
     }
   });
 
-  const formattedBalance = balance ? parseFloat(formatEther(balance)).toFixed(2) : '0.00';
+  const formattedBalance = balance ? parseFloat(formatUnits(balance, 6)).toFixed(2) : '0.00';
 
-  const handleMint = async () => {
-    setError(null);
-    setMinting(true);
-    try {
-      const response = await fetch(`${apiUrl}/api/mcp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: Date.now(),
-          method: 'tools/call',
-          params: { name: 'wdk_mint_test_token', arguments: { amount: '1000' } }
-        })
-      });
-      const data = await response.json();
-      if (data.error) {
-        setError(data.error.message || 'Minting failed');
+    const handleMint = async () => {
+      if (!address) {
+        setError('Wallet not connected');
+        return;
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Minting failed');
-    }
-    setMinting(false);
-  };
+      setError(null);
+      setSuccess(null);
+      setMinting(true);
+      try {
+         const response = await fetch(`${apiUrl}/api/mcp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: Date.now(),
+            method: 'tools/call',
+            params: { name: 'wdk_mint_test_token', arguments: { amount: '10000', recipient: address, context: 'User minting test USDT via frontend testnet tools' } }
+          })
+        });
+        const data = await response.json();
+        if (data.error) {
+          setError(data.error.message || 'Minting failed');
+        } else if (data.result) {
+          setError(null);
+          setSuccess('✓ Successfully minted 10,000 USDT');
+          setTimeout(() => setSuccess(null), 3000);
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Minting failed');
+      }
+      setMinting(false);
+    };
 
   const handleApprove = () => {
     writeContract({
@@ -108,8 +118,8 @@ export const TestnetTools = () => {
   );
 
   return (
-    <div className="flex flex-col gap-3 w-full mt-3 pt-3 border-t border-white/5">
-      <div className="flex items-center justify-between px-1">
+    <div className="flex flex-col w-full mt-3 pt-3 border-t border-white/5">
+      <div className="flex items-center justify-between px-1 mb-8">
         <span className="text-[9px] font-mono text-neutral-gray lowercase tracking-wide">Available Balance</span>
         <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-tether-teal/10 border border-tether-teal/20">
           <span className="w-1.5 h-1.5 rounded-full bg-tether-teal animate-pulse"></span>
@@ -117,7 +127,7 @@ export const TestnetTools = () => {
         </div>
       </div>
       
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2 mb-3">
         <CyberButton 
           onClick={handleMint} 
           disabled={isPending || isConfirming || minting} 
@@ -144,10 +154,23 @@ export const TestnetTools = () => {
         />
       </div>
       
-      {(isPending || isConfirming) && (
-        <div className="flex items-center justify-center gap-2 text-[10px] text-tether-teal font-mono bg-tether-teal/5 py-1.5 rounded border border-tether-teal/10 mt-1">
+      {(isPending || isConfirming || minting) && (
+        <div className="flex items-center justify-center gap-2 text-[10px] text-tether-teal font-mono bg-tether-teal/5 py-1.5 rounded border border-tether-teal/10 mt-3">
           <Loader2 className="w-3 h-3 animate-spin" />
-          <span className="tracking-wider uppercase">Processing on-chain...</span>
+          <span className="tracking-wider uppercase">Processing...</span>
+        </div>
+      )}
+      
+      {success && (
+        <div className="flex items-center justify-center gap-2 text-[10px] text-green-400 font-mono bg-green-400/10 py-1.5 px-2 rounded border border-green-400/20 mt-3">
+          <span className="tracking-wider">{success}</span>
+        </div>
+      )}
+      
+      {error && (
+        <div className="flex items-center justify-center gap-2 text-[10px] text-red-400 font-mono bg-red-400/10 py-1.5 px-2 rounded border border-red-400/20 mt-3">
+          <AlertCircle className="w-3 h-3" />
+          <span className="tracking-wider">{error}</span>
         </div>
       )}
     </div>

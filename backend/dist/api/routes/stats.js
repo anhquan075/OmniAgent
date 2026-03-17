@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const hono_1 = require("hono");
-const ethers_1 = require("../../contracts/clients/ethers");
+const ethers_1 = require("@/contracts/clients/ethers");
 const ethers_2 = require("ethers");
-const env_1 = require("../../config/env");
-const logger_1 = require("../../utils/logger");
+const env_1 = require("@/config/env");
+const logger_1 = require("@/utils/logger");
 const stats = new hono_1.Hono();
 stats.get('/', async (c) => {
     try {
