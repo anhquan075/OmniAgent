@@ -1,6 +1,22 @@
 # OmniWDK: The Sovereign Yield Robot Fleet
 
-OmniWDK is an autonomous, non-custodial yield routing stack built for Hackathon Galactica: WDK Edition 1. It introduces a new paradigm: an autonomous AI capital allocator managing a fleet of Multi-VM sub-agents.
+<div align="center">
+  <img src="frontend/public/imgs/mascot-owl-no-bg.png" alt="OmniWDK Mascot" width="200" />
+</div>
+
+<div align="center">
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg?logo=node.js)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg?logo=typescript)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18-blueviolet.svg?logo=react)](https://react.dev/)
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.25-purple.svg?logo=ethereum)](https://soliditylang.org/)
+[![WDK](https://img.shields.io/badge/WDK-Autonomous-orange.svg)](https://github.com/OmniWDK)
+[![X402](https://img.shields.io/badge/X402-Payment-yellowgreen.svg)](https://x402.org/)
+
+</div>
+
+OmniWDK is an autonomous, non-custodial yield routing stack. It introduces a new paradigm: an autonomous AI capital allocator managing a fleet of Multi-VM sub-agents.
 
 ## Why OmniWDK Wins
 
