@@ -6,6 +6,7 @@ import { logger } from '@/utils/logger';
 const dashboard = new Hono();
 
 dashboard.get('/events', async (c) => {
+  logger.info('[Dashboard] Client connected to SSE stream');
   return streamSSE(c, async (stream) => {
     await stream.writeSSE({
       data: JSON.stringify({ type: 'connected', message: 'Dashboard Stream Connected' }),

@@ -29,6 +29,7 @@ const verifySignature = (payload: string, signature: string | undefined) => {
 
 // SSE Stream for Agent Brain
 agent.get('/stream', (c) => {
+  logger.info('[Agent] Client connected to agent stream');
   return stream(c, async (stream) => {
     c.header('Content-Type', 'text/event-stream');
     c.header('Cache-Control', 'no-cache');
@@ -50,6 +51,7 @@ agent.get('/stream', (c) => {
 
     // Clean up on disconnect
     c.req.raw.signal.addEventListener('abort', () => {
+      logger.info('[Agent] Client disconnected from stream');
       agentEvents.off('agent-update', listener);
       clearInterval(interval);
     });
@@ -64,6 +66,8 @@ agent.get('/stream', (c) => {
 // Reporting endpoint (for the loop to send updates)
 agent.post('/report', async (c) => {
   const body = await c.req.json();
+  logger.debug({ node: body.node, action: body.action }, '[Agent] Received report');
+  
   const event = {
     ...body,
     timestamp: new Date().toISOString(),
@@ -74,6 +78,7 @@ agent.post('/report', async (c) => {
   if (agentHistory.length > 100) agentHistory.shift();
   
   agentEvents.emit('agent-update', event);
+  logger.debug('[Agent] Report emitted to listeners');
   return c.text('OK');
 });
 
@@ -83,12 +88,15 @@ agent.post('/webhook', async (c) => {
   const eventName = c.req.header('x-github-event');
   const rawBody = await c.req.text();
 
+  logger.info({ event: eventName }, '[Webhook] Received event');
+
   if (!verifySignature(rawBody, signature)) {
+    logger.warn('[Webhook] Invalid signature');
     return c.text('Invalid signature', 401);
   }
 
   const payload = JSON.parse(rawBody);
-  logger.info({ event: eventName }, '[Webhook] Received event');
+  logger.info({ event: eventName, action: payload.action }, '[Webhook] Processing event');
 
   // Trigger rebalance on specific events
   let shouldTrigger = false;

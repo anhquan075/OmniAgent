@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatHistory } from './ChatHistory';
 import { MessageInput } from './MessageInput';
-import { CpuIcon, ZapIcon, ShieldCheckIcon, BarChart3Icon, BrainCircuitIcon, CoinsIcon } from 'lucide-react';
+import { CpuIcon, ZapIcon, ShieldCheckIcon, BarChart3Icon, BrainCircuitIcon, CoinsIcon, BotIcon } from 'lucide-react';
 import { OperationalPlan, TaskStatus } from './TaskStep';
 import { Conversation } from '../ai-elements/Conversation';
 
@@ -29,6 +29,8 @@ const SUGGESTED_ACTIONS = [
   { label: 'Get USDT', icon: ZapIcon, prompt: 'Check my USDT balance in the vault.' },
   { label: 'Bridge Funds', icon: ZapIcon, prompt: 'Show me how to bridge USDT to another chain.' },
   { label: 'Smart Account', icon: ZapIcon, prompt: 'Show me my ERC-4337 smart account details.' },
+  { label: 'Robot Fleet', icon: BotIcon, prompt: 'What is the status of the robot fleet?' },
+  { label: 'Start Fleet', icon: BotIcon, prompt: 'Start the robot fleet simulator.' },
 ];
 
 export function ChatContainer({ 

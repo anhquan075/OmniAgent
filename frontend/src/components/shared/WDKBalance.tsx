@@ -1,10 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { EyeIcon, EyeOffIcon, RefreshCcwIcon, Zap, ExternalLink } from 'lucide-react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { parseUnits } from 'viem';
-
-const MINT_ABI = ['function mint(address to, uint256 amount) external'] as const;
+import { EyeIcon, EyeOffIcon, RefreshCcwIcon, ExternalLink } from 'lucide-react';
 
 const TOKEN_ADDRESS = import.meta.env.VITE_TESTNET_TOKEN_ADDRESS as `0x${string}`;
 const BLOCK_EXPLORER = 'https://testnet.bscscan.com';
@@ -15,50 +11,23 @@ interface WDKBalanceProps {
   fiatRate?: number;
   className?: string;
   logo?: string;
+  onRefresh?: () => void;
 }
 
 export const WDKBalance: React.FC<WDKBalanceProps> = ({ 
   amount, 
   symbol, 
   fiatRate = 1.0, 
-  className = "" 
+  className = "",
+  logo,
+  onRefresh
 }) => {
-  const { address, isConnected } = useAccount();
-  const { writeContract, isPending, data: hash } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess: txSuccess } = useWaitForTransactionReceipt({ hash });
   const [isMasked, setIsMasked] = useState(false);
   const [viewMode, setViewMode] = useState<'crypto' | 'fiat'>('crypto');
-  const [mintSuccess, setMintSuccess] = useState(false);
-
-  useEffect(() => {
-    if (txSuccess && hash) {
-      setMintSuccess(true);
-    }
-  }, [txSuccess, hash]);
 
   const displayAmount = viewMode === 'crypto' 
     ? amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : (amount * fiatRate).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
-
-  const handleMint = async () => {
-    if (!isConnected || !address) {
-      return;
-    }
-    setMintSuccess(false);
-    try {
-      writeContract({
-        address: TOKEN_ADDRESS,
-        abi: MINT_ABI,
-        functionName: 'mint',
-        args: [address, parseUnits('10000', 6)],
-      });
-    } catch (error) {
-      console.error('Mint error:', error);
-    }
-  };
-
-  const isMinting = isPending || isConfirming;
-  const showMinted = mintSuccess || (hash && txSuccess);
 
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
@@ -67,6 +36,15 @@ export const WDKBalance: React.FC<WDKBalanceProps> = ({
           {viewMode === 'crypto' ? `${symbol} Balance` : 'Net Value (USD)'}
         </span>
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {onRefresh && (
+            <button 
+              onClick={onRefresh}
+              className="p-1 rounded hover:bg-white/5 text-neutral-gray hover:text-tether-teal transition-colors"
+              title="Refresh balance"
+            >
+              <RefreshCcwIcon className="w-3 h-3" />
+            </button>
+          )}
           <button 
             onClick={() => setIsMasked(!isMasked)}
             className="p-1 rounded hover:bg-white/5 text-neutral-gray hover:text-tether-teal transition-colors"
@@ -85,35 +63,8 @@ export const WDKBalance: React.FC<WDKBalanceProps> = ({
       </div>
 
       <div className="flex items-baseline gap-2 relative">
-        {(symbol === 'USDT' || symbol === 'USD₮') && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handleMint}
-              disabled={isMinting || !isConnected}
-              title={!isConnected ? 'Connect wallet to mint' : 'Mint 10k test USDT'}
-              className="flex items-center gap-1.5 px-3 py-1 text-[10px] font-semibold rounded-md border transition-all disabled:opacity-50"
-              style={{
-                background: isMinting ? 'rgba(234, 179, 8, 0.04)' : 'rgba(234, 179, 8, 0.12)',
-                borderColor: 'rgba(234, 179, 8, 0.4)',
-                color: '#FBBF24',
-                cursor: isMinting || !isConnected ? 'not-allowed' : 'pointer',
-              }}
-            >
-              <Zap size={11} />
-              {isMinting ? 'Minting...' : showMinted ? 'Minted!' : 'Mint 10k USDT'}
-            </button>
-            <a
-              href={`${BLOCK_EXPLORER}/address/${TOKEN_ADDRESS}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="View USDT on explorer"
-              className="p-1"
-              style={{ color: 'rgba(251, 191, 36, 0.5)' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ExternalLink size={10} />
-            </a>
-          </div>
+        {logo && (
+          <img src={logo} alt={symbol} className="w-4 h-4 object-contain" />
         )}
         
         <AnimatePresence mode="wait">
@@ -140,14 +91,6 @@ export const WDKBalance: React.FC<WDKBalanceProps> = ({
             )}
           </motion.div>
         </AnimatePresence>
-        
-        {!isMasked && viewMode === 'crypto' && (
-          <div className="flex items-center gap-2 ml-auto">
-            <div className="text-[9px] font-mono text-neon-green">
-              +2.4% <span className="opacity-40">24h</span>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

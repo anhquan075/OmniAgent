@@ -67,7 +67,8 @@ export function getFleetStatus() {
     robots: robotList,
     fleetTotalEarned: fleetTotalEarned.toFixed(4),
     recentEvents: getRecentEvents().slice(-10),
-    latestTxHash: getRecentEvents()[0]?.txHash || null
+    latestTxHash: getRecentEvents()[0]?.txHash || null,
+    latestTxValue: getRecentEvents()[0]?.earnings || null
   };
 }
 

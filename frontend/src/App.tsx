@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldAlertIcon, ActivityIcon, CoinsIcon, BarChart3Icon, ZapIcon, LayoutDashboardIcon, ShieldCheckIcon, GlobeIcon, ServerIcon, LinkIcon, BrainCircuitIcon, MenuIcon, XIcon, BotIcon } from 'lucide-react';
+import { ShieldAlertIcon, ActivityIcon, CoinsIcon, BarChart3Icon, ZapIcon, LayoutDashboardIcon, ShieldCheckIcon, GlobeIcon, ServerIcon, LinkIcon, BrainCircuitIcon, MenuIcon, XIcon, BotIcon, Zap, Loader2, ExternalLink } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import { useChat } from "@ai-sdk/react";
 import { lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
 import { useQuery } from '@tanstack/react-query';
@@ -46,13 +47,15 @@ const INITIAL_SESSION_ID = 'session-' + Date.now();
 export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
+  const [minting, setMinting] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const queryClient = useQueryClient();
   const { address, isConnected } = useAccount();
 
   // Local state for input as per modern ai-sdk best practices
   const [input, setInput] = useState('');
-
   // Live Stats Fetching
-  const { data: stats } = useQuery({
+  const { data: stats, refetch: refetchStats } = useQuery({
     queryKey: ['agent-stats'],
     queryFn: async () => {
       const res = await fetch('/api/stats');
@@ -61,6 +64,41 @@ export default function App() {
     },
     refetchInterval: 10000,
   });
+
+  const handleMint = async () => {
+    if (!isConnected || !address) {
+      setNotification({ type: 'error', message: 'Please connect wallet first' });
+      setTimeout(() => setNotification(null), 5000);
+      return;
+    }
+    setNotification(null);
+    setMinting(true);
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_URL}/api/mcp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: { name: 'wdk_mint_test_token', arguments: { amount: '10000', recipient: address, context: 'User minting via dashboard' } }
+        })
+      });
+      const data = await response.json();
+      if (data.error) {
+        setNotification({ type: 'error', message: data.error.message || 'Minting failed' });
+      } else {
+        setNotification({ type: 'success', message: 'Minted 10,000 USDT' });
+        setTimeout(() => refetchStats(), 2000);
+      }
+    } catch (error) {
+      setNotification({ type: 'error', message: error instanceof Error ? error.message : 'Minting failed' });
+    } finally {
+      setMinting(false);
+      setTimeout(() => setNotification(null), 5000);
+    }
+  };
 
   const agentState = stats?.system?.isPaused ? 'IDLE' : (stats?.system?.canExecute ? 'EXECUTING' : (stats?.system ? 'SCANNING' : 'IDLE'));
   
@@ -255,13 +293,37 @@ export default function App() {
               </div>
             </div>
           </div>
-
-          <div className="flex items-center gap-2 md:gap-6">
-            <div className="hidden xl:block">
-              <WDKBalance amount={Number(stats?.vault?.totalAssets || 0)} symbol="USD₮" className="items-end" logo="/coins/bnb.png" />
-            </div>
+          <div className="flex items-center gap-2 md:gap-4">
             <div className="h-8 border-l border-white/10 mx-1 md:mx-2 hidden lg:block"></div>
             
+            {/* Mint Button - positioned left of BNB Chain badge */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleMint}
+                disabled={minting || !isConnected}
+                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-semibold rounded-md border transition-all disabled:opacity-50"
+                style={{
+                  background: minting ? 'rgba(234, 179, 8, 0.04)' : 'rgba(234, 179, 8, 0.12)',
+                  borderColor: 'rgba(234, 179, 8, 0.4)',
+                  color: '#FBBF24',
+                  cursor: minting || !isConnected ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {minting ? <Loader2 size={11} className="animate-spin" /> : <Zap size={11} />}
+                {minting ? 'Minting...' : 'Mint 10k'}
+              </button>
+              <a
+                href="https://testnet.bscscan.com/token/0xdea54eC5150Aa35ef2686b02EdD20b050430Ad7D"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1"
+                style={{ color: 'rgba(251, 191, 36, 0.5)' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ExternalLink size={10} />
+              </a>
+            </div>
+
             <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 mr-2 shadow-glow-sm">
               <div className="w-5 h-5 rounded-full bg-[#F3BA2F]/10 flex items-center justify-center border border-[#F3BA2F]/20">
                 <img src="/coins/bnb.png" alt="BNB Chain" className="w-3.5 h-3.5 object-contain" />
@@ -272,6 +334,20 @@ export default function App() {
               </div>
             </div>
 
+            {/* Notification Toast */}
+            {notification && (
+              <motion.div
+                initial={{ opacity: 0, y: -5, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                className={`absolute top-full right-0 mt-2 px-3 py-2 rounded-lg border text-[11px] font-medium whitespace-nowrap z-50 ${
+                  notification.type === 'success' 
+                    ? 'bg-green-500/20 border-green-500/40 text-green-400' 
+                    : 'bg-red-500/20 border-red-500/40 text-red-400'
+                }`}
+              >
+                {notification.type === 'success' ? '✓' : '✗'} {notification.message}
+              </motion.div>
+            )}
             <div className="scale-75 md:scale-100 origin-right">
               <ConnectButton chainStatus="none" showBalance={false} accountStatus="address" />
             </div>

@@ -1,5 +1,5 @@
-import { EventEmitter } from 'events';
 import { logger } from '@/utils/logger';
+import { EventEmitter } from 'events';
 
 export interface FleetEvent {
   robotId: string;
@@ -25,6 +25,8 @@ export interface FleetStatus {
   robots: Robot[];
   fleetTotalEarned: string;
   recentEvents: FleetEvent[];
+  latestTxHash?: string | null;
+  latestTxValue?: string | null;
 }
 
 class RobotFleetService {
@@ -122,14 +124,18 @@ class RobotFleetService {
         enabled: false,
         robots: [],
         fleetTotalEarned: '0.0000',
-        recentEvents: []
+        recentEvents: [],
+        latestTxHash: null,
+        latestTxValue: null
       };
     }
     return this.simulator.getFleetStatus?.() || {
       enabled: false,
       robots: [],
       fleetTotalEarned: '0.0000',
-      recentEvents: []
+      recentEvents: [],
+      latestTxHash: null,
+      latestTxValue: null
     };
   }
 

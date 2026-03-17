@@ -8,7 +8,9 @@ const robotFleet = new Hono();
 const fleetEmitter = robotFleetService.getEmitter();
 
 robotFleet.get('/events', async (c) => {
+  logger.info('[RobotFleet] Client connected to fleet SSE stream');
   return streamSSE(c, async (stream) => {
+    logger.debug('[RobotFleet] SSE stream established');
     logger.info('[RobotFleetAPI] New SSE client connected');
     
     // Send initial connection message
@@ -79,10 +81,12 @@ robotFleet.get('/events', async (c) => {
 // Status endpoint (fallback for polling)
 robotFleet.get('/status', async (c) => {
   try {
+    logger.debug('[RobotFleet] Fetching fleet status');
     const status = robotFleetService.getFleetStatus();
+    logger.info({ robotCount: status.robots.length, enabled: status.enabled }, '[RobotFleet] Status retrieved');
     return c.json(status);
   } catch (error: any) {
-    logger.error(error, '[RobotFleetAPI] Status error');
+    logger.error(error, '[RobotFleet] Status error');
     return c.json({ 
       error: 'Failed to get fleet status', 
       message: error.message 

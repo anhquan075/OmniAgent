@@ -42,6 +42,7 @@ export class RiskService {
     try {
       const { object } = await generateObject({
         model: openai(env.OPENROUTER_MODEL_CRYPTO || 'deepseek/deepseek-chat'),
+        temperature: 0,
         schema: z.object({
           score: z.number().min(0).max(100).describe('Risk score from 0 to 100'),
           explanation: z.string().describe('Brief explanation of the risk assessment')

@@ -73,7 +73,7 @@ export const useRobotFleetEvents = (): UseRobotFleetEventsResult => {
                 icon: ICON_MAP['Delivery'],
                 robotId: 'SYSTEM',
                 taskName: 'Fleet Status Sync',
-                earnings: '0',
+                earnings: data.latestTxValue || '0',
                 timestamp: new Date().toISOString(),
                 type: 'fleet:status'
               };

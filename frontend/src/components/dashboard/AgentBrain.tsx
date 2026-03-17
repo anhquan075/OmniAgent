@@ -1,30 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Shield, Activity, Zap, Calculator, TrendingUp, Cpu, Lock, CheckCircle2, ExternalLink, BrainCircuit, ShieldAlert, Coins } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { BLOCK_EXPLORERS } from '@/lib/networkConfig';
-import { getApiUrl } from '@/lib/api';
 
-export default function AgentBrain() {
+interface AgentBrainProps {
+  stats?: any;
+}
+
+export default function AgentBrain({ stats }: AgentBrainProps) {
   const { isConnected } = useAccount();
-  const [stats, setStats] = useState(null);
-  const [simAmount, setSimAmount] = useState(1000);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await fetch(getApiUrl('/api/stats'));
-        const data = await res.json();
-        setStats(data);
-      } catch (e) {
-        console.error("Stats fetch failed", e);
-      }
-    };
-    fetchStats();
-    const interval = setInterval(fetchStats, 10000);
-    return () => clearInterval(interval);
-  }, []);
 
   const getRiskColor = (drawdown) => {
     if (drawdown >= 2000) return 'text-red-500 bg-red-500/10 border-red-500/20';

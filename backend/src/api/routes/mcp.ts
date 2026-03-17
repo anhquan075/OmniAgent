@@ -7,6 +7,7 @@ import { wdkTools, handleWdkTool } from '../../mcp-server/handlers/wdk-tools.js'
 import { x402Tools, handleX402Tool } from '../../mcp-server/handlers/x402-tools.js';
 import { erc4337Tools, handleErc4337Tool } from '../../mcp-server/handlers/erc4337-tools.js';
 import { McpExecutionContext, McpTool } from '../../mcp-server/types/mcp-protocol.js';
+import { logger } from '@/utils/logger';
 
 const mcpRoute = new Hono();
 
@@ -53,10 +54,14 @@ mcpRoute.post('/', async (c) => {
     const body = await c.req.json();
     const { jsonrpc, id, method, params } = body;
 
+    logger.info({ method, id }, '[MCP] Received request');
+    logger.debug({ body: JSON.stringify(body).slice(0, 200) }, '[MCP] Request body');
+
     const userWalletAddress = c.req.header('x-user-wallet') || null;
     const isConnectedWallet = c.req.header('x-wallet-connected') === 'true';
 
     if (method === 'tools/list') {
+      logger.info('[MCP] Listing tools');
       const tools = registry.getAllTools();
       
       const toolsWithContext = tools.map((tool: McpTool) => ({
@@ -71,6 +76,7 @@ mcpRoute.post('/', async (c) => {
         }
       }));
 
+      logger.info({ toolCount: tools.length }, '[MCP] Returning tools list');
       return c.json({
         jsonrpc: '2.0',
         id,
@@ -89,6 +95,8 @@ mcpRoute.post('/', async (c) => {
       const { name, arguments: args } = params;
       const requestId = String(id || `req-${Date.now()}`);
 
+      logger.info({ tool: name, args: JSON.stringify(args).slice(0, 100), requestId }, '[MCP] Executing tool');
+
       const context: McpExecutionContext = {
         requestId,
         timestamp: Date.now(),
@@ -100,6 +108,7 @@ mcpRoute.post('/', async (c) => {
       const result = await registry.executeTool(name, args || {}, context);
 
       if (!result.success) {
+        logger.error({ tool: name, error: result.error }, '[MCP] Tool execution failed');
         return c.json({
           jsonrpc: '2.0',
           id,
@@ -110,6 +119,7 @@ mcpRoute.post('/', async (c) => {
         });
       }
 
+      logger.info({ tool: name, success: true }, '[MCP] Tool executed successfully');
       return c.json({
         jsonrpc: '2.0',
         id,
@@ -131,6 +141,7 @@ mcpRoute.post('/', async (c) => {
       });
     }
 
+    logger.warn({ method }, '[MCP] Unknown method');
     return c.json({
       jsonrpc: '2.0',
       id,

@@ -56,6 +56,8 @@ Topics: DeFi strategies, yield optimization, vault management, settlement rails.
 }
 
 chat.post('/', async (c) => {
+  logger.info('[Chat] Received POST /api/chat');
+  
   const rawBody = await c.req.json().catch(() => null);
   const body = rawBody || {};
   const { messages: rawMessages, id }: { messages?: any[]; id?: string } = body;
@@ -126,7 +128,7 @@ chat.post('/', async (c) => {
           model: baseModel as any,
           maxSteps: 10,
           maxToolRoundtrips: 3,
-          temperature: isSmallTalk ? 0.7 : 0, 
+          temperature: 0,
           tools: isSmallTalk ? {} : agentTools as any,
           onStepFinish: (arg: any) => {
             const toolResults = arg?.toolResults;
@@ -259,7 +261,7 @@ chat.post('/', async (c) => {
                     ...generatedMessages,
                     { role: 'user', content: 'Summarize the above tool results and answer the user query.' }
                   ],
-                  temperature: 0.7
+                  temperature: 0
                 });
 
                 await writer.merge(summaryResult.toUIMessageStream());
@@ -271,24 +273,27 @@ chat.post('/', async (c) => {
         }
 
         if (!isSmallTalk) {
-          try {
-            const response = await result.response;
-            const generatedMessages = response.messages;
-            let assistantText = '';
-            
-            if (generatedMessages && generatedMessages.length > 0) {
-              const lastMsg = generatedMessages[generatedMessages.length - 1];
-              if (lastMsg.role === 'assistant' && typeof lastMsg.content === 'string') {
-                assistantText = lastMsg.content;
+          // Spawn suggestion generation in background - don't await
+          (async () => {
+            try {
+              const response = await result.response;
+              const generatedMessages = response.messages;
+              let assistantText = '';
+              
+              if (generatedMessages && generatedMessages.length > 0) {
+                const lastMsg = generatedMessages[generatedMessages.length - 1];
+                if (lastMsg.role === 'assistant' && typeof lastMsg.content === 'string') {
+                  assistantText = lastMsg.content;
+                }
               }
-            }
 
-            const suggestions = await generateSuggestions(baseModel as any, generatedMessages || [], assistantText);
-            writer.write({ type: 'data-suggestions', data: suggestions });
-          } catch (err) {
-            logger.error(err, '[Chat] Error in suggestion generation');
-            writer.write({ type: 'data-suggestions', data: fallbackSuggestions });
-          }
+              const suggestions = await generateSuggestions(baseModel as any, generatedMessages || [], assistantText);
+              writer.write({ type: 'data-suggestions', data: suggestions });
+            } catch (err) {
+              logger.error(err, '[Chat] Error in suggestion generation');
+              writer.write({ type: 'data-suggestions', data: fallbackSuggestions });
+            }
+          })();
         }
       } catch (error: any) {
         if (error.name === 'AbortError') return;

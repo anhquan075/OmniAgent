@@ -16,6 +16,7 @@ import { env } from '@/config/env';
 import { getContracts } from '@/contracts/clients/ethers';
 import axios from 'axios';
 import { logger } from '@/utils/logger';
+import { robotFleetService } from '@/services/RobotFleetService';
 
 import { AaveV3LendingAdapter, AAVE_V3_POOL_BNB } from '@/protocols/aave-v3-lending-adapter';
 import { LayerZeroBridgeClient, LZ_ENDPOINT_BNB } from '@/protocols/layerzero-bridge-client';
@@ -1804,6 +1805,142 @@ export const agentTools = {
         return { success: true, token: token_address, paymaster: paymaster_address, isApproved, allowance: allowance.toString() };
       } catch (e: any) {
         logger.error(e, '[Tools] Error in erc4337_is_token_approved');
+        throw e;
+      }
+    }
+  }),
+
+  // ============================================
+  // Robot Fleet Operations
+  // ============================================
+
+  robot_fleet_status: tool({
+    description: 'Get the current status of the Robot Fleet including robot list, total earnings, and recent events.',
+    parameters: z.object({
+      context: z.string().describe('Reason for checking fleet status.')
+    }),
+    // @ts-ignore
+    execute: async ({ context }: { context: string }) => {
+      try {
+        const status = robotFleetService.getFleetStatus();
+        
+        await reportToDashboard('robot_fleet_status', { 
+          robotCount: status.robots.length, 
+          fleetTotalEarned: status.fleetTotalEarned,
+          enabled: status.enabled 
+        });
+        
+        return {
+          enabled: status.enabled,
+          robots: status.robots,
+          fleetTotalEarned: status.fleetTotalEarned,
+          recentEvents: status.recentEvents,
+          latestTxHash: status.latestTxHash,
+          latestTxValue: status.latestTxValue
+        };
+      } catch (e: any) {
+        logger.error(e, '[Tools] Error in robot_fleet_status');
+        throw e;
+      }
+    }
+  }),
+
+  robot_fleet_start: tool({
+    description: 'Start the Robot Fleet simulator. This activates the fleet of robots that can perform tasks and earn yields.',
+    parameters: z.object({
+      context: z.string().describe('Reason for starting the fleet.')
+    }),
+    // @ts-ignore
+    execute: async ({ context }: { context: string }) => {
+      try {
+        const currentStatus = robotFleetService.getFleetStatus();
+        if (currentStatus.enabled) {
+          return { success: true, message: 'Robot Fleet is already running', robots: currentStatus.robots };
+        }
+        
+        await robotFleetService.startSimulator();
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const newStatus = robotFleetService.getFleetStatus();
+        
+        await reportToDashboard('robot_fleet_start', { 
+          robotCount: newStatus.robots.length,
+          fleetTotalEarned: newStatus.fleetTotalEarned 
+        });
+        
+        return {
+          success: true,
+          message: 'Robot Fleet started successfully',
+          robots: newStatus.robots,
+          fleetTotalEarned: newStatus.fleetTotalEarned
+        };
+      } catch (e: any) {
+        logger.error(e, '[Tools] Error in robot_fleet_start');
+        throw e;
+      }
+    }
+  }),
+
+  robot_fleet_get_events: tool({
+    description: 'Get recent events from the Robot Fleet including task completions, earnings, and transactions.',
+    parameters: z.object({
+      limit: z.number().optional().describe('Maximum number of events to return (default: 10)'),
+      context: z.string().describe('Reason for getting events.')
+    }),
+    // @ts-ignore
+    execute: async ({ limit = 10, context }: { limit?: number; context: string }) => {
+      try {
+        const events = robotFleetService.getRecentEvents();
+        
+        const limitedEvents = events.slice(-limit);
+        
+        await reportToDashboard('robot_fleet_get_events', { 
+          eventCount: limitedEvents.length 
+        });
+        
+        return {
+          success: true,
+          events: limitedEvents,
+          totalEvents: events.length
+        };
+      } catch (e: any) {
+        logger.error(e, '[Tools] Error in robot_fleet_get_events');
+        throw e;
+      }
+    }
+  }),
+
+  robot_fleet_get_robots: tool({
+    description: 'Get detailed information about all robots in the fleet including their status, earnings, and task count.',
+    parameters: z.object({
+      context: z.string().describe('Reason for getting robot information.')
+    }),
+    // @ts-ignore
+    execute: async ({ context }: { context: string }) => {
+      try {
+        const robots = robotFleetService.getRobots();
+        
+        const status = robotFleetService.getFleetStatus();
+        
+        await reportToDashboard('robot_fleet_get_robots', { 
+          robotCount: robots.length,
+          workingCount: robots.filter(r => r.status === 'Working').length,
+          idleCount: robots.filter(r => r.status === 'Idle').length
+        });
+        
+        return {
+          success: true,
+          robots: robots,
+          summary: {
+            total: robots.length,
+            working: robots.filter(r => r.status === 'Working').length,
+            idle: robots.filter(r => r.status === 'Idle').length,
+            totalEarned: status.fleetTotalEarned
+          }
+        };
+      } catch (e: any) {
+        logger.error(e, '[Tools] Error in robot_fleet_get_robots');
         throw e;
       }
     }
