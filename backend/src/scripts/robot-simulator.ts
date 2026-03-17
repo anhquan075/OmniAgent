@@ -66,7 +66,8 @@ export function getFleetStatus() {
     enabled: fleetConfig?.enabled || false,
     robots: robotList,
     fleetTotalEarned: fleetTotalEarned.toFixed(4),
-    recentEvents: getRecentEvents().slice(-10)
+    recentEvents: getRecentEvents().slice(-10),
+    latestTxHash: getRecentEvents()[0]?.txHash || null
   };
 }
 

@@ -659,15 +659,4 @@ The script auto-updates `.env` with the correct oracle address.
 
 ---
 
-## Competition Analysis
-
-| Feature | OmniWDK | tsentry | shll-safe | paymind |
-|---------|---------|---------|-----------|---------|
-| Multi-VM | Yes | No | No | No |
-| PolicyGuard | Yes | No | Yes | No |
-| X402 | Yes | No | No | No |
-| Production | Yes | Partial | Yes | Yes |
-
----
-
 OmniWDK: Where robots manage robots' money.
