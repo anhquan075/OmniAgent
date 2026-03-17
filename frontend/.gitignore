@@ -1,1 +1,11 @@
 .vercel
+
+# Playwright test artifacts
+playwright-report/
+test-results/
+test-results-*.json
+.last-run.json
+
+# Screenshots and traces
+screenshots/
+traces/
