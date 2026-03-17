@@ -12,7 +12,7 @@ interface AgentBrainProps {
 export default function AgentBrain({ stats }: AgentBrainProps) {
   const { isConnected } = useAccount();
 
-  const getRiskColor = (drawdown) => {
+  const getRiskColor = (drawdown: number) => {
     if (drawdown >= 2000) return 'text-red-500 bg-red-500/10 border-red-500/20';
     if (drawdown >= 1000) return 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20';
     return 'text-tether-teal bg-tether-teal/10 border-tether-teal/20';

@@ -389,6 +389,12 @@ pnpm robot:dev       # Robot fleet in watch mode
 # Frontend
 pnpm run dev         # Development server
 pnpm run build       # Production build
+
+# E2E Testing (Playwright)
+cd frontend
+pnpm playwright test              # Run all tests (headless)
+pnpm playwright test --headed     # Run tests with visible browser
+pnpm playwright test mcp-api.spec.ts --headed  # Run specific test file
 ```
 
 **Note:** All services (MCP, SSE Dashboard, Robot Fleet) run as unified endpoints in the main backend server. No separate processes are spawned.

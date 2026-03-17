@@ -14,12 +14,13 @@ export default defineConfig({
     baseURL: 'http://localhost:5175',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    headless: false, // Run in headed mode (browser visible)
   },
 
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], headless: false },
     },
   ],
 

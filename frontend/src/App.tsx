@@ -47,6 +47,7 @@ const INITIAL_SESSION_ID = 'session-' + Date.now();
 export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
+  const [mcpToolsExpanded, setMcpToolsExpanded] = useState(true);
   const [minting, setMinting] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const queryClient = useQueryClient();
@@ -367,8 +368,8 @@ export default function App() {
             ${isMobileMenuOpen ? 'fixed inset-0 top-[68px] md:top-[80px] z-40 bg-space-black/95 p-6 overflow-y-auto' : 'hidden'} 
             lg:relative lg:inset-auto lg:flex lg:flex-[2.5] xl:flex-[2] lg:flex-col lg:gap-4 xl:gap-6 lg:min-w-0 lg:min-h-0 lg:bg-transparent lg:overflow-hidden
           `}>
-            <BentoCard title="MCP Tools" icon={ServerIcon} className="h-[400px] md:h-[480px] shrink-0">
-              <MCPServerDemo />
+            <BentoCard title="MCP Tools" icon={ServerIcon} className={`shrink-0 transition-all duration-300 ${mcpToolsExpanded ? 'h-[400px] md:h-[480px]' : 'h-[40px]'}`}>
+              <MCPServerDemo isExpanded={mcpToolsExpanded} onToggleExpand={setMcpToolsExpanded} />
             </BentoCard>
 
             <div className="flex-1 min-h-0 glass-dark rounded-3xl overflow-hidden border border-white/10 relative mt-4 lg:mt-0">
@@ -413,7 +414,7 @@ export default function App() {
 
               <BentoCard title="Agent Live Strategy" icon={BrainCircuitIcon} className="flex-1 min-h-[300px]">
                 <div className="h-full overflow-y-auto custom-scrollbar pr-2">
-                  <AgentBrain />
+                  <AgentBrain stats={stats} />
                 </div>
               </BentoCard>
             </div>
