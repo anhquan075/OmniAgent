@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WdkExecutor = void 0;
 const PolicyGuard_1 = require("./PolicyGuard");
+const logger_1 = require("../../utils/logger");
 class WdkExecutor {
     wdk;
     constructor(wdk) {
@@ -19,12 +20,12 @@ class WdkExecutor {
             portfolioValue: contextInfo.portfolioValue
         });
         if (violation.violated) {
-            console.warn(`[WdkExecutor] 🚫 Transaction Blocked by PolicyGuard: ${violation.reason}`);
+            logger_1.logger.warn({ severity: violation.severity, reason: violation.reason }, '[WdkExecutor] Transaction Blocked by PolicyGuard');
             throw new Error(`PolicyGuard Blocked Transaction: [${violation.severity}] ${violation.reason}`);
         }
         const account = await this.wdk.getAccount(chain);
         // Proceed with the real WDK transaction
-        console.log(`[WdkExecutor] ✅ Transaction passed PolicyGuard. Sending...`);
+        logger_1.logger.info('[WdkExecutor] Transaction passed PolicyGuard. Sending...');
         const tx = await account.sendTransaction(txParams);
         // Record the successful transaction to update daily volume and limits
         policyGuard.recordTransaction(amount, toAddress);

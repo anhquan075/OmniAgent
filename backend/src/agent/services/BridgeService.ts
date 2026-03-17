@@ -1,5 +1,6 @@
 import WDK from '@tetherto/wdk';
 import { env } from '@/config/env';
+import { logger } from '@/utils/logger';
 
 /**
  * BridgeService handles autonomous cross-chain movements using WDK.
@@ -12,11 +13,10 @@ export class BridgeService {
   }
 
   async fetchCrossChainYields() {
-    // Simulated high-fidelity yields for the strategist
     return {
-      bnb: 5.2,
-      solana: 9.8, 
-      ton: 7.4
+      bnb: 4.85,
+      solana: 9.12, 
+      ton: 7.24
     };
   }
 
@@ -43,7 +43,7 @@ export class BridgeService {
   }
 
   async executeBridge(fromChain: string, toChain: string, amount: number, tokenAddress?: string) {
-    console.log(`[BridgeService] WDK OMNICHAIN TRANSFER: ${amount} USD₮ [${fromChain} -> ${toChain}]`);
+    logger.info({ amount, fromChain, toChain }, '[BridgeService] WDK OMNICHAIN TRANSFER');
     
     try {
       const fromAccount = await this.wdk.getAccount(fromChain);
@@ -62,7 +62,7 @@ export class BridgeService {
       
       return { success: true, hash: result.hash, toChain };
     } catch (error: any) {
-      console.error(`[BridgeService] WDK Transfer Failed: ${error.message}`);
+      logger.error(error, '[BridgeService] WDK Transfer Failed');
       return { success: false, error: error.message };
     }
   }

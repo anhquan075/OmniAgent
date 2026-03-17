@@ -1,16 +1,22 @@
 import { z } from 'zod';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import * as fs from 'fs';
+import { logger } from '@/utils/logger';
 
-// Load .env.wdk from parent directory
-const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env.wdk';
+// Load .env file (primary configuration)
+const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
 const envPath = path.resolve(process.cwd(), envFile);
 dotenv.config({ path: envPath });
 
-// Fallback to regular .env if .env.wdk is missing
-dotenv.config();
+// Fallback to .env.wdk for backward compatibility (deprecated)
+const legacyEnvPath = path.resolve(process.cwd(), '.env.wdk');
+if (fs.existsSync(legacyEnvPath)) {
+  logger.warn('[Env] Using .env.wdk (deprecated). Please migrate to .env');
+  dotenv.config({ path: legacyEnvPath, override: false });
+}
 
-console.log(`[Env] BNB_RPC_URL from process.env: ${process.env.BNB_RPC_URL}`);
+logger.info({ rpcUrl: process.env.BNB_RPC_URL }, '[Env] BNB_RPC_URL from process.env');
 
 const envSchema = z.object({
   PORT: z.string().default('3001'),
@@ -32,10 +38,15 @@ const envSchema = z.object({
   WDK_XAUT_ADDRESS: z.string().optional(),
   WDK_RISK_POLICY_ADDRESS: z.string().optional(),
   WDK_SHARPE_TRACKER_ADDRESS: z.string().optional(),
+  WDK_AAVE_ADAPTER_ADDRESS: z.string().optional(),
+  WDK_LZ_ADAPTER_ADDRESS: z.string().optional(),
   GITHUB_WEBHOOK_SECRET: z.string().optional(),
   OPENROUTER_API_KEY: z.string().optional(),
+  PRIVATE_KEY: z.string().optional(),
+  SOLANA_PRIVATE_KEY: z.string().optional(),
+  TON_PRIVATE_KEY: z.string().optional(),
   OPENROUTER_BASE_URL: z.string().default('https://openrouter.ai/api/v1'),
-  OPENROUTER_MODEL_GENERAL: z.string().default('google/gemini-2.0-flash-exp:free'),
+  OPENROUTER_MODEL_GENERAL: z.string().default('google/gemini-2.0-flash-001'),
   OPENROUTER_MODEL_CRYPTO: z.string().default('deepseek/deepseek-chat'),
 
   OPENCLAW_GATEWAY_URL: z.string().default('https://gateway.openclaw.com/api').optional(),
@@ -48,12 +59,16 @@ const envSchema = z.object({
 
   DEPLOYMENT_MODE: z.enum(['local', 'production']).default('local'),
   AGENT_CRON_SECRET: z.string().optional(),
+
+  ERC4337_FACTORY_ADDRESS: z.string().optional(),
+  ERC4337_PAYMASTER_ADDRESS: z.string().optional(),
+  ERC4337_ENTRYPOINT_ADDRESS: z.string().default('0x5FF137D4a0ADCA4B1FB0b8274Ea4dE461a706c12'),
 });
 
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error('❌ Invalid environment variables:', parsed.error.format());
+  logger.error({ errors: parsed.error.format() }, '[Env] Invalid environment variables');
   process.exit(1);
 }
 

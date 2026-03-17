@@ -40,7 +40,8 @@ describe("WDKVault V2 Integration", function () {
       300, 200, 500, 99000000n, 100, 100,
       2000, 5000, 7000,
       5, 3600, 500, 5, 5000,
-      2000, 1500, 500
+      2000, 1500, 500,
+      1000, ethers.parseUnits("1.2", 18)
     );
 
     // Deploy CircuitBreaker
@@ -73,6 +74,9 @@ describe("WDKVault V2 Integration", function () {
     const secondaryAdapter = await ManagedAdapter.deploy(usdt.target, deployer.address);
     const lpAdapter = await ManagedAdapter.deploy(usdt.target, deployer.address);
 
+    const MockLendingAdapter = await ethers.getContractFactory("MockLendingAdapter");
+    const lendingAdapter = await MockLendingAdapter.deploy(usdt.target, deployer.address);
+
     // Deploy WDKVault
     const WDKVault = await ethers.getContractFactory("WDKVault");
     const vault = await WDKVault.deploy(
@@ -95,10 +99,11 @@ describe("WDKVault V2 Integration", function () {
 
     // Wire everything
     await vault.setEngine(engine.target);
-    await vault.setAdapters(wdkAdapter.target, secondaryAdapter.target, lpAdapter.target);
+    await vault.setAdapters(wdkAdapter.target, secondaryAdapter.target, lpAdapter.target, lendingAdapter.target);
     await wdkAdapter.setVault(vault.target);
     await secondaryAdapter.setVault(vault.target);
     await lpAdapter.setVault(vault.target);
+    await lendingAdapter.setVault(vault.target);
 
     // Lock configuration
     await wdkAdapter.lockConfiguration();

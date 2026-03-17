@@ -10,6 +10,7 @@ const AgentService_1 = require("../../agent/services/AgentService");
 const crypto_1 = __importDefault(require("crypto"));
 const events_1 = require("events");
 const AutonomousLoop_1 = require("../../agent/AutonomousLoop");
+const logger_1 = require("../../utils/logger");
 const agent = new hono_1.Hono();
 const agentEvents = new events_1.EventEmitter();
 let agentHistory = [];
@@ -79,7 +80,7 @@ agent.post('/webhook', async (c) => {
         return c.text('Invalid signature', 401);
     }
     const payload = JSON.parse(rawBody);
-    console.log(`[Webhook] Received event: ${eventName}`);
+    logger_1.logger.info({ event: eventName }, '[Webhook] Received event');
     // Trigger rebalance on specific events
     let shouldTrigger = false;
     if (eventName === 'pull_request' && payload.pull_request?.merged)
@@ -89,7 +90,7 @@ agent.post('/webhook', async (c) => {
     if (eventName === 'push')
         shouldTrigger = true;
     if (shouldTrigger) {
-        AgentService_1.AgentService.runCycle().catch(e => console.error('[Webhook] Rebalance trigger failed:', e));
+        AgentService_1.AgentService.runCycle().catch(e => logger_1.logger.error(e, '[Webhook] Rebalance trigger failed'));
         return c.json({ success: true, message: 'Autonomous cycle triggered' });
     }
     return c.json({ success: true, message: 'Event logged' });
@@ -113,7 +114,7 @@ agent.post('/run-cycle', async (c) => {
         });
     }
     catch (e) {
-        console.error('[RunCycle] Cron-triggered cycle failed:', e.message);
+        logger_1.logger.error(e, '[RunCycle] Cron-triggered cycle failed');
         return c.json({ success: false, error: e.message }, 500);
     }
 });

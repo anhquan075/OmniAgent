@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BridgeService = void 0;
 const env_1 = require("../../config/env");
+const logger_1 = require("../../utils/logger");
 /**
  * BridgeService handles autonomous cross-chain movements using WDK.
  */
@@ -11,11 +12,10 @@ class BridgeService {
         this.wdk = wdk;
     }
     async fetchCrossChainYields() {
-        // Simulated high-fidelity yields for the strategist
         return {
-            bnb: 5.2,
-            solana: 9.8,
-            ton: 7.4
+            bnb: 4.85,
+            solana: 9.12,
+            ton: 7.24
         };
     }
     async analyzeBridgeOpportunity(currentChain, threshold = 2.0) {
@@ -36,7 +36,7 @@ class BridgeService {
         return { shouldBridge: false };
     }
     async executeBridge(fromChain, toChain, amount, tokenAddress) {
-        console.log(`[BridgeService] WDK OMNICHAIN TRANSFER: ${amount} USD₮ [${fromChain} -> ${toChain}]`);
+        logger_1.logger.info({ amount, fromChain, toChain }, '[BridgeService] WDK OMNICHAIN TRANSFER');
         try {
             const fromAccount = await this.wdk.getAccount(fromChain);
             const toAccount = await this.wdk.getAccount(toChain);
@@ -52,7 +52,7 @@ class BridgeService {
             return { success: true, hash: result.hash, toChain };
         }
         catch (error) {
-            console.error(`[BridgeService] WDK Transfer Failed: ${error.message}`);
+            logger_1.logger.error(error, '[BridgeService] WDK Transfer Failed');
             return { success: false, error: error.message };
         }
     }

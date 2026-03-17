@@ -2,6 +2,8 @@ import {
   type LanguageModelMiddleware,
   simulateReadableStream,
 } from 'ai';
+import { logger } from '@/utils/logger';
+
 // Simple in-memory cache for demo purposes
 const cache = new Map<string, any>();
 
@@ -9,7 +11,7 @@ export const cacheMiddleware: any = {
   wrapGenerate: async ({ doGenerate, params }: any) => {
     const cacheKey = JSON.stringify(params);
     if (cache.has(cacheKey)) {
-      console.log('[Cache] Hit (Generate)');
+      logger.debug({ type: 'generate' }, '[Cache] Hit');
       return cache.get(cacheKey);
     }
 
@@ -22,7 +24,7 @@ export const cacheMiddleware: any = {
     const cacheKey = JSON.stringify(params);
 
     if (cache.has(cacheKey)) {
-      console.log('[Cache] Hit (Stream)');
+      logger.debug({ type: 'stream' }, '[Cache] Hit');
       const cachedResult = cache.get(cacheKey);
       return {
         ...cachedResult,

@@ -3,6 +3,7 @@ import {
   generateText,
 } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
+import { logger } from '@/utils/logger';
 
 // Lightweight model for cost-efficient guardrails
 const gatekeeperModel = createOpenAI({
@@ -58,7 +59,7 @@ export const strategicGuardrail: any = {
           } as any;
         }
       } catch (e) {
-        console.error('[Guardrail] Input check failed:', e);
+        logger.error(e, '[Guardrail] Input check failed');
         // Fail-safe: allow if gatekeeper is down
       }
     }

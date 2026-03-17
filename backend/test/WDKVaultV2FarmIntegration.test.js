@@ -67,23 +67,10 @@ describe("WDKVault V2 — Farm Integration Tests", function () {
 
     const RiskPolicy = await ethers.getContractFactory("RiskPolicy");
     const policy = await RiskPolicy.deploy(
-      300,
-      200,
-      500,
-      99000000n,
-      200,
-      100,
-      2000,
-      5000,
-      7000,
-      5,
-      3600,
-      500,
-      5,
-      5000,
-      2000,
-      1500,
-      500
+      300, 200, 500, 99000000n, 200, 100,
+      2000, 5000, 7000, 5, 3600, 500, 5, 5000,
+      2000, 1500, 500,
+      1000, ethers.parseUnits("1.2", 18)
     );
 
     const CircuitBreaker = await ethers.getContractFactory("CircuitBreaker");
@@ -139,13 +126,16 @@ describe("WDKVault V2 — Farm Integration Tests", function () {
       usdt.target,
       stableSwapPool.target,
       cake.target,
-      deployer.address, // wbnb (mock placeholder for gas-gated harvest)
-      stableSwapPool.target,
+      deployer.address, // wbnb
+      stableSwapPool.target, // pool
       masterChef.target,
       pancakeRouter.target,
       poolId,
       deployer.address
     );
+
+    const MockLendingAdapter = await ethers.getContractFactory("MockLendingAdapter");
+    const lendingAdapter = await MockLendingAdapter.deploy(usdt.target, deployer.address);
 
     const WDKVault = await ethers.getContractFactory("WDKVault");
     const vault = await WDKVault.deploy(
@@ -166,16 +156,13 @@ describe("WDKVault V2 — Farm Integration Tests", function () {
       100000000n
     );
 
-    await vault.setEngine(engine.target);
     await sharpeTracker.setEngine(engine.target);
-    await vault.setAdapters(
-      wdkAdapter.target,
-      secondaryAdapter.target,
-      lpAdapter.target
-    );
+    await vault.setEngine(engine.target);
+    await vault.setAdapters(wdkAdapter.target, secondaryAdapter.target, lpAdapter.target, lendingAdapter.target);
     await wdkAdapter.setVault(vault.target);
     await secondaryAdapter.setVault(vault.target);
     await lpAdapter.setVault(vault.target);
+    await lendingAdapter.setVault(vault.target);
 
     await wdkAdapter.lockConfiguration();
     await secondaryAdapter.lockConfiguration();
@@ -455,23 +442,10 @@ describe("WDKVault V2 — Farm Integration Tests", function () {
 
       const RiskPolicy = await ethers.getContractFactory("RiskPolicy");
       const policy2 = await RiskPolicy.deploy(
-        300,
-        200,
-        500,
-        99000000n,
-        200,
-        100,
-        2000,
-        5000,
-        7000,
-        5,
-        3600,
-        500,
-        5,
-        5000,
-        0,
-        0,
-        0
+        300, 200, 500, 99000000n, 200, 100,
+        2000, 5000, 7000, 5, 3600, 500, 5, 5000,
+        0, 0, 0,
+        1000, ethers.parseUnits("1.2", 18)
       );
 
       const MockChainlinkAggregator = await ethers.getContractFactory(
@@ -540,15 +514,21 @@ describe("WDKVault V2 — Farm Integration Tests", function () {
         deployer.address
       );
 
+      const MockLendingAdapter = await ethers.getContractFactory("MockLendingAdapter");
+      const lending2 = await MockLendingAdapter.deploy(usdt.target, deployer.address);
+      await lending2.setVault(vault2.target);
+
       await vault2.setAdapters(
         adapter1.target,
         adapter2.target,
-        ethers.ZeroAddress
+        ethers.ZeroAddress,
+        lending2.target
       );
       await adapter1.setVault(vault2.target);
       await adapter2.setVault(vault2.target);
       await adapter1.lockConfiguration();
       await adapter2.lockConfiguration();
+      await lending2.lockConfiguration();
       await vault2.lockConfiguration();
 
       await usdt.mint(user.address, ethers.parseUnits("10000", 18));

@@ -21,6 +21,8 @@ const zod_1 = require("zod");
 const env_1 = require("../config/env");
 const ethers_2 = require("../contracts/clients/ethers");
 const axios_1 = __importDefault(require("axios"));
+const logger_1 = require("../utils/logger");
+const layerzero_bridge_client_1 = require("../protocols/layerzero-bridge-client");
 function validateWDKSecretSeed() {
     const seed = env_1.env.WDK_SECRET_SEED;
     if (!seed) {
@@ -60,7 +62,9 @@ async function reportToDashboard(node, details = {}) {
             details
         }, { timeout: 2000 });
     }
-    catch (e) { }
+    catch (e) {
+        logger_1.logger.warn(e, `[Tools] Failed to report ${node} to dashboard`);
+    }
 }
 /**
  * Agent Tools Definition
@@ -89,16 +93,16 @@ exports.agentTools = {
                 let bufferTarget = 0;
                 try {
                     const buffer = await vault.bufferStatus();
-                    // Buffer status returns (uint256 bufferTarget, uint256 idleBalance, uint256 utilizationBps)
-                    const targetRaw = buffer.bufferTarget ?? buffer[0] ?? 0n;
-                    const currentRaw = buffer.idleBalance ?? buffer[1] ?? 0n;
+                    // Buffer status returns (uint256 current, uint256 target, uint256 utilizationBps)
+                    const currentRaw = buffer.current ?? buffer[0] ?? 0n;
+                    const targetRaw = buffer.target ?? buffer[1] ?? 0n;
                     const utilizationRaw = buffer.utilizationBps ?? buffer[2] ?? 0n;
                     bufferTarget = Number(ethers_1.ethers.formatUnits(targetRaw, tokenDecimals));
                     bufferCurrent = Number(ethers_1.ethers.formatUnits(currentRaw, tokenDecimals));
                     bufferUtilizationBps = Number(utilizationRaw);
                 }
                 catch (e) {
-                    console.warn("Could not fetch buffer status:", e);
+                    logger_1.logger.warn(e, '[Tools] Could not fetch buffer status');
                 }
                 const res = {
                     vault: await vault.getAddress(),
@@ -137,7 +141,7 @@ exports.agentTools = {
                         nativeBalance = ethers_1.ethers.formatUnits(nativeBigInt, decimals);
                     }
                     catch (e) {
-                        console.warn(`[MultiVM] Failed to get native balance for ${network}:`, e);
+                        logger_1.logger.warn(e, `[MultiVM] Failed to get native balance for ${network}`);
                     }
                     let usdtBalance = "0";
                     try {
@@ -148,7 +152,7 @@ exports.agentTools = {
                         }
                     }
                     catch (e) {
-                        console.warn(`[MultiVM] Failed to get USDT balance for ${network}:`, e);
+                        logger_1.logger.warn(e, `[MultiVM] Failed to get USDT balance for ${network}`);
                     }
                     results[network] = {
                         address,
@@ -243,7 +247,7 @@ exports.agentTools = {
                 estimatedSlippageBps: 100,
             });
             if (policyViolation.violated) {
-                console.warn(`[Rebalance] Policy violation: ${policyViolation.reason}`);
+                logger_1.logger.warn({ reason: policyViolation.reason }, '[Rebalance] Policy violation');
                 await reportToDashboard('executeRebalance', {
                     actionTaken: 'BLOCKED_BY_POLICY',
                     reason: policyViolation.reason,
@@ -311,7 +315,7 @@ exports.agentTools = {
                 targetAllocation: { engine: 40, vault: 60 },
                 estimatedGasPerSwap: '1000000',
             });
-            console.log(`[Rebalance] Profit simulation: ${JSON.stringify(profitSim)}`);
+            logger_1.logger.debug({ profitSim }, '[Rebalance] Profit simulation');
             try {
                 const tx = await wdkExecutor.sendTransaction('bnb', {
                     to: txRequest.to,
@@ -323,7 +327,7 @@ exports.agentTools = {
                 return res;
             }
             catch (error) {
-                console.warn(`[Rebalance] Execution failed: ${error.message}`);
+                logger_1.logger.warn(error, '[Rebalance] Execution failed');
                 return {
                     actionTaken: 'BLOCKED_BY_POLICY_DURING_EXECUTION',
                     reason: error.message
@@ -348,7 +352,7 @@ exports.agentTools = {
                 portfolioValue: (await vault.totalAssets()).toString(),
             });
             if (policyViolation.violated) {
-                console.warn(`[Bridge] Policy violation: ${policyViolation.reason}`);
+                logger_1.logger.warn({ reason: policyViolation.reason }, '[Bridge] Policy violation');
                 return { actionTaken: 'BLOCKED_BY_POLICY', reason: policyViolation.reason };
             }
             const opportunity = await bridgeService.analyzeBridgeOpportunity('bnb', threshold);
@@ -363,7 +367,7 @@ exports.agentTools = {
                     holdingPeriodDays: 30,
                 });
                 if (!profitSim.isViable) {
-                    console.log(`[Bridge] Not viable: ${profitSim.profitMargin}% margin`);
+                    logger_1.logger.info({ margin: profitSim.profitMargin }, '[Bridge] Not viable');
                     return { actionTaken: 'SKIPPED_NOT_PROFITABLE', profitMargin: profitSim.profitMargin };
                 }
                 const bridgeResult = await bridgeService.executeBridge('bnb', opportunity.targetChain || '', 100);
@@ -396,7 +400,7 @@ exports.agentTools = {
                 estimatedSlippageBps: 0,
             });
             if (policyViolation.violated) {
-                console.warn(`[X402] Policy violation: ${policyViolation.reason}`);
+                logger_1.logger.warn({ reason: policyViolation.reason }, '[X402] Policy violation');
                 return { status: "failed", error: `Policy violation: ${policyViolation.reason}` };
             }
             try {
@@ -409,7 +413,7 @@ exports.agentTools = {
                     expectedOutput: paymentAmount,
                     slippage: 0,
                 });
-                console.log(`[X402] Payment simulation: ${JSON.stringify(paymentSim)}`);
+                logger_1.logger.debug({ paymentSim }, '[X402] Payment simulation');
                 const insightData = await x402.payAndFetch(serviceUrl, providerAddress, paymentAmount, profile.level, portfolioValue.toString());
                 policyGuard.recordTransaction(paymentAmount);
                 return {
@@ -447,7 +451,7 @@ exports.agentTools = {
                         expectedOutput: yieldAmount.toString(),
                         slippage: 0,
                     });
-                    console.log(`[YieldSweep] Yield simulation: ${JSON.stringify(yieldSim)}`);
+                    logger_1.logger.debug({ yieldSim }, '[YieldSweep] Yield simulation');
                     try {
                         const riskService = new RiskService_1.RiskService(zkOracle, breaker, exports.wdk);
                         const profile = await riskService.getRiskProfile();
@@ -466,7 +470,7 @@ exports.agentTools = {
                         return res;
                     }
                     catch (error) {
-                        console.warn(`[YieldSweep] Blocked by policy guard: ${error.message}`);
+                        logger_1.logger.warn(error, '[YieldSweep] Blocked by policy guard');
                         return { actionTaken: 'BLOCKED_BY_POLICY', message: error.message };
                     }
                 }
@@ -476,5 +480,94 @@ exports.agentTools = {
                 return { error: "Yield sweep failed", message: e.message };
             }
         },
+    }),
+    supply_to_aave: (0, ai_1.tool)({
+        description: 'Supply USDT to Aave V3 on BNB Chain to earn yield.',
+        parameters: zod_1.z.object({
+            amount: zod_1.z.string().describe('Amount of USDT to supply (in decimal USDT, e.g., "100.5")')
+        }),
+        // @ts-ignore
+        execute: async ({ amount }) => {
+            if (!env_1.env.WDK_AAVE_ADAPTER_ADDRESS)
+                return { status: "failed", error: "Aave adapter address not configured" };
+            const riskService = new RiskService_1.RiskService(zkOracle, breaker, exports.wdk);
+            const profile = await riskService.getRiskProfile();
+            const usdtAmount = ethers_1.ethers.parseUnits(amount, 6);
+            try {
+                const tx = await wdkExecutor.sendTransaction('bnb', {
+                    to: env_1.env.WDK_AAVE_ADAPTER_ADDRESS,
+                    data: new ethers_1.Interface(["function onVaultDeposit(uint256 amount) external"]).encodeFunctionData("onVaultDeposit", [usdtAmount])
+                }, {
+                    riskLevel: profile.level,
+                    portfolioValue: (await vault.totalAssets()).toString(),
+                    estimatedAmount: usdtAmount.toString()
+                });
+                return { status: "success", action: "AAVE_SUPPLY", txHash: tx.hash };
+            }
+            catch (e) {
+                return { status: "failed", error: e.message };
+            }
+        }
+    }),
+    withdraw_from_aave: (0, ai_1.tool)({
+        description: 'Withdraw USDT from Aave V3 on BNB Chain back to the vault.',
+        parameters: zod_1.z.object({
+            amount: zod_1.z.string().describe('Amount of USDT to withdraw (in decimal USDT, e.g., "100.5")')
+        }),
+        // @ts-ignore
+        execute: async ({ amount }) => {
+            if (!env_1.env.WDK_AAVE_ADAPTER_ADDRESS)
+                return { status: "failed", error: "Aave adapter address not configured" };
+            const riskService = new RiskService_1.RiskService(zkOracle, breaker, exports.wdk);
+            const profile = await riskService.getRiskProfile();
+            const usdtAmount = ethers_1.ethers.parseUnits(amount, 6);
+            try {
+                const tx = await wdkExecutor.sendTransaction('bnb', {
+                    to: env_1.env.WDK_AAVE_ADAPTER_ADDRESS,
+                    data: new ethers_1.Interface(["function withdrawToVault(uint256 amount) external returns (uint256)"]).encodeFunctionData("withdrawToVault", [usdtAmount])
+                }, {
+                    riskLevel: profile.level,
+                    portfolioValue: (await vault.totalAssets()).toString(),
+                    estimatedAmount: usdtAmount.toString()
+                });
+                return { status: "success", action: "AAVE_WITHDRAW", txHash: tx.hash };
+            }
+            catch (e) {
+                return { status: "failed", error: e.message };
+            }
+        }
+    }),
+    bridge_via_layerzero: (0, ai_1.tool)({
+        description: 'Bridge USDT to another chain via LayerZero.',
+        parameters: zod_1.z.object({
+            amount: zod_1.z.string().describe('Amount of USDT to bridge'),
+            dstEid: zod_1.z.number().describe('Destination LayerZero Endpoint ID')
+        }),
+        // @ts-ignore
+        execute: async ({ amount, dstEid }) => {
+            if (!env_1.env.WDK_LZ_ADAPTER_ADDRESS)
+                return { status: "failed", error: "LayerZero adapter address not configured" };
+            const riskService = new RiskService_1.RiskService(zkOracle, breaker, exports.wdk);
+            const profile = await riskService.getRiskProfile();
+            const usdtAmount = ethers_1.ethers.parseUnits(amount, 6);
+            const options = '0x00030100110100000000000000000000000000030d40'; // Example gas options
+            try {
+                const adapter = new layerzero_bridge_client_1.LayerZeroBridgeClient(env_1.env.WDK_LZ_ADAPTER_ADDRESS, (await exports.wdk.getAccount('bnb')).signer);
+                const fee = await adapter.getQuote(dstEid, usdtAmount, options);
+                const tx = await wdkExecutor.sendTransaction('bnb', {
+                    to: env_1.env.WDK_LZ_ADAPTER_ADDRESS,
+                    data: new ethers_1.Interface(["function bridge(uint32 dstEid, uint256 amount, bytes calldata options) external payable"]).encodeFunctionData("bridge", [dstEid, usdtAmount, options]),
+                    value: fee
+                }, {
+                    riskLevel: profile.level,
+                    portfolioValue: (await vault.totalAssets()).toString(),
+                    estimatedAmount: usdtAmount.toString()
+                });
+                return { status: "success", action: "LZ_BRIDGE", txHash: tx.hash };
+            }
+            catch (e) {
+                return { status: "failed", error: e.message };
+            }
+        }
     })
 };

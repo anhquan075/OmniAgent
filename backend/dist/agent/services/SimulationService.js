@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SimulationService = void 0;
 const ethers_1 = require("ethers");
+const logger_1 = require("../../utils/logger");
 class SimulationService {
     provider;
     constructor(rpcUrl) {
@@ -11,7 +12,7 @@ class SimulationService {
      * Simulates a transaction using eth_call.
      */
     async simulateTransaction(tx) {
-        console.log(`[SimulationService] Simulating transaction to ${tx.to}...`);
+        logger_1.logger.info({ to: tx.to }, '[SimulationService] Simulating transaction');
         try {
             const data = await this.provider.call({
                 to: tx.to,
@@ -19,11 +20,11 @@ class SimulationService {
                 data: tx.data,
                 value: tx.value || 0n,
             });
-            console.log(`[SimulationService] Simulation succeeded.`);
+            logger_1.logger.info('[SimulationService] Simulation succeeded');
             return { success: true, data };
         }
         catch (error) {
-            console.error(`[SimulationService] Simulation failed! Reason: ${error.message}`);
+            logger_1.logger.error(error, '[SimulationService] Simulation failed');
             let reason = 'Unknown revert';
             if (error.data) {
                 reason = error.data;

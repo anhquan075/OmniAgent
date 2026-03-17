@@ -1,5 +1,6 @@
 import { ethers, Contract } from 'ethers';
 import { env } from '@/config/env';
+import { logger } from '@/utils/logger';
 
 // Load ABIs
 import {
@@ -11,7 +12,7 @@ import {
   GroupSyndicateAbi
 } from '../abis';
 
-console.log(`[Ethers] Initializing provider with: ${env.BNB_RPC_URL}`);
+logger.info({ rpcUrl: env.BNB_RPC_URL }, '[Ethers] Initializing provider');
 const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
 
 export const getContracts = () => {

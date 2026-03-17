@@ -10,6 +10,10 @@ import {RiskPolicy} from "./RiskPolicy.sol";
 import {SharpeTracker} from "./SharpeTracker.sol";
 import {WDKVault} from "./WDKVault.sol";
 
+interface IAaveAdapter {
+    function getHealthFactor() external view returns (uint256);
+}
+
 /// @title StrategyEngine — Cycle execution with circuit breaker, Dutch auction bounty, and Sharpe tracking
 contract StrategyEngine {
     uint256 public constant BPS_DENOMINATOR = 10_000;
@@ -26,6 +30,7 @@ contract StrategyEngine {
         uint256 volatilityBps;
         uint256 targetWDKBps;
         uint256 targetLpBps;
+        uint256 targetLendingBps;
         uint256 bountyBps;
         bool breakerPaused;
         int256 meanYieldBps;
@@ -33,6 +38,7 @@ contract StrategyEngine {
         int256 sharpeRatio;
         uint256 auctionElapsedSeconds;
         uint256 bufferUtilizationBps;
+        uint256 healthFactor;
     }
 
     struct FlashRebalanceData {
@@ -42,7 +48,7 @@ contract StrategyEngine {
         uint256 amount;
     }
 
-    event DecisionProofV2(address indexed executor, RiskState indexed nextState, uint256 price, uint256 previousPrice, uint256 volatilityBps, uint256 targetWDKBps, uint256 targetLpBps, uint256 bountyBps, bool breakerPaused, int256 sharpeRatio, uint256 auctionElapsed, uint256 bufferUtilizationBps);
+    event DecisionProofV2(address indexed executor, RiskState indexed nextState, uint256 price, uint256 previousPrice, uint256 volatilityBps, uint256 targetWDKBps, uint256 targetLpBps, uint256 targetLendingBps, uint256 bountyBps, bool breakerPaused, int256 sharpeRatio, uint256 auctionElapsed, uint256 bufferUtilizationBps);
     event FlashRebalanceRequested(address indexed flashPool, address indexed fromAdapter, address indexed toAdapter, uint256 principal);
     event FlashRebalanceSettled(address indexed flashPool, address indexed fromAdapter, address indexed toAdapter, uint256 principal, uint256 fee);
 
@@ -57,6 +63,7 @@ contract StrategyEngine {
     error StrategyEngine__InvalidFlashAsset();
     error StrategyEngine__NoActiveFlash();
     error StrategyEngine__YieldOverflow();
+    error StrategyEngine__LendingHealthTooLow(uint256 current, uint256 min);
 
     WDKVault public immutable vault;
     RiskPolicy public immutable policy;
@@ -124,11 +131,18 @@ contract StrategyEngine {
         uint256 price = priceOracle.getPrice();
         uint256 volatility = _previewEwma(_rawVolatilityBps(price, lastPrice));
         RiskState nextState = _selectState(price, volatility);
-        (uint256 wdkBps, uint256 lpBps) = _selectAllocation(nextState);
+        (uint256 wdkBps, uint256 lpBps, uint256 lendingBps) = _selectAllocation(nextState);
         uint256 bountyBps = _auctionBountyBps();
         (int256 meanYield, uint256 yieldVol, int256 sharpe) = sharpeTracker.computeSharpe();
         (, , uint256 bufferUtil) = vault.bufferStatus();
-        preview = DecisionPreviewV2({ executable: canExec && !breakerPaused, reason: breakerPaused ? bytes32("BREAKER_PAUSED") : reason, nextState: nextState, price: price, previousPrice: lastPrice, volatilityBps: volatility, targetWDKBps: wdkBps, targetLpBps: lpBps, bountyBps: bountyBps, breakerPaused: breakerPaused, meanYieldBps: meanYield, yieldVolatilityBps: yieldVol, sharpeRatio: sharpe, auctionElapsedSeconds: _auctionElapsed(), bufferUtilizationBps: bufferUtil });
+        
+        uint256 health;
+        address lending = address(vault.lendingAdapter());
+        if (lending != address(0)) {
+            try IAaveAdapter(lending).getHealthFactor() returns (uint256 h) { health = h; } catch {}
+        }
+
+        preview = DecisionPreviewV2({ executable: canExec && !breakerPaused, reason: breakerPaused ? bytes32("BREAKER_PAUSED") : reason, nextState: nextState, price: price, previousPrice: lastPrice, volatilityBps: volatility, targetWDKBps: wdkBps, targetLpBps: lpBps, targetLendingBps: lendingBps, bountyBps: bountyBps, breakerPaused: breakerPaused, meanYieldBps: meanYield, yieldVolatilityBps: yieldVol, sharpeRatio: sharpe, auctionElapsedSeconds: _auctionElapsed(), bufferUtilizationBps: bufferUtil, healthFactor: health });
     }
 
     function previewAuction() external view returns (uint256 currentBountyBps, uint256 elapsedSeconds, uint256 remainingSeconds, uint256 minBountyBps, uint256 maxBountyBps) {
@@ -143,6 +157,15 @@ contract StrategyEngine {
 
     function previewSharpe() external view returns (int256 mean, uint256 volatility, int256 sharpe) { return sharpeTracker.computeSharpe(); }
     function previewBreaker() external view returns (ICircuitBreaker.BreakerStatus memory) { return circuitBreaker.previewBreaker(); }
+
+    function getHealthFactor() external view returns (uint256) {
+        address lending = address(vault.lendingAdapter());
+        if (lending != address(0)) {
+            try IAaveAdapter(lending).getHealthFactor() returns (uint256 h) { return h; }
+            catch { return 0; }
+        }
+        return 0;
+    }
     
     function riskScore() external view returns (uint256) {
         uint256 price = priceOracle.getPrice();
@@ -170,11 +193,11 @@ contract StrategyEngine {
      * @notice Non-state-modifying simulation of the next cycle.
      * Useful for AI agents to pre-flight their risk scoring without hitting cooldown reverts.
      */
-    function simulateCycle() external view returns (RiskState nextState, uint256 wdkBps, uint256 lpBps, uint256 bountyBps) {
+    function simulateCycle() external view returns (RiskState nextState, uint256 wdkBps, uint256 lpBps, uint256 lendingBps, uint256 bountyBps) {
         uint256 price = priceOracle.getPrice();
         uint256 volatility = _previewEwma(_rawVolatilityBps(price, lastPrice));
         nextState = _selectState(price, volatility);
-        (wdkBps, lpBps) = _selectAllocation(nextState);
+        (wdkBps, lpBps, lendingBps) = _selectAllocation(nextState);
         bountyBps = _auctionBountyBps();
     }
 
@@ -213,18 +236,26 @@ contract StrategyEngine {
         uint256 rawVol = _rawVolatilityBps(price, lastPrice);
         uint256 volatility = _updateEwma(rawVol);
         RiskState nextState = _selectState(price, volatility);
-        (uint256 wdkBps, uint256 lpBps) = _selectAllocation(nextState);
+        (uint256 wdkBps, uint256 lpBps, uint256 lendingBps) = _selectAllocation(nextState);
         uint256 bountyBps = _auctionBountyBps();
+        
+        address lending = address(vault.lendingAdapter());
+        if (lending != address(0) && lendingBps > 0) {
+            uint256 health = IAaveAdapter(lending).getHealthFactor();
+            uint256 minHealth = policy.minHealthFactor();
+            if (health < minHealth) revert StrategyEngine__LendingHealthTooLow(health, minHealth);
+        }
+
         _recordSharpeYield();
         _harvestLpRewards();
         if (useFlash) {
             if (nextState == currentState) revert StrategyEngine__NotExecutable("NO_REGIME_SHIFT");
             _requestFlashLoan(flashData);
         }
-        vault.rebalance(wdkBps, policy.maxSlippageBps(), executor, bountyBps, lpBps);
+        vault.rebalance(wdkBps, lendingBps, executor, bountyBps, lpBps);
         (, , uint256 bufferUtil) = vault.bufferStatus();
         (, , int256 sharpe) = sharpeTracker.computeSharpe();
-        emit DecisionProofV2(executor, nextState, price, lastPrice, volatility, wdkBps, lpBps, bountyBps, false, sharpe, _auctionElapsed(), bufferUtil);
+        emit DecisionProofV2(executor, nextState, price, lastPrice, volatility, wdkBps, lpBps, lendingBps, bountyBps, false, sharpe, _auctionElapsed(), bufferUtil);
         lastPrice = price;
         lastTotalAssets = vault.totalAssets();
         lastExecution = block.timestamp;
@@ -326,10 +357,38 @@ contract StrategyEngine {
         return RiskState.Normal;
     }
 
-    function _selectAllocation(RiskState state) internal view returns (uint256 wdkBps, uint256 lpBps) {
-        if (state == RiskState.Drawdown) return (policy.drawdownWDKBps(), policy.drawdownLpBps());
-        if (state == RiskState.Guarded) return (policy.guardedWDKBps(), policy.guardedLpBps());
-        return (policy.normalWDKBps(), policy.normalLpBps());
+    function _selectAllocation(RiskState state) internal view returns (uint256 wdkBps, uint256 lpBps, uint256 lendingBps) {
+        lendingBps = policy.maxAaveAllocationBps();
+        if (state == RiskState.Drawdown) {
+            wdkBps = policy.drawdownWDKBps();
+            lpBps = policy.drawdownLpBps();
+            // In drawdown, maybe reduce lending? For now, we'll follow RiskPolicy logic.
+            // If RiskPolicy has maxAaveAllocationBps, we'll cap it.
+        } else if (state == RiskState.Guarded) {
+            wdkBps = policy.guardedWDKBps();
+            lpBps = policy.guardedLpBps();
+        } else {
+            wdkBps = policy.normalWDKBps();
+            lpBps = policy.normalLpBps();
+        }
+        
+        // Ensure total doesn't exceed 100%
+        if (wdkBps + lpBps + lendingBps > BPS_DENOMINATOR) {
+            // Priority: WDK > LP > Lending? 
+            // Actually, usually WDK is safety.
+            // Let's just ensure we don't overflow.
+            if (wdkBps + lpBps > BPS_DENOMINATOR) {
+                lendingBps = 0;
+                if (wdkBps > BPS_DENOMINATOR) {
+                    wdkBps = BPS_DENOMINATOR;
+                    lpBps = 0;
+                } else {
+                    lpBps = BPS_DENOMINATOR - wdkBps;
+                }
+            } else {
+                lendingBps = BPS_DENOMINATOR - (wdkBps + lpBps);
+            }
+        }
     }
 
     function _recordSharpeYield() internal {

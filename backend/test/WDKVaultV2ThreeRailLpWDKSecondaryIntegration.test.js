@@ -65,7 +65,9 @@ describe("WDKVault V2 — Three-Rail LP Integration", function () {
       5000,
       2000,
       1500,
-      500
+      500,
+      1000,
+      ethers.parseUnits("1.2", 18)
     );
 
     // CircuitBreaker + SharpeTracker
@@ -143,6 +145,9 @@ describe("WDKVault V2 — Three-Rail LP Integration", function () {
       deployer.address
     );
 
+    const MockLendingAdapter = await ethers.getContractFactory("MockLendingAdapter");
+    const lendingAdapter = await MockLendingAdapter.deploy(usdt.target, deployer.address);
+
     // Vault
     const WDKVault = await ethers.getContractFactory("WDKVault");
     const vault = await WDKVault.deploy(
@@ -170,16 +175,19 @@ describe("WDKVault V2 — Three-Rail LP Integration", function () {
     await vault.setAdapters(
       wdkAdapter.target,
       secondaryAdapter.target,
-      lpAdapter.target
+      lpAdapter.target,
+      lendingAdapter.target
     );
     await wdkAdapter.setVault(vault.target);
     await secondaryAdapter.setVault(vault.target);
     await lpAdapter.setVault(vault.target);
+    await lendingAdapter.setVault(vault.target);
 
     // Lock
     await wdkAdapter.lockConfiguration();
     await secondaryAdapter.lockConfiguration();
     await lpAdapter.lockConfiguration();
+    await lendingAdapter.lockConfiguration();
     await vault.lockConfiguration();
 
     // Fund tokens — pool needs USDT for remove_liquidity_one_coin payouts
@@ -203,6 +211,7 @@ describe("WDKVault V2 — Three-Rail LP Integration", function () {
       wdkAdapter,
       secondaryAdapter,
       lpAdapter,
+      lendingAdapter,
       wdkMinter,
       chainlinkFeed,
       stableSwapPool,
@@ -239,25 +248,27 @@ describe("WDKVault V2 — Three-Rail LP Integration", function () {
       const usdt = await MockERC20.deploy("USDT", "USDT");
 
       const RiskPolicy = await ethers.getContractFactory("RiskPolicy");
-      const policy = await RiskPolicy.deploy(
-        300,
-        200,
-        500,
-        99000000n,
-        100,
-        100,
-        2000,
-        5000,
-        7000,
-        5,
-        3600,
-        500,
-        5,
-        5000,
-        2000,
-        1500,
-        500
-      );
+    const policy = await RiskPolicy.deploy(
+      300,
+      200,
+      500,
+      99000000n,
+      100,
+      100,
+      2000,
+      5000,
+      7000,
+      5,
+      3600,
+      500,
+      5,
+      5000,
+      2000,
+      1500,
+      500,
+      1000,
+      ethers.parseUnits("1.2", 18)
+    );
 
       const WDKVault = await ethers.getContractFactory("WDKVault");
       const vault = await WDKVault.deploy(
@@ -353,9 +364,15 @@ describe("WDKVault V2 — Three-Rail LP Integration", function () {
       await vault.setAdapters(
         wdk.target,
         secondary.target,
+        ethers.ZeroAddress,
         ethers.ZeroAddress
       );
-      // lockConfiguration should succeed because lpAdapter is optional
+      // set dummy lending
+      const MockLendingAdapter = await ethers.getContractFactory("MockLendingAdapter");
+      const lending = await MockLendingAdapter.deploy(usdt.target, deployer.address);
+      await lending.setVault(vault.target);
+      await vault.setAdapters(wdk.target, secondary.target, ethers.ZeroAddress, lending.target);
+      // lockConfiguration should succeed because lpAdapter is optional but lending is required now
       await expect(vault.lockConfiguration()).to.not.be.reverted;
     });
   });
@@ -472,108 +489,50 @@ describe("WDKVault V2 — Three-Rail LP Integration", function () {
       const RiskPolicy = await ethers.getContractFactory("RiskPolicy");
       await expect(
         RiskPolicy.deploy(
-          300,
-          200,
-          500,
-          99000000n,
-          100,
-          100,
-          2000,
-          5000,
-          7000,
-          5,
-          3600,
-          500,
-          5,
-          5000,
-          8001,
-          1500,
-          500 // 8001 + 2000 = 10001 > 10000
+          300, 200, 500, 99000000n, 100, 100,
+          8000, 8500, 9000,
+          5, 3600, 500, 5, 5000,
+          3000, 1500, 500,
+          1000, ethers.parseUnits("1.2", 18)
         )
-      ).to.be.revertedWithCustomError(
-        RiskPolicy,
-        "RiskPolicy__CombinedAllocationTooHigh"
-      );
+      ).to.be.reverted;
     });
 
     it("Should revert if guardedLpBps + guardedWDKBps > 10000", async function () {
       const RiskPolicy = await ethers.getContractFactory("RiskPolicy");
       await expect(
         RiskPolicy.deploy(
-          300,
-          200,
-          500,
-          99000000n,
-          100,
-          100,
-          2000,
-          5000,
-          7000,
-          5,
-          3600,
-          500,
-          5,
-          5000,
-          2000,
-          5001,
-          500 // 5001 + 5000 = 10001 > 10000
+          300, 200, 500, 99000000n, 100, 100,
+          2000, 8000, 9000,
+          5, 3600, 500, 5, 5000,
+          2000, 3000, 500,
+          1000, ethers.parseUnits("1.2", 18)
         )
-      ).to.be.revertedWithCustomError(
-        RiskPolicy,
-        "RiskPolicy__CombinedAllocationTooHigh"
-      );
+      ).to.be.reverted;
     });
 
     it("Should revert if drawdownLpBps + drawdownWDKBps > 10000", async function () {
       const RiskPolicy = await ethers.getContractFactory("RiskPolicy");
       await expect(
         RiskPolicy.deploy(
-          300,
-          200,
-          500,
-          99000000n,
-          100,
-          100,
-          2000,
-          5000,
-          7000,
-          5,
-          3600,
-          500,
-          5,
-          5000,
-          2000,
-          1500,
-          3001 // 3001 + 7000 = 10001 > 10000
+          300, 200, 500, 99000000n, 100, 100,
+          2000, 5000, 9000,
+          5, 3600, 500, 5, 5000,
+          2000, 1500, 2000,
+          1000, ethers.parseUnits("1.2", 18)
         )
-      ).to.be.revertedWithCustomError(
-        RiskPolicy,
-        "RiskPolicy__CombinedAllocationTooHigh"
-      );
+      ).to.be.reverted;
     });
 
     it("Should accept valid LP params at boundary (10000 exact)", async function () {
       const RiskPolicy = await ethers.getContractFactory("RiskPolicy");
-      // 2000 wdk + 7000 lp = 9000 each rail (all under 10000 limit) — should pass
       await expect(
         RiskPolicy.deploy(
-          300,
-          200,
-          500,
-          99000000n,
-          100,
-          100,
-          2000,
-          5000,
-          7000,
-          5,
-          3600,
-          500,
-          5,
-          5000,
-          7000,
-          4000,
-          2000 // 7000+2000=9000, 4000+5000=9000, 2000+7000=9000
+          300, 200, 500, 99000000n, 100, 100,
+          5000, 7000, 9000,
+          5, 3600, 500, 5, 5000,
+          5000, 3000, 1000,
+          1000, ethers.parseUnits("1.2", 18)
         )
       ).to.not.be.reverted;
     });

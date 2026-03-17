@@ -4,13 +4,21 @@ import RobotCard from './RobotCard';
 import ActivityFeed from './ActivityFeed';
 import { Badge } from '../ui/Badge';
 import { cn } from '../../lib/utils';
-import { ZapIcon, Truck, Sparkles, Scan, LucideIcon } from 'lucide-react';
+import { ZapIcon, Truck, Sparkles, Scan, Shield, Radar, Zap, Lock, Eye, Activity, ShieldAlert, Target, LucideIcon } from 'lucide-react';
 import { getApiUrl } from '../../lib/api';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Delivery: Truck,
   Cleaning: Sparkles,
   Inspection: Scan,
+  "[S]": Shield,
+  "[L]": Radar,
+  "[A]": Zap,
+  "[G]": Lock,
+  "[O]": Eye,
+  "[D]": Activity,
+  "[M]": ShieldAlert,
+  "[B]": Target,
 };
 
 const FleetStatus: React.FC = () => {
@@ -127,7 +135,7 @@ const FleetStatus: React.FC = () => {
           <span className="text-[9px] text-neutral-gray uppercase tracking-wider mb-0.5">Session Earnings</span>
           <div className="flex items-center gap-1.5 text-tether-teal font-heading font-bold text-xl leading-none">
             <ZapIcon className="w-3.5 h-3.5 fill-current" />
-            <span className="animate-in fade-in slide-in-from-top-1 duration-500">{fleetTotal} ETH</span>
+            <span className="animate-in fade-in slide-in-from-top-1 duration-500">{fleetTotal} BNB</span>
           </div>
         </div>
       </div>

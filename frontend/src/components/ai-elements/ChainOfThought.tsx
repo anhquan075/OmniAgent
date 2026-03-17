@@ -27,6 +27,12 @@ export const ChainOfThought = memo(({
   onOpenChange,
   children,
   ...props
+}: {
+  className?: string;
+  open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  children?: React.ReactNode;
 }) => {
   const [isOpen, setIsOpen] = useControllableState({
     defaultProp: defaultOpen,

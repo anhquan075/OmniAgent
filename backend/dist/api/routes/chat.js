@@ -5,10 +5,9 @@ const ai_1 = require("ai");
 const openai_1 = require("@ai-sdk/openai");
 const zod_1 = require("zod");
 const env_1 = require("../../config/env");
+const logger_1 = require("../../utils/logger");
 const tools_1 = require("../../agent/tools");
 const chat_store_1 = require("../../utils/chat-store");
-const cache_1 = require("../middleware/cache");
-const guardrails_1 = require("../middleware/guardrails");
 const chat = new hono_1.Hono();
 // Zod schema for suggestions
 const suggestionsSchema = zod_1.z.array(zod_1.z.object({
@@ -42,7 +41,7 @@ Topics: DeFi strategies, yield optimization, vault management, settlement rails.
         }
     }
     catch (err) {
-        console.error('[Chat] Error generating suggestions:', err);
+        logger_1.logger.error(err, '[Chat] Error generating suggestions');
     }
     return fallbackSuggestions;
 }
@@ -62,10 +61,21 @@ chat.post('/', async (c) => {
             userText = lastUserMessage.parts.find((p) => p.type === 'text')?.text || '';
         }
         else if (lastUserMessage.content && typeof lastUserMessage.content === 'object') {
-            // Fallback for different SDK versions
             userText = lastUserMessage.content.text || '';
         }
     }
+    // Filter messages to ensure they have valid content
+    const validMessages = messages.filter((m) => {
+        if (!m?.role)
+            return false;
+        if (typeof m.content === 'string')
+            return true;
+        if (Array.isArray(m.content))
+            return true;
+        if (m.content?.text)
+            return true;
+        return false;
+    });
     // 1. Intent detection: Detect if crypto/DeFi query
     const cryptoKeywords = /\b(vault|strategy|rebalance|usdt|xaut|gold|crypto|defi|yield|risk|depeg|peg|asset|allocation|emergency|circuit|breaker|sharpe|bridge|cross-chain|solana|bnb|ethereum|price|oracle|tether|stablecoin|liquidity|apy|apr)\b/i;
     const isCryptoQuery = cryptoKeywords.test(userText);
@@ -77,13 +87,9 @@ chat.post('/', async (c) => {
     // 2. Model selection: Use DeepSeek for crypto/DeFi, Gemini for general
     const modelId = isCryptoQuery
         ? (env_1.env.OPENROUTER_MODEL_CRYPTO || "deepseek/deepseek-chat")
-        : (env_1.env.OPENROUTER_MODEL_GENERAL || "google/gemini-2.0-flash-exp:free");
-    console.log(`[Chat] Query: "${userText.slice(0, 50)}..." | Crypto: ${isCryptoQuery} | Model: ${modelId}`);
+        : (env_1.env.OPENROUTER_MODEL_GENERAL || "google/gemini-2.0-flash-001");
+    logger_1.logger.info({ userText: userText.slice(0, 50), isCryptoQuery, modelId }, '[Chat] Processing query');
     const baseModel = openai.chat(modelId);
-    const model = (0, ai_1.wrapLanguageModel)({
-        model: baseModel,
-        middleware: [cache_1.cacheMiddleware, guardrails_1.strategicGuardrail]
-    });
     const stream = (0, ai_1.createUIMessageStream)({
         execute: async ({ writer }) => {
             try {
@@ -95,13 +101,13 @@ chat.post('/', async (c) => {
                         data: {
                             status: 'Connecting',
                             progress: 10,
-                            thought: 'Initializing neural bridge to WDK settlement rails...'
+                            thought: 'Initializing link to WDK settlement rails...'
                         },
                     });
                 }
-                let coreMessages = await (0, ai_1.convertToModelMessages)(messages);
+                let coreMessages = validMessages;
                 const result = await (0, ai_1.streamText)({
-                    model,
+                    model: baseModel,
                     maxSteps: 10,
                     maxToolRoundtrips: 3,
                     temperature: isSmallTalk ? 0.7 : 0,
@@ -129,7 +135,7 @@ chat.post('/', async (c) => {
                             else if (toolName === 'execute_rebalance') {
                                 status = 'Settlement';
                                 progress = 95;
-                                thought = 'Finalizing atomic rebalance via ProofVault settlement layer...';
+                                thought = 'Finalizing atomic rebalance via OmniWDK settlement layer...';
                             }
                             else if (toolName === 'yield_sweep') {
                                 status = 'Yield Harvest';
@@ -179,7 +185,7 @@ chat.post('/', async (c) => {
                     system: isSmallTalk
                         ? `You are the OmniWDK AFOS Strategist. Keep responses brief and professional. Just answer the user's question directly in natural language.`
                         : `You are the OmniWDK AFOS Strategist. 
-               Directive: yield optimization for USD₮ and XAU₮ via Tether WDK & ProofVault.
+                Directive: yield optimization for USDT and XAUT via Tether WDK & OmniWDK.
                
                CRITICAL INSTRUCTION: You MUST ALWAYS provide a final text summary after using tools.
                
@@ -208,26 +214,25 @@ chat.post('/', async (c) => {
                     try {
                         const response = await result.response;
                         const generatedMessages = response.messages;
-                        console.log(`[Chat] Response messages count: ${generatedMessages.length}`);
+                        logger_1.logger.info({ messageCount: generatedMessages.length }, '[Chat] Stream finished');
                         if (generatedMessages.length > 0) {
                             const lastMsg = generatedMessages[generatedMessages.length - 1];
-                            console.log(`[Chat] Last message role: ${lastMsg.role}`);
-                            console.log(`[Chat] Last message content: ${JSON.stringify(lastMsg.content).slice(0, 100)}...`);
+                            logger_1.logger.debug({ role: lastMsg.role, contentPreview: JSON.stringify(lastMsg.content).slice(0, 100) }, '[Chat] Last message details');
                         }
                         if (generatedMessages && generatedMessages.length > 0) {
                             const lastMsg = generatedMessages[generatedMessages.length - 1];
                             // Check if the conversation ended on a tool execution (role: 'tool')
                             const endedOnTool = lastMsg.role === 'tool';
-                            console.log(`[Chat] Ended on tool? ${endedOnTool}`);
+                            logger_1.logger.debug({ endedOnTool }, '[Chat] Termination check');
                             if (endedOnTool) {
-                                console.log('[Chat] Model stopped after tool usage without summary. Forcing synthesis...');
+                                logger_1.logger.info('[Chat] Model stopped after tool usage without summary. Forcing synthesis...');
                                 writer.write({
                                     type: 'data-status',
                                     id: 'agent-status',
                                     data: { status: 'Synthesizing', progress: 99, thought: 'Generating strategic summary...' },
                                 });
                                 const summaryResult = await (0, ai_1.streamText)({
-                                    model,
+                                    model: baseModel,
                                     messages: [
                                         ...generatedMessages,
                                         { role: 'user', content: 'Summarize the above tool results and answer the user query.' }
@@ -239,7 +244,7 @@ chat.post('/', async (c) => {
                         }
                     }
                     catch (err) {
-                        console.error('[Chat] Error in synthesis loop:', err);
+                        logger_1.logger.error(err, '[Chat] Error in synthesis loop');
                     }
                 }
                 if (!isSmallTalk) {
@@ -257,7 +262,7 @@ chat.post('/', async (c) => {
                         writer.write({ type: 'data-suggestions', data: suggestions });
                     }
                     catch (err) {
-                        console.error('[Chat] Error in suggestion generation:', err);
+                        logger_1.logger.error(err, '[Chat] Error in suggestion generation');
                         writer.write({ type: 'data-suggestions', data: fallbackSuggestions });
                     }
                 }
@@ -265,7 +270,7 @@ chat.post('/', async (c) => {
             catch (error) {
                 if (error.name === 'AbortError')
                     return;
-                console.error('Execution Error:', error);
+                logger_1.logger.error(error, '[Chat] Execution Error');
                 writer.write({
                     type: 'data-notification',
                     data: { message: `Execution Error: ${error.message}`, level: 'error' },
@@ -283,7 +288,7 @@ chat.post('/', async (c) => {
                 await (0, chat_store_1.saveChat)({ chatId, messages: [...messages, responseMessage] });
             }
             catch (err) {
-                console.error('[ChatRoute] Failed to save chat:', err);
+                logger_1.logger.error(err, '[ChatRoute] Failed to save chat');
             }
         },
     });

@@ -33,6 +33,13 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
     );
     await lpAdapter.waitForDeployment();
 
+    const MockLendingAdapter = await ethers.getContractFactory("MockLendingAdapter");
+    const lendingAdapter = await MockLendingAdapter.deploy(
+      await token.getAddress(),
+      deployer.address
+    );
+    await lendingAdapter.waitForDeployment();
+
     const WDKVault = await ethers.getContractFactory("WDKVault");
     const vault = await WDKVault.deploy(
       await token.getAddress(),
@@ -61,7 +68,9 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       0, // sharpeLowThreshold_
       1000, // normalLpBps_
       500, // guardedLpBps_
-      0 // drawdownLpBps_
+      0, // drawdownLpBps_
+      1000, // maxAaveAllocationBps_
+      ethers.parseUnits("1.2", 18) // minHealthFactor_
     );
     await policy.waitForDeployment();
 
@@ -99,15 +108,18 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       await vault.setAdapters(
         await wdkAdapter.getAddress(),
         await secondaryAdapter.getAddress(),
-        await lpAdapter.getAddress()
+        await lpAdapter.getAddress(),
+        await lendingAdapter.getAddress()
       )
     ).wait();
     await (await wdkAdapter.setVault(await vault.getAddress())).wait();
     await (await secondaryAdapter.setVault(await vault.getAddress())).wait();
     await (await lpAdapter.setVault(await vault.getAddress())).wait();
+    await (await lendingAdapter.setVault(await vault.getAddress())).wait();
     await (await wdkAdapter.lockConfiguration()).wait();
     await (await secondaryAdapter.lockConfiguration()).wait();
     await (await lpAdapter.lockConfiguration()).wait();
+    await (await lendingAdapter.lockConfiguration()).wait();
     await (await vault.lockConfiguration()).wait();
 
     await (
@@ -142,6 +154,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       wdkAdapter,
       secondaryAdapter,
       lpAdapter,
+      lendingAdapter,
       engine,
       policy,
       oracle,
@@ -175,6 +188,13 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
     );
     await lpAdapter.waitForDeployment();
 
+    const MockLendingAdapter = await ethers.getContractFactory("MockLendingAdapter");
+    const lendingAdapter = await MockLendingAdapter.deploy(
+      await token.getAddress(),
+      deployer.address
+    );
+    await lendingAdapter.waitForDeployment();
+
     const WDKVault = await ethers.getContractFactory("WDKVault");
     const vault = await WDKVault.deploy(
       await token.getAddress(),
@@ -203,7 +223,9 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       0,
       1000,
       500,
-      0
+      0,
+      1000,
+      ethers.parseUnits("1.2", 18)
     );
     await policy.waitForDeployment();
 
@@ -253,6 +275,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       wdkAdapter,
       secondaryAdapter,
       lpAdapter,
+      lendingAdapter,
       engine,
       policy,
       oracle,
@@ -276,22 +299,25 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       });
 
       it("should allow deposit after configuration is locked", async function () {
-        const { user1, vault, wdkAdapter, secondaryAdapter } =
+        const { user1, vault, wdkAdapter, secondaryAdapter, lpAdapter, lendingAdapter } =
           await deployUnlockedFixture();
         await (await vault.setEngine(user1.address)).wait();
         await (
           await vault.setAdapters(
             await wdkAdapter.getAddress(),
             await secondaryAdapter.getAddress(),
-            ethers.ZeroAddress
+            await lpAdapter.getAddress(),
+            await lendingAdapter.getAddress()
           )
         ).wait();
         await (await wdkAdapter.setVault(await vault.getAddress())).wait();
-        await (
-          await secondaryAdapter.setVault(await vault.getAddress())
-        ).wait();
+        await (await secondaryAdapter.setVault(await vault.getAddress())).wait();
+        await (await lpAdapter.setVault(await vault.getAddress())).wait();
+        await (await lendingAdapter.setVault(await vault.getAddress())).wait();
         await (await wdkAdapter.lockConfiguration()).wait();
         await (await secondaryAdapter.lockConfiguration()).wait();
+        await (await lpAdapter.lockConfiguration()).wait();
+        await (await lendingAdapter.lockConfiguration()).wait();
         await (await vault.lockConfiguration()).wait();
 
         const tx = vault
@@ -331,6 +357,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
             .setAdapters(
               await wdkAdapter.getAddress(),
               await wdkAdapter.getAddress(),
+              ethers.ZeroAddress,
               ethers.ZeroAddress
             )
         ).to.be.reverted;
@@ -354,8 +381,10 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
         const secondary = await secondaryAdapter.managedAssets();
         const lpAdapterAddr = await vault.lpAdapter();
         const lp = lpAdapterAddr !== ethers.ZeroAddress ? await (await ethers.getContractAt("ManagedAdapter", lpAdapterAddr)).managedAssets() : 0n;
+        const lendingAdapterAddr = await vault.lendingAdapter();
+        const lending = lendingAdapterAddr !== ethers.ZeroAddress ? await (await ethers.getContractAt("ManagedAdapter", lendingAdapterAddr)).managedAssets() : 0n;
 
-        expect(total).to.equal(idle + wdk + secondary + lp);
+        expect(total).to.equal(idle + wdk + secondary + lp + lending);
       });
 
       it("should return 0 before any deposits", async function () {
@@ -540,22 +569,25 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       });
 
       it("should allow mint after configuration lock", async function () {
-        const { user1, vault, wdkAdapter, secondaryAdapter } =
+        const { user1, vault, wdkAdapter, secondaryAdapter, lpAdapter, lendingAdapter } =
           await deployUnlockedFixture();
         await (await vault.setEngine(user1.address)).wait();
         await (
           await vault.setAdapters(
             await wdkAdapter.getAddress(),
             await secondaryAdapter.getAddress(),
-            ethers.ZeroAddress
+            await lpAdapter.getAddress(),
+            await lendingAdapter.getAddress()
           )
         ).wait();
         await (await wdkAdapter.setVault(await vault.getAddress())).wait();
-        await (
-          await secondaryAdapter.setVault(await vault.getAddress())
-        ).wait();
+        await (await secondaryAdapter.setVault(await vault.getAddress())).wait();
+        await (await lpAdapter.setVault(await vault.getAddress())).wait();
+        await (await lendingAdapter.setVault(await vault.getAddress())).wait();
         await (await wdkAdapter.lockConfiguration()).wait();
         await (await secondaryAdapter.lockConfiguration()).wait();
+        await (await lpAdapter.lockConfiguration()).wait();
+        await (await lendingAdapter.lockConfiguration()).wait();
         await (await vault.lockConfiguration()).wait();
 
         await expect(
@@ -1152,7 +1184,9 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
           0,
           0,
           0,
-          0
+          0,
+          1000,
+          ethers.parseUnits("1.2", 18)
         )
       )
         .to.be.revertedWithCustomError(
@@ -1173,7 +1207,9 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
             0,
             0,
             0,
-            0
+            0,
+            1000,
+            ethers.parseUnits("1.2", 18)
           ).catch(() => ({ interface: null }))) || { interface: null },
           "RiskPolicy__AllocsNotMonotonic"
         )
@@ -1196,7 +1232,9 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
               0,
               0,
               0,
-              0
+              0,
+              1000,
+              ethers.parseUnits("1.2", 18)
             )
           ).to.be.reverted;
         });
@@ -1220,7 +1258,9 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
           0,
           0,
           0,
-          0
+          0,
+          1000,
+          ethers.parseUnits("1.2", 18)
         )
       ).to.be.reverted;
     });
@@ -1246,7 +1286,9 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
           0,
           0,
           0,
-          0
+          0,
+          1000,
+          ethers.parseUnits("1.2", 18)
         )
       )
         .to.be.revertedWithCustomError(
@@ -1274,7 +1316,9 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
               0,
               0,
               0,
-              0
+              0,
+              1000,
+              ethers.parseUnits("1.2", 18)
             )
           ).to.be.reverted;
         });
@@ -1301,7 +1345,9 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
           0,
           0,
           0,
-          0
+          0,
+          1000,
+          ethers.parseUnits("1.2", 18)
         )
       ).to.be.reverted;
     });
@@ -1327,7 +1373,9 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
           0,
           0,
           0,
-          0
+          0,
+          1000,
+          ethers.parseUnits("1.2", 18)
         )
       ).to.be.reverted;
     });
@@ -1353,7 +1401,9 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
           0,
           0,
           0,
-          0
+          0,
+          1000,
+          ethers.parseUnits("1.2", 18)
         )
       ).to.be.reverted;
     });
@@ -1379,7 +1429,9 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
           0,
           0,
           0,
-          0
+          0,
+          1000,
+          ethers.parseUnits("1.2", 18)
         )
       ).to.be.reverted;
     });
@@ -1405,7 +1457,9 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
           0,
           0,
           0,
-          0
+          0,
+          1000,
+          ethers.parseUnits("1.2", 18)
         )
       ).to.be.reverted;
     });
@@ -1538,6 +1592,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
         wdkAdapter,
         secondaryAdapter,
         lpAdapter,
+        lendingAdapter,
         oracle,
       } = await deployFullFixture();
 
@@ -1561,13 +1616,17 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       let secondary = await secondaryAdapter.managedAssets();
       const lpAdapterAddr = await vault.lpAdapter();
       let lp = await (await ethers.getContractAt("ManagedAdapter", lpAdapterAddr)).managedAssets();
-      let total = wdk + secondary + lp;
+      const lendingAdapterAddr = await vault.lendingAdapter();
+      let lending = await (await ethers.getContractAt("MockLendingAdapter", lendingAdapterAddr)).managedAssets();
+      let total = wdk + secondary + lp + lending;
       expect(total).to.be.closeTo(totalBefore, ethers.parseUnits("5", 18));
 
-      await (await oracle.setPrice(ethers.parseUnits("1.03", 8))).wait();
+      await (await oracle.setPrice(ethers.parseUnits("1.15", 8))).wait();
       await ethers.provider.send("evm_increaseTime", [300]);
       await ethers.provider.send("evm_mine", []);
       await (await engine.executeCycle()).wait();
+      const preview = await engine.previewDecision();
+      console.log("Decision Preview:", preview);
 
       wdk = await wdkAdapter.managedAssets();
       expect(wdk).to.be.greaterThan(ethers.parseUnits("700", 18));
@@ -1575,6 +1634,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
       await (await token.mint(await wdkAdapter.getAddress(), ethers.parseUnits("10000", 18))).wait();
       await (await token.mint(await secondaryAdapter.getAddress(), ethers.parseUnits("10000", 18))).wait();
       await (await token.mint(await lpAdapter.getAddress(), ethers.parseUnits("10000", 18))).wait();
+      await (await token.mint(await lendingAdapter.getAddress(), ethers.parseUnits("10000", 18))).wait();
 
       const shares1 = await vault.balanceOf(user1.address);
       await (

@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateEnvironment = validateEnvironment;
 const env_1 = require("./env");
+const logger_1 = require("../utils/logger");
 const PLACEHOLDER_VALUES = [
     'replace_me',
     'your_',
@@ -45,18 +46,14 @@ function validateContractAddresses() {
     }
 }
 function validateEnvironment() {
-    console.log('[Security] Validating critical environment variables...');
-    if (process.env.MOCK_MODE === 'true') {
-        console.warn('[Security] ⚠️  MOCK_MODE is enabled. Skipping strict validation.');
-        return;
-    }
+    logger_1.logger.info('[Security] Validating critical environment variables');
     validateSecretSeed();
-    console.log('✓ WDK_SECRET_SEED is valid');
+    logger_1.logger.debug('WDK_SECRET_SEED is valid');
     validateContractAddresses();
-    console.log('✓ Contract addresses are valid');
+    logger_1.logger.debug('Contract addresses are valid');
     if (!env_1.env.OPENROUTER_API_KEY) {
         throw new Error('OPENROUTER_API_KEY is not set. Agent requires LLM access.');
     }
-    console.log('✓ OPENROUTER_API_KEY is configured');
-    console.log('[Security] ✅ All environment validations passed');
+    logger_1.logger.debug('OPENROUTER_API_KEY is configured');
+    logger_1.logger.info('[Security] All environment validations passed');
 }

@@ -3,11 +3,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const hono_1 = require("hono");
 const streaming_1 = require("hono/streaming");
 const RobotFleetService_1 = require("../../services/RobotFleetService");
+const logger_1 = require("../../utils/logger");
 const robotFleet = new hono_1.Hono();
 const fleetEmitter = RobotFleetService_1.robotFleetService.getEmitter();
 robotFleet.get('/events', async (c) => {
     return (0, streaming_1.streamSSE)(c, async (stream) => {
-        console.log('[RobotFleetAPI] New SSE client connected');
+        logger_1.logger.info('[RobotFleetAPI] New SSE client connected');
         // Send initial connection message
         await stream.writeSSE({
             data: JSON.stringify({
@@ -38,7 +39,7 @@ robotFleet.get('/events', async (c) => {
                 });
             }
             catch (e) {
-                console.error('[RobotFleetAPI] SSE Write Error:', e);
+                logger_1.logger.error(e, '[RobotFleetAPI] SSE Write Error');
             }
         };
         fleetEmitter.on('fleet:event', onFleetEvent);
@@ -54,7 +55,7 @@ robotFleet.get('/events', async (c) => {
                 });
             }
             catch (e) {
-                console.error('[RobotFleetAPI] Heartbeat failed:', e);
+                logger_1.logger.error(e, '[RobotFleetAPI] Heartbeat failed');
                 clearInterval(heartbeatInterval);
             }
         }, 30000);
@@ -62,7 +63,7 @@ robotFleet.get('/events', async (c) => {
         stream.onAbort(() => {
             fleetEmitter.off('fleet:event', onFleetEvent);
             clearInterval(heartbeatInterval);
-            console.log('[RobotFleetAPI] SSE client disconnected');
+            logger_1.logger.info('[RobotFleetAPI] SSE client disconnected');
         });
         // Keep connection alive
         await new Promise(() => { });
@@ -75,7 +76,7 @@ robotFleet.get('/status', async (c) => {
         return c.json(status);
     }
     catch (error) {
-        console.error('[RobotFleetAPI] Status error:', error);
+        logger_1.logger.error(error, '[RobotFleetAPI] Status error');
         return c.json({
             error: 'Failed to get fleet status',
             message: error.message

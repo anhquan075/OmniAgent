@@ -5,6 +5,7 @@ import { AgentService } from '@/agent/services/AgentService';
 import crypto from 'crypto';
 import { EventEmitter } from 'events';
 import { runAutonomousCycle } from '@/agent/AutonomousLoop';
+import { logger } from '@/utils/logger';
 
 const agent = new Hono();
 const agentEvents = new EventEmitter();
@@ -87,7 +88,7 @@ agent.post('/webhook', async (c) => {
   }
 
   const payload = JSON.parse(rawBody);
-  console.log(`[Webhook] Received event: ${eventName}`);
+  logger.info({ event: eventName }, '[Webhook] Received event');
 
   // Trigger rebalance on specific events
   let shouldTrigger = false;
@@ -96,7 +97,7 @@ agent.post('/webhook', async (c) => {
   if (eventName === 'push') shouldTrigger = true;
 
   if (shouldTrigger) {
-    AgentService.runCycle().catch(e => console.error('[Webhook] Rebalance trigger failed:', e));
+    AgentService.runCycle().catch(e => logger.error(e, '[Webhook] Rebalance trigger failed'));
     return c.json({ success: true, message: 'Autonomous cycle triggered' });
   }
 
@@ -123,7 +124,7 @@ agent.post('/run-cycle', async (c) => {
       schedulingReason: result.schedulingReason,
     });
   } catch (e: any) {
-    console.error('[RunCycle] Cron-triggered cycle failed:', e.message);
+    logger.error(e, '[RunCycle] Cron-triggered cycle failed');
     return c.json({ success: false, error: e.message }, 500);
   }
 });

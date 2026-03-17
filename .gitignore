@@ -52,4 +52,28 @@ pnpm-debug.log*
 .pnpm-store/
 target/
 plans/
-*/.chats/
+.chats/
+docs/
+# Build outputs
+dist/
+*.log
+*.pid
+
+# Environment
+.env.local
+.env.*.local
+
+# Temp files
+check_*.js
+check_*.ts
+test-*.js
+*-output*.xml
+
+# CLI artifacts
+.chats/
+serena/
+.sisyphus/
+.serena/
+
+# Deprecated
+scripts/wdk/

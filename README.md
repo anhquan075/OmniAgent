@@ -1,177 +1,673 @@
-# OmniWDK: The Sovereign Yield Robot Fleet 🤖🚀
+# OmniWDK: The Sovereign Yield Robot Fleet
 
-OmniWDK is an autonomous, non-custodial yield routing stack built for the **Hackathon Galáctica: WDK Edition 1**. 
+OmniWDK is an autonomous, non-custodial yield routing stack built for Hackathon Galactica: WDK Edition 1. It introduces a new paradigm: an autonomous AI capital allocator managing a fleet of Multi-VM sub-agents.
 
-While others build simple chatbots that can swap tokens, OmniWDK introduces a completely new paradigm: **an autonomous AI capital allocator managing a fleet of Multi-VM sub-agents**.
+## Why OmniWDK Wins
 
-## 🏆 Why OmniWDK Wins (Hackathon Judging Criteria)
-
-We analyzed the competition (`tsentry`, `shll-safe-agent`, `paymind-ai`, `ajo-agent`) and built OmniWDK to be technologically superior across all four judging metrics:
-
-### 1. Technical Correctness (Provable PolicyGuard) 🛡️
-Most competitors rely on "soft prompts" to tell the LLM not to drain funds. This is incredibly dangerous. OmniWDK implements a strict **PolicyGuard middleware** that intercepts raw WDK execution. 
-- **Hard Limits:** Daily volume limits enforced at the code level, not the LLM level.
-- **Whitelist:** Funds can only be sent to whitelisted smart contracts.
-- **Feedback Loop:** If the LLM hallucinates a bad transaction, PolicyGuard blocks it, catches the error, and feeds the rejection reason *back into the LLM's context* so it learns and adjusts its strategy immediately.
-
-### 2. Degree of Agent Autonomy (Adaptive Loop) ⚡
-OmniWDK doesn't just run on a dumb cron job. The agent's `AutonomousLoop` dynamically schedules itself based on the current ZK-Risk level.
-- High Risk = 5-minute polling to secure funds.
-- Low Risk = 60-minute polling to save LLM tokens and RPC calls.
-
-### 3. Economic Soundness (The X402 Robot Economy) 💸
-Taking inspiration from the `x402` protocol (HTTP 402 Payment Required for machines), OmniWDK acts as a central brain that **hires sub-agents**.
-- If the agent needs advanced risk analysis or off-chain data, it uses WDK to send a micro-payment (e.g., 0.1 USDT) to a sub-agent's address.
-- The transaction hash acts as the cryptographic proof-of-payment (the `X-402-Payment-Hash` header) to unlock the gated API.
-- **Result:** A self-sustaining machine-to-machine economy where AI pays AI using Tether.
-
-### 4. Real-World Applicability (True Multi-VM Capability) 🌐
-WDK's superpower is its abstraction over multiple blockchains. Competitors focused solely on EVM.
-OmniWDK seamlessly registers and manages wallets across **BNB Chain (EVM)**, **Solana**, and **TON**.
-- The agent actively monitors native and USDT balances across all three chains simultaneously, seeking cross-chain yield opportunities.
+| Criteria | Description |
+|----------|-------------|
+| **Technical Correctness** | PolicyGuard middleware with hard limits enforced at code level |
+| **Agent Autonomy** | Adaptive loop that dynamically schedules based on ZK-Risk level |
+| **Economic Soundness** | X402 robot economy - AI pays AI using USDT |
+| **Real-World Applicability** | True Multi-VM (BNB + Solana + TON) |
 
 ---
 
-## 🏗️ Architecture
+## How It Works
+
+OmniWDK operates as an autonomous capital allocator:
 
 ```mermaid
-graph TD
-    A[AutonomousLoop AI] --> B(WdkExecutor Middleware)
-    A --> F[X402 Client]
-    B --> C{PolicyGuard}
-    C -- Valid --> D[WDK Engine]
-    C -- Blocked --> E[Rejection fed to LLM]
-    D --> G(BNB Vault)
-    D --> H(Solana Wallet)
-    D --> I(TON Wallet)
-    F -- 0.1 USDT Tx Hash --> J[Gated Sub-Agent API]
+graph TB
+    subgraph "Frontend React Vite"
+        A[Dashboard] --> B[MCP Panel]
+        B --> C[Tool Executor]
+    end
+    
+    subgraph "Backend Node.js Hono"
+        D[API Server] --> E[MCP Handler]
+        E --> F[Tool Registry]
+        
+        F --> G[BNB Tools]
+        F --> H[Solana Tools]
+        F --> I[TON Tools]
+        F --> J[WDK Vault Tools]
+        F --> K[X402 Tools]
+        
+        G --> L[PolicyGuard]
+        H --> L
+        I --> L
+        J --> L
+        K --> L
+        
+        L --> M[WDK Executor]
+        M --> N[BNB Chain]
+        M --> O[Solana]
+        M --> P[TON]
+    end
+    
+    C -->|HTTP| D
 ```
 
-- **Backend:** Node.js / Hono / Vercel AI SDK / Tether WDK
-- **Blockchain:** BNB Chain (Primary), Solana, TON
-- **Contracts:** Custom ERC4626 Vault (`WDKVault`) + Strategy Engine (`OmniWDKEngine`)
-- **Frontend:** React / Vite / Tailwind
+### Autonomous Loop Flow
 
-## 🚀 Quick Start
+```mermaid
+sequenceDiagram
+    participant AI as AutonomousLoop
+    participant PG as PolicyGuard
+    participant WDK as WDK Engine
+    participant X402 as X402 Client
+    
+    AI->>PG: Check risk level
+    PG-->>AI: LOW risk
+    
+    AI->>WDK: Get multi-chain balances
+    WDK-->>AI: BNB $500 SOL $200 TON $100
+    
+    alt Needs external data
+        AI->>X402: Pay 0.1 USDT
+        X402-->>AI: Analysis result
+    end
+    
+    AI->>WDK: Execute yield
+    WDK-->>AI: Confirmed
+```
 
-### 1. Install Dependencies
+### PolicyGuard Security
+
+```mermaid
+flowchart LR
+    A[Transaction] --> B{Whitelist}
+    B -->|FAIL| E[Block]
+    B -->|PASS| C{Volume}
+    C -->|FAIL| E
+    C -->|PASS| D[Execute]
+    E --> F[Feedback to LLM]
+    D --> G[Log]
+```
+
+---
+
+## MCP Tools (32 Total)
+
+| Category | Tools | Description |
+|----------|-------|-------------|
+| **X402** | 4 | Pay sub-agents, list services |
+| **WDK Vault** | 4 | Deposit, withdraw, balance |
+| **WDK Engine** | 3 | Execute cycle, risk metrics |
+| **Aave** | 3 | Supply, withdraw, position |
+| **BNB** | 7 | Wallet, transfer, swap |
+| **Solana** | 4 | Wallet, transfer |
+| **TON** | 3 | Wallet, transfer |
+
+---
+
+## Quick Start
+
+### Prerequisites
+- Node.js 18+
+- pnpm 8+
+
+### 1. Install
+
 ```bash
+git clone https://github.com/your-repo/omnisdk.git
+cd omnisdk
+
 cd backend && pnpm install
 cd ../frontend && pnpm install
 ```
 
-### 2. Configure Environment
+---
+
+## Backend Environment Setup
+
+### Copy and Configure
+
 ```bash
 cd backend
-cp .env.example .env.wdk
+cp .env.example .env
 ```
-Edit `.env.wdk` with your `OPENROUTER_API_KEY`, `WDK_SECRET_SEED`, and `BNB_RPC_URL`.
 
-### 3. Run the Stack
-**Start the Backend (API + Autonomous Loop):**
+### Required Variables
+
+Edit `.env` with your values:
+
+```bash
+# Required: BIP-39 mnemonic (12-24 words) for the agent wallet
+WDK_SECRET_SEED=""
+
+# Required: OpenRouter API key for LLM calls
+OPENROUTER_API_KEY=""
+
+# Required: BNB Chain RPC URL
+BNB_RPC_URL="https://bsc-testnet-dataseed.bnbchain.org"
+```
+
+### Optional Variables
+
+```bash
+# OpenRouter Model Configuration (defaults provided)
+OPENROUTER_MODEL_GENERAL=google/gemini-2.0-flash-001
+OPENROUTER_MODEL_CRYPTO=deepseek/deepseek-chat
+
+# Solana RPC (default: https://api.mainnet-beta.solana.com)
+SOLANA_RPC_URL=""
+
+# TON RPC (default: https://toncenter.com/api/v2/jsonRPC)
+TON_RPC_URL=""
+
+# Private key for smart contract deployments (optional)
+PRIVATE_KEY=""
+
+# Server port (default: 3001)
+PORT=3001
+```
+
+### Full Environment Variables Reference
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `WDK_SECRET_SEED` | Yes | - | BIP-39 mnemonic seed phrase |
+| `OPENROUTER_API_KEY` | Yes | - | OpenRouter API key for LLM |
+| `BNB_RPC_URL` | Yes | https://bsc-testnet-dataseed.bnbchain.org | BNB Chain RPC |
+| `PORT` | No | 3001 | Server port |
+| `PRIVATE_KEY` | No | Derived from WDK_SECRET_SEED | For deployments |
+| `SOLANA_RPC_URL` | No | https://api.mainnet-beta.solana.com | Solana RPC |
+| `TON_RPC_URL` | No | https://toncenter.com/api/v2/jsonRPC | TON RPC |
+| `OPENROUTER_MODEL_GENERAL` | No | google/gemini-2.0-flash-001 | General LLM model |
+| `OPENROUTER_MODEL_CRYPTO` | No | deepseek/deepseek-chat | Crypto LLM model |
+
+---
+
+## Frontend Environment Setup
+
+### Copy and Configure
+
+```bash
+cd frontend
+cp .env.example .env
+```
+
+### Required Variables
+
+```bash
+# Default network (testnet, mainnet)
+VITE_DEFAULT_NETWORK=testnet
+
+# API URL pointing to backend
+VITE_API_URL=http://localhost:3001
+```
+
+### Optional Variables
+
+```bash
+# BNB Testnet RPC (default provided)
+VITE_BSC_TESTNET_RPC_URL=https://bsc-testnet-rpc.publicnode.com
+
+# Testnet Contract Addresses (optional - defaults provided)
+VITE_TESTNET_VAULT_ADDRESS=
+VITE_TESTNET_ENGINE_ADDRESS=
+VITE_TESTNET_TOKEN_ADDRESS=
+
+# Mainnet Contract Addresses (optional)
+VITE_MAINNET_VAULT_ADDRESS=
+VITE_MAINNET_ENGINE_ADDRESS=
+VITE_MAINNET_TOKEN_ADDRESS=
+
+# WalletConnect Project ID (get from https://cloud.walletconnect.com)
+VITE_WALLETCONNECT_PROJECT_ID=
+```
+
+### Full Environment Variables Reference
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VITE_DEFAULT_NETWORK` | Yes | testnet | Network mode |
+| `VITE_API_URL` | Yes | http://localhost:3001 | Backend API URL |
+| `VITE_WALLETCONNECT_PROJECT_ID` | No | - | WalletConnect project ID |
+| `VITE_BSC_TESTNET_RPC_URL` | No | https://bsc-testnet-rpc.publicnode.com | BNB Testnet RPC |
+| `VITE_TESTNET_VAULT_ADDRESS` | No | - | Vault contract (testnet) |
+| `VITE_TESTNET_ENGINE_ADDRESS` | No | - | Engine contract (testnet) |
+| `VITE_TESTNET_TOKEN_ADDRESS` | No | - | USDT contract (testnet) |
+| `VITE_MAINNET_VAULT_ADDRESS` | No | - | Vault contract (mainnet) |
+| `VITE_MAINNET_ENGINE_ADDRESS` | No | - | Engine contract (mainnet) |
+| `VITE_MAINNET_TOKEN_ADDRESS` | No | - | USDT contract (mainnet) |
+
+---
+
+## Run the Application
+
+### Start Backend
+
 ```bash
 cd backend
 pnpm run dev
 ```
 
-**Start the Frontend:**
+Expected output:
+```
+Server ready: http://localhost:3001
+[MCP] Registered 30 tools
+[AutonomousLoop] Starting...
+```
+
+### Start Frontend
+
 ```bash
 cd frontend
 pnpm run dev
 ```
 
-## 🤖 The Autonomous Loop in Action
-When you start the backend, the `AutonomousLoop` wakes up every 5-15 minutes (dynamically scheduled based on risk).
-1. Checks balances across BNB, Solana, and TON.
-2. Analyzes ZK-Risk.
-3. Decides whether to hire an X402 sub-agent for more data.
-4. Executes yielding, bridging, or sweeping via WDK.
+Open http://localhost:5173
 
 ---
 
-## 🎯 Competitive Positioning
+## Unified Backend Architecture
 
-After analyzing 6 competitors in Hackathon Galáctica, **OmniWDK is the only project combining all winning elements**:
+OmniWDK uses a **unified backend server** approach where all services run as HTTP/SSE endpoints within a single Hono application process. This eliminates the complexity of managing multiple spawned processes.
 
-| Feature | tsentry | shll-safe | paymind | ajo | axiom | peaq | **OmniWDK** |
-|---------|---------|-----------|---------|-----|-------|------|-------------|
-| **Multi-VM (Non-EVM)** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ **Solana + TON** |
-| **On-Chain Safety** | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ **PolicyGuard** |
-| **Fleet Coordination** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ **X402 sub-agents** |
-| **Autonomous Loop** | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ **Adaptive scheduling** |
-| **X402 Payments** | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ **Robot economy** |
-| **Production Ready** | ⚠️ | ✅ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ **Deployed + tested** |
+### Architecture Benefits
 
-### Unique Advantages (No Competitor Has These)
-1. ✅ **Multi-VM Support**: Solana + TON beyond EVM (all competitors are EVM-only or single-chain)
-2. ✅ **Fleet Architecture**: Coordinated sub-agents via X402 micro-payments
-3. ✅ **Combined Safety Model**: On-chain PolicyGuard + adaptive LLM feedback loop
+| Aspect | Unified Approach | Multi-Process Approach |
+|--------|------------------|------------------------|
+| **Deployment** | Single process to manage | Multiple processes to coordinate |
+| **Communication** | Direct function calls | Inter-process communication (IPC) |
+| **Debugging** | Single log stream | Multiple log streams to correlate |
+| **Resource Usage** | Shared memory and connections | Duplicated resources per process |
+| **Scaling** | Horizontal (replicas) | Vertical (process management) |
 
-**📊 Full competitive analysis**: [Strategic Positioning Document](plans/reports/251216-2315-hackathon-strategic-positioning.md)
+### Endpoint Overview
+
+All services are exposed as REST/SSE endpoints:
+
+```typescript
+// MCP Tools - JSON-RPC over HTTP
+POST /api/mcp
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": { "name": "bnb_getBalance", "arguments": {} }
+}
+
+// Dashboard Events - Server-Sent Events (SSE)
+GET /api/dashboard/events
+// Streams: cycle:start, step:finish, cycle:end, cycle:error
+
+// Robot Fleet - SSE + REST
+GET /api/robot-fleet/events     // SSE stream
+GET /api/robot-fleet/status     // REST status
+```
+
+### Implementation Details
+
+The main server (`backend/src/index.ts`) registers all route handlers:
+
+```typescript
+app.route('/api/stats', statsRoute);
+app.route('/api/chat', chatRoute);
+app.route('/api/agent', agentRoute);
+app.route('/api/dashboard', dashboardRoute);  // SSE for autonomous loop
+app.route('/api/robot-fleet', robotFleetRoute); // SSE for robot events
+app.route('/api/x402', x402Route);
+app.route('/api/mcp', mcpRoute);               // MCP HTTP endpoint
+```
+
+**Key Files:**
+- `backend/src/api/routes/mcp.ts` - MCP HTTP handler (JSON-RPC)
+- `backend/src/api/routes/dashboard.ts` - SSE dashboard events
+- `backend/src/api/routes/robot-fleet.ts` - Robot fleet SSE + REST
+- `backend/src/services/RobotFleetService.ts` - In-process fleet manager
+- `backend/src/mcp-server/tool-registry.ts` - Tool registration system
+- `backend/src/mcp-server/handlers/` - Tool implementations (BNB, Solana, TON, WDK, X402, ERC4337)
 
 ---
 
-## 📹 Demo Video & Presentation
+## MCP Panel Usage
 
-**3-Minute Demo Script**:
-1. **[0:00-0:30]** PolicyGuard blocking malicious transaction attempt
-2. **[0:30-1:00]** Multi-VM balance check (BNB + Solana + TON simultaneously)
-3. **[1:00-1:30]** X402 payment flow (agent pays sub-agent with USDT)
-4. **[1:30-2:00]** Autonomous loop adaptive scheduling (risk-based intervals)
-5. **[2:00-3:00]** Why OmniWDK wins (feature comparison + vision)
+1. Connect Wallet in header
+2. Expand category (X402, Vault, Engine, Aave)
+3. Click the button on any tool to show parameters
+4. Enter required parameters
+5. Click Execute
 
-**Full demo script**: [Demo Video Script](plans/20260316-hackathon-galactica-winning-strategy/submission-materials/demo-video-script.md) | [Strategic Positioning Document - Demo Section](plans/reports/251216-2315-hackathon-strategic-positioning.md#demo-script-3-minute-live-walkthrough)
+### Test Commands
 
-**Pitch Deck Structure**: [Pitch Deck Structure](plans/20260316-hackathon-galactica-winning-strategy/submission-materials/pitch-deck-structure.md)
-
----
-
-## 🏗️ Deployment Status
-
-**BNB Testnet (Live)**:
-- **WDKVault**: [`0x26CEefE4F0C3558237016F213914764047f671bA`](https://testnet.bscscan.com/address/0x26CEefE4F0C3558237016F213914764047f671bA)
-- **StrategyEngine**: [`0xF4874EA114B082B03798Ae40C6B375b79644EE0F`](https://testnet.bscscan.com/address/0xF4874EA114B082B03798Ae40C6B375b79644EE0F)
-- **Mock USDT**: `0x5b1bD8Ffd728755A55F53A97A2700FFb0f5739C3`
-- **Agent Status**: ✅ Operational (autonomous loop running)
-- **Smoke Test**: ✅ All tests passed
-
-**To run smoke test**:
 ```bash
-cd backend
-npx hardhat run scripts/smoke-test-bnb.js --network bnbTestnet
+# Check balance
+curl -X POST http://localhost:3001/api/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"bnb_getBalance","arguments":{}}}'
+
+# List tools
+curl -X POST http://localhost:3001/api/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
 ---
 
-## 📚 Documentation
+## Project Structure
 
-- **Architecture & Design**: [Strategic Positioning Document](plans/reports/251216-2315-hackathon-strategic-positioning.md)
-- **Competitor Analysis (SHLL + PayMind)**: [Deep Dive Report](plans/reports/251216-2252-competitor-deep-dive-analysis.md)
-- **Competitor Analysis (Axiom + Ajo)**: [Analysis Report](docs/competitive-analysis-axiom-ajo.md)
-- **Implementation Plan**: [Master Plan](plans/20260316-hackathon-galactica-winning-strategy/plan.md)
+```
+omnisdk/
+├── backend/
+│   ├── src/
+│   │   ├── api/routes/mcp.ts      # MCP endpoint
+│   │   ├── agent/middleware/PolicyGuard.ts
+│   │   ├── mcp-server/handlers/  # Tool implementations
+│   │   │   ├── bnb-tools.ts
+│   │   │   ├── solana-tools.ts
+│   │   │   ├── ton-tools.ts
+│   │   │   ├── wdk-tools.ts
+│   │   │   └── x402-tools.ts
+│   │   └── contracts/            # Solidity
+│   ├── hardhat.config.js
+│   └── .env.example
+├── frontend/
+│   ├── src/
+│   │   └── components/dashboard/MCPServerDemo.tsx
+│   ├── vite.config.ts
+│   └── .env.example
+└── README.md
+```
 
 ---
 
-## 🚀 Future Roadmap
+## Scripts
 
-**Post-Hackathon Enhancements**:
-1. **ERC-4337 Gasless Transactions**: Match tsentry's account abstraction
-2. **LayerZero Bridge Integration**: Enable cross-chain capital movement
-3. **On-Chain PolicyGuard Contract**: Upgrade to tamper-proof smart contract enforcement
-4. **ML Risk Scoring**: Replace ZK-Oracle stub with real machine learning model
-5. **Dashboard UI**: Visual representation of fleet status and multi-chain balances
-6. **Production Mainnet**: Professional security audit + mainnet deployment
+```bash
+# Backend
+pnpm run dev          # Development server (includes MCP HTTP endpoint)
+pnpm run build        # Production build
+pnpm run start        # Production server
+pnpm test            # Run tests
+pnpm run compile     # Compile Solidity contracts
+pnpm robot:start     # Start robot fleet simulator (standalone)
+pnpm robot:dev       # Robot fleet in watch mode
+
+# Frontend
+pnpm run dev         # Development server
+pnpm run build       # Production build
+```
+
+**Note:** All services (MCP, SSE Dashboard, Robot Fleet) run as unified endpoints in the main backend server. No separate processes are spawned.
 
 ---
 
-## 🏆 Built for Hackathon Galáctica: WDK Edition 1
+## Deploy Smart Contracts (Complete Guide)
 
-**Why OmniWDK Wins**:
-- ✅ **Technical Correctness (35%)**: PolicyGuard + Multi-VM mastery
-- ✅ **Agent Autonomy (25%)**: Adaptive scheduling + true autonomous operation
-- ✅ **Economic Soundness (25%)**: X402 robot economy + self-sustaining model
-- ✅ **Real-World Applicability (15%)**: Massive TAM (machine economy) + production deployment
+### Prerequisites
 
-**We're not building a hackathon toy. We're building the future of autonomous capital management.**
+**1. Get Testnet BNB Tokens**
+- Visit [BNB Testnet Faucet](https://testnet.bnbchain.org/faucet-smart)
+- Request testnet BNB for deployment (~0.5 BNB recommended)
+- Verify balance on [BSCScan Testnet](https://testnet.bscscan.com)
 
-🤖 **OmniWDK: Where robots manage robots' money.**
+**2. Configure Environment**
+
+Edit `backend/.env` and add:
+```bash
+# Required for deployment
+PRIVATE_KEY="your-wallet-private-key-here"
+
+# Network RPC
+BNB_RPC_URL="https://bsc-testnet-dataseed.bnbchain.org"
+```
+
+**Security Note:** Never commit your private key or share it. Use a dedicated testnet wallet.
+
+---
+
+### Step-by-Step Deployment
+
+#### Step 1: Install Dependencies
+
+```bash
+cd backend
+pnpm install
+```
+
+#### Step 2: Compile Contracts
+
+```bash
+pnpm run compile
+```
+
+Expected output:
+```
+Compiled 45 Solidity files successfully
+```
+
+#### Step 3: Deploy Core Contracts
+
+```bash
+npx hardhat run scripts/DeployStackWithSeed.ts --network bnbTestnet
+```
+
+This deploys (in order):
+1. **Mock ERC20 Tokens** - USDT, XAUT test tokens
+2. **Mock Oracles** - Price feeds for USDT/USD, XAUT/USD
+3. **Risk Policy** - Risk management parameters
+4. **WDK Vault** - Main vault for deposits
+5. **WDK Engine** - Execution engine with rebalancing logic
+6. **Adapters** - XAUT, Secondary, LP, Lending adapters
+7. **Circuit Breaker** - Emergency pause mechanism
+
+**Expected Output:**
+```
+=== Phase 1: Deploy Tokens ===
+USDT deployed: 0x...
+XAUT deployed: 0x...
+
+=== Phase 2: Deploy Oracles ===
+USDT Oracle: 0x...
+XAUT Oracle: 0x...
+
+=== Phase 3: Deploy Core ===
+WDK Vault: 0x...
+WDK Engine: 0x...
+...
+
+--- Deployment Complete ---
+```
+
+**Important:** Save these addresses - you'll need them in Step 5.
+
+#### Step 4: Deploy ZK Risk Oracle (Critical)
+
+The main deployment script has a bug and doesn't deploy the ZK Risk Oracle. Deploy it separately:
+
+```bash
+npx hardhat run scripts/deploy-zk-oracle.ts --network bnbTestnet
+```
+
+**Expected Output:**
+```
+Deploying ZKRiskOracle...
+ZKRiskOracle deployed to: 0x6270359cBb1EB483f9630712e9D101845D39d524
+✅ Updated .env with WDK_ZK_ORACLE_ADDRESS
+```
+
+#### Step 5: Update Environment File
+
+The deployment scripts auto-update `.env`, but verify all addresses are present:
+
+```bash
+# Core Contracts
+WDK_VAULT_ADDRESS=0xcB411a907e47047da98B38C99A683c6FAF2AA87A
+WDK_ENGINE_ADDRESS=0x0b33c994825c88484387E73D1F75967CeE79Cf25
+
+# Tokens
+WDK_USDT_ADDRESS=0xdea54eC5150Aa35ef2686b02EdD20b050430Ad7D
+WDK_XAUT_ADDRESS=0x3CfeB85C9E4063c622255FD216055bF3058eb32e
+
+# Oracles
+WDK_ZK_ORACLE_ADDRESS=0x6270359cBb1EB483f9630712e9D101845D39d524
+WDK_USDT_ORACLE_ADDRESS=0xC3D519Ed04E55BFe67732513109bBBF6c959471D
+WDK_XAUT_ORACLE_ADDRESS=0x9Da68499a9B4acB7641f3CBBd2f4F51062D6b57B
+
+# Adapters
+WDK_XAUT_ADAPTER_ADDRESS=0x06C390c4a68A9289Ba3366d6f023907970421120
+WDK_SECONDARY_ADAPTER_ADDRESS=0x759ae06e462Ac0000D0A34578dF0A15fC390cDd6
+WDK_LP_ADAPTER_ADDRESS=0xc3704bdbBe7E3c51180Bc219629E36a21795f7e0
+WDK_LENDING_ADAPTER_ADDRESS=0x4774285a7Cd9711Ae396e1EDD0Bcf6d093bEa1bb
+
+# Circuit Breaker
+WDK_BREAKER_ADDRESS=0x03408d440E2d9cd31D744469f111AaaBb121A844
+
+# Network
+BNB_RPC_URL=https://bsc-testnet-dataseed.bnbchain.org
+```
+
+#### Step 6: Seed Vault with Initial Funds
+
+The deployment may leave the vault empty. Fund it manually:
+
+```bash
+npx hardhat run scripts/seed-vault.ts --network bnbTestnet
+```
+
+**Expected Output:**
+```
+Minting 100,000 USDT...
+Approving vault...
+Depositing into vault...
+✅ Vault seeded successfully
+Vault balance: 100000.0 USDT
+```
+
+#### Step 7: Verify Deployment
+
+Test the backend API:
+
+```bash
+# Start backend server
+pnpm run dev
+
+# In another terminal, test stats endpoint
+curl http://localhost:3001/api/stats
+```
+
+**Expected Response:**
+```json
+{
+  "vault": {
+    "totalAssets": "100000.0",
+    "bufferUtilizationBps": "3333"
+  },
+  "risk": {
+    "level": "LOW",
+    "drawdownBps": 0
+  },
+  "system": {
+    "isPaused": false,
+    "canExecute": true
+  }
+}
+```
+
+---
+
+### BNB Testnet Deployment (Reference Addresses)
+
+**Latest Verified Deployment:**
+
+| Contract | Address | Explorer |
+|----------|---------|----------|
+| **WDK Vault** | `0xcB411a907e47047da98B38C99A683c6FAF2AA87A` | [View on BSCScan](https://testnet.bscscan.com/address/0xcB411a907e47047da98B38C99A683c6FAF2AA87A) |
+| **WDK Engine** | `0x0b33c994825c88484387E73D1F75967CeE79Cf25` | [View on BSCScan](https://testnet.bscscan.com/address/0x0b33c994825c88484387E73D1F75967CeE79Cf25) |
+| **USDT Token** | `0xdea54eC5150Aa35ef2686b02EdD20b050430Ad7D` | [View on BSCScan](https://testnet.bscscan.com/address/0xdea54eC5150Aa35ef2686b02EdD20b050430Ad7D) |
+| **XAUT Token** | `0x3CfeB85C9E4063c622255FD216055bF3058eb32e` | [View on BSCScan](https://testnet.bscscan.com/address/0x3CfeB85C9E4063c622255FD216055bF3058eb32e) |
+| **ZK Risk Oracle** | `0x6270359cBb1EB483f9630712e9D101845D39d524` | [View on BSCScan](https://testnet.bscscan.com/address/0x6270359cBb1EB483f9630712e9D101845D39d524) |
+| **USDT Oracle** | `0xC3D519Ed04E55BFe67732513109bBBF6c959471D` | [View on BSCScan](https://testnet.bscscan.com/address/0xC3D519Ed04E55BFe67732513109bBBF6c959471D) |
+| **XAUT Oracle** | `0x9Da68499a9B4acB7641f3CBBd2f4F51062D6b57B` | [View on BSCScan](https://testnet.bscscan.com/address/0x9Da68499a9B4acB7641f3CBBd2f4F51062D6b57B) |
+| **Circuit Breaker** | `0x03408d440E2d9cd31D744469f111AaaBb121A844` | [View on BSCScan](https://testnet.bscscan.com/address/0x03408d440E2d9cd31D744469f111AaaBb121A844) |
+| **XAUT Adapter** | `0x06C390c4a68A9289Ba3366d6f023907970421120` | [View on BSCScan](https://testnet.bscscan.com/address/0x06C390c4a68A9289Ba3366d6f023907970421120) |
+| **Secondary Adapter** | `0x759ae06e462Ac0000D0A34578dF0A15fC390cDd6` | [View on BSCScan](https://testnet.bscscan.com/address/0x759ae06e462Ac0000D0A34578dF0A15fC390cDd6) |
+| **LP Adapter** | `0xc3704bdbBe7E3c51180Bc219629E36a21795f7e0` | [View on BSCScan](https://testnet.bscscan.com/address/0xc3704bdbBe7E3c51180Bc219629E36a21795f7e0) |
+| **Lending Adapter** | `0x4774285a7Cd9711Ae396e1EDD0Bcf6d093bEa1bb` | [View on BSCScan](https://testnet.bscscan.com/address/0x4774285a7Cd9711Ae396e1EDD0Bcf6d093bEa1bb) |
+
+**Deployment Date:** January 24, 2025  
+**Network:** BNB Testnet (Chain ID: 97)  
+**Total Vault Assets:** 150,000 USDT
+
+---
+
+### Deploy to Local Hardhat Node
+
+For local development and testing:
+
+```bash
+# Terminal 1: Start local node
+cd backend
+pnpm run node
+
+# Terminal 2: Deploy
+npx hardhat run scripts/DeployStackWithSeed.ts --network localhost
+npx hardhat run scripts/deploy-zk-oracle.ts --network localhost
+npx hardhat run scripts/seed-vault.ts --network localhost
+```
+
+**Local Network Configuration:**
+- RPC URL: `http://127.0.0.1:8545`
+- Chain ID: `31337`
+- No testnet tokens needed
+
+---
+
+## Troubleshooting
+
+### Empty Vault After Deployment
+
+**Symptom:** Vault `totalAssets` shows near-zero value (e.g., 0.00000005 USDT)
+
+**Cause:** The deployment script `DeployStackWithSeed.ts` has known issues:
+- Line 177: Assigns `usdtOracleAddr` instead of deploying `ZKRiskOracle`
+- Phase 6 (seeding) may not execute, leaving vault unfunded
+
+**Solution:** Use the manual seeding script:
+
+```bash
+cd backend
+npx hardhat run scripts/seed-vault.ts --network bnbTestnet
+```
+
+This script will:
+1. Mint 100,000 USDT to deployer
+2. Approve vault to spend USDT
+3. Deposit into vault
+
+### Stats Endpoint Error (CALL_EXCEPTION)
+
+**Symptom:** `/api/stats` endpoint fails with `CALL_EXCEPTION` when calling `zkOracle.getVerifiedRiskBands()`
+
+**Cause:** `WDK_ZK_ORACLE_ADDRESS` in `.env` points to wrong contract (e.g., MockPriceOracle instead of ZKRiskOracle)
+
+**Solution:** Deploy ZKRiskOracle separately:
+
+```bash
+cd backend
+npx hardhat run scripts/deploy-zk-oracle.ts --network bnbTestnet
+```
+
+The script auto-updates `.env` with the correct oracle address.
+
+### Environment File Confusion
+
+**Important:** Use only `.env` file (not `.env.wdk.local`). All scripts and documentation reference `.env` as the primary configuration file.
+
+---
+
+## Competition Analysis
+
+| Feature | OmniWDK | tsentry | shll-safe | paymind |
+|---------|---------|---------|-----------|---------|
+| Multi-VM | Yes | No | No | No |
+| PolicyGuard | Yes | No | Yes | No |
+| X402 | Yes | No | No | No |
+| Production | Yes | Partial | Yes | Yes |
+
+---
+
+OmniWDK: Where robots manage robots' money.

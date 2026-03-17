@@ -1,4 +1,5 @@
 import { ethers, JsonRpcProvider } from 'ethers';
+import { logger } from '@/utils/logger';
 
 export interface SimulationResult {
   success: boolean;
@@ -17,7 +18,7 @@ export class SimulationService {
    * Simulates a transaction using eth_call.
    */
   async simulateTransaction(tx: { to: string; from?: string; data: string; value?: bigint }): Promise<SimulationResult> {
-    console.log(`[SimulationService] Simulating transaction to ${tx.to}...`);
+    logger.info({ to: tx.to }, '[SimulationService] Simulating transaction');
     try {
       const data = await this.provider.call({
         to: tx.to,
@@ -26,10 +27,10 @@ export class SimulationService {
         value: tx.value || 0n,
       });
       
-      console.log(`[SimulationService] Simulation succeeded.`);
+      logger.info('[SimulationService] Simulation succeeded');
       return { success: true, data };
     } catch (error: any) {
-      console.error(`[SimulationService] Simulation failed! Reason: ${error.message}`);
+      logger.error(error, '[SimulationService] Simulation failed');
       let reason = 'Unknown revert';
       if (error.data) {
         reason = error.data;

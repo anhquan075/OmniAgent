@@ -1,28 +1,29 @@
 import { ethers } from "hardhat";
 import * as fs from "fs";
 import * as path from "path";
+import { logger } from "../src/utils/logger";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  console.log("🚀 Starting Full Stack Deployment with Seed Data...");
-  console.log("Network:", (await ethers.provider.getNetwork()).name);
-  console.log("Deployer:", deployer.address);
+  logger.info("Starting Full Stack Deployment with Seed Data...");
+  logger.info(`Network: ${(await ethers.provider.getNetwork()).name}`);
+  logger.info(`Deployer: ${deployer.address}`);
 
   // 1. Deploy Mock Assets
-  console.log("\n--- Phase 1: Mock Assets ---");
+  logger.info("\n--- Phase 1: Mock Assets ---");
   const MockERC20 = await ethers.getContractFactory("MockERC20");
   const usdt = await (await MockERC20.deploy("Tether USD", "USDT")).waitForDeployment();
   await (await usdt.setDecimals(6)).wait();
   const usdtAddr = await usdt.getAddress();
-  console.log("USDT (6 dec):", usdtAddr);
+  logger.info(`USDT (6 dec): ${usdtAddr}`);
 
   const xaut = await (await MockERC20.deploy("Tether Gold", "XAUT")).waitForDeployment();
   await (await xaut.setDecimals(4)).wait();
   const xautAddr = await xaut.getAddress();
-  console.log("XAUT (4 dec):", xautAddr);
+  logger.info(`XAUT (4 dec): ${xautAddr}`);
 
   // 2. Deploy Mock Oracles
-  console.log("\n--- Phase 2: Oracles ---");
+  logger.info("\n--- Phase 2: Oracles ---");
   const MockChainlink = await ethers.getContractFactory("MockChainlinkAggregator");
   const usdtChainlink = await (await MockChainlink.deploy(8, ethers.parseUnits("1", 8))).waitForDeployment();
   const xautChainlink = await (await MockChainlink.deploy(8, ethers.parseUnits("2000", 8))).waitForDeployment();
@@ -32,86 +33,119 @@ async function main() {
   const xautOracle = await (await MockPriceOracle.deploy(ethers.parseUnits("2000", 8), deployer.address)).waitForDeployment();
   const usdtOracleAddr = await usdtOracle.getAddress();
   const xautOracleAddr = await xautOracle.getAddress();
-  console.log("USDT Oracle:", usdtOracleAddr);
-  console.log("XAUT Oracle:", xautOracleAddr);
+  logger.info(`USDT Oracle: ${usdtOracleAddr}`);
+  logger.info(`XAUT Oracle: ${xautOracleAddr}`);
 
   // 3. Deploy Core Stack
-  console.log("\n--- Phase 3: Core Stack ---");
+  logger.info("\n--- Phase 3: Core Stack ---");
   const RiskPolicy = await ethers.getContractFactory("RiskPolicy");
   const policy = await (await RiskPolicy.deploy(
-    300, 150, 500, ethers.parseUnits("0.97", 8), 100, 100, 1000, 5000, 10000, 5, 3600, 500, 20, 1500, 0, 0, 0
+    300,              // cooldown
+    150,              // guardedVolatilityBps
+    500,              // drawdownVolatilityBps
+    ethers.parseUnits("0.97", 8), // depegPrice
+    100,              // maxSlippageBps
+    100,              // maxBountyBps
+    1000,             // normalWDKBps (10%)
+    5000,             // guardedWDKBps (50%)
+    9500,             // drawdownWDKBps (95%) - reduced from 10000 to allow 5% LP
+    5,                // minBountyBps
+    3600,             // auctionDurationSeconds
+    500,              // idleBufferBps
+    20,               // sharpeWindowSize
+    1500,             // sharpeLowThreshold
+    1000,             // normalLpBps (10%)
+    1000,             // guardedLpBps (10%)
+    500,              // drawdownLpBps (5%)
+    3000,             // maxAaveAllocationBps (30%) - updated per plan
+    ethers.parseUnits("1.5", 18)  // minHealthFactor: 1.5
   )).waitForDeployment();
-  console.log("RiskPolicy:", await policy.getAddress());
+  logger.info(`RiskPolicy: ${await policy.getAddress()}`);
   
   const SharpeTracker = await ethers.getContractFactory("SharpeTracker");
   const sharpeTracker = await (await SharpeTracker.deploy(20)).waitForDeployment();
-  console.log("SharpeTracker:", await sharpeTracker.getAddress());
+  logger.info(`SharpeTracker: ${await sharpeTracker.getAddress()}`);
 
   const MockStableSwap = await ethers.getContractFactory("MockStableSwapPoolWithLPSupport");
   const pool = await (await MockStableSwap.deploy(
     usdtAddr, xautAddr, ethers.parseUnits("1000000", 18), ethers.parseUnits("1000000", 18), ethers.parseUnits("1", 18), 0
   )).waitForDeployment();
-  console.log("Mock StableSwap Pool:", await pool.getAddress());
+  logger.info(`Mock StableSwap Pool: ${await pool.getAddress()}`);
 
   const CircuitBreaker = await ethers.getContractFactory("CircuitBreaker");
   const breaker = await (await CircuitBreaker.deploy(
     await usdtChainlink.getAddress(), await pool.getAddress(), 50, 100, 50, 3600, 999999999
   )).waitForDeployment();
-  console.log("CircuitBreaker:", await breaker.getAddress());
+  logger.info(`CircuitBreaker: ${await breaker.getAddress()}`);
 
   const WDKVault = await ethers.getContractFactory("WDKVault");
   const vault = await (await WDKVault.deploy(usdtAddr, "OmniWDK WDK Vault", "OWDK", deployer.address, 500)).waitForDeployment();
   const vaultAddr = await vault.getAddress();
-  console.log("WDKVault:", vaultAddr);
+  logger.info(`WDKVault: ${vaultAddr}`);
 
   const StrategyEngine = await ethers.getContractFactory("StrategyEngine");
   const engine = await (await StrategyEngine.deploy(
     vaultAddr, await policy.getAddress(), usdtOracleAddr, await breaker.getAddress(), await sharpeTracker.getAddress(), ethers.parseUnits("1", 8)
   )).waitForDeployment();
   const engineAddr = await engine.getAddress();
-  console.log("StrategyEngine:", engineAddr);
+  logger.info(`StrategyEngine: ${engineAddr}`);
 
   // 4. Deploy Adapters
-  console.log("\n--- Phase 4: Adapters ---");
+  logger.info("\n--- Phase 4: Adapters ---");
   const XAUTYieldAdapter = await ethers.getContractFactory("XAUTYieldAdapter");
   const xautAdapter = await (await XAUTYieldAdapter.deploy(usdtAddr, xautAddr, xautOracleAddr, usdtOracleAddr, deployer.address)).waitForDeployment();
   const xautAdapterAddr = await xautAdapter.getAddress();
-  console.log("XAUT Adapter:", xautAdapterAddr);
+  logger.info(`XAUT Adapter: ${xautAdapterAddr}`);
 
   const ManagedAdapter = await ethers.getContractFactory("ManagedAdapter");
   const secondaryAdapter = await (await ManagedAdapter.deploy(usdtAddr, deployer.address)).waitForDeployment();
   const lpAdapter = await (await ManagedAdapter.deploy(usdtAddr, deployer.address)).waitForDeployment();
-  console.log("Secondary Adapter:", await secondaryAdapter.getAddress());
-  console.log("LP Adapter:", await lpAdapter.getAddress());
+  
+  const MockAavePool = await ethers.getContractFactory("MockAavePool");
+  const aavePool = await (await MockAavePool.deploy(usdtAddr, usdtAddr)).waitForDeployment();
+  const AaveLendingAdapter = await ethers.getContractFactory("AaveLendingAdapter");
+  const lendingAdapter = await (await AaveLendingAdapter.deploy(usdtAddr, usdtAddr, await aavePool.getAddress(), deployer.address)).waitForDeployment();
+  const lendingAdapterAddr = await lendingAdapter.getAddress();
+
+  logger.info(`Secondary Adapter: ${await secondaryAdapter.getAddress()}`);
+  logger.info(`LP Adapter: ${await lpAdapter.getAddress()}`);
+  logger.info(`Lending Adapter: ${lendingAdapterAddr}`);
 
   // 5. Wiring & Locking
-  console.log("\n--- Phase 5: Wiring ---");
+  logger.info("\n--- Phase 5: Wiring ---");
   await (await sharpeTracker.setEngine(engineAddr)).wait();
   await (await vault.setEngine(engineAddr)).wait();
-  await (await vault.setAdapters(xautAdapterAddr, await secondaryAdapter.getAddress(), await lpAdapter.getAddress())).wait();
+  await (await vault.setAdapters(
+    xautAdapterAddr, 
+    await secondaryAdapter.getAddress(), 
+    await lpAdapter.getAddress(),
+    lendingAdapterAddr
+  )).wait();
   await (await xautAdapter.setVault(vaultAddr)).wait();
   await (await secondaryAdapter.setVault(vaultAddr)).wait();
   await (await lpAdapter.setVault(vaultAddr)).wait();
-  console.log("Wiring complete.");
+  await (await lendingAdapter.setVault(vaultAddr)).wait();
+  logger.info("Wiring complete.");
 
-  console.log("Locking configurations...");
+  logger.info("Locking configurations...");
   await (await xautAdapter.lockConfiguration()).wait();
   await (await secondaryAdapter.lockConfiguration()).wait();
   await (await lpAdapter.lockConfiguration()).wait();
+  await (await lendingAdapter.lockConfiguration()).wait();
   await (await vault.lockConfiguration()).wait();
-  console.log("Configurations locked.");
+  logger.info("Configurations locked.");
 
   const currentEngine = await vault.engine();
-  console.log("Vault Engine set to:", currentEngine);
+  logger.info(`Vault Engine set to: ${currentEngine}`);
   if (currentEngine === ethers.ZeroAddress) {
     throw new Error("Failed to set Vault Engine!");
   }
 
   // 6. Seed Data (Big Data Simulation)
-  console.log("\n--- Phase 6: Seeding Data ---");
+  logger.info("\n--- Phase 6: Seeding Data ---");
   const userCount = 10;
   const seedAmount = ethers.parseUnits("10000", 6);
-  console.log(`Minting ${ethers.formatUnits(seedAmount * BigInt(userCount), 6)} USDT to ${userCount} test users and depositing...`);
+  logger.info(`Minting ${ethers.formatUnits(seedAmount * BigInt(userCount), 6)} USDT to ${userCount} test users and depositing...`);
   
   for (let i = 0; i < userCount; i++) {
     const tempWallet = ethers.Wallet.createRandom().connect(ethers.provider);
@@ -121,20 +155,20 @@ async function main() {
     await (await usdt.mint(tempWallet.address, seedAmount)).wait();
     await (await usdt.connect(tempWallet).approve(vaultAddr, seedAmount)).wait();
     
-    console.log(`  - Depositing for User ${i+1}: ${tempWallet.address}`);
+    logger.info(`  - Depositing for User ${i+1}: ${tempWallet.address}`);
     const depTx = await vault.connect(tempWallet).deposit(seedAmount, tempWallet.address);
     await depTx.wait();
-    console.log(`  - Seeded User ${i+1} success.`);
+    logger.info(`  - Seeded User ${i+1} success.`);
   }
 
   // Seed XAUT Adapter for value reporting
   await (await xaut.mint(xautAdapterAddr, ethers.parseUnits("10", 4))).wait();
-  console.log("Seeded XAUT Adapter with 10.0 oz Gold");
+  logger.info("Seeded XAUT Adapter with 10.0 oz Gold");
 
   // 7. Output Environment Variables
-  console.log("\n========================================");
-  console.log("   DEPLOYMENT COMPLETE");
-  console.log("========================================");
+  logger.info("\n========================================");
+  logger.info("   DEPLOYMENT COMPLETE");
+  logger.info("========================================");
   const envContent = `
 WDK_VAULT_ADDRESS=${vaultAddr}
 WDK_ENGINE_ADDRESS=${engineAddr}
@@ -143,9 +177,9 @@ WDK_XAUT_ADDRESS=${xautAddr}
 WDK_ZK_ORACLE_ADDRESS=${usdtOracleAddr}
 WDK_BREAKER_ADDRESS=${await breaker.getAddress()}
 `;
-  console.log(envContent);
-  fs.writeFileSync(path.join(process.cwd(), '.env.wdk.local'), envContent);
-  console.log("Environment variables saved to .env.wdk.local");
+  logger.info(envContent);
+  fs.writeFileSync(path.join(process.cwd(), '.env'), envContent);
+  logger.info("Environment variables saved to .env");
 }
 
-main().catch(console.error);
+main().catch((err) => logger.error(err));

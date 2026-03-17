@@ -41,7 +41,7 @@ export const DashboardOverlay: React.FC<DashboardOverlayProps> = ({ isOpen, onCl
 
           {/* Content */}
           <div className="flex-1 min-h-0 glass-dark rounded-[2.5rem] border border-white/10 overflow-hidden relative shadow-2xl">
-            <div className="absolute inset-0 bg-[url('/imgs/grid.svg')] opacity-5 pointer-events-none"></div>
+
             <div className="h-full w-full overflow-y-auto custom-scrollbar p-8">
               <WDKVaultV2Client />
             </div>

@@ -78,6 +78,15 @@ export function MessageInput({ input, handleInputChange, handleSubmit, status, s
     }
   };
 
+  const handleSubmitWrapper = (e: React.FormEvent<HTMLFormElement>, overrideText?: string) => {
+    const text = overrideText !== undefined ? overrideText : input;
+    if (!text.trim()) {
+      e.preventDefault();
+      return;
+    }
+    handleSubmit(e, overrideText);
+  };
+
   // Final UI state based on refined streaming detection
   const showActiveLink = isActuallyStreaming;
   const effectiveStatus = isActuallyStreaming ? status : 'ready';
@@ -93,26 +102,13 @@ export function MessageInput({ input, handleInputChange, handleSubmit, status, s
       />
 
       <PromptInput
-        onSubmit={(data, e) => handleSubmit(e as any, data.text)}
+        onSubmit={(data, e) => handleSubmitWrapper(e as any, data.text)}
         className={cn(
           "relative flex items-end gap-2 p-2 rounded-2xl bg-[#161B22]/80 backdrop-blur-xl border transition-all duration-300",
           isFocused ? "border-tether-teal/50 shadow-[0_0_20px_rgba(38,161,123,0.15)] bg-[#161B22]" : "border-transparent shadow-lg",
           isHighPriority && "border-neon-green/40 shadow-[0_0_15px_rgba(57,255,20,0.1)]"
         )}
       >
-        <div className="flex items-center self-center pl-1">
-          <PromptInputActionMenu>
-            <PromptInputActionMenuTrigger className="text-neutral-gray hover:text-tether-teal transition-colors" />
-            <PromptInputActionMenuContent>
-              <PromptInputActionMenuItem onClick={() => setIsHighPriority(!isHighPriority)} className="cursor-pointer">
-                <ZapIcon className={cn("mr-2 h-4 w-4", isHighPriority ? "text-neon-green" : "text-gray-400")} />
-                <span className="text-xs font-heading uppercase tracking-wider">
-                  {isHighPriority ? "Priority: Active" : "Enable Priority"}
-                </span>
-              </PromptInputActionMenuItem>
-            </PromptInputActionMenuContent>
-          </PromptInputActionMenu>
-        </div>
 
         <PromptInputBody className="flex-1">
           <PromptInputTextarea

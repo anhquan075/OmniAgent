@@ -2,13 +2,14 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.cacheMiddleware = void 0;
 const ai_1 = require("ai");
+const logger_1 = require("../../utils/logger");
 // Simple in-memory cache for demo purposes
 const cache = new Map();
 exports.cacheMiddleware = {
     wrapGenerate: async ({ doGenerate, params }) => {
         const cacheKey = JSON.stringify(params);
         if (cache.has(cacheKey)) {
-            console.log('[Cache] Hit (Generate)');
+            logger_1.logger.debug({ type: 'generate' }, '[Cache] Hit');
             return cache.get(cacheKey);
         }
         const result = await doGenerate();
@@ -18,7 +19,7 @@ exports.cacheMiddleware = {
     wrapStream: async ({ doStream, params }) => {
         const cacheKey = JSON.stringify(params);
         if (cache.has(cacheKey)) {
-            console.log('[Cache] Hit (Stream)');
+            logger_1.logger.debug({ type: 'stream' }, '[Cache] Hit');
             const cachedResult = cache.get(cacheKey);
             return {
                 ...cachedResult,

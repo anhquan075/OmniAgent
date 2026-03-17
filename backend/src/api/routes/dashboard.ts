@@ -1,7 +1,7 @@
-
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { agentEvents } from '../../agent/AutonomousLoop';
+import { logger } from '@/utils/logger';
 
 const dashboard = new Hono();
 
@@ -18,7 +18,7 @@ dashboard.get('/events', async (c) => {
           data: JSON.stringify({ type: 'cycle:start', ...data }),
           event: 'agent-event',
         });
-      } catch (e) { console.error('SSE Write Error:', e); }
+      } catch (e) { logger.error(e, '[Dashboard] SSE Write Error (cycle:start)'); }
     };
 
     const onStepFinish = async (data: any) => {
@@ -27,7 +27,7 @@ dashboard.get('/events', async (c) => {
           data: JSON.stringify({ type: 'step:finish', ...data }),
           event: 'agent-event',
         });
-      } catch (e) { console.error('SSE Write Error:', e); }
+      } catch (e) { logger.error(e, '[Dashboard] SSE Write Error (step:finish)'); }
     };
 
     const onCycleEnd = async (data: any) => {
@@ -36,7 +36,7 @@ dashboard.get('/events', async (c) => {
           data: JSON.stringify({ type: 'cycle:end', ...data }),
           event: 'agent-event',
         });
-      } catch (e) { console.error('SSE Write Error:', e); }
+      } catch (e) { logger.error(e, '[Dashboard] SSE Write Error (cycle:end)'); }
     };
 
     const onCycleError = async (data: any) => {
@@ -45,7 +45,7 @@ dashboard.get('/events', async (c) => {
           data: JSON.stringify({ type: 'cycle:error', ...data }),
           event: 'agent-event',
         });
-      } catch (e) { console.error('SSE Write Error:', e); }
+      } catch (e) { logger.error(e, '[Dashboard] SSE Write Error (cycle:error)'); }
     };
 
     const onStatusSleeping = async (data: any) => {
@@ -54,7 +54,7 @@ dashboard.get('/events', async (c) => {
           data: JSON.stringify({ type: 'status:sleeping', ...data }),
           event: 'agent-event',
         });
-      } catch (e) { console.error('SSE Write Error:', e); }
+      } catch (e) { logger.error(e, '[Dashboard] SSE Write Error (status:sleeping)'); }
     };
 
     agentEvents.on('cycle:start', onCycleStart);
@@ -69,7 +69,7 @@ dashboard.get('/events', async (c) => {
       agentEvents.off('cycle:end', onCycleEnd);
       agentEvents.off('cycle:error', onCycleError);
       agentEvents.off('status:sleeping', onStatusSleeping);
-      console.log('Dashboard stream disconnected');
+      logger.info('[Dashboard] SSE client disconnected');
     });
 
     while (true) {

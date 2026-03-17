@@ -43,6 +43,10 @@ contract RiskPolicy {
     uint256 public immutable guardedLpBps;
     uint256 public immutable drawdownLpBps;
 
+    // ── Lending rail params (Phase 1) ───────────────────────────
+    uint256 public immutable maxAaveAllocationBps;
+    uint256 public immutable minHealthFactor;
+
     uint256 public constant BPS_DENOMINATOR = 10_000;
 
     constructor(
@@ -62,7 +66,9 @@ contract RiskPolicy {
         uint256 sharpeLowThreshold_,
         uint256 normalLpBps_,
         uint256 guardedLpBps_,
-        uint256 drawdownLpBps_
+        uint256 drawdownLpBps_,
+        uint256 maxAaveAllocationBps_,
+        uint256 minHealthFactor_
     ) {
         if (cooldown_ == 0) revert RiskPolicy__ZeroCooldown();
         if (guardedVolatilityBps_ > drawdownVolatilityBps_) revert RiskPolicy__VolatilityOrderInvalid();
@@ -90,6 +96,8 @@ contract RiskPolicy {
             revert RiskPolicy__AllocsNotMonotonic();
         }
 
+        if (maxAaveAllocationBps_ > BPS_DENOMINATOR) revert RiskPolicy__AllocationTooHigh();
+
         cooldown = cooldown_;
         guardedVolatilityBps = guardedVolatilityBps_;
         drawdownVolatilityBps = drawdownVolatilityBps_;
@@ -107,5 +115,7 @@ contract RiskPolicy {
         normalLpBps = normalLpBps_;
         guardedLpBps = guardedLpBps_;
         drawdownLpBps = drawdownLpBps_;
+        maxAaveAllocationBps = maxAaveAllocationBps_;
+        minHealthFactor = minHealthFactor_;
     }
 }

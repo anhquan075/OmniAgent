@@ -4,6 +4,7 @@ import { generateObject } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { env } from '@/config/env';
+import { logger } from '@/utils/logger';
 
 export interface RiskProfile {
   level: 'LOW' | 'MEDIUM' | 'HIGH';
@@ -53,10 +54,10 @@ Analyze the simulation for potential anomalies, protocol failures, or excessive 
 Return a score from 0 (Safe) to 100 (Extremely Risky) and a concise explanation.`,
       });
 
-      console.log(`[RiskService] AI Risk Score: ${object.score}/100. Reason: ${object.explanation}`);
+      logger.info({ score: object.score, explanation: object.explanation }, '[RiskService] AI Risk Score');
       return object;
     } catch (e: any) {
-      console.error(`[RiskService] AI Risk Scoring failed: ${e.message}`);
+      logger.error(e, '[RiskService] AI Risk Scoring failed');
       return { score: 50, explanation: `Safety fallback: AI scoring unreachable (${e.message})` };
     }
   }
@@ -64,12 +65,12 @@ Return a score from 0 (Safe) to 100 (Extremely Risky) and a concise explanation.
   async getRiskProfile(): Promise<RiskProfile> {
     try {
       const oracleAddress = await this.zkOracle.getAddress();
-      console.log(`[RiskService] Fetching risk from ZK Oracle at: ${oracleAddress}`);
+      logger.debug({ oracleAddress }, '[RiskService] Fetching risk from ZK Oracle');
       
       // Check for misconfiguration via environment variable
       const sharpeTracker = env.WDK_SHARPE_TRACKER_ADDRESS;
       if (sharpeTracker && oracleAddress.toLowerCase() === sharpeTracker.toLowerCase()) {
-        console.warn(`[RiskService] CONFIGURATION WARNING: WDK_ZK_ORACLE_ADDRESS is pointing to SharpeTracker (${sharpeTracker}). Using safe fallback.`);
+        logger.warn({ sharpeTracker }, '[RiskService] CONFIGURATION WARNING: WDK_ZK_ORACLE_ADDRESS is pointing to SharpeTracker. Using safe fallback.');
         return this.getSafeFallbackProfile("Config Error: Using SharpeTracker instead of ZKRiskOracle");
       }
 
@@ -90,7 +91,7 @@ Return a score from 0 (Safe) to 100 (Extremely Risky) and a concise explanation.
         message: "ZK-Proven Metrics"
       };
     } catch (error: any) {
-      console.error(`[RiskService] WARNING: Failed to fetch ZK Risk metrics: ${error.message}. Defaulting to LOW risk.`);
+      logger.error(error, '[RiskService] WARNING: Failed to fetch ZK Risk metrics. Defaulting to LOW risk.');
       return this.getSafeFallbackProfile(`Contract Revert: ${error.message}`);
     }
   }
@@ -108,7 +109,7 @@ Return a score from 0 (Safe) to 100 (Extremely Risky) and a concise explanation.
 
   async triggerEmergencyPause(reason: string) {
     const bnbAccount = await this.wdk.getAccount('bnb');
-    console.log(`[RiskService] EMERGENCY PAUSE TRIGGERED: ${reason}`);
+    logger.warn({ reason }, '[RiskService] EMERGENCY PAUSE TRIGGERED');
     
     // Pause selector: 0x8456d592
     const data = '0x8456d592'; 
@@ -119,7 +120,7 @@ Return a score from 0 (Safe) to 100 (Extremely Risky) and a concise explanation.
       data: data
     } as any);
 
-    console.log(`Vault Paused! Hash: ${tx.hash}`);
+    logger.info({ txHash: tx.hash }, 'Vault Paused');
     return tx;
   }
 }

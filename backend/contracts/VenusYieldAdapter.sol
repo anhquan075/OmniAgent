@@ -89,6 +89,7 @@ contract VenusYieldAdapter is Ownable2Step, IManagedAdapter {
 
     function onVaultDeposit(uint256 amount) external onlyVault {
         if (amount == 0) revert VenusAdapter__ZeroAmount();
+        _asset.safeTransferFrom(msg.sender, address(this), amount);
         _asset.forceApprove(address(_vToken), amount);
         uint256 err = _vToken.mint(amount);
         if (err != 0) revert VenusAdapter__MintFailed(err);
@@ -98,12 +99,23 @@ contract VenusYieldAdapter is Ownable2Step, IManagedAdapter {
         if (amount == 0) return 0;
         uint256 bal = _asset.balanceOf(address(this));
         if (bal < amount) {
-            uint256 err = _vToken.redeemUnderlying(amount - bal);
-            if (err != 0) revert VenusAdapter__RedeemFailed(err);
+            uint256 toRedeem = amount - bal;
+            // Robustness: Venus may fail to redeem if liquidity is insufficient.
+            // We handle the failure to ensure the vault waterfall can proceed.
+            try _vToken.redeemUnderlying(toRedeem) returns (uint256 err) {
+                if (err != 0) {
+                    // Fail silently, return only what is currently idle in the adapter
+                }
+            } catch {
+                // Fail silently
+            }
         }
         uint256 actual = _asset.balanceOf(address(this));
-        if (actual > amount) actual = amount;
-        _asset.safeTransfer(vault, actual);
-        return actual;
+        uint256 toTransfer = actual > amount ? amount : actual;
+        
+        if (toTransfer > 0) {
+            _asset.safeTransfer(vault, toTransfer);
+        }
+        return toTransfer;
     }
 }

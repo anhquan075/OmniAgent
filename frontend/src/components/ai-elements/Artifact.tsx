@@ -9,10 +9,15 @@ import {
 import { cn } from "../../lib/utils";
 import { XIcon } from "lucide-react";
 
+interface ArtifactProps {
+  className?: string;
+  children?: React.ReactNode;
+}
+
 export const Artifact = ({
   className,
   ...props
-}) => (
+}: ArtifactProps) => (
   <div
     className={cn(
       "flex flex-col overflow-hidden rounded-lg border bg-background shadow-sm",

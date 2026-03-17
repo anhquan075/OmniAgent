@@ -3,11 +3,10 @@ import { streamText, createUIMessageStream, createUIMessageStreamResponse, conve
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { env } from '@/config/env';
+import { logger } from '@/utils/logger';
 
 import { agentTools } from '@/agent/tools';
 import { loadChat, saveChat } from '../../utils/chat-store';
-import { cacheMiddleware } from '../middleware/cache';
-import { strategicGuardrail } from '../middleware/guardrails';
 
 const chat = new Hono();
 
@@ -51,7 +50,7 @@ Topics: DeFi strategies, yield optimization, vault management, settlement rails.
       return suggestions.slice(0, 3);
     }
   } catch (err) {
-    console.error('[Chat] Error generating suggestions:', err);
+    logger.error(err, '[Chat] Error generating suggestions');
   }
   return fallbackSuggestions;
 }
@@ -72,10 +71,18 @@ chat.post('/', async (c) => {
     } else if (Array.isArray(lastUserMessage.parts)) {
       userText = lastUserMessage.parts.find((p: any) => p.type === 'text')?.text || '';
     } else if (lastUserMessage.content && typeof lastUserMessage.content === 'object') {
-      // Fallback for different SDK versions
       userText = (lastUserMessage.content as any).text || '';
     }
   }
+
+  // Filter messages to ensure they have valid content
+  const validMessages = messages.filter((m: any) => {
+    if (!m?.role) return false;
+    if (typeof m.content === 'string') return true;
+    if (Array.isArray(m.content)) return true;
+    if (m.content?.text) return true;
+    return false;
+  });
 
   // 1. Intent detection: Detect if crypto/DeFi query
   const cryptoKeywords = /\b(vault|strategy|rebalance|usdt|xaut|gold|crypto|defi|yield|risk|depeg|peg|asset|allocation|emergency|circuit|breaker|sharpe|bridge|cross-chain|solana|bnb|ethereum|price|oracle|tether|stablecoin|liquidity|apy|apr)\b/i;
@@ -91,16 +98,11 @@ chat.post('/', async (c) => {
   // 2. Model selection: Use DeepSeek for crypto/DeFi, Gemini for general
   const modelId = isCryptoQuery 
     ? (env.OPENROUTER_MODEL_CRYPTO || "deepseek/deepseek-chat")
-    : (env.OPENROUTER_MODEL_GENERAL || "google/gemini-2.0-flash-exp:free");
+    : (env.OPENROUTER_MODEL_GENERAL || "google/gemini-2.0-flash-001");
   
-  console.log(`[Chat] Query: "${userText.slice(0, 50)}..." | Crypto: ${isCryptoQuery} | Model: ${modelId}`);
+  logger.info({ userText: userText.slice(0, 50), isCryptoQuery, modelId }, '[Chat] Processing query');
   
   const baseModel = openai.chat(modelId);
-  
-  const model = wrapLanguageModel({
-    model: baseModel,
-    middleware: [cacheMiddleware, strategicGuardrail]
-  });
 
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
@@ -113,15 +115,15 @@ chat.post('/', async (c) => {
             data: { 
               status: 'Connecting', 
               progress: 10,
-              thought: 'Initializing neural bridge to WDK settlement rails...'
+              thought: 'Initializing link to WDK settlement rails...'
             },
           });
         }
 
-        let coreMessages = await convertToModelMessages(messages);
+        let coreMessages = validMessages;
 
         const result = await streamText({
-          model,
+          model: baseModel as any,
           maxSteps: 10,
           maxToolRoundtrips: 3,
           temperature: isSmallTalk ? 0.7 : 0, 
@@ -196,8 +198,8 @@ chat.post('/', async (c) => {
           },
           system: isSmallTalk 
             ? `You are the OmniWDK AFOS Strategist. Keep responses brief and professional. Just answer the user's question directly in natural language.`
-            : `You are the OmniWDK AFOS Strategist. 
-               Directive: yield optimization for USD₮ and XAU₮ via Tether WDK & OmniWDK.
+               : `You are the OmniWDK AFOS Strategist. 
+                Directive: yield optimization for USDT and XAUT via Tether WDK & OmniWDK.
                
                CRITICAL INSTRUCTION: You MUST ALWAYS provide a final text summary after using tools.
                
@@ -229,11 +231,10 @@ chat.post('/', async (c) => {
             const response = await result.response;
             const generatedMessages = response.messages;
             
-            console.log(`[Chat] Response messages count: ${generatedMessages.length}`);
+            logger.info({ messageCount: generatedMessages.length }, '[Chat] Stream finished');
             if (generatedMessages.length > 0) {
                 const lastMsg = generatedMessages[generatedMessages.length - 1];
-                console.log(`[Chat] Last message role: ${lastMsg.role}`);
-                console.log(`[Chat] Last message content: ${JSON.stringify(lastMsg.content).slice(0, 100)}...`);
+                logger.debug({ role: lastMsg.role, contentPreview: JSON.stringify(lastMsg.content).slice(0, 100) }, '[Chat] Last message details');
             }
 
             if (generatedMessages && generatedMessages.length > 0) {
@@ -241,10 +242,10 @@ chat.post('/', async (c) => {
 
               // Check if the conversation ended on a tool execution (role: 'tool')
               const endedOnTool = lastMsg.role === 'tool';
-              console.log(`[Chat] Ended on tool? ${endedOnTool}`);
+              logger.debug({ endedOnTool }, '[Chat] Termination check');
 
               if (endedOnTool) {
-                console.log('[Chat] Model stopped after tool usage without summary. Forcing synthesis...');
+                logger.info('[Chat] Model stopped after tool usage without summary. Forcing synthesis...');
                 
                 writer.write({
                   type: 'data-status',
@@ -253,7 +254,7 @@ chat.post('/', async (c) => {
                 });
 
                 const summaryResult = await streamText({
-                  model,
+                  model: baseModel as any,
                   messages: [
                     ...generatedMessages,
                     { role: 'user', content: 'Summarize the above tool results and answer the user query.' }
@@ -265,7 +266,7 @@ chat.post('/', async (c) => {
               }
             }
           } catch (err) {
-            console.error('[Chat] Error in synthesis loop:', err);
+            logger.error(err, '[Chat] Error in synthesis loop');
           }
         }
 
@@ -282,16 +283,16 @@ chat.post('/', async (c) => {
               }
             }
 
-            const suggestions = await generateSuggestions(baseModel, generatedMessages || [], assistantText);
+            const suggestions = await generateSuggestions(baseModel as any, generatedMessages || [], assistantText);
             writer.write({ type: 'data-suggestions', data: suggestions });
           } catch (err) {
-            console.error('[Chat] Error in suggestion generation:', err);
+            logger.error(err, '[Chat] Error in suggestion generation');
             writer.write({ type: 'data-suggestions', data: fallbackSuggestions });
           }
         }
       } catch (error: any) {
         if (error.name === 'AbortError') return;
-        console.error('Execution Error:', error);
+        logger.error(error, '[Chat] Execution Error');
         writer.write({
           type: 'data-notification',
           data: { message: `Execution Error: ${error.message}`, level: 'error' },
@@ -306,7 +307,7 @@ chat.post('/', async (c) => {
       try {
         await saveChat({ chatId, messages: [...messages, responseMessage] });
       } catch (err) {
-        console.error('[ChatRoute] Failed to save chat:', err);
+        logger.error(err, '[ChatRoute] Failed to save chat');
       }
     },
   });

@@ -1,6 +1,6 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
-import { logger } from 'hono/logger';
+import { pinoLogger } from 'hono-pino';
 import { cors } from 'hono/cors';
 import { env } from './config/env';
 import { bigIntReplacer } from './utils/json';
@@ -10,33 +10,35 @@ import agentRoute from './api/routes/agent';
 import dashboardRoute from './api/routes/dashboard';
 import robotFleetRoute from './api/routes/robot-fleet';
 import x402Route from './api/routes/x402';
+import mcpRoute from './api/routes/mcp';
 import { AgentService } from './agent/services/AgentService';
 import { startAutonomousLoop } from './agent/AutonomousLoop';
 import { validateEnvironment } from './config/security';
 import { robotFleetService } from './services/RobotFleetService';
+import { logger } from './utils/logger';
 
 const app = new Hono();
 
 // Global Error Handler
 app.onError((err, c) => {
-  console.error('[Hono Error]:', err);
+  logger.error(err, '[Hono Error]');
   return c.json({ error: 'Internal Server Error', message: err.message }, 500);
 });
 
 // Middleware
-app.use('*', logger());
+app.use('*', pinoLogger({ 
+  pino: logger,
+  http: {
+    reqId: () => crypto.randomUUID(),
+  }
+}));
 app.use('*', cors());
-
-app.use('*', async (c, next) => {
-  console.log(`[Hono] ${c.req.method} ${c.req.url}`);
-  await next();
-});
 
 app.use('/api/chat', async (c, next) => {
   if (c.req.method === 'POST') {
     try {
       const body = await c.req.raw.clone().json();
-      console.log(`[Request] POST /api/chat body:`, JSON.stringify(body, null, 2));
+      logger.debug({ body }, '[Request] POST /api/chat');
     } catch (e) {}
   }
   await next();
@@ -48,7 +50,6 @@ app.use('*', async (c, next) => {
   const contentType = c.res.headers.get('Content-Type');
   if (contentType?.includes('application/json')) {
     try {
-      console.log(`[BigInt Middleware] Processing JSON response for ${c.req.path}`);
       const clone = c.res.clone();
       const body = await clone.json();
       c.res = new Response(JSON.stringify(body, bigIntReplacer), {
@@ -56,7 +57,7 @@ app.use('*', async (c, next) => {
         status: c.res.status
       });
     } catch (e) {
-      console.error(`[BigInt Middleware] JSON parsing error for ${c.req.path}:`, e);
+      logger.error(e, `[BigInt Middleware] JSON parsing error for ${c.req.path}`);
     }
   }
 });
@@ -71,6 +72,7 @@ app.route('/api/agent', agentRoute);
 app.route('/api/dashboard', dashboardRoute);
 app.route('/api/robot-fleet', robotFleetRoute);
 app.route('/api/x402', x402Route);
+app.route('/api/mcp', mcpRoute);
 
 const port = Number(env.PORT);
 
@@ -80,45 +82,45 @@ const isMain = process.argv[1]?.endsWith('src/index.ts') ||
                process.argv[1]?.endsWith('dist/index.js');
 
 if (isMain) {
-  console.log(`🚀 OmniWDK WDK Strategist API starting on port ${port}`);
+  logger.info(`[OmniWDK] WDK Strategist API starting on port ${port}`);
 
   serve({
     fetch: app.fetch,
     port
   }, async (info) => {
-    console.log(`🌍 Server is running on http://localhost:${info.port}`);
+    logger.info(`[Server] Server is running on http://localhost:${info.port}`);
     
     // Start robot fleet simulator
     try {
       await robotFleetService.startSimulator();
-      console.log('🤖 Robot Fleet Simulator started successfully');
+      logger.info('[RobotFleet] Robot Fleet Simulator started successfully');
     } catch (e) {
-      console.warn('⚠️  Robot fleet simulator failed to start:', e);
+      logger.warn(e, '[RobotFleet] Robot fleet simulator failed to start');
     }
     
     // Validate critical environment variables before starting agent
     try {
       validateEnvironment();
     } catch (e: any) {
-      console.error('❌ Environment validation failed:', e.message);
-      console.warn('⚠️  Autonomous Agent Loop will NOT start due to missing/invalid secrets');
+      logger.error(e, '[Config] Environment validation failed');
+      logger.warn('[Agent] Autonomous Agent Loop will NOT start due to missing/invalid secrets');
       return;
     }
 
     if (env.DEPLOYMENT_MODE === 'production') {
-      console.log('☁️  Production mode: autonomous loop disabled (use POST /api/agent/run-cycle via cron)');
+      logger.info('[Deployment] Production mode: autonomous loop disabled (use POST /api/agent/run-cycle via cron)');
       return;
     }
 
     if (process.env.ALLOW_AGENT_RUN !== 'true') {
-      console.warn('⚠️  Autonomous Agent Loop skipped (ALLOW_AGENT_RUN not set)');
+      logger.warn('[Agent] Autonomous Agent Loop skipped (ALLOW_AGENT_RUN not set)');
       return;
     }
     
-    console.log('--- Starting Integrated Autonomous Loop (Dynamic Scheduling) ---');
+    logger.info('[Agent] Starting Integrated Autonomous Loop (Dynamic Scheduling)');
     
     startAutonomousLoop().catch((e: any) => {
-      console.error('Failed to start Autonomous Loop:', e);
+      logger.error(e, '[Agent] Failed to start Autonomous Loop');
     });
   });
 }

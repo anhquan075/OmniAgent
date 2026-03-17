@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
-import { Pickaxe, LockOpen, ArrowDownToLine, Loader2 } from 'lucide-react';
+import { Pickaxe, LockOpen, ArrowDownToLine, Loader2, AlertCircle } from 'lucide-react';
 
 export const TestnetTools = () => {
   const { address, isConnected } = useAccount();
   const { writeContract, isPending, data: hash } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const [error, setError] = useState<string | null>(null);
+  const [minting, setMinting] = useState(false);
 
   const tokenAddress = import.meta.env.VITE_TESTNET_TOKEN_ADDRESS;
   const vaultAddress = import.meta.env.VITE_TESTNET_VAULT_ADDRESS;
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
   const { data: balance } = useReadContract({
     address: tokenAddress,
@@ -30,19 +33,28 @@ export const TestnetTools = () => {
 
   const formattedBalance = balance ? parseFloat(formatEther(balance)).toFixed(2) : '0.00';
 
-  const handleMint = () => {
-    writeContract({
-      address: tokenAddress,
-      abi: [{
-        name: 'mint',
-        type: 'function',
-        stateMutability: 'nonpayable',
-        inputs: [{ type: 'address', name: 'to' }, { type: 'uint256', name: 'amount' }],
-        outputs: [],
-      }],
-      functionName: 'mint',
-      args: [address, parseEther('1000')],
-    });
+  const handleMint = async () => {
+    setError(null);
+    setMinting(true);
+    try {
+      const response = await fetch(`${apiUrl}/api/mcp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: { name: 'wdk_mint_test_token', arguments: { amount: '1000' } }
+        })
+      });
+      const data = await response.json();
+      if (data.error) {
+        setError(data.error.message || 'Minting failed');
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Minting failed');
+    }
+    setMinting(false);
   };
 
   const handleApprove = () => {
@@ -108,9 +120,9 @@ export const TestnetTools = () => {
       <div className="grid grid-cols-3 gap-2">
         <CyberButton 
           onClick={handleMint} 
-          disabled={isPending || isConfirming} 
+          disabled={isPending || isConfirming || minting} 
           icon={Pickaxe} 
-          label="Mint" 
+          label={minting ? 'Minting...' : 'Mint'} 
           colorClass="bg-purple-500"
           borderClass="group-hover:border-purple-500/50"
         />

@@ -20,7 +20,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { createHighlighter, type Highlighter } from "shiki";
+import { createHighlighter, type BundledLanguage, type SpecialLanguage, type Highlighter } from "shiki";
 
 // Shiki uses bitflags for font styles: 1=italic, 2=bold, 4=underline
 // oxlint-disable-next-line eslint(no-bitwise)
@@ -155,13 +155,13 @@ export const highlightCode = (
       const availableLangs = highlighter.getLoadedLanguages();
       const langToUse = availableLangs.includes(language) ? language : "text";
 
-      const result = highlighter.codeToTokens(code, {
-        lang: langToUse,
-        themes: {
-          dark: "github-dark",
-          light: "github-light",
-        },
-      });
+       const result = highlighter.codeToTokens(code, {
+         lang: langToUse as BundledLanguage | SpecialLanguage,
+         themes: {
+           dark: "github-dark",
+           light: "github-light",
+         },
+       });
 
       const tokenized = {
         bg: result.bg ?? "transparent",

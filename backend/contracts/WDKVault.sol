@@ -31,6 +31,7 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
     IManagedAdapter public wdkAdapter;
     IManagedAdapter public secondaryAdapter;
     IManagedAdapter public lpAdapter;
+    IManagedAdapter public lendingAdapter;
     IVenusVToken public venusVToken;
     uint256 public venusExchangeRateScale;
     bool public configurationLocked;
@@ -42,14 +43,14 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
     mapping(address => uint256) public userPrincipal;
 
     // --- Events ---
-    event Rebalanced(uint256 wdkTarget, uint256 actualWDK, uint256 idle, uint256 secondary, uint256 lp);
+    event Rebalanced(uint256 wdkTarget, uint256 actualWDK, uint256 idle, uint256 secondary, uint256 lp, uint256 lending);
     event BountyPaid(address indexed executor, uint256 amount);
     event AutoHarvestTriggered(uint256 harvested);
     event WDKWithdrawFailed(uint256 amount);
     event EngineSet(address indexed engine);
     event PegArbExecutorSet(address indexed pegArbExecutor);
     event VenusIdleBufferSet(address indexed venusVToken, uint256 exchangeRateScale);
-    event AdaptersSet(address indexed wdk, address indexed secondary, address indexed lp);
+    event AdaptersSet(address indexed wdk, address indexed secondary, address indexed lp, address lending);
     event ConfigurationLocked();
     event YieldWithdrawn(address indexed user, address indexed receiver, uint256 amount);
 
@@ -63,6 +64,7 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
     error WDKVault__WDKNotSet();
     error WDKVault__SecondaryNotSet();
     error WDKVault__LpNotSet();
+    error WDKVault__LendingNotSet();
     error WDKVault__InvalidFlashAdapter();
     error WDKVault__InsufficientLiquidity();
     error WDKVault__PegArbNotApproved();
@@ -70,6 +72,7 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
     error WDKVault__VenusMintFailed(uint256 code);
     error WDKVault__VenusRedeemFailed(uint256 code);
     error WDKVault__AdapterReportingFailure(address adapter);
+    error WDKVault__AssetMismatch(address adapter);
 
     modifier onlyEngine() {
         if (msg.sender != engine) revert WDKVault__CallerNotEngine();
@@ -96,24 +99,35 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
     function setAdapters(
         IManagedAdapter wdk_,
         IManagedAdapter secondary_,
-        IManagedAdapter lp_
+        IManagedAdapter lp_,
+        IManagedAdapter lending_
     ) external onlyOwner {
         if (configurationLocked) revert WDKVault__ConfigurationLocked();
+        
+        address targetAsset = asset();
+        if (address(wdk_) != address(0) && wdk_.asset() != targetAsset) revert WDKVault__AssetMismatch(address(wdk_));
+        if (address(secondary_) != address(0) && secondary_.asset() != targetAsset) revert WDKVault__AssetMismatch(address(secondary_));
+        if (address(lp_) != address(0) && lp_.asset() != targetAsset) revert WDKVault__AssetMismatch(address(lp_));
+        if (address(lending_) != address(0) && lending_.asset() != targetAsset) revert WDKVault__AssetMismatch(address(lending_));
+
         wdkAdapter = wdk_;
         secondaryAdapter = secondary_;
         lpAdapter = lp_;
+        lendingAdapter = lending_;
 
-        if (address(wdk_) != address(0)) IERC20(asset()).forceApprove(address(wdk_), type(uint256).max);
-        if (address(secondary_) != address(0)) IERC20(asset()).forceApprove(address(secondary_), type(uint256).max);
-        if (address(lp_) != address(0)) IERC20(asset()).forceApprove(address(lp_), type(uint256).max);
+        if (address(wdk_) != address(0)) IERC20(targetAsset).forceApprove(address(wdk_), type(uint256).max);
+        if (address(secondary_) != address(0)) IERC20(targetAsset).forceApprove(address(secondary_), type(uint256).max);
+        if (address(lp_) != address(0)) IERC20(targetAsset).forceApprove(address(lp_), type(uint256).max);
+        if (address(lending_) != address(0)) IERC20(targetAsset).forceApprove(address(lending_), type(uint256).max);
 
-        emit AdaptersSet(address(wdk_), address(secondary_), address(lp_));
+        emit AdaptersSet(address(wdk_), address(secondary_), address(lp_), address(lending_));
     }
 
     function lockConfiguration() external onlyOwner {
         if (engine == address(0)) revert WDKVault__EngineNotSet();
         if (address(wdkAdapter) == address(0)) revert WDKVault__WDKNotSet();
         if (address(secondaryAdapter) == address(0)) revert WDKVault__SecondaryNotSet();
+        if (address(lendingAdapter) == address(0)) revert WDKVault__LendingNotSet();
         configurationLocked = true;
         emit ConfigurationLocked();
         renounceOwnership();
@@ -159,7 +173,11 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
         if (address(lpAdapter) != address(0)) {
             try lpAdapter.managedAssets() returns (uint256 v) { lpManaged = v; } catch { if (failingAdapter == address(0)) failingAdapter = address(lpAdapter); }
         }
-        total = _idleAssets() + wdkManaged + secManaged + lpManaged;
+        uint256 lendingManaged;
+        if (address(lendingAdapter) != address(0)) {
+            try lendingAdapter.managedAssets() returns (uint256 v) { lendingManaged = v; } catch { if (failingAdapter == address(0)) failingAdapter = address(lendingAdapter); }
+        }
+        total = _idleAssets() + wdkManaged + secManaged + lpManaged + lendingManaged;
     }
 
     function _idleAssets() internal view returns (uint256) {
@@ -175,7 +193,7 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
 
     function rebalance(
         uint256 wdkTargetBps,
-        uint256,
+        uint256 lendingTargetBps,
         address executor,
         uint256 bountyBps,
         uint256 lpTargetBps
@@ -202,24 +220,29 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
         uint256 wdkTarget = (deployable * wdkTargetBps) / BPS_DENOMINATOR;
         uint256 currentWDK = address(wdkAdapter) != address(0) ? wdkAdapter.managedAssets() : 0;
 
-        if (address(wdkAdapter) != address(0)) {
-            if (wdkTarget > currentWDK) {
-                uint256 toSend = Math.min(wdkTarget - currentWDK, _availableIdle(buffer));
-                if (toSend > 0) wdkAdapter.onVaultDeposit(toSend);
-            } else if (currentWDK > wdkTarget) {
-                try wdkAdapter.withdrawToVault(currentWDK - wdkTarget) {} catch { emit WDKWithdrawFailed(currentWDK - wdkTarget); }
+        // --- Phase 1: Withdrawals (Reclaim liquidity) ---
+        if (address(wdkAdapter) != address(0) && currentWDK > wdkTarget) {
+            try wdkAdapter.withdrawToVault(currentWDK - wdkTarget) {} catch { 
+                emit WDKWithdrawFailed(currentWDK - wdkTarget); 
             }
         }
+        _rebalanceLpWithdraw(deployable, lpTargetBps);
+        _rebalanceLendingWithdraw(deployable, lendingTargetBps);
 
-        _rebalanceLp(deployable, lpTargetBps, buffer);
+        // --- Phase 2: Deposits (Allocate liquidity) ---
+        uint256 updatedWDK = address(wdkAdapter) != address(0) ? wdkAdapter.managedAssets() : 0;
+        if (address(wdkAdapter) != address(0) && wdkTarget > updatedWDK) {
+            uint256 toSend = Math.min(wdkTarget - updatedWDK, _availableIdle(buffer));
+            if (toSend > 0) wdkAdapter.onVaultDeposit(toSend);
+        }
+        _rebalanceLpDeposit(deployable, lpTargetBps, buffer);
+        _rebalanceLendingDeposit(deployable, lendingTargetBps, buffer);
+        
         _payExecutorBounty(executor, bountyBps, total);
         _rebalanceSecondary(buffer);
 
         uint256 postRawAssets = rawTotalAssets();
         
-        // Profit Locking Logic: Capture any jump in raw assets during rebalance (harvests, etc)
-        // preRawAssets IS the raw total (totalInternal) at the start.
-        // postRawAssets IS the raw total (totalInternal) at the end.
         if (postRawAssets > preRawAssets) {
             uint256 profit = postRawAssets - preRawAssets;
             lockedProfit = preLocked + profit;
@@ -239,7 +262,8 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
             address(wdkAdapter) != address(0) ? wdkAdapter.managedAssets() : 0,
             _idleAssets(),
             address(secondaryAdapter) != address(0) ? secondaryAdapter.managedAssets() : 0,
-            address(lpAdapter) != address(0) ? lpAdapter.managedAssets() : 0
+            address(lpAdapter) != address(0) ? lpAdapter.managedAssets() : 0,
+            address(lendingAdapter) != address(0) ? lendingAdapter.managedAssets() : 0
         );
     }
 
@@ -256,15 +280,41 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
         return idle > buffer ? idle - buffer : 0;
     }
 
-    function _rebalanceLp(uint256 deployable, uint256 lpTargetBps, uint256 buffer) internal {
+    function _rebalanceLpWithdraw(uint256 deployable, uint256 lpTargetBps) internal {
+        if (address(lpAdapter) == address(0)) return;
+        uint256 lpTarget = (deployable * lpTargetBps) / BPS_DENOMINATOR;
+        uint256 currentLp = lpAdapter.managedAssets();
+        if (currentLp > lpTarget) {
+            lpAdapter.withdrawToVault(currentLp - lpTarget);
+        }
+    }
+
+    function _rebalanceLpDeposit(uint256 deployable, uint256 lpTargetBps, uint256 buffer) internal {
         if (address(lpAdapter) == address(0) || lpTargetBps == 0) return;
         uint256 lpTarget = (deployable * lpTargetBps) / BPS_DENOMINATOR;
         uint256 currentLp = lpAdapter.managedAssets();
         if (lpTarget > currentLp) {
             uint256 toSend = Math.min(lpTarget - currentLp, _availableIdle(buffer));
             if (toSend > 0) lpAdapter.onVaultDeposit(toSend);
-        } else if (currentLp > lpTarget) {
-            lpAdapter.withdrawToVault(currentLp - lpTarget);
+        }
+    }
+
+    function _rebalanceLendingWithdraw(uint256 deployable, uint256 lendingTargetBps) internal {
+        if (address(lendingAdapter) == address(0)) return;
+        uint256 lendingTarget = (deployable * lendingTargetBps) / BPS_DENOMINATOR;
+        uint256 currentLending = lendingAdapter.managedAssets();
+        if (currentLending > lendingTarget) {
+            lendingAdapter.withdrawToVault(currentLending - lendingTarget);
+        }
+    }
+
+    function _rebalanceLendingDeposit(uint256 deployable, uint256 lendingTargetBps, uint256 buffer) internal {
+        if (address(lendingAdapter) == address(0) || lendingTargetBps == 0) return;
+        uint256 lendingTarget = (deployable * lendingTargetBps) / BPS_DENOMINATOR;
+        uint256 currentLending = lendingAdapter.managedAssets();
+        if (lendingTarget > currentLending) {
+            uint256 toSend = Math.min(lendingTarget - currentLending, _availableIdle(buffer));
+            if (toSend > 0) lendingAdapter.onVaultDeposit(toSend);
         }
     }
 
@@ -311,10 +361,13 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
     }
 
     function _isConfiguredAdapter(address adapter) internal view returns (bool) {
-        return adapter == address(wdkAdapter) || adapter == address(secondaryAdapter) || adapter == address(lpAdapter);
+        return adapter == address(wdkAdapter) || 
+               adapter == address(secondaryAdapter) || 
+               adapter == address(lpAdapter) ||
+               adapter == address(lendingAdapter);
     }
 
-    /// @dev 4-tier liquidity waterfall: idle -> Venus -> secondary -> LP -> WDK
+    /// @dev 5-tier liquidity waterfall: idle -> Venus -> lending -> LP -> secondary -> WDK
     function _ensureLiquid(uint256 needed) internal {
         uint256 idle = IERC20(asset()).balanceOf(address(this));
         if (idle >= needed) return;
@@ -330,12 +383,12 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
             }
         }
 
-        // Tier 2: Pull from secondary adapter
-        if (address(secondaryAdapter) != address(0)) {
-            uint256 secAvail = secondaryAdapter.managedAssets();
-            if (secAvail > 0) {
+        // Tier 2: Pull from lending adapter (Aave)
+        if (address(lendingAdapter) != address(0)) {
+            uint256 lendingAvail = lendingAdapter.managedAssets();
+            if (lendingAvail > 0) {
                 uint256 still = needed - idle;
-                secondaryAdapter.withdrawToVault(Math.min(still, secAvail));
+                lendingAdapter.withdrawToVault(Math.min(still, lendingAvail));
                 idle = IERC20(asset()).balanceOf(address(this));
                 if (idle >= needed) return;
             }
@@ -352,7 +405,18 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
             }
         }
 
-        // Tier 4: Pull from WDK adapter (synchronous)
+        // Tier 4: Pull from secondary adapter
+        if (address(secondaryAdapter) != address(0)) {
+            uint256 secAvail = secondaryAdapter.managedAssets();
+            if (secAvail > 0) {
+                uint256 still = needed - idle;
+                secondaryAdapter.withdrawToVault(Math.min(still, secAvail));
+                idle = IERC20(asset()).balanceOf(address(this));
+                if (idle >= needed) return;
+            }
+        }
+
+        // Tier 5: Pull from WDK adapter (synchronous)
         if (address(wdkAdapter) != address(0)) {
             uint256 wdkAvail = wdkAdapter.managedAssets();
             if (wdkAvail > 0) {

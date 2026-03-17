@@ -4,6 +4,7 @@ import { env } from '@/config/env';
 import { agentTools } from './tools';
 import { EventEmitter } from 'events';
 import { robotFleetService } from '@/services/RobotFleetService';
+import { logger } from '@/utils/logger';
 
 // Event Emitter for Dashboard Stream
 export const agentEvents = new EventEmitter();
@@ -17,7 +18,7 @@ const openai = createOpenAI({
 });
 
 const SYSTEM_PROMPT = `You are the OmniWDK AFOS Strategist, an autonomous AI agent managing a DeFi vault.
-Directive: Yield optimization for USD₮ and XAU₮ via Tether WDK & OmniWDK.
+Directive: Yield optimization for USDT and XAUT via Tether WDK & OmniWDK.
 You are a Multi-VM Native Agent. You monitor and manage assets across EVM (BNB), Solana, and TON blockchains simultaneously.
 
 WORKFLOW:
@@ -26,7 +27,9 @@ WORKFLOW:
 3. EVALUATE the risk level based on the tool output.
    - If risk is HIGH: Call handle_emergency immediately.
    - If MEDIUM or LOW: Proceed to check_strategy or check_cross_chain_yields or hire_fleet_robot to find yield opportunities or gain insights.
-4. OPTIMIZE: If opportunities exist, execute rebalances or bridging across supported chains.
+4. OPTIMIZE: If opportunities exist, execute rebalances, bridging (bridge_via_layerzero), or institutional lending (supply_to_aave / withdraw_from_aave) across supported chains.
+   - For Aave V3 on BNB: Use supply_to_aave when USDT supply APY is attractive and health factor > 1.5. Use withdraw_from_aave to reclaim liquidity if needed for rebalancing or emergency.
+   - For Cross-chain: Use bridge_via_layerzero to move idle USDT to chains with higher yield potential.
 5. SWEEP: Use yield_sweep if there's profit.
 6. FINISH: Provide a technical summary of all findings and actions.
 
@@ -60,8 +63,7 @@ export interface AutonomousCycleResult {
 
 export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
   const modelId = env.OPENROUTER_MODEL_CRYPTO || 'deepseek/deepseek-chat';
-  console.log(`[AutonomousLoop] Using crypto model: ${modelId} (Fortified Native maxSteps)`);
-  console.log(`[AutonomousLoop] Starting cycle at ${new Date().toISOString()}...`);
+  logger.info({ modelId }, '[AutonomousLoop] Starting cycle');
   
   agentEvents.emit('cycle:start', { timestamp: new Date(), modelId });
 
@@ -78,8 +80,8 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
   let robotEarningsDetected = false;
 
   if (parseFloat(cycleEarnings) > 0) {
-    console.log(`[AutonomousLoop] 💰 Fleet earnings since last cycle: ${cycleEarnings} ETH`);
-    currentSystemPrompt += `\n\n[FLEET UPDATE]: Since your last cycle, the autonomous robot fleet has earned ${cycleEarnings} ETH. Consider this new capital in your strategy.`;
+    logger.info({ cycleEarnings }, '[AutonomousLoop] Fleet earnings since last cycle');
+    currentSystemPrompt += `\n\n[FLEET UPDATE]: Since your last cycle, the autonomous robot fleet has earned ${cycleEarnings} BNB. Consider this new capital in your strategy.`;
     robotEarningsDetected = true;
   }
 
@@ -87,7 +89,7 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
   const fleetEmitter = robotFleetService.getEmitter();
   const onFleetEarning = (event: any) => {
     if (event.earnings && parseFloat(event.earnings) > 0) {
-      console.log(`[AutonomousLoop] 🤖 Robot fleet earning detected: ${event.robotId} earned ${event.earnings} ETH`);
+      logger.info({ robotId: event.robotId, earnings: event.earnings }, '[AutonomousLoop] Robot fleet earning detected');
       robotEarningsDetected = true;
     }
   };
@@ -102,7 +104,7 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
       prompt: "Perform a full autonomous strategy cycle. Start with risk analysis and do not stop until you provide a final summary with NEXT_RUN_DECISION.",
       onStepFinish: (step: any) => {
         const callCount = step.toolCalls?.length || 0;
-        console.log(`[AutonomousLoop] Step finished. Tool calls: ${callCount}`);
+        logger.debug({ callCount }, '[AutonomousLoop] Step finished');
         agentEvents.emit('step:finish', { 
           stepType: callCount > 0 ? 'tool_execution' : 'reasoning',
           toolCalls: step.toolCalls,
@@ -119,7 +121,7 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
     const isTextMissing = !result.text || result.text.trim().length === 0;
 
     if (isToolExecutionLast || isTextMissing) {
-      console.log('[AutonomousLoop] Agent finished on tool execution or no text. Forcing synthesis...');
+      logger.info('[AutonomousLoop] Agent finished on tool execution or no text. Forcing synthesis...');
       
       const summaryResult = await generateText({
         model: openai.chat(modelId),
@@ -131,7 +133,7 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
         ],
       });
 
-      console.log(`[AutonomousLoop] Synthesis complete: ${summaryResult.text.slice(0, 50)}...`);
+      logger.info('[AutonomousLoop] Synthesis complete');
       
       finalResult = {
         ...result,
@@ -144,7 +146,7 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
     }
 
     const summaryText = finalResult.text || "";
-    console.log(`[AutonomousLoop] Summary: ${summaryText}`);
+    logger.debug({ summaryText }, '[AutonomousLoop] Cycle Summary');
 
     const schedulingDecision = parseSchedulingDecision(summaryText);
 
@@ -165,7 +167,7 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
 
     return cycleResult;
   } catch (error: any) {
-    console.error(`[AutonomousLoop] Cycle failed:`, error);
+    logger.error(error, '[AutonomousLoop] Cycle failed');
     
     agentEvents.emit('cycle:error', { error: error.message });
 
@@ -221,7 +223,7 @@ function parseSchedulingDecision(text: string): {
     // Step 1: Find the NEXT_RUN_DECISION marker
     const decisionIndex = text.indexOf('NEXT_RUN_DECISION');
     if (decisionIndex === -1) {
-      console.warn('[AutonomousLoop] No NEXT_RUN_DECISION found in summary');
+      logger.warn('[AutonomousLoop] No NEXT_RUN_DECISION found in summary');
       return defaultDecision;
     }
 
@@ -231,14 +233,14 @@ function parseSchedulingDecision(text: string): {
     // Step 3: Find the first '{' and last '}'
     const firstBrace = afterMarker.indexOf('{');
     if (firstBrace === -1) {
-      console.warn('[AutonomousLoop] No opening brace found after NEXT_RUN_DECISION');
+      logger.warn('[AutonomousLoop] No opening brace found after NEXT_RUN_DECISION');
       return defaultDecision;
     }
 
     // Find the matching closing brace (simple approach: find last '}')
     const lastBrace = afterMarker.lastIndexOf('}');
     if (lastBrace === -1 || lastBrace <= firstBrace) {
-      console.warn('[AutonomousLoop] No closing brace found after NEXT_RUN_DECISION');
+      logger.warn('[AutonomousLoop] No closing brace found after NEXT_RUN_DECISION');
       return defaultDecision;
     }
 
@@ -266,10 +268,10 @@ function parseSchedulingDecision(text: string): {
     const reason = String(parsed.reason || "No reason provided");
     const confidence = Math.max(0, Math.min(1, Number(parsed.confidence) || 0.5));
 
-    console.log(`[AutonomousLoop] Scheduling decision parsed: ${delay}ms (${reason})`);
+    logger.info({ delay, reason }, '[AutonomousLoop] Scheduling decision parsed');
     return { delay_ms: delay, reason, confidence };
   } catch (e) {
-    console.warn('[AutonomousLoop] Failed to parse NEXT_RUN_DECISION:', e);
+    logger.warn(e, '[AutonomousLoop] Failed to parse NEXT_RUN_DECISION');
     return defaultDecision;
   }
 }
@@ -279,18 +281,18 @@ let isRunning = false;
 
 export async function startAutonomousLoop(initialDelayMs?: number): Promise<void> {
   if (isRunning) {
-    console.warn('[AutonomousLoop] Loop already running');
+    logger.warn('[AutonomousLoop] Loop already running');
     return;
   }
   
   isRunning = true;
   const INITIAL_DELAY = initialDelayMs || 5000; // Start almost immediately (5s) for first run
-  console.log('--- OmniWDK Autonomous AI SDK Loop Started ---');
+  logger.info('--- OmniWDK Autonomous AI SDK Loop Started ---');
 
   const scheduleNext = (delay: number) => {
     if (!isRunning) return;
     
-    console.log(`[AutonomousLoop] Sleeping for ${delay}ms...`);
+    logger.info({ delay, wakeTime: new Date(Date.now() + delay).toISOString() }, '[AutonomousLoop] Sleeping');
     agentEvents.emit('status:sleeping', { duration: delay, wakeTime: new Date(Date.now() + delay) });
     
     currentTimeout = setTimeout(async () => {
@@ -306,7 +308,7 @@ export async function startAutonomousLoop(initialDelayMs?: number): Promise<void
       const nextDelay = result.nextRunDelay || 300000;
       scheduleNext(nextDelay);
     } catch (e) {
-      console.error("Cycle error:", e);
+      logger.error(e, '[AutonomousLoop] Cycle error');
       scheduleNext(300000); // Safe fallback
     }
   };
@@ -320,7 +322,7 @@ export function stopAutonomousLoop(): void {
   if (currentTimeout) {
     clearTimeout(currentTimeout);
     currentTimeout = null;
-    console.log('[AutonomousLoop] Loop stopped');
+    logger.info('[AutonomousLoop] Loop stopped');
     agentEvents.emit('status:stopped');
   }
 }

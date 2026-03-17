@@ -16,12 +16,19 @@ const useConfirmation = () => {
   return context;
 };
 
+interface ConfirmationProps {
+  className?: string;
+  approval?: { approved: boolean } | null;
+  state?: string;
+  children?: React.ReactNode;
+}
+
 export const Confirmation = ({
   className,
   approval,
   state,
   ...props
-}) => {
+}: ConfirmationProps) => {
   const contextValue = useMemo(() => ({ approval, state }), [approval, state]);
 
   if (!approval || state === "input-streaming" || state === "input-available") {
@@ -109,6 +116,9 @@ export const ConfirmationActions = ({
   );
 };
 
-export const ConfirmationAction = (props) => (
+export const ConfirmationAction = (props: {
+  className?: string;
+  children?: React.ReactNode;
+}) => (
   <Button className="h-8 px-3 text-sm" type="button" {...props} />
 );

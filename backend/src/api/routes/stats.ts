@@ -2,12 +2,13 @@ import { Hono } from 'hono';
 import { getContracts } from '@/contracts/clients/ethers';
 import { ethers } from 'ethers';
 import { env } from '@/config/env';
+import { logger } from '@/utils/logger';
 
 const stats = new Hono();
 
 stats.get('/', async (c) => {
   try {
-    console.log("[Stats] Fetching data from contracts...");
+    logger.debug('[Stats] Fetching data from contracts');
     const { vault, zkOracle, breaker, engine, usdt } = getContracts();
 
     // Fetch in parallel with individual error handling
@@ -20,10 +21,10 @@ stats.get('/', async (c) => {
       preview,
       usdtBalance
     ] = await Promise.all([
-      vault.totalAssets().catch((e) => { console.error("vault.totalAssets error:", e.message); return 0n; }),
-      vault.bufferStatus().catch((e) => { console.error("vault.bufferStatus error:", e.message); return { utilizationBps: 0n, current: 0n, target: 0n }; }),
+      vault.totalAssets().catch((e) => { logger.error(e, "vault.totalAssets error"); return 0n; }),
+      vault.bufferStatus().catch((e) => { logger.error(e, "vault.bufferStatus error"); return { utilizationBps: 0n, current: 0n, target: 0n }; }),
       zkOracle.getVerifiedRiskBands().catch((e) => { 
-        console.error("zkOracle.getVerifiedRiskBands error:", e.message);
+        logger.error(e, "zkOracle.getVerifiedRiskBands error");
         return {
           monteCarloDrawdownBps: 0,
           verifiedSharpeRatio: 0,
@@ -31,13 +32,13 @@ stats.get('/', async (c) => {
           recommendedBufferBps: 500
         };
       }),
-      breaker.isPaused().catch((e) => { console.error("breaker.isPaused error:", e.message); return false; }),
-      engine.canExecute().catch((e) => { console.error("engine.canExecute error:", e.message); return [false, "0x00"]; }),
-      engine.previewDecision().catch((e) => { console.error("engine.previewDecision error:", e.message); return { targetWDKBps: 0n, state: 0n }; }),
-      usdt.balanceOf(env.WDK_VAULT_ADDRESS).catch((e) => { console.error("usdt.balanceOf error:", e.message); return 0n; })
+      breaker.isPaused().catch((e) => { logger.error(e, "breaker.isPaused error"); return false; }),
+      engine.canExecute().catch((e) => { logger.error(e, "engine.canExecute error"); return [false, "0x00"]; }),
+      engine.previewDecision().catch((e) => { logger.error(e, "engine.previewDecision error"); return { targetWDKBps: 0n, state: 0n }; }),
+      usdt.balanceOf(env.WDK_VAULT_ADDRESS).catch((e) => { logger.error(e, "usdt.balanceOf error"); return 0n; })
     ]);
 
-    console.log("[Stats] Formatting response...");
+    logger.debug('[Stats] Formatting response');
     
     const [canExecute, executeReason] = executionStatus || [false, "0x00"];
 
@@ -70,7 +71,7 @@ stats.get('/', async (c) => {
 
     return c.json(response);
   } catch (error: any) {
-    console.error("Stats Error (Fatal):", error);
+    logger.error(error, "Stats Error (Fatal)");
     return c.json({ error: error.message }, 500);
   }
 });

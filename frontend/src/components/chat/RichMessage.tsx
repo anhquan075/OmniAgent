@@ -47,10 +47,15 @@ export function RichMessage({ role, content, parts, toolInvocations, timestamp, 
 
     const toolTitles: Record<string, string> = {
       get_vault_status: 'Vault Analytics',
+      get_all_chain_balances: 'Multi-Chain Balance',
       check_risk: 'ZK Risk Proof',
       execute_rebalance: 'Tactical Rebalance',
       execute_syndicate_payout: 'Syndicate Payout',
-      x402_payment: 'x402 Settlement'
+      x402_payment: 'x402 Settlement',
+      analyze_risk: 'Risk Analysis',
+      check_strategy: 'Strategy Check',
+      yield_sweep: 'Yield Sweep',
+      check_cross_chain_yields: 'Cross-Chain Yield',
     };
 
     const title = toolTitles[toolName] || toolName;
@@ -79,6 +84,21 @@ export function RichMessage({ role, content, parts, toolInvocations, timestamp, 
               {toolName === 'get_vault_status' ? (
                 <div className="mt-2">
                    <BalanceCard {...result} />
+                </div>
+              ) : toolName === 'get_all_chain_balances' ? (
+                <div className="mt-2 space-y-2">
+                  {result.balances?.map((chain: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-black/20 border border-white/5">
+                      <span className="text-[10px] font-heading uppercase text-neutral-gray">{chain.chain}</span>
+                      <span className="text-[10px] font-mono text-tether-teal">{chain.native} {chain.symbol}</span>
+                    </div>
+                  ))}
+                  {result.total && (
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-tether-teal/10 border border-tether-teal/30">
+                      <span className="text-[10px] font-heading uppercase text-tether-teal">Total</span>
+                      <span className="text-[10px] font-mono font-bold text-tether-teal">{result.total}</span>
+                    </div>
+                  )}
                 </div>
               ) : toolName === 'check_risk' ? (
                  <div className="grid grid-cols-2 gap-3 mt-2">

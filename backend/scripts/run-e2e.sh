@@ -3,7 +3,7 @@
 # TetherProof-WDK E2E Runner
 # Uses direct node execution for hardhat to bypass broken symlinks in node_modules
 
-echo "🚀 Starting TetherProof-WDK E2E Test Suite..."
+echo "[E2E] Starting OmniWDK E2E Test Suite..."
 
 # 1. Start Hardhat Node in background if not already running
 if ! lsof -i:8545 > /dev/null; then

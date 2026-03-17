@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import axios from 'axios';
+import { logger } from '@/utils/logger';
 
 export interface GasEstimate {
   gasUsed: string;
@@ -57,7 +58,7 @@ export class ProfitSimulator {
         return this.gasPrice;
       }
     } catch (e) {
-      console.error('[ProfitSimulator] Failed to fetch gas price:', e);
+      logger.error(e, '[ProfitSimulator] Failed to fetch gas price');
     }
 
     return this.gasPrice || ethers.parseUnits('5', 'gwei');
@@ -78,7 +79,7 @@ export class ProfitSimulator {
       }
       return this.gasTokenPrice;
     } catch (e) {
-      console.error('[ProfitSimulator] Failed to fetch BNB price:', e);
+      logger.error(e, '[ProfitSimulator] Failed to fetch BNB price');
       return this.gasTokenPrice || 600; // Fallback estimate
     }
   }

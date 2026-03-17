@@ -7,6 +7,7 @@ exports.ProfitSimulator = void 0;
 exports.createProfitSimulator = createProfitSimulator;
 const ethers_1 = require("ethers");
 const axios_1 = __importDefault(require("axios"));
+const logger_1 = require("../../utils/logger");
 class ProfitSimulator {
     rpcUrl;
     gasPrice = 0n;
@@ -34,7 +35,7 @@ class ProfitSimulator {
             }
         }
         catch (e) {
-            console.error('[ProfitSimulator] Failed to fetch gas price:', e);
+            logger_1.logger.error(e, '[ProfitSimulator] Failed to fetch gas price');
         }
         return this.gasPrice || ethers_1.ethers.parseUnits('5', 'gwei');
     }
@@ -51,7 +52,7 @@ class ProfitSimulator {
             return this.gasTokenPrice;
         }
         catch (e) {
-            console.error('[ProfitSimulator] Failed to fetch BNB price:', e);
+            logger_1.logger.error(e, '[ProfitSimulator] Failed to fetch BNB price');
             return this.gasTokenPrice || 600; // Fallback estimate
         }
     }

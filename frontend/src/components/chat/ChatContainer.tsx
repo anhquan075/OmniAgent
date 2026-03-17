@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatHistory } from './ChatHistory';
 import { MessageInput } from './MessageInput';
-import { CpuIcon, ZapIcon, ShieldCheckIcon, BarChart3Icon, BrainCircuitIcon } from 'lucide-react';
+import { CpuIcon, ZapIcon, ShieldCheckIcon, BarChart3Icon, BrainCircuitIcon, CoinsIcon } from 'lucide-react';
 import { OperationalPlan, TaskStatus } from './TaskStep';
 import { Conversation } from '../ai-elements/Conversation';
 
@@ -25,8 +25,10 @@ interface ChatContainerProps {
 const SUGGESTED_ACTIONS = [
   { label: 'Vault Status', icon: BarChart3Icon, prompt: 'Show me the current vault status and buffer utilization.' },
   { label: 'Check Risk', icon: ShieldCheckIcon, prompt: 'What are the current ZK-risk parameters?' },
-  { label: 'Pivot Gold', icon: ZapIcon, prompt: 'Simulate a rebalance to Tether Gold (XAU₮).' },
-  { label: 'Harvest Yield', icon: CpuIcon, prompt: 'Check for available yield to harvest.' },
+  { label: 'My Balance', icon: CoinsIcon, prompt: 'What is my current wallet balance on BNB Chain?' },
+  { label: 'Get USDT', icon: ZapIcon, prompt: 'Check my USDT balance in the vault.' },
+  { label: 'Bridge Funds', icon: ZapIcon, prompt: 'Show me how to bridge USDT to another chain.' },
+  { label: 'Smart Account', icon: ZapIcon, prompt: 'Show me my ERC-4337 smart account details.' },
 ];
 
 export function ChatContainer({ 
@@ -42,8 +44,11 @@ export function ChatContainer({
   regenerate,  stop,
   error,
   data 
-}: ChatContainerProps) {  const scrollRef = useRef<HTMLDivElement>(null);
+}: ChatContainerProps) {  
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  
+  const safeMessages = Array.isArray(messages) && messages.length > 0 ? messages : [];
 
   // Extract real-time status from data parts
   const currentAgentStatus = React.useMemo(() => {
@@ -56,9 +61,9 @@ export function ChatContainer({
     }
 
     // 2. Fallback to checking messages parts (for merged streams)
-    if (messages && messages.length > 0) {
-      for (let i = messages.length - 1; i >= 0; i--) {
-        const parts = (messages[i] as any).parts;
+    if (safeMessages && safeMessages.length > 0) {
+      for (let i = safeMessages.length - 1; i >= 0; i--) {
+        const parts = (safeMessages[i] as any).parts;
         if (parts && Array.isArray(parts)) {
           for (let j = parts.length - 1; j >= 0; j--) {
             const p = parts[j];
@@ -69,11 +74,12 @@ export function ChatContainer({
       }
     }
     return null;
-  }, [data, messages]);
+  }, [data, safeMessages]);
 
   // Extract dynamic suggestions from the last message
   const dynamicSuggestions = React.useMemo(() => {
-    if (status !== 'ready' || !messages || messages.length === 0) return null;
+    // Allow extraction during streaming or ready state to show suggestions as they arrive
+    if ((status !== 'ready' && status !== 'streaming') || !messages || messages.length === 0) return null;
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.role !== 'assistant') return null;
     
@@ -234,9 +240,6 @@ export function ChatContainer({
         
         {isActuallyStreaming && (
           <div className="mx-2 mt-4 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            {/* Only show roadmap during the thinking phase */}
-            {!hasStartedText && <OperationalPlan steps={roadmapSteps} />}
-            
             <div className="flex items-center gap-2 text-gray-400 font-sans text-sm ml-2">
               <div className="flex gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-tether-teal" />
@@ -284,11 +287,16 @@ export function ChatContainer({
         {/* Suggested Actions Chips */}
         {activeSuggestions && (
           <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2 scrollbar-none no-scrollbar px-1">
-            {activeSuggestions.map((action: any) => (
-              <button
-                key={action.label}
-                onClick={() => sendMessage({ text: action.prompt })}
-                className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[9px] font-heading tracking-widest text-neutral-gray-light hover:bg-tether-teal/10 hover:border-tether-teal/30 hover:text-tether-teal transition-all duration-300"
+             {activeSuggestions.map((action: any) => (
+               <button
+                 key={action.label}
+                  onClick={() => {
+                    const text = (action.prompt || "").trim();
+                    if (!text) return;
+                    if (!Array.isArray(messages) || messages.length === 0) return;
+                    sendMessage({ text });
+                  }}
+                 className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[9px] font-heading tracking-widest text-neutral-gray-light hover:bg-tether-teal/10 hover:border-tether-teal/30 hover:text-tether-teal transition-all duration-300"
               >
                 {action.icon && <action.icon className="w-3 h-3" />}
                 {action.label}

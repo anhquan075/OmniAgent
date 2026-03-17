@@ -40,9 +40,19 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ events }) => {
                     {IconComponent && <IconComponent className="w-3 h-3 text-tether-teal inline-block" />}
                     <span className="font-medium text-tether-teal">Robot {eventData.robotId}</span>
                     <span className="text-neutral-gray">earned</span>
-                    <span className="font-bold text-neon-green">{eventData.earnings} ETH</span>
+                    <span className="font-bold text-neon-green">{eventData.earnings} BNB</span>
                     <span className="text-neutral-gray">from</span>
                     <span className="text-white/80">{eventData.taskName}</span>
+                    {eventData.txHash && (
+                      <a 
+                        href={`https://testnet.bscscan.com/tx/${eventData.txHash}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-tether-teal/60 hover:text-tether-teal underline decoration-dotted underline-offset-2 ml-1 transition-colors"
+                      >
+                        [tx]
+                      </a>
+                    )}
                   </span>
                 </div>
               );

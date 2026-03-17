@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Truck, Sparkles, Scan, LucideIcon } from 'lucide-react';
+import { Truck, Sparkles, Scan, Shield, Radar, Zap, Lock, Eye, Activity, ShieldAlert, Target, LucideIcon } from 'lucide-react';
 import { getApiUrl } from '../lib/api';
 
 export interface RobotEvent {
@@ -9,6 +9,7 @@ export interface RobotEvent {
   earnings: string;
   timestamp: string;
   icon: LucideIcon;
+  txHash?: string;
 }
 
 interface UseRobotFleetEventsResult {
@@ -21,6 +22,14 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Delivery: Truck,
   Cleaning: Sparkles,
   Inspection: Scan,
+  "[S]": Shield,
+  "[L]": Radar,
+  "[A]": Zap,
+  "[G]": Lock,
+  "[O]": Eye,
+  "[D]": Activity,
+  "[M]": ShieldAlert,
+  "[B]": Target,
 };
 
 export const useRobotFleetEvents = (): UseRobotFleetEventsResult => {
@@ -40,21 +49,50 @@ export const useRobotFleetEvents = (): UseRobotFleetEventsResult => {
           setError(null);
         };
 
+        const handleFleetEvent = (e: MessageEvent) => {
+          try {
+            const data = JSON.parse(e.data);
+            
+            if (data.type === 'fleet:task-completed' && data.event) {
+              const eventData = data.event;
+              const iconName = eventData.icon || 'Truck';
+              const IconComponent = ICON_MAP[iconName] || Truck;
+              
+              const formattedEvent = {
+                ...eventData,
+                icon: IconComponent
+              };
+              
+              addEvent(formattedEvent);
+              return;
+            }
+
+            if (data.type === 'fleet:status') {
+              const statusEvent = {
+                ...data,
+                icon: ICON_MAP['Delivery'],
+                robotId: 'SYSTEM',
+                taskName: 'Fleet Status Sync',
+                earnings: '0',
+                timestamp: new Date().toISOString(),
+                type: 'fleet:status'
+              };
+              addEvent(statusEvent as any);
+            }
+          } catch (err) {
+            console.error('Failed to parse fleet-event message', err);
+          }
+        };
+
+        eventSource.addEventListener('fleet-event', handleFleetEvent as any);
+
         eventSource.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            const iconName = data.icon || 'Truck';
-            const IconComponent = ICON_MAP[iconName] || Truck;
-            
-            const formattedEvent = {
-              ...data,
-              icon: IconComponent
-            };
-            
-            addEvent(formattedEvent);
-          } catch (e) {
-            console.error('Failed to parse SSE message', e);
-          }
+            if (data.type === 'connected') {
+              console.log('Robot Fleet Stream Connected');
+            }
+          } catch (e) {}
         };
 
         eventSource.onerror = (err) => {

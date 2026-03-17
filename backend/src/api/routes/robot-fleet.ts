@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { robotFleetService, FleetEvent, Robot } from '../../services/RobotFleetService';
+import { logger } from '@/utils/logger';
 
 const robotFleet = new Hono();
 
@@ -8,7 +9,7 @@ const fleetEmitter = robotFleetService.getEmitter();
 
 robotFleet.get('/events', async (c) => {
   return streamSSE(c, async (stream) => {
-    console.log('[RobotFleetAPI] New SSE client connected');
+    logger.info('[RobotFleetAPI] New SSE client connected');
     
     // Send initial connection message
     await stream.writeSSE({
@@ -41,7 +42,7 @@ robotFleet.get('/events', async (c) => {
           event: 'fleet-event',
         });
       } catch (e) {
-        console.error('[RobotFleetAPI] SSE Write Error:', e);
+        logger.error(e, '[RobotFleetAPI] SSE Write Error');
       }
     };
 
@@ -58,7 +59,7 @@ robotFleet.get('/events', async (c) => {
           event: 'heartbeat',
         });
       } catch (e) {
-        console.error('[RobotFleetAPI] Heartbeat failed:', e);
+        logger.error(e, '[RobotFleetAPI] Heartbeat failed');
         clearInterval(heartbeatInterval);
       }
     }, 30000);
@@ -67,7 +68,7 @@ robotFleet.get('/events', async (c) => {
     stream.onAbort(() => {
       fleetEmitter.off('fleet:event', onFleetEvent);
       clearInterval(heartbeatInterval);
-      console.log('[RobotFleetAPI] SSE client disconnected');
+      logger.info('[RobotFleetAPI] SSE client disconnected');
     });
 
     // Keep connection alive
@@ -81,7 +82,7 @@ robotFleet.get('/status', async (c) => {
     const status = robotFleetService.getFleetStatus();
     return c.json(status);
   } catch (error: any) {
-    console.error('[RobotFleetAPI] Status error:', error);
+    logger.error(error, '[RobotFleetAPI] Status error');
     return c.json({ 
       error: 'Failed to get fleet status', 
       message: error.message 

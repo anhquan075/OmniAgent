@@ -3,9 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getContracts = void 0;
 const ethers_1 = require("ethers");
 const env_1 = require("../../config/env");
+const logger_1 = require("../../utils/logger");
 // Load ABIs
 const abis_1 = require("../abis");
-console.log(`[Ethers] Initializing provider with: ${env_1.env.BNB_RPC_URL}`);
+logger_1.logger.info({ rpcUrl: env_1.env.BNB_RPC_URL }, '[Ethers] Initializing provider');
 const provider = new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL);
 const getContracts = () => {
     const engineAbi = abis_1.StrategyEngineAbi;

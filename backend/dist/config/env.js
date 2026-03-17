@@ -37,13 +37,19 @@ exports.env = void 0;
 const zod_1 = require("zod");
 const dotenv = __importStar(require("dotenv"));
 const path = __importStar(require("path"));
-// Load .env.wdk from parent directory
-const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env.wdk';
+const fs = __importStar(require("fs"));
+const logger_1 = require("../utils/logger");
+// Load .env file (primary configuration)
+const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
 const envPath = path.resolve(process.cwd(), envFile);
 dotenv.config({ path: envPath });
-// Fallback to regular .env if .env.wdk is missing
-dotenv.config();
-console.log(`[Env] BNB_RPC_URL from process.env: ${process.env.BNB_RPC_URL}`);
+// Fallback to .env.wdk for backward compatibility (deprecated)
+const legacyEnvPath = path.resolve(process.cwd(), '.env.wdk');
+if (fs.existsSync(legacyEnvPath)) {
+    logger_1.logger.warn('[Env] Using .env.wdk (deprecated). Please migrate to .env');
+    dotenv.config({ path: legacyEnvPath, override: false });
+}
+logger_1.logger.info({ rpcUrl: process.env.BNB_RPC_URL }, '[Env] BNB_RPC_URL from process.env');
 const envSchema = zod_1.z.object({
     PORT: zod_1.z.string().default('3001'),
     BNB_RPC_URL: zod_1.z.string().default('https://binance.llamarpc.com'),
@@ -62,17 +68,31 @@ const envSchema = zod_1.z.object({
     WDK_XAUT_ADDRESS: zod_1.z.string().optional(),
     WDK_RISK_POLICY_ADDRESS: zod_1.z.string().optional(),
     WDK_SHARPE_TRACKER_ADDRESS: zod_1.z.string().optional(),
+    WDK_AAVE_ADAPTER_ADDRESS: zod_1.z.string().optional(),
+    WDK_LZ_ADAPTER_ADDRESS: zod_1.z.string().optional(),
     GITHUB_WEBHOOK_SECRET: zod_1.z.string().optional(),
     OPENROUTER_API_KEY: zod_1.z.string().optional(),
+    PRIVATE_KEY: zod_1.z.string().optional(),
+    SOLANA_PRIVATE_KEY: zod_1.z.string().optional(),
+    TON_PRIVATE_KEY: zod_1.z.string().optional(),
     OPENROUTER_BASE_URL: zod_1.z.string().default('https://openrouter.ai/api/v1'),
-    OPENROUTER_MODEL_GENERAL: zod_1.z.string().default('google/gemini-2.0-flash-exp:free'),
+    OPENROUTER_MODEL_GENERAL: zod_1.z.string().default('google/gemini-2.0-flash-001'),
     OPENROUTER_MODEL_CRYPTO: zod_1.z.string().default('deepseek/deepseek-chat'),
+    OPENCLAW_GATEWAY_URL: zod_1.z.string().default('https://gateway.openclaw.com/api').optional(),
+    OPENCLAW_API_KEY: zod_1.z.string().optional(),
+    MAX_OPENCLAW_EXPOSURE_PERCENT: zod_1.z.string().default('20').transform(Number),
+    MIN_OPENCLAW_APY: zod_1.z.string().default('8.5').transform(Number),
+    VELORA_ROUTER_ADDRESS: zod_1.z.string().default('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'),
+    VELORA_FACTORY_ADDRESS: zod_1.z.string().default('0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f'),
     DEPLOYMENT_MODE: zod_1.z.enum(['local', 'production']).default('local'),
     AGENT_CRON_SECRET: zod_1.z.string().optional(),
+    ERC4337_FACTORY_ADDRESS: zod_1.z.string().optional(),
+    ERC4337_PAYMASTER_ADDRESS: zod_1.z.string().optional(),
+    ERC4337_ENTRYPOINT_ADDRESS: zod_1.z.string().default('0x5FF137D4a0ADCA4B1FB0b8274Ea4dE461a706c12'),
 });
 const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {
-    console.error('❌ Invalid environment variables:', parsed.error.format());
+    logger_1.logger.error({ errors: parsed.error.format() }, '[Env] Invalid environment variables');
     process.exit(1);
 }
 exports.env = parsed.data;

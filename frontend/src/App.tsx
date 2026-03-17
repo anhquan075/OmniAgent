@@ -12,6 +12,7 @@ import { ChatHistorySidebar } from "./components/chat/ChatHistorySidebar";
 import { WDKBalance } from "./components/shared/WDKBalance";
 import AgentBrain from "./components/dashboard/AgentBrain";
 import FleetStatus from "./components/dashboard/FleetStatus";
+import MCPServerDemo from "./components/dashboard/MCPServerDemo";
 import { GuestSplash } from "./components/shared/GuestSplash";
 import { ConnectionModal } from "./components/shared/ConnectionModal";
 
@@ -71,8 +72,7 @@ export default function App() {
   const { messages, sendMessage, status, setMessages,     stop,
     regenerate,
     error,
-    addToolOutput,
-    data
+    addToolResult
   } = useChat({
     api: '/api/chat',
     id: activeSessionId,
@@ -81,7 +81,7 @@ export default function App() {
       {
         id: "initial-1",
         role: "assistant",
-        content: "System initialized. I am your **OmniWDK Strategist**. I am currently monitoring cross-chain liquidity for USD₮ and XAU₮ yield optimization.",
+        content: "System initialized. I am your **OmniWDK Strategist**. I am currently monitoring cross-chain liquidity for USDT and XAUT yield optimization.",
       } as any
     ],
     experimental_onData: (dataPart: any) => {
@@ -98,11 +98,24 @@ export default function App() {
 
   const initialUpdatedRef = useRef(false);
 
+  // When activeSessionId changes, reset messages to initial state
+  // This ensures each new session starts with the default initial message
+  useEffect(() => {
+    initialUpdatedRef.current = false;
+    setMessages([
+      {
+        id: "initial-1",
+        role: "assistant",
+        content: "System initialized. I am your **OmniWDK Strategist**. I am currently monitoring cross-chain liquidity for USDT and XAUT yield optimization.",
+      } as any
+    ]);
+  }, [activeSessionId, setMessages]);
+
   // Update initial message when wallet connects or stats arrive
   useEffect(() => {
     if (isConnected && address && messages?.length === 1 && messages[0].id === "initial-1" && !initialUpdatedRef.current) {
       const portfolioMsg = stats?.vault?.totalAssets 
-        ? ` My sensors indicate a total vault value of **${stats.vault.totalAssets} USD₮** with **${(stats.risk?.drawdownBps || 0) / 100}%** expected drawdown.`
+        ? ` My sensors indicate a total vault value of **${stats.vault.totalAssets} USDT** with **${(stats.risk?.drawdownBps || 0) / 100}%** expected drawdown.`
         : "";
 
       initialUpdatedRef.current = true;
@@ -116,11 +129,6 @@ export default function App() {
     }
   }, [isConnected, address, setMessages, stats, messages?.length]);
 
-  // Reset initialUpdatedRef when session changes
-  useEffect(() => {
-    initialUpdatedRef.current = false;
-  }, [activeSessionId]);
-
   // Automatically close ConnectionModal when connected
   useEffect(() => {
     if (isConnected) {
@@ -129,21 +137,24 @@ export default function App() {
   }, [isConnected]);
 
   const handleNewChat = () => {
+    // Stop any active stream first
+    if (status === 'streaming' || status === 'submitted') {
+      stop();
+    }
+    
     const newId = Date.now().toString();
     const newSession = { id: newId, title: 'New Command', lastMessage: 'No commands yet', timestamp: new Date() };
     
     setSessions(prev => [newSession, ...prev]);
-    setActiveSessionId(newId);
+    
+    // CRITICAL: Change activeSessionId FIRST
+    // This causes useChat hook to re-initialize with new `id` prop and load initialMessages
+    // If we setMessages() before changing activeSessionId, the hook reset clears our messages
     initialUpdatedRef.current = false;
+    setActiveSessionId(newId);
     
-    setMessages([
-      {
-        id: "initial-" + newId,
-        role: "assistant",
-        content: "New session started. Standing by for WDK instructions.",
-      } as any
-    ]);
-    
+    // Let useChat hook initialize with initialMessages on the new session ID
+    // The hook will use initialMessages from config when id changes
     setIsMobileMenuOpen(false);
   };
 
@@ -153,12 +164,13 @@ export default function App() {
       const lastMsg = messages[messages.length - 1];
       if (lastMsg.role === 'user') {
         let content = "Command sent";
-        if (typeof lastMsg.content === 'string') {
-          content = lastMsg.content;
-        } else if (lastMsg.parts) {
-          content = lastMsg.parts
-            .filter((p) => p.type === 'text')
-            .map((p) => p.text)
+        const msgContent = (lastMsg as any).content;
+        if (typeof msgContent === 'string') {
+          content = msgContent;
+        } else if ((lastMsg as any).parts) {
+          content = (lastMsg as any).parts
+            .filter((p: any) => p.type === 'text')
+            .map((p: any) => p.text)
             .join('');
         }
         setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, lastMessage: content } : s));
@@ -176,8 +188,12 @@ export default function App() {
     const text = (overrideText || input).trim();
     if (!text) return;
 
-    // If the strategist is stuck or still "streaming", force a stop 
-    // before sending the next command to prevent UI locking.
+    // Validate messages array exists and is not empty
+    if (!Array.isArray(messages) || messages.length === 0) {
+      console.warn("[App] Cannot send message - invalid messages state", { messages });
+      return;
+    }
+
     if (status === 'streaming' || status === 'submitted') {
       stop();
     }
@@ -185,7 +201,6 @@ export default function App() {
     setInput('');
     
     try {
-      // Small delay to ensure the previous stream is fully aborted
       await new Promise(resolve => setTimeout(resolve, 50));
       await sendMessage({ text });
     } catch (err) {
@@ -276,19 +291,8 @@ export default function App() {
             ${isMobileMenuOpen ? 'fixed inset-0 top-[68px] md:top-[80px] z-40 bg-space-black/95 p-6 overflow-y-auto' : 'hidden'} 
             lg:relative lg:inset-auto lg:flex lg:flex-[2.5] xl:flex-[2] lg:flex-col lg:gap-4 xl:gap-6 lg:min-w-0 lg:min-h-0 lg:bg-transparent lg:overflow-hidden
           `}>
-            <BentoCard title="WDK Performance" icon={BarChart3Icon} className="h-[120px] md:h-[140px] shrink-0">
-              <div className="flex flex-col h-full justify-center">
-                <div className="text-3xl md:text-4xl font-heading font-bold text-tether-teal">
-                  {stats?.risk?.sharpe ? stats.risk.sharpe.toFixed(2) : "---"}
-                  <span className="text-xs ml-2 text-neutral-gray font-sans font-normal lowercase tracking-normal">Sharpe</span>
-                </div>
-                <div className="mt-4 h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                  <motion.div 
-                    className="h-full bg-tether-teal shadow-glow-sm"
-                    animate={{ width: `${Math.min((stats?.risk?.sharpe || 0) * 20, 100)}%` }}
-                  />
-                </div>
-              </div>
+            <BentoCard title="MCP Tools" icon={ServerIcon} className="h-[400px] md:h-[480px] shrink-0">
+              <MCPServerDemo />
             </BentoCard>
 
             <div className="flex-1 min-h-0 glass-dark rounded-3xl overflow-hidden border border-white/10 relative mt-4 lg:mt-0">
@@ -305,21 +309,19 @@ export default function App() {
           {/* Column 2: Agent Terminal */}
           <div className={`flex-[7] xl:flex-[6] flex flex-col min-w-0 min-h-0 glass-dark rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative ${isMobileMenuOpen ? 'hidden lg:flex' : 'flex'}`}>
             <div className="flex-1 flex flex-col min-h-0">
-              <ChatContainer
-                messages={messages}
-                isLoading={isLoading}
-                status={status}
-                input={input}
-                handleInputChange={onInputChange}
-                handleSubmit={onHandleSubmit}
-                sendMessage={sendMessage}
-                addToolOutput={addToolOutput}
-                setMessages={setMessages}
-                regenerate={regenerate}
-                stop={stop}
-                error={error}
-                data={data}
-              />
+               <ChatContainer
+                 messages={messages}
+                 sendMessage={sendMessage}
+                 status={status}
+                 input={input}
+                 handleInputChange={onInputChange}
+                 handleSubmit={onHandleSubmit}
+                 setMessages={setMessages}
+                 regenerate={regenerate}
+                 stop={stop}
+                 error={error}
+                 data={stats ? [ { type: 'data-status', data: stats } ] : []}
+               />
             </div>
           </div>
 
@@ -329,7 +331,7 @@ export default function App() {
             xl:relative xl:inset-auto xl:flex xl:flex-[2.5] 2xl:flex-[2] xl:flex-col xl:gap-4 2xl:gap-6 xl:min-w-0 xl:min-h-0 xl:bg-transparent xl:overflow-hidden xl:pl-1
           `}>
             <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-6 pr-1">
-              <BentoCard title="Robot Fleet Operations" icon={BotIcon} className="min-h-[320px] shrink-0">
+              <BentoCard title="Robot Fleet Operations" icon={BotIcon} className="min-h-[280px] shrink-0">
                 <FleetStatus />
               </BentoCard>
 

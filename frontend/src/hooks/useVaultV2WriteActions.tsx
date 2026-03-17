@@ -369,7 +369,7 @@ export function useVaultV2WriteActions({ refresh }) {
             } else if (canExec && canExec[0] === true) {
               // canExecute=READY but staticCall reverted — decode the actual revert reason
               msg =
-                "Execution simulation reverted (canExecute=READY). Mock router may need re-seeding.";
+                "Execution simulation reverted (canExecute=READY). DEX router may need re-seeding.";
               try {
                 // Try to extract the revert reason from the original staticCall error
                 const revertData = error?.data ?? error?.error?.data ?? null;
@@ -384,7 +384,7 @@ export function useVaultV2WriteActions({ refresh }) {
                   } catch {
                     // Try custom error selector lookup (first 4 bytes)
                     const selector = revertData.slice(0, 10);
-                    msg = `Execution reverted with custom error selector ${selector}. Check adapter state or re-seed mock router reserves.`;
+                    msg = `Execution reverted with custom error selector ${selector}. Check adapter state or re-seed DEX router reserves.`;
                   }
                 } else {
                   // No revert data — silent revert (out-of-gas, adapter call failure, or cooldown)
@@ -405,7 +405,7 @@ export function useVaultV2WriteActions({ refresh }) {
                     msg =
                       totalAssets === 0n
                         ? "Execution reverted: vault has no assets. Deposit funds first, then execute."
-                        : "Execution reverted (no revert data). On testnet: run scripts/seed-mock-pancake-router-usdt-wdks-reserves.js --network bnbTestnet. On mainnet: check circuit breaker status or wait for cycle cooldown to elapse.";
+                        : "Execution reverted (no revert data). On testnet: run re-seed script for DEX router reserves. On mainnet: check circuit breaker status or wait for cycle cooldown to elapse.";
                   }
                 }
               } catch {

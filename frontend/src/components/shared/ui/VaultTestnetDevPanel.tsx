@@ -111,7 +111,7 @@ export function VaultTestnetDevPanel({
         <Radio size={14} />
         <span>TESTNET · {networkLabel} · Chain {chainIdNum}</span>
         <span style={{ color: "rgba(251,191,36,0.45)", fontWeight: 400 }}>
-          — mock contracts
+          — OmniWDK Smart Contracts
         </span>
       </div>
 
@@ -187,13 +187,13 @@ export function VaultTestnetDevPanel({
           }}
         >
           <Zap size={11} />
-          {mintBusy ? "Minting…" : "Mint 10k USDT"}
+          {mintBusy ? "Minting…" : "Mint 10k USD₮"}
           {tokenAddress && blockExplorer && (
             <a
               href={`${blockExplorer}/address/${tokenAddress}`}
               target="_blank"
               rel="noopener noreferrer"
-              title="View mock USDT on testnet BSC scan"
+              title="View Testnet USD₮ on bscscan"
               onClick={(e) => e.stopPropagation()}
               style={{
                 color: "rgba(251,191,36,0.5)",

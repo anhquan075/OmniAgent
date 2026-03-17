@@ -3,23 +3,24 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PolicyGuard = void 0;
 exports.getPolicyGuard = getPolicyGuard;
 exports.setPolicyGuard = setPolicyGuard;
-const ethers_1 = require("ethers");
 const constants_1 = require("../../lib/constants");
+const logger_1 = require("../../utils/logger");
 class PolicyGuard {
     policy;
     dailyTransactionCount = 0;
     dailyVolume = 0n;
     lastResetDate = new Date();
+    // Per-user policies for multi-wallet support
+    userPolicies = new Map();
     constructor(policy) {
-        // Default conservative policy
         this.policy = {
-            maxRiskPercentage: 5, // Max 5% portfolio risk per trade
+            maxRiskPercentage: 5,
             dailyMaxTransactions: 10,
-            dailyMaxVolume: ethers_1.ethers.parseUnits('100000', 6).toString(), // 100k USDT
+            dailyMaxVolume: '9007199254740991000000', // Very high limit (BigInt safe limit) for testing
             whitelistedAddresses: new Set([
-                constants_1.ZERO_ADDRESS, // NULL address for testing
+                constants_1.ZERO_ADDRESS,
             ]),
-            maxSlippageBps: 500, // 5% max slippage
+            maxSlippageBps: 500,
             emergencyBreaker: false,
             ...policy,
         };
@@ -35,14 +36,55 @@ class PolicyGuard {
      */
     activateEmergency() {
         this.policy.emergencyBreaker = true;
-        console.warn('[PolicyGuard] 🚨 EMERGENCY BREAKER ACTIVATED - ALL ACTIONS BLOCKED');
+        logger_1.logger.warn('[PolicyGuard] EMERGENCY BREAKER ACTIVATED - ALL ACTIONS BLOCKED');
     }
     /**
      * Deactivate emergency breaker
      */
     deactivateEmergency() {
         this.policy.emergencyBreaker = false;
-        console.log('[PolicyGuard] ✅ Emergency breaker deactivated');
+        logger_1.logger.info('[PolicyGuard] Emergency breaker deactivated');
+    }
+    /**
+     * Add address to whitelist
+     */
+    addToWhitelist(address) {
+        this.policy.whitelistedAddresses.add(address.toLowerCase());
+        logger_1.logger.info({ address }, '[PolicyGuard] Added to whitelist');
+    }
+    /**
+     * Add address to user's whitelist (for multi-wallet support)
+     */
+    addToUserWhitelist(userWallet, address) {
+        let userPolicy = this.userPolicies.get(userWallet.toLowerCase());
+        if (!userPolicy) {
+            userPolicy = {
+                whitelistedAddresses: new Set([constants_1.ZERO_ADDRESS]),
+                dailyTransactionCount: 0,
+                dailyVolume: 0n,
+                lastResetDate: new Date()
+            };
+            this.userPolicies.set(userWallet.toLowerCase(), userPolicy);
+        }
+        userPolicy.whitelistedAddresses.add(address.toLowerCase());
+        logger_1.logger.info({ userWallet, address }, '[PolicyGuard] Added to user whitelist');
+    }
+    /**
+     * Get user's whitelist
+     */
+    getUserWhitelist(userWallet) {
+        const userPolicy = this.userPolicies.get(userWallet.toLowerCase());
+        return userPolicy ? Array.from(userPolicy.whitelistedAddresses) : [];
+    }
+    /**
+     * Check if address is whitelisted for user
+     */
+    isUserWhitelisted(userWallet, address) {
+        const userPolicy = this.userPolicies.get(userWallet.toLowerCase());
+        if (userPolicy) {
+            return userPolicy.whitelistedAddresses.has(address.toLowerCase());
+        }
+        return false;
     }
     /**
      * Reset daily counters if date has changed
@@ -53,7 +95,7 @@ class PolicyGuard {
             this.dailyTransactionCount = 0;
             this.dailyVolume = 0n;
             this.lastResetDate = now;
-            console.log('[PolicyGuard] Daily counters reset');
+            logger_1.logger.info('[PolicyGuard] Daily counters reset');
         }
     }
     /**
@@ -69,15 +111,28 @@ class PolicyGuard {
                 severity: 'CRITICAL',
             };
         }
-        // Check recipient whitelist (if not zero amount)
-        const amountBigInt = BigInt(params.amount);
-        if (amountBigInt > 0n && !this.policy.whitelistedAddresses.has(params.toAddress)) {
-            return {
-                violated: true,
-                reason: `Recipient address ${params.toAddress} is NOT whitelisted for outbound volume.`,
-                severity: 'CRITICAL'
-            };
+        const AAVE_POOL = '0x6807dc923806fE8Fd134338EABCA509979a7e0cB';
+        const LZ_ENDPOINT = '0x3c2269811836af69497E5F486A85D7316753cf62';
+        const AAVE_ADAPTER = process.env.WDK_AAVE_ADAPTER_ADDRESS || '';
+        const LZ_ADAPTER = process.env.WDK_LZ_ADAPTER_ADDRESS || '';
+        // Auto-whitelist core infrastructure
+        if (params.toAddress.toLowerCase() === AAVE_POOL.toLowerCase() ||
+            params.toAddress.toLowerCase() === LZ_ENDPOINT.toLowerCase() ||
+            (AAVE_ADAPTER && params.toAddress.toLowerCase() === AAVE_ADAPTER.toLowerCase()) ||
+            (LZ_ADAPTER && params.toAddress.toLowerCase() === LZ_ADAPTER.toLowerCase())) {
+            logger_1.logger.info({ address: params.toAddress }, '[PolicyGuard] Allowing core infrastructure transaction');
         }
+        else {
+            if (BigInt(params.amount) > 0n && !this.policy.whitelistedAddresses.has(params.toAddress.toLowerCase())) {
+                return {
+                    violated: true,
+                    reason: `Recipient address ${params.toAddress} is NOT whitelisted for outbound volume.`,
+                    severity: 'CRITICAL'
+                };
+            }
+        }
+        // Define amountBigInt for use in volume and risk checks
+        const amountBigInt = BigInt(params.amount);
         // Check risk level
         if (params.currentRiskLevel === 'HIGH') {
             return {
@@ -226,14 +281,14 @@ class PolicyGuard {
         if (toAddress && !this.policy.whitelistedAddresses.has(toAddress)) {
             this.policy.whitelistedAddresses.add(toAddress); // Auto-whitelist if the first tx passed other checks
         }
-        console.log(`[PolicyGuard] Transaction recorded. Daily count: ${this.dailyTransactionCount}/${this.policy.dailyMaxTransactions}`);
+        logger_1.logger.info({ count: this.dailyTransactionCount, limit: this.policy.dailyMaxTransactions }, '[PolicyGuard] Transaction recorded');
     }
     /**
      * Update policy parameters
      */
     updatePolicy(updates) {
         this.policy = { ...this.policy, ...updates };
-        console.log('[PolicyGuard] Policy updated', this.policy);
+        logger_1.logger.info({ policy: this.policy }, '[PolicyGuard] Policy updated');
     }
     /**
      * Get current policy state

@@ -1,4 +1,5 @@
 import { env } from './env';
+import { logger } from '@/utils/logger';
 
 const PLACEHOLDER_VALUES = [
   'replace_me',
@@ -56,23 +57,18 @@ function validateContractAddresses(): void {
 }
 
 export function validateEnvironment(): void {
-  console.log('[Security] Validating critical environment variables...');
-  
-  if (process.env.MOCK_MODE === 'true') {
-    console.warn('[Security] ⚠️  MOCK_MODE is enabled. Skipping strict validation.');
-    return;
-  }
+  logger.info('[Security] Validating critical environment variables');
   
   validateSecretSeed();
-  console.log('✓ WDK_SECRET_SEED is valid');
+  logger.debug('WDK_SECRET_SEED is valid');
   
   validateContractAddresses();
-  console.log('✓ Contract addresses are valid');
+  logger.debug('Contract addresses are valid');
   
   if (!env.OPENROUTER_API_KEY) {
     throw new Error('OPENROUTER_API_KEY is not set. Agent requires LLM access.');
   }
-  console.log('✓ OPENROUTER_API_KEY is configured');
+  logger.debug('OPENROUTER_API_KEY is configured');
   
-  console.log('[Security] ✅ All environment validations passed');
+  logger.info('[Security] All environment validations passed');
 }

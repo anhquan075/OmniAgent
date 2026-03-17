@@ -31,14 +31,19 @@ describe("WDKVault Profit Locking", function () {
     const secondaryAdapter = await MockAdapter.deploy(await asset.getAddress(), owner.address);
     lpAdapter = await MockAdapter.deploy(await asset.getAddress(), owner.address);
     
+    const MockLendingAdapter = await ethers.getContractFactory("MockLendingAdapter");
+    const lendingAdapter = await MockLendingAdapter.deploy(await asset.getAddress(), owner.address);
+
     await wdkAdapter.setVault(await vault.getAddress());
     await secondaryAdapter.setVault(await vault.getAddress());
     await lpAdapter.setVault(await vault.getAddress());
-    
+    await lendingAdapter.setVault(await vault.getAddress());
+
     await vault.setAdapters(
       await wdkAdapter.getAddress(),
       await secondaryAdapter.getAddress(),
-      await lpAdapter.getAddress()
+      await lpAdapter.getAddress(),
+      await lendingAdapter.getAddress()
     );
     
     await vault.lockConfiguration();
