@@ -88,17 +88,19 @@ flowchart LR
 
 ---
 
-## MCP Tools (32 Total)
+## MCP Tools (45+ Total)
 
 | Category | Tools | Description |
 |----------|-------|-------------|
-| **X402** | 4 | Pay sub-agents, list services |
-| **WDK Vault** | 4 | Deposit, withdraw, balance |
+| **X402** | 5 | Pay sub-agents, fleet status, list services |
+| **WDK Vault** | 6 | Deposit, withdraw, balance, state |
 | **WDK Engine** | 3 | Execute cycle, risk metrics |
 | **Aave** | 3 | Supply, withdraw, position |
-| **BNB** | 7 | Wallet, transfer, swap |
-| **Solana** | 4 | Wallet, transfer |
+| **BNB** | 7 | Wallet, transfer, swap, bridge, Aave |
+| **Solana** | 4 | Wallet, transfer, swap |
 | **TON** | 3 | Wallet, transfer |
+| **ERC4337** | 12+ | Smart account management |
+| **Robot Fleet** | 4 | Status, start, events, robots |
 
 ---
 
@@ -398,6 +400,80 @@ pnpm playwright test mcp-api.spec.ts --headed  # Run specific test file
 ```
 
 **Note:** All services (MCP, SSE Dashboard, Robot Fleet) run as unified endpoints in the main backend server. No separate processes are spawned.
+
+---
+
+## E2E Testing (Playwright)
+
+### Run Tests
+
+```bash
+cd frontend
+
+# Run all tests (headless - no browser window)
+pnpm playwright test
+
+# Run tests with visible browser (for debugging)
+pnpm playwright test --headed
+
+# Run specific test file
+pnpm playwright test mcp-api.spec.ts --headed
+
+# Run specific test by name
+pnpm playwright test "tools/list returns all MCP tools" --headed
+
+# List all available tests
+pnpm playwright test --list
+```
+
+### Test Files
+
+| File | Description |
+|------|-------------|
+| `e2e/tests/chat-ui.spec.ts` | Chat UI rendering, input, suggested actions (27 tests) |
+| `e2e/tests/mcp-api.spec.ts` | MCP tools API, chat API, stats API (10 tests) |
+
+### Test Categories
+
+**Chat UI Tests:**
+- Message input and rendering
+- Suggested actions (Vault Status, Robot Fleet, etc.)
+- Command palette
+- Streaming indicators
+- Responsive design
+
+**API Tests:**
+- MCP tools/list endpoint
+- Tool execution with JSON responses
+- Sequential tool calls
+- Chat message handling
+- Stats API
+- Robot Fleet API
+
+### Verify Backend APIs Manually
+
+```bash
+# Test MCP tools list
+curl -X POST http://localhost:3001/api/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+# Execute a tool (vault status)
+curl -X POST http://localhost:3001/api/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"wdk_vault_getBalance","arguments":{}}}'
+
+# Test stats endpoint
+curl http://localhost:3001/api/stats
+
+# Test robot fleet status
+curl http://localhost:3001/api/robot-fleet/status
+
+# Test chat with tool call
+curl -X POST http://localhost:3001/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"What is the vault status?"}]}'
+```
 
 ---
 
