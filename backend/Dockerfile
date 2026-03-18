@@ -26,13 +26,13 @@ COPY backend/package.json .
 RUN pnpm config set store-dir /root/.pnpm-store
 
 ENV NODE_ENV=production
-ENV PORT=8000
+ENV PORT=3001
 ENV USER=appuser
 
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1
 
 USER appuser
 
