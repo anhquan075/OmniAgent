@@ -368,11 +368,27 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         const vaultAddress = env.WDK_VAULT_ADDRESS;
         if (!vaultAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Vault address not configured' } };
         
+        const usdtAddress = env.WDK_USDT_ADDRESS;
+        if (!usdtAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'USDT address not configured' } };
+        
+        const usdtAmount = ethers.parseUnits(amount, 6);
+        
+        const usdtAbi = [
+          'function approve(address spender, uint256 amount) returns (bool)',
+          'function allowance(address owner, address spender) view returns (uint256)'
+        ];
+        const usdt = new ethers.Contract(usdtAddress, usdtAbi, signer);
+        
+        const currentAllowance = await usdt.allowance(address, vaultAddress);
+        if (currentAllowance < usdtAmount) {
+          const approveTx = await usdt.approve(vaultAddress, ethers.MaxUint256);
+          await approveTx.wait();
+        }
+        
         const vaultAbi = [
           'function deposit(uint256 assets, address receiver) external returns (uint256 shares)'
         ];
         
-        const usdtAmount = ethers.parseUnits(amount, 6);
         const vault = new ethers.Contract(vaultAddress, vaultAbi, signer);
         const tx = await vault.deposit(usdtAmount, address);
         await tx.wait();

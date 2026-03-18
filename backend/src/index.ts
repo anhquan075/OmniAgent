@@ -11,6 +11,7 @@ import dashboardRoute from './api/routes/dashboard';
 import robotFleetRoute from './api/routes/robot-fleet';
 import x402Route from './api/routes/x402';
 import mcpRoute from './api/routes/mcp';
+import { createSecurityMiddleware } from './api/middleware/security';
 import { AgentService } from './agent/services/AgentService';
 import { startAutonomousLoop } from './agent/AutonomousLoop';
 import { validateEnvironment } from './config/security';
@@ -19,10 +20,13 @@ import { logger } from './utils/logger';
 
 const app = new Hono();
 
+// Apply security middleware
+createSecurityMiddleware(app);
+
 // Global Error Handler
 app.onError((err, c) => {
   logger.error(err, '[Hono Error]');
-  return c.json({ error: 'Internal Server Error', message: err.message }, 500);
+  return c.json({ error: 'Internal Server Error', message: 'An unexpected error occurred' }, 500);
 });
 
 // Middleware

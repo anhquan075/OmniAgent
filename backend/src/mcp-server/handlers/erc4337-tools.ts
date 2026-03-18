@@ -103,7 +103,7 @@ export const erc4337Tools: McpTool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        account: { type: 'string', description: 'The account address to check' }
+        account: { type: 'string', description: 'The account address to check', default: '' }
       },
       required: []
     },
@@ -331,7 +331,7 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
         const signer = getSigner();
         const owner = (params.owner as string) || await signer.getAddress();
 
-        const factory = getFactoryContract();
+        const factory = getFactoryContract(signer);
         const tx = await factory.createAccount(owner);
         await tx.wait();
 
@@ -349,11 +349,18 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
       }
 
       case 'erc4337_isValidAccount': {
-        const account = (params.account as string) || ethers.ZeroAddress;
+        const accountParam = params.account;
+        let account: string;
+        
+        if (typeof accountParam === 'string' && accountParam.length > 0) {
+          account = accountParam;
+        } else {
+          account = await (await getSigner()).getAddress();
+        }
 
         const factory = getFactoryContract();
         const isValid = await factory.isValidAccount(account);
-        return { success: true, data: { isValid } };
+        return { success: true, data: { isValid, account } };
       }
 
       case 'erc4337_execute': {

@@ -9,6 +9,18 @@ export class ToolRegistry {
       console.warn(`[ToolRegistry] Tool ${tool.name} already registered, overwriting`);
     }
     this.tools.set(tool.name, { tool, handler });
+    
+    if (tool.name.includes('_')) {
+      const camelName = tool.name.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+      if (camelName !== tool.name && !this.tools.has(camelName)) {
+        this.tools.set(camelName, { tool, handler });
+      }
+    } else if (/[a-z][A-Z]/.test(tool.name)) {
+      const snakeName = tool.name.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+      if (snakeName !== tool.name && !this.tools.has(snakeName)) {
+        this.tools.set(snakeName, { tool, handler });
+      }
+    }
   }
 
   getTool(name: string): { tool: McpTool; handler: ToolHandler } | undefined {
@@ -35,8 +47,21 @@ export class ToolRegistry {
     return Array.from(this.tools.values()).map(t => t.tool);
   }
 
+  private normalizeToolName(name: string): string {
+    if (name.includes('_')) {
+      const parts = name.split('_');
+      return parts[0] + parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
+    }
+    return name;
+  }
+
   async executeTool(name: string, params: Record<string, unknown>, context: McpExecutionContext): Promise<McpToolResult> {
-    const entry = this.tools.get(name);
+    let entry = this.tools.get(name);
+    
+    if (!entry) {
+      const normalized = this.normalizeToolName(name);
+      entry = this.tools.get(normalized);
+    }
     
     if (!entry) {
       return {

@@ -59,6 +59,7 @@ const envSchema = z.object({
 
   DEPLOYMENT_MODE: z.enum(['local', 'production']).default('local'),
   AGENT_CRON_SECRET: z.string().optional(),
+  JWT_SECRET: z.string().min(32).optional(),
 
   ERC4337_FACTORY_ADDRESS: z.string().optional(),
   ERC4337_PAYMASTER_ADDRESS: z.string().optional(),
