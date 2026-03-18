@@ -1,0 +1,12 @@
+# Railway Configuration for OmniAgent Backend
+# Using Dockerfile builder for deployment
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "backend/Dockerfile"
+context = "."
+
+[deploy]
+startCommand = "node backend/dist/index.js"
+restartPolicyType = "always"
+restartPolicyMaxRetries = 10
