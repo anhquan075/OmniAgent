@@ -90,9 +90,10 @@ if (isMain) {
 
   serve({
     fetch: app.fetch,
-    port
+    port,
+    hostname: '0.0.0.0'
   }, async (info) => {
-    logger.info(`[Server] Server is running on http://localhost:${info.port}`);
+    logger.info(`[Server] Server is running on http://0.0.0.0:${info.port}`);
     
     try {
       await robotFleetService.startSimulator();
