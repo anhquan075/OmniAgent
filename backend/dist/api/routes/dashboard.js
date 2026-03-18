@@ -7,6 +7,10 @@ const logger_1 = require("../../utils/logger");
 const dashboard = new hono_1.Hono();
 dashboard.get('/events', async (c) => {
     logger_1.logger.info('[Dashboard] Client connected to SSE stream');
+    c.header('Content-Type', 'text/event-stream');
+    c.header('Cache-Control', 'no-cache, no-transform');
+    c.header('Connection', 'keep-alive');
+    c.header('X-Accel-Buffering', 'no');
     return (0, streaming_1.streamSSE)(c, async (stream) => {
         await stream.writeSSE({
             data: JSON.stringify({ type: 'connected', message: 'Dashboard Stream Connected' }),

@@ -60,8 +60,9 @@ agent.get('/stream', (c) => {
   logger.info('[Agent] Client connected to agent stream');
   return stream(c, async (stream) => {
     c.header('Content-Type', 'text/event-stream');
-    c.header('Cache-Control', 'no-cache');
+    c.header('Cache-Control', 'no-cache, no-transform');
     c.header('Connection', 'keep-alive');
+    c.header('X-Accel-Buffering', 'no');
 
     // Send history immediately
     await stream.write(`data: ${JSON.stringify({ type: 'history', data: agentHistory })}\n\n`);

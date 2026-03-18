@@ -9,6 +9,12 @@ const fleetEmitter = robotFleetService.getEmitter();
 
 robotFleet.get('/events', async (c) => {
   logger.info('[RobotFleet] Client connected to fleet SSE stream');
+
+  c.header('Content-Type', 'text/event-stream');
+  c.header('Cache-Control', 'no-cache, no-transform');
+  c.header('Connection', 'keep-alive');
+  c.header('X-Accel-Buffering', 'no');
+
   return streamSSE(c, async (stream) => {
     logger.debug('[RobotFleet] SSE stream established');
     logger.info('[RobotFleetAPI] New SSE client connected');

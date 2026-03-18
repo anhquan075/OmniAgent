@@ -84,9 +84,10 @@ if (isMain) {
     logger_1.logger.info(`[OmniAgent] WDK Strategist API starting on port ${port}`);
     (0, node_server_1.serve)({
         fetch: app.fetch,
-        port
+        port,
+        hostname: '0.0.0.0'
     }, async (info) => {
-        logger_1.logger.info(`[Server] Server is running on http://localhost:${info.port}`);
+        logger_1.logger.info(`[Server] Server is running on http://0.0.0.0:${info.port}`);
         try {
             await RobotFleetService_1.robotFleetService.startSimulator();
         }

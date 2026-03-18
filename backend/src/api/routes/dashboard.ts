@@ -7,6 +7,12 @@ const dashboard = new Hono();
 
 dashboard.get('/events', async (c) => {
   logger.info('[Dashboard] Client connected to SSE stream');
+
+  c.header('Content-Type', 'text/event-stream');
+  c.header('Cache-Control', 'no-cache, no-transform');
+  c.header('Connection', 'keep-alive');
+  c.header('X-Accel-Buffering', 'no');
+
   return streamSSE(c, async (stream) => {
     await stream.writeSSE({
       data: JSON.stringify({ type: 'connected', message: 'Dashboard Stream Connected' }),
