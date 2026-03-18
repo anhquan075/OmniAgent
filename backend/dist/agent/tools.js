@@ -50,7 +50,7 @@ async function getWdk() {
             await Promise.all([
                 WDK.registerWallet('bnb', WalletEVM, { provider: env_1.env.BNB_RPC_URL }),
                 WDK.registerWallet('solana', WalletSolana, { rpcUrl: env_1.env.SOLANA_RPC_URL }),
-                WDK.registerWallet('ton', WalletTON, { rpcUrl: env_1.env.TON_RPC_URL })
+                WDK.registerWallet('ton', WalletTON, { tonClient: { url: env_1.env.TON_RPC_URL, secretKey: env_1.env.TON_API_KEY } })
             ]);
             return WDK;
         })();

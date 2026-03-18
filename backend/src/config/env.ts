@@ -23,6 +23,7 @@ const envSchema = z.object({
   BNB_RPC_URL: z.string().default('https://binance.llamarpc.com'),
   SOLANA_RPC_URL: z.string().default('https://api.mainnet-beta.solana.com'),
   TON_RPC_URL: z.string().default('https://toncenter.com/api/v2/jsonRPC'),
+  TON_API_KEY: z.string().optional(),
   AGENT_REPORT_URL: z.string().optional(),
   AGENT_REPORT_BASE_URL: z.string().optional(),
 

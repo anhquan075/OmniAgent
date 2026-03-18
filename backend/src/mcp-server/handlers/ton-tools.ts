@@ -15,7 +15,9 @@ async function getWdk() {
         getWDK(),
         getWalletTON()
       ]);
-      await WDK.registerWallet('ton', WalletTON, { rpcUrl: env.TON_RPC_URL } as any);
+      const tonClientConfig: any = { url: env.TON_RPC_URL };
+      if (env.TON_API_KEY) tonClientConfig.secretKey = env.TON_API_KEY;
+      await WDK.registerWallet('ton', WalletTON, { tonClient: tonClientConfig } as any);
       return WDK;
     })();
   }
@@ -24,7 +26,9 @@ async function getWdk() {
 
 function getTonClient() {
   if (!tonClient) {
-    tonClient = new TonClient({ endpoint: env.TON_RPC_URL });
+    const config: any = { endpoint: env.TON_RPC_URL };
+    if (env.TON_API_KEY) config.apiKey = env.TON_API_KEY;
+    tonClient = new TonClient(config);
   }
   return tonClient;
 }

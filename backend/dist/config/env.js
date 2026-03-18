@@ -55,6 +55,7 @@ const envSchema = zod_1.z.object({
     BNB_RPC_URL: zod_1.z.string().default('https://binance.llamarpc.com'),
     SOLANA_RPC_URL: zod_1.z.string().default('https://api.mainnet-beta.solana.com'),
     TON_RPC_URL: zod_1.z.string().default('https://toncenter.com/api/v2/jsonRPC'),
+    TON_API_KEY: zod_1.z.string().optional(),
     AGENT_REPORT_URL: zod_1.z.string().optional(),
     AGENT_REPORT_BASE_URL: zod_1.z.string().optional(),
     WDK_SECRET_SEED: zod_1.z.string(),
