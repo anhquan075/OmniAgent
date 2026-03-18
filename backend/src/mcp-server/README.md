@@ -1,6 +1,6 @@
-# OmniWDK MCP Server
+# OmniAgent MCP Server
 
-Model Context Protocol (MCP) server exposing OmniWDK Multi-VM blockchain operations.
+Model Context Protocol (MCP) server exposing OmniAgent Multi-VM blockchain operations.
 
 ## Quick Start
 

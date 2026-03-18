@@ -111,7 +111,7 @@ export function VaultTestnetDevPanel({
         <Radio size={14} />
         <span>TESTNET · {networkLabel} · Chain {chainIdNum}</span>
         <span style={{ color: "rgba(251,191,36,0.45)", fontWeight: 400 }}>
-          — OmniWDK Smart Contracts
+          — OmniAgent Smart Contracts
         </span>
       </div>
 

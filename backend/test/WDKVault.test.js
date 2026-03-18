@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-describe("OmniWDK WDKVault", function () {
+describe("OmniAgent OmniAgentVault", function () {
   async function deployFixture() {
     const [deployer, user, executor] = await ethers.getSigners();
 
@@ -35,10 +35,10 @@ describe("OmniWDK WDKVault", function () {
     );
     await lendingAdapter.waitForDeployment();
 
-    const WDKVault = await ethers.getContractFactory("WDKVault");
-    const vault = await WDKVault.deploy(
+    const OmniAgentVault = await ethers.getContractFactory("OmniAgentVault");
+    const vault = await OmniAgentVault.deploy(
       await token.getAddress(),
-      "OmniWDK WDKVault Share",
+      "OmniAgent OmniAgentVault Share",
       "rpUSDT",
       deployer.address,
       0 // idleBufferBps = 0 for simple tests
@@ -172,10 +172,10 @@ describe("OmniWDK WDKVault", function () {
     );
     await lendingAdapter.waitForDeployment();
 
-    const WDKVault = await ethers.getContractFactory("WDKVault");
-    const vault = await WDKVault.deploy(
+    const OmniAgentVault = await ethers.getContractFactory("OmniAgentVault");
+    const vault = await OmniAgentVault.deploy(
       await token.getAddress(),
-      "OmniWDK WDKVault Share",
+      "OmniAgent OmniAgentVault Share",
       "rpUSDT",
       deployer.address,
       0
@@ -340,7 +340,7 @@ describe("OmniWDK WDKVault", function () {
     // Not locked yet
     await expect(engine.executeCycle()).to.be.revertedWithCustomError(
       vault,
-      "WDKVault__NotLocked"
+      "OmniAgentVault__NotLocked"
     );
   });
 
@@ -349,7 +349,7 @@ describe("OmniWDK WDKVault", function () {
 
     await expect(
       vault.connect(user).deposit(ethers.parseUnits("100", 18), user.address)
-    ).to.be.revertedWithCustomError(vault, "WDKVault__NotLocked");
+    ).to.be.revertedWithCustomError(vault, "OmniAgentVault__NotLocked");
   });
 
   it("rejects adapter configuration when asset mismatches", async function () {
@@ -447,7 +447,7 @@ describe("OmniWDK WDKVault", function () {
     const { deployer, vault } = await deployFixture();
     await expect(
       vault.connect(deployer).rebalance(7000, 1000, deployer.address, 10, 0)
-    ).to.be.revertedWithCustomError(vault, "WDKVault__CallerNotEngine");
+    ).to.be.revertedWithCustomError(vault, "OmniAgentVault__CallerNotEngine");
   });
 
   it("locks oracle and removes owner in deploy-like flow", async function () {

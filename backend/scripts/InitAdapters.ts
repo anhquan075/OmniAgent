@@ -45,7 +45,7 @@ async function main() {
 
     // Set engine on vault
     logger.info("\n[3/3] Setting engine on vault...");
-    const vault = await ethers.getContractAt("WDKVault", vaultAddr, deployer);
+    const vault = await ethers.getContractAt("OmniAgentVault", vaultAddr, deployer);
     const vaultTx = await vault.setEngine(engineAddr);
     await vaultTx.wait();
     logger.info("Vault engine set successfully");

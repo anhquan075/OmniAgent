@@ -21,7 +21,7 @@ async function main() {
   logger.info(`Vault: ${vaultAddr}`);
   logger.info(`Engine: ${engineAddr}`);
 
-  const vault = await ethers.getContractAt("WDKVault", vaultAddr!);
+  const vault = await ethers.getContractAt("OmniAgentVault", vaultAddr!);
   const engine = await ethers.getContractAt("StrategyEngine", engineAddr!);
   const oracle = await ethers.getContractAt("MockPriceOracle", usdtOracleAddr!);
   const usdt = await ethers.getContractAt("MockERC20", await vault.asset());

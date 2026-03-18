@@ -46,6 +46,7 @@ Topics: DeFi strategies, yield optimization, vault management, settlement rails.
     return fallbackSuggestions;
 }
 chat.post('/', async (c) => {
+    logger_1.logger.info('[Chat] Received POST /api/chat');
     const rawBody = await c.req.json().catch(() => null);
     const body = rawBody || {};
     const { messages: rawMessages, id } = body;
@@ -110,7 +111,7 @@ chat.post('/', async (c) => {
                     model: baseModel,
                     maxSteps: 10,
                     maxToolRoundtrips: 3,
-                    temperature: isSmallTalk ? 0.7 : 0,
+                    temperature: 0,
                     tools: isSmallTalk ? {} : tools_1.agentTools,
                     onStepFinish: (arg) => {
                         const toolResults = arg?.toolResults;
@@ -135,7 +136,7 @@ chat.post('/', async (c) => {
                             else if (toolName === 'execute_rebalance') {
                                 status = 'Settlement';
                                 progress = 95;
-                                thought = 'Finalizing atomic rebalance via OmniWDK settlement layer...';
+                                thought = 'Finalizing atomic rebalance via OmniAgent settlement layer...';
                             }
                             else if (toolName === 'yield_sweep') {
                                 status = 'Yield Harvest';
@@ -183,9 +184,9 @@ chat.post('/', async (c) => {
                         }
                     },
                     system: isSmallTalk
-                        ? `You are the OmniWDK AFOS Strategist. Keep responses brief and professional. Just answer the user's question directly in natural language.`
-                        : `You are the OmniWDK AFOS Strategist. 
-                Directive: yield optimization for USDT and XAUT via Tether WDK & OmniWDK.
+                        ? `You are the OmniAgent AFOS Strategist. Keep responses brief and professional. Just answer the user's question directly in natural language.`
+                        : `You are the OmniAgent AFOS Strategist. 
+                Directive: yield optimization for USDT and XAUT via Tether WDK & OmniAgent.
                
                CRITICAL INSTRUCTION: You MUST ALWAYS provide a final text summary after using tools.
                
@@ -237,7 +238,7 @@ chat.post('/', async (c) => {
                                         ...generatedMessages,
                                         { role: 'user', content: 'Summarize the above tool results and answer the user query.' }
                                     ],
-                                    temperature: 0.7
+                                    temperature: 0
                                 });
                                 await writer.merge(summaryResult.toUIMessageStream());
                             }
@@ -248,23 +249,26 @@ chat.post('/', async (c) => {
                     }
                 }
                 if (!isSmallTalk) {
-                    try {
-                        const response = await result.response;
-                        const generatedMessages = response.messages;
-                        let assistantText = '';
-                        if (generatedMessages && generatedMessages.length > 0) {
-                            const lastMsg = generatedMessages[generatedMessages.length - 1];
-                            if (lastMsg.role === 'assistant' && typeof lastMsg.content === 'string') {
-                                assistantText = lastMsg.content;
+                    // Spawn suggestion generation in background - don't await
+                    (async () => {
+                        try {
+                            const response = await result.response;
+                            const generatedMessages = response.messages;
+                            let assistantText = '';
+                            if (generatedMessages && generatedMessages.length > 0) {
+                                const lastMsg = generatedMessages[generatedMessages.length - 1];
+                                if (lastMsg.role === 'assistant' && typeof lastMsg.content === 'string') {
+                                    assistantText = lastMsg.content;
+                                }
                             }
+                            const suggestions = await generateSuggestions(baseModel, generatedMessages || [], assistantText);
+                            writer.write({ type: 'data-suggestions', data: suggestions });
                         }
-                        const suggestions = await generateSuggestions(baseModel, generatedMessages || [], assistantText);
-                        writer.write({ type: 'data-suggestions', data: suggestions });
-                    }
-                    catch (err) {
-                        logger_1.logger.error(err, '[Chat] Error in suggestion generation');
-                        writer.write({ type: 'data-suggestions', data: fallbackSuggestions });
-                    }
+                        catch (err) {
+                            logger_1.logger.error(err, '[Chat] Error in suggestion generation');
+                            writer.write({ type: 'data-suggestions', data: fallbackSuggestions });
+                        }
+                    })();
                 }
             }
             catch (error) {

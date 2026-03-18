@@ -10,9 +10,9 @@ export function VaultTopNavbar({ busyAction }) {
       {/* Brand */}
       <div className="topNavBrand">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.svg" alt="OmniWDK" className="topNavLogo" />
+        <img src="/logo.svg" alt="OmniAgent" className="topNavLogo" />
         <div className="topNavBrandText">
-          <span className="topNavTitle">OmniWDK <strong>Vault</strong></span>
+          <span className="topNavTitle">OmniAgent <strong>Vault</strong></span>
           <span className="topNavTagline">Autonomous yield protection · on-chain</span>
         </div>
       </div>

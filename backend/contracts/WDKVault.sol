@@ -14,10 +14,10 @@ import {IVenusVToken} from "./interfaces/IVenusVToken.sol";
 import {TransientReentrancyGuard} from "./TransientReentrancyGuard.sol";
 
 /**
- * @title WDKVault
- * @notice OmniWDK WDKVault V2 (Polkadot Hub Adaptation)
+ * @title OmniAgentVault
+ * @notice OmniAgent OmniAgentVault V2 (Polkadot Hub Adaptation)
  */
-contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
+contract OmniAgentVault is ERC4626, Ownable, TransientReentrancyGuard {
     using SafeERC20 for IERC20;
 
     uint256 public constant BPS_DENOMINATOR = 10_000;
@@ -55,27 +55,27 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
     event YieldWithdrawn(address indexed user, address indexed receiver, uint256 amount);
 
     // --- Errors ---
-    error WDKVault__ZeroAddress();
-    error WDKVault__BufferTooHigh();
-    error WDKVault__NotLocked();
-    error WDKVault__ConfigurationLocked();
-    error WDKVault__CallerNotEngine();
-    error WDKVault__EngineNotSet();
-    error WDKVault__WDKNotSet();
-    error WDKVault__SecondaryNotSet();
-    error WDKVault__LpNotSet();
-    error WDKVault__LendingNotSet();
-    error WDKVault__InvalidFlashAdapter();
-    error WDKVault__InsufficientLiquidity();
-    error WDKVault__PegArbNotApproved();
-    error WDKVault__VenusDecimalsInvalid();
-    error WDKVault__VenusMintFailed(uint256 code);
-    error WDKVault__VenusRedeemFailed(uint256 code);
-    error WDKVault__AdapterReportingFailure(address adapter);
-    error WDKVault__AssetMismatch(address adapter);
+    error OmniAgentVault__ZeroAddress();
+    error OmniAgentVault__BufferTooHigh();
+    error OmniAgentVault__NotLocked();
+    error OmniAgentVault__ConfigurationLocked();
+    error OmniAgentVault__CallerNotEngine();
+    error OmniAgentVault__EngineNotSet();
+    error OmniAgentVault__WDKNotSet();
+    error OmniAgentVault__SecondaryNotSet();
+    error OmniAgentVault__LpNotSet();
+    error OmniAgentVault__LendingNotSet();
+    error OmniAgentVault__InvalidFlashAdapter();
+    error OmniAgentVault__InsufficientLiquidity();
+    error OmniAgentVault__PegArbNotApproved();
+    error OmniAgentVault__VenusDecimalsInvalid();
+    error OmniAgentVault__VenusMintFailed(uint256 code);
+    error OmniAgentVault__VenusRedeemFailed(uint256 code);
+    error OmniAgentVault__AdapterReportingFailure(address adapter);
+    error OmniAgentVault__AssetMismatch(address adapter);
 
     modifier onlyEngine() {
-        if (msg.sender != engine) revert WDKVault__CallerNotEngine();
+        if (msg.sender != engine) revert OmniAgentVault__CallerNotEngine();
         _;
     }
 
@@ -86,12 +86,12 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
         address initialOwner_,
         uint256 idleBufferBps_
     ) ERC20(name_, symbol_) ERC4626(asset_) Ownable(initialOwner_) {
-        if (idleBufferBps_ > 2000) revert WDKVault__BufferTooHigh();
+        if (idleBufferBps_ > 2000) revert OmniAgentVault__BufferTooHigh();
         idleBufferBps = idleBufferBps_;
     }
 
     function setEngine(address engine_) external onlyOwner {
-        if (engine_ == address(0)) revert WDKVault__ZeroAddress();
+        if (engine_ == address(0)) revert OmniAgentVault__ZeroAddress();
         engine = engine_;
         emit EngineSet(engine_);
     }
@@ -102,13 +102,13 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
         IManagedAdapter lp_,
         IManagedAdapter lending_
     ) external onlyOwner {
-        if (configurationLocked) revert WDKVault__ConfigurationLocked();
+        if (configurationLocked) revert OmniAgentVault__ConfigurationLocked();
         
         address targetAsset = asset();
-        if (address(wdk_) != address(0) && wdk_.asset() != targetAsset) revert WDKVault__AssetMismatch(address(wdk_));
-        if (address(secondary_) != address(0) && secondary_.asset() != targetAsset) revert WDKVault__AssetMismatch(address(secondary_));
-        if (address(lp_) != address(0) && lp_.asset() != targetAsset) revert WDKVault__AssetMismatch(address(lp_));
-        if (address(lending_) != address(0) && lending_.asset() != targetAsset) revert WDKVault__AssetMismatch(address(lending_));
+        if (address(wdk_) != address(0) && wdk_.asset() != targetAsset) revert OmniAgentVault__AssetMismatch(address(wdk_));
+        if (address(secondary_) != address(0) && secondary_.asset() != targetAsset) revert OmniAgentVault__AssetMismatch(address(secondary_));
+        if (address(lp_) != address(0) && lp_.asset() != targetAsset) revert OmniAgentVault__AssetMismatch(address(lp_));
+        if (address(lending_) != address(0) && lending_.asset() != targetAsset) revert OmniAgentVault__AssetMismatch(address(lending_));
 
         wdkAdapter = wdk_;
         secondaryAdapter = secondary_;
@@ -124,10 +124,10 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
     }
 
     function lockConfiguration() external onlyOwner {
-        if (engine == address(0)) revert WDKVault__EngineNotSet();
-        if (address(wdkAdapter) == address(0)) revert WDKVault__WDKNotSet();
-        if (address(secondaryAdapter) == address(0)) revert WDKVault__SecondaryNotSet();
-        if (address(lendingAdapter) == address(0)) revert WDKVault__LendingNotSet();
+        if (engine == address(0)) revert OmniAgentVault__EngineNotSet();
+        if (address(wdkAdapter) == address(0)) revert OmniAgentVault__WDKNotSet();
+        if (address(secondaryAdapter) == address(0)) revert OmniAgentVault__SecondaryNotSet();
+        if (address(lendingAdapter) == address(0)) revert OmniAgentVault__LendingNotSet();
         configurationLocked = true;
         emit ConfigurationLocked();
         renounceOwnership();
@@ -198,7 +198,7 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
         uint256 bountyBps,
         uint256 lpTargetBps
     ) external nonReentrant onlyEngine {
-        if (!configurationLocked) revert WDKVault__NotLocked();
+        if (!configurationLocked) revert OmniAgentVault__NotLocked();
 
         uint256 preRawAssets = rawTotalAssets();
         uint256 preLocked = calculateLockedProfit();
@@ -207,7 +207,7 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
         _maybeHarvest();
 
         (uint256 total, address failingStart) = _totalAssetsInternal();
-        if (failingStart != address(0)) revert WDKVault__AdapterReportingFailure(failingStart);
+        if (failingStart != address(0)) revert OmniAgentVault__AdapterReportingFailure(failingStart);
 
         uint256 buffer = (total * idleBufferBps) / BPS_DENOMINATOR;
         uint256 deployable = total > buffer ? total - buffer : 0;
@@ -352,11 +352,11 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
         uint256 repaymentAmount,
         address flashPool
     ) external nonReentrant onlyEngine {
-        if (!_isConfiguredAdapter(fromAdapter) || !_isConfiguredAdapter(toAdapter)) revert WDKVault__InvalidFlashAdapter();
+        if (!_isConfiguredAdapter(fromAdapter) || !_isConfiguredAdapter(toAdapter)) revert OmniAgentVault__InvalidFlashAdapter();
         IERC20(asset()).safeTransfer(toAdapter, amount);
         IManagedAdapter(toAdapter).onVaultDeposit(amount);
         uint256 withdrawn = IManagedAdapter(fromAdapter).withdrawToVault(repaymentAmount);
-        if (withdrawn < repaymentAmount) revert WDKVault__InsufficientLiquidity();
+        if (withdrawn < repaymentAmount) revert OmniAgentVault__InsufficientLiquidity();
         IERC20(asset()).safeTransfer(flashPool, repaymentAmount);
     }
 
@@ -427,17 +427,17 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
             }
         }
 
-        if (IERC20(asset()).balanceOf(address(this)) < needed) revert WDKVault__InsufficientLiquidity();
+        if (IERC20(asset()).balanceOf(address(this)) < needed) revert OmniAgentVault__InsufficientLiquidity();
     }
 
     function _redeemFromVenus(uint256 amount) internal {
         uint256 result = venusVToken.redeemUnderlying(amount);
-        if (result != 0) revert WDKVault__VenusRedeemFailed(result);
+        if (result != 0) revert OmniAgentVault__VenusRedeemFailed(result);
     }
 
     function _mintToVenus(uint256 amount) internal {
         uint256 result = venusVToken.mint(amount);
-        if (result != 0) revert WDKVault__VenusMintFailed(result);
+        if (result != 0) revert OmniAgentVault__VenusMintFailed(result);
     }
 
     function _decimalsOffset() internal view override returns (uint8) {
@@ -445,21 +445,21 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
     }
 
     function deposit(uint256 assets, address receiver) public override returns (uint256 shares) {
-        if (!configurationLocked) revert WDKVault__NotLocked();
+        if (!configurationLocked) revert OmniAgentVault__NotLocked();
         shares = super.deposit(assets, receiver);
         userPrincipal[receiver] += assets;
         return shares;
     }
 
     function mint(uint256 shares, address receiver) public override returns (uint256 assets) {
-        if (!configurationLocked) revert WDKVault__NotLocked();
+        if (!configurationLocked) revert OmniAgentVault__NotLocked();
         assets = super.mint(shares, receiver);
         userPrincipal[receiver] += assets;
         return assets;
     }
 
     function withdraw(uint256 assets, address receiver, address owner_) public override nonReentrant returns (uint256) {
-        if (!configurationLocked) revert WDKVault__NotLocked();
+        if (!configurationLocked) revert OmniAgentVault__NotLocked();
         _ensureLiquid(assets);
         uint256 shares = super.withdraw(assets, receiver, owner_);
         if (userPrincipal[owner_] > assets) {
@@ -471,7 +471,7 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
     }
 
     function redeem(uint256 shares, address receiver, address owner_) public override nonReentrant returns (uint256) {
-        if (!configurationLocked) revert WDKVault__NotLocked();
+        if (!configurationLocked) revert OmniAgentVault__NotLocked();
         uint256 assets = previewRedeem(shares);
         _ensureLiquid(assets);
         uint256 returnedAssets = super.redeem(shares, receiver, owner_);
@@ -487,7 +487,7 @@ contract WDKVault is ERC4626, Ownable, TransientReentrancyGuard {
      * @notice Allows a user to withdraw only their accrued yield, without touching principal.
      */
     function withdrawYield(address receiver) external nonReentrant returns (uint256 yieldAmount) {
-        if (!configurationLocked) revert WDKVault__NotLocked();
+        if (!configurationLocked) revert OmniAgentVault__NotLocked();
         uint256 maxWithdrawable = maxWithdraw(msg.sender);
         uint256 principal = userPrincipal[msg.sender];
         

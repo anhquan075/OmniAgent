@@ -32,6 +32,7 @@ const verifySignature = (payload, signature) => {
 };
 // SSE Stream for Agent Brain
 agent.get('/stream', (c) => {
+    logger_1.logger.info('[Agent] Client connected to agent stream');
     return (0, streaming_1.stream)(c, async (stream) => {
         c.header('Content-Type', 'text/event-stream');
         c.header('Cache-Control', 'no-cache');
@@ -48,6 +49,7 @@ agent.get('/stream', (c) => {
         }, 15000);
         // Clean up on disconnect
         c.req.raw.signal.addEventListener('abort', () => {
+            logger_1.logger.info('[Agent] Client disconnected from stream');
             agentEvents.off('agent-update', listener);
             clearInterval(interval);
         });
@@ -60,6 +62,7 @@ agent.get('/stream', (c) => {
 // Reporting endpoint (for the loop to send updates)
 agent.post('/report', async (c) => {
     const body = await c.req.json();
+    logger_1.logger.debug({ node: body.node, action: body.action }, '[Agent] Received report');
     const event = {
         ...body,
         timestamp: new Date().toISOString(),
@@ -69,6 +72,7 @@ agent.post('/report', async (c) => {
     if (agentHistory.length > 100)
         agentHistory.shift();
     agentEvents.emit('agent-update', event);
+    logger_1.logger.debug('[Agent] Report emitted to listeners');
     return c.text('OK');
 });
 // Webhook receiver
@@ -76,11 +80,13 @@ agent.post('/webhook', async (c) => {
     const signature = c.req.header('x-hub-signature-256');
     const eventName = c.req.header('x-github-event');
     const rawBody = await c.req.text();
+    logger_1.logger.info({ event: eventName }, '[Webhook] Received event');
     if (!verifySignature(rawBody, signature)) {
+        logger_1.logger.warn('[Webhook] Invalid signature');
         return c.text('Invalid signature', 401);
     }
     const payload = JSON.parse(rawBody);
-    logger_1.logger.info({ event: eventName }, '[Webhook] Received event');
+    logger_1.logger.info({ event: eventName, action: payload.action }, '[Webhook] Processing event');
     // Trigger rebalance on specific events
     let shouldTrigger = false;
     if (eventName === 'pull_request' && payload.pull_request?.merged)

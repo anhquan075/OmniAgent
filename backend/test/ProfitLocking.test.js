@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-describe("WDKVault Profit Locking", function () {
+describe("OmniAgentVault Profit Locking", function () {
   let vault, asset, owner, user, engine, secondary, lp, wdk;
   let idleBufferBps = 500; // 5%
   let lpAdapter;
@@ -13,10 +13,10 @@ describe("WDKVault Profit Locking", function () {
     asset = await MockERC20.deploy("Tether", "USDT");
     await asset.waitForDeployment();
 
-    const WDKVault = await ethers.getContractFactory("WDKVault");
-    vault = await WDKVault.deploy(
+    const OmniAgentVault = await ethers.getContractFactory("OmniAgentVault");
+    vault = await OmniAgentVault.deploy(
       await asset.getAddress(),
-      "OmniWDK Vault",
+      "OmniAgent Vault",
       "oWDK",
       owner.address,
       idleBufferBps

@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("GroupSyndicate", function () {
-  let GroupSyndicate, WDKVault, ERC20Mock;
+  let GroupSyndicate, OmniAgentVault, ERC20Mock;
   let syndicate, vault, asset;
   let owner, agent, user1, user2, user3;
   

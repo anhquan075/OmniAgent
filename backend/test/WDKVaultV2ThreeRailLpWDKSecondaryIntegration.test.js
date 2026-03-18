@@ -6,7 +6,7 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 
 /// @dev Integration tests for the 3-rail vault: WDK + Secondary (ManagedAdapter) + LP (StableSwap)
-describe("WDKVault V2 — Three-Rail LP Integration", function () {
+describe("OmniAgentVault V2 — Three-Rail LP Integration", function () {
   async function deployThreeRailFixture() {
     const [deployer, user, executor] = await ethers.getSigners();
 
@@ -149,10 +149,10 @@ describe("WDKVault V2 — Three-Rail LP Integration", function () {
     const lendingAdapter = await MockLendingAdapter.deploy(usdt.target, deployer.address);
 
     // Vault
-    const WDKVault = await ethers.getContractFactory("WDKVault");
-    const vault = await WDKVault.deploy(
+    const OmniAgentVault = await ethers.getContractFactory("OmniAgentVault");
+    const vault = await OmniAgentVault.deploy(
       usdt.target,
-      "WDKVault V2 3Rail",
+      "OmniAgentVault V2 3Rail",
       "pv3USDT",
       deployer.address,
       500
@@ -270,8 +270,8 @@ describe("WDKVault V2 — Three-Rail LP Integration", function () {
       ethers.parseUnits("1.2", 18)
     );
 
-      const WDKVault = await ethers.getContractFactory("WDKVault");
-      const vault = await WDKVault.deploy(
+      const OmniAgentVault = await ethers.getContractFactory("OmniAgentVault");
+      const vault = await OmniAgentVault.deploy(
         usdt.target,
         "V",
         "V",

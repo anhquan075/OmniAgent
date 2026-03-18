@@ -1,5 +1,5 @@
 {
-  "name": "omniwdk",
+  "name": "omni-agent",
   "framework": "vite",
   "buildCommand": "pnpm run build",
   "outputDirectory": "dist",

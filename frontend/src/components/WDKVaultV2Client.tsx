@@ -23,6 +23,10 @@ import {
   Zap,
 } from "lucide-react";
 import { VaultTestnetDevPanel } from "@/components/shared/ui/VaultTestnetDevPanel";
+import { HealthMonitorCard } from "@/components/shared/cards/HealthMonitorCard";
+import { X402PaymentCard } from "@/components/shared/cards/X402PaymentCard";
+import { useHealthMonitor } from "@/hooks/useHealthMonitor";
+import { useX402Payment } from "@/hooks/useX402Payment";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 function shortAddr(addr) {
@@ -70,7 +74,7 @@ function ContractAddressBadge({ label, address, icon: Icon, bscScanAddr }) {
   );
 }
 
-export default function WDKVaultV2Client() {
+export default function OmniAgentVaultV2Client() {
   const [, setStatus] = useState("Loading live data...");
   const [busyAction, setBusyAction] = useState(null);
   const { networkMode, isTestnet, isCreditcoin, setNetworkMode } = useNetworkMode();
@@ -100,6 +104,8 @@ export default function WDKVaultV2Client() {
   const { isConnected } = wallet;
   const vaultState = useVaultV2ReadState();
   const actions = useVaultV2WriteActions({ refresh: vaultState.refresh });
+  const healthMonitor = useHealthMonitor(wallet.wallet);
+  const x402Payment = useX402Payment();
 
   const refreshArgs = useMemo(
     () => ({
@@ -536,8 +542,10 @@ export default function WDKVaultV2Client() {
           </div>
           <div className="bento-row-side" style={{ flex: 3 }}>
             <VaultDutchAuctionCard auctionState={vaultState.auctionMetrics} />
-            <VaultSharpeRatioYieldTrackerCard
-              sharpeState={vaultState.sharpeMetrics}
+            <HealthMonitorCard 
+              positionData={healthMonitor.positionData}
+              alert={healthMonitor.alert}
+              isLoading={healthMonitor.isLoading}
             />
           </div>
         </div>
@@ -603,10 +611,11 @@ export default function WDKVaultV2Client() {
             onBusyChange={setBusyAction}
             onStatus={setStatus}
           />
-          <VaultOraclePolicyMetricsCard
-            algoMetrics={vaultState.algoMetrics}
-            harvestGasEstimate={vaultState.harvestGasEstimate}
-            harvestGasMultiplier={vaultState.harvestGasMultiplier}
+          <X402PaymentCard
+            riskAnalysis={x402Payment.riskAnalysis}
+            isLoading={x402Payment.isLoading}
+            error={x402Payment.error}
+            onAnalyze={x402Payment.analyzePayment}
           />
         </div>
 

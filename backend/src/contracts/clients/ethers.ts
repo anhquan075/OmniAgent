@@ -7,7 +7,7 @@ import {
   StrategyEngineAbi,
   ZKRiskOracleAbi,
   CircuitBreakerAbi,
-  WDKVaultAbi,
+  OmniAgentVaultAbi,
   ExecutionAuctionAbi,
   GroupSyndicateAbi
 } from '../abis';
@@ -18,7 +18,7 @@ const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
 export const getContracts = () => {
   const engineAbi = StrategyEngineAbi;
   const breakerAbiActual = CircuitBreakerAbi;
-  const vaultAbiActual = WDKVaultAbi;
+  const vaultAbiActual = OmniAgentVaultAbi;
   const oracleAbiActual = ZKRiskOracleAbi;
   const auctionAbiActual = ExecutionAuctionAbi;
   const syndicateAbiActual = GroupSyndicateAbi;

@@ -19,5 +19,5 @@ __exportStar(require("./ERC20"), exports);
 __exportStar(require("./ExecutionAuction"), exports);
 __exportStar(require("./GroupSyndicate"), exports);
 __exportStar(require("./StrategyEngine"), exports);
-__exportStar(require("./WDKVault"), exports);
+__exportStar(require("./OmniAgentVault"), exports);
 __exportStar(require("./ZKRiskOracle"), exports);

@@ -47,7 +47,7 @@ export class RiskService {
           score: z.number().min(0).max(100).describe('Risk score from 0 to 100'),
           explanation: z.string().describe('Brief explanation of the risk assessment')
         }),
-        prompt: `DeFi Risk Analysis for OmniWDK AFOS Agent.
+        prompt: `DeFi Risk Analysis for OmniAgent AFOS Agent.
 Current Risk Profile: ${JSON.stringify(currentProfile)}
 Transaction Simulation Result: ${JSON.stringify(txSimulation)}
 

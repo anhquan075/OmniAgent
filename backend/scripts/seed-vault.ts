@@ -27,7 +27,7 @@ async function main() {
 
   // Get contract instances
   const usdt = await ethers.getContractAt('MockERC20', usdtAddr);
-  const vault = await ethers.getContractAt('WDKVault', vaultAddr);
+  const vault = await ethers.getContractAt('OmniAgentVault', vaultAddr);
 
   // Check current state
   console.log("--- Current State ---");

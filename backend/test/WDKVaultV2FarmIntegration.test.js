@@ -7,7 +7,7 @@ const {
   setBalance,
 } = require("@nomicfoundation/hardhat-network-helpers");
 
-describe("WDKVault V2 — Farm Integration Tests", function () {
+describe("OmniAgentVault V2 — Farm Integration Tests", function () {
   async function deployFarmIntegrationFixture() {
     const [deployer, user, executor] = await ethers.getSigners();
 
@@ -137,10 +137,10 @@ describe("WDKVault V2 — Farm Integration Tests", function () {
     const MockLendingAdapter = await ethers.getContractFactory("MockLendingAdapter");
     const lendingAdapter = await MockLendingAdapter.deploy(usdt.target, deployer.address);
 
-    const WDKVault = await ethers.getContractFactory("WDKVault");
-    const vault = await WDKVault.deploy(
+    const OmniAgentVault = await ethers.getContractFactory("OmniAgentVault");
+    const vault = await OmniAgentVault.deploy(
       usdt.target,
-      "WDKVault V2 Farm",
+      "OmniAgentVault V2 Farm",
       "pvFARM",
       deployer.address,
       500
@@ -479,8 +479,8 @@ describe("WDKVault V2 — Farm Integration Tests", function () {
       const SharpeTracker = await ethers.getContractFactory("SharpeTracker");
       const sharpe2 = await SharpeTracker.deploy(5);
 
-      const WDKVault = await ethers.getContractFactory("WDKVault");
-      const vault2 = await WDKVault.deploy(
+      const OmniAgentVault = await ethers.getContractFactory("OmniAgentVault");
+      const vault2 = await OmniAgentVault.deploy(
         usdt.target,
         "Test",
         "TEST",

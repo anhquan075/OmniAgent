@@ -1,6 +1,49 @@
 import { ethers } from 'ethers';
 import { ZERO_ADDRESS } from '@/lib/constants';
 import { logger } from '@/utils/logger';
+import { z } from 'zod';
+import { generateObject } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { env } from '@/config/env';
+const TransactionSchema = z.object({
+  toAddress: z.string().refine((val) => ethers.isAddress(val), {
+    message: "Invalid Ethereum address",
+  }),
+  amount: z.string().refine((val) => {
+    try {
+      BigInt(val);
+      return true;
+    } catch {
+      return false;
+    }
+  }, {
+    message: "Amount must be a valid BigInt string",
+  }),
+  currentRiskLevel: z.enum(['LOW', 'MEDIUM', 'HIGH']),
+  portfolioValue: z.string(),
+});
+
+const SwapSchema = z.object({
+  fromToken: z.string().refine((val) => ethers.isAddress(val), {
+    message: "Invalid fromToken address",
+  }),
+  toToken: z.string().refine((val) => ethers.isAddress(val), {
+    message: "Invalid toToken address",
+  }),
+  amount: z.string().refine((val) => {
+    try {
+      BigInt(val);
+      return true;
+    } catch {
+      return false;
+    }
+  }, {
+    message: "Amount must be a valid BigInt string",
+  }),
+  currentRiskLevel: z.enum(['LOW', 'MEDIUM', 'HIGH']),
+  portfolioValue: z.string(),
+  estimatedSlippageBps: z.number().min(0).max(10000).optional(),
+});
 
 export interface SafetyPolicy {
   maxRiskPercentage: number;
@@ -389,6 +432,85 @@ export class PolicyGuard {
       volumeUsed: this.dailyVolume.toString(),
       volumeLimit: this.policy.dailyMaxVolume,
     };
+  }
+
+  validateTransactionWithSchema(params: any): PolicyViolation {
+    try {
+      const parsed = TransactionSchema.parse(params);
+      return this.validateTransaction(parsed);
+    } catch (error: any) {
+      return {
+        violated: true,
+        reason: `Schema validation failed: ${error.errors?.[0]?.message || error.message}`,
+        severity: 'MEDIUM',
+      };
+    }
+  }
+
+  validateSwapWithSchema(params: any): PolicyViolation {
+    try {
+      const parsed = SwapSchema.parse(params);
+      return this.validateSwapTransaction(parsed);
+    } catch (error: any) {
+      return {
+        violated: true,
+        reason: `Schema validation failed: ${error.errors?.[0]?.message || error.message}`,
+        severity: 'MEDIUM',
+      };
+    }
+  }
+
+  async aiReviewTransaction(params: {
+    toAddress: string;
+    amount: string;
+    transactionType: string;
+    context?: string;
+  }): Promise<PolicyViolation> {
+    try {
+      const openai = createOpenAI({
+        apiKey: env.OPENROUTER_API_KEY,
+        baseURL: env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
+      });
+
+      const { object } = await generateObject({
+        model: openai(env.OPENROUTER_MODEL_CRYPTO || 'deepseek/deepseek-chat'),
+        temperature: 0,
+        schema: z.object({
+          approved: z.boolean().describe('Whether the transaction should be approved'),
+          reason: z.string().describe('Brief explanation of the decision'),
+          riskLevel: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).describe('Estimated risk level')
+        }),
+        prompt: `Review this DeFi transaction for security and risk:
+
+Transaction Details:
+- Type: ${params.transactionType}
+- To: ${params.toAddress}
+- Amount: ${params.amount} USDT
+- Context: ${params.context || 'No additional context'}
+
+Is this transaction safe to execute? Consider:
+1. Address reputation and whitelist status
+2. Transaction amount relative to portfolio
+3. Smart contract interaction risks
+4. Cross-chain bridging risks if applicable
+
+Provide a decision with reason and risk level.`
+      });
+
+      if (!object.approved) {
+        return {
+          violated: true,
+          reason: `AI review rejected: ${object.reason}`,
+          severity: object.riskLevel as any,
+        };
+      }
+
+      logger.info({ reason: object.reason, riskLevel: object.riskLevel }, '[PolicyGuard] AI review passed');
+      return { violated: false, reason: 'AI review passed', severity: 'LOW' };
+    } catch (error: any) {
+      logger.warn({ error: error.message }, '[PolicyGuard] AI review failed, falling back to standard validation');
+      return { violated: false, reason: 'AI review unavailable, using standard validation', severity: 'LOW' };
+    }
   }
 }
 

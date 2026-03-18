@@ -166,9 +166,9 @@ mcpRoute.get('/', (c) => {
   const isConnectedWallet = c.req.header('x-wallet-connected') === 'true';
   
   return c.json({
-    name: 'omniwdk-mcp-server',
+    name: 'omni-agent-mcp-server',
     version: '1.0.0',
-    description: 'OmniWDK Multi-VM MCP Server',
+    description: 'OmniAgent Multi-VM MCP Server',
     tools: registry.getToolCount(),
     _meta: {
       mode: userWalletAddress ? 'user_wallet' : 'agent_wallet',

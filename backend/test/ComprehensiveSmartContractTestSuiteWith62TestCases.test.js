@@ -40,10 +40,10 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
     );
     await lendingAdapter.waitForDeployment();
 
-    const WDKVault = await ethers.getContractFactory("WDKVault");
-    const vault = await WDKVault.deploy(
+    const OmniAgentVault = await ethers.getContractFactory("OmniAgentVault");
+    const vault = await OmniAgentVault.deploy(
       await token.getAddress(),
-      "OmniWDK WDKVault Share",
+      "OmniAgent OmniAgentVault Share",
       "rpUSDT",
       deployer.address,
       0 // idleBufferBps
@@ -195,10 +195,10 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
     );
     await lendingAdapter.waitForDeployment();
 
-    const WDKVault = await ethers.getContractFactory("WDKVault");
-    const vault = await WDKVault.deploy(
+    const OmniAgentVault = await ethers.getContractFactory("OmniAgentVault");
+    const vault = await OmniAgentVault.deploy(
       await token.getAddress(),
-      "OmniWDK WDKVault Share",
+      "OmniAgent OmniAgentVault Share",
       "rpUSDT",
       deployer.address,
       0
@@ -287,7 +287,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
   // WDKVAULT TESTS
   // ==============================================================================
 
-  describe("WDKVault4626", function () {
+  describe("OmniAgentVault4626", function () {
     describe("Configuration & Locking", function () {
       it("should prevent deposit before configuration is locked", async function () {
         const { user1, vault } = await deployUnlockedFixture();
@@ -295,7 +295,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
           vault
             .connect(user1)
             .deposit(ethers.parseUnits("100", 18), user1.address)
-        ).to.be.revertedWithCustomError(vault, "WDKVault__NotLocked");
+        ).to.be.revertedWithCustomError(vault, "OmniAgentVault__NotLocked");
       });
 
       it("should allow deposit after configuration is locked", async function () {
@@ -331,7 +331,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
         await (await vault.setEngine(await engine.getAddress())).wait();
         await expect(
           vault.connect(deployer).lockConfiguration()
-        ).to.be.revertedWithCustomError(vault, "WDKVault__WDKNotSet");
+        ).to.be.revertedWithCustomError(vault, "OmniAgentVault__WDKNotSet");
       });
 
       it("should zero owner after lockConfiguration", async function () {
@@ -398,7 +398,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
         const { user1, vault } = await deployFullFixture();
         await expect(
           vault.connect(user1).rebalance(7000, 100, user1.address, 10, 0)
-        ).to.be.revertedWithCustomError(vault, "WDKVault__CallerNotEngine");
+        ).to.be.revertedWithCustomError(vault, "OmniAgentVault__CallerNotEngine");
       });
 
       it("should revert if configuration not locked", async function () {
@@ -565,7 +565,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
         const { user1, vault } = await deployUnlockedFixture();
         await expect(
           vault.connect(user1).mint(ethers.parseUnits("100", 6), user1.address)
-        ).to.be.revertedWithCustomError(vault, "WDKVault__NotLocked");
+        ).to.be.revertedWithCustomError(vault, "OmniAgentVault__NotLocked");
       });
 
       it("should allow mint after configuration lock", async function () {

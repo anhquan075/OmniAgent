@@ -7,7 +7,9 @@ const logger_1 = require("@/utils/logger");
 const robotFleet = new hono_1.Hono();
 const fleetEmitter = RobotFleetService_1.robotFleetService.getEmitter();
 robotFleet.get('/events', async (c) => {
+    logger_1.logger.info('[RobotFleet] Client connected to fleet SSE stream');
     return (0, streaming_1.streamSSE)(c, async (stream) => {
+        logger_1.logger.debug('[RobotFleet] SSE stream established');
         logger_1.logger.info('[RobotFleetAPI] New SSE client connected');
         // Send initial connection message
         await stream.writeSSE({
@@ -72,11 +74,13 @@ robotFleet.get('/events', async (c) => {
 // Status endpoint (fallback for polling)
 robotFleet.get('/status', async (c) => {
     try {
+        logger_1.logger.debug('[RobotFleet] Fetching fleet status');
         const status = RobotFleetService_1.robotFleetService.getFleetStatus();
+        logger_1.logger.info({ robotCount: status.robots.length, enabled: status.enabled }, '[RobotFleet] Status retrieved');
         return c.json(status);
     }
     catch (error) {
-        logger_1.logger.error(error, '[RobotFleetAPI] Status error');
+        logger_1.logger.error(error, '[RobotFleet] Status error');
         return c.json({
             error: 'Failed to get fleet status',
             message: error.message

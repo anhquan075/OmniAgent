@@ -54,7 +54,7 @@ export function ChatHistory({ messages = [], isStreaming = false, addToolOutput 
           </div>
           <div className="font-heading tracking-widest text-sm text-tether-teal">SYSTEM ONLINE</div>
           <p className="font-sans text-xs text-gray-400 max-w-xs leading-relaxed">
-            Initialize your WDKVault operations via WDK. Ask for vault status, execute cross-chain strategies, or check risk parameters.
+            Initialize your OmniAgentVault operations via WDK. Ask for vault status, execute cross-chain strategies, or check risk parameters.
           </p>
         </div>
       ) : (

@@ -120,7 +120,7 @@ export default function App() {
       {
         id: "initial-1",
         role: "assistant",
-        content: "System initialized. I am your **OmniWDK Strategist**. I am currently monitoring cross-chain liquidity for USDT and XAUT yield optimization.",
+        content: "System initialized. I am your **OmniAgent Strategist**. I am currently monitoring cross-chain liquidity for USDT and XAUT yield optimization.",
       } as any
     ],
     experimental_onData: (dataPart: any) => {
@@ -145,7 +145,7 @@ export default function App() {
       {
         id: "initial-1",
         role: "assistant",
-        content: "System initialized. I am your **OmniWDK Strategist**. I am currently monitoring cross-chain liquidity for USDT and XAUT yield optimization.",
+        content: "System initialized. I am your **OmniAgent Strategist**. I am currently monitoring cross-chain liquidity for USDT and XAUT yield optimization.",
       } as any
     ]);
   }, [activeSessionId, setMessages]);
@@ -162,7 +162,7 @@ export default function App() {
         {
           id: "initial-1",
           role: "assistant",
-          content: `System initialized. Welcome back, Commander **${address.slice(0, 6)}...${address.slice(-4)}**. I am your **OmniWDK Autonomous Strategist**. All settlement rails are hot.${portfolioMsg}`,
+          content: `System initialized. Welcome back, Commander **${address.slice(0, 6)}...${address.slice(-4)}**. I am your **OmniAgent Autonomous Strategist**. All settlement rails are hot.${portfolioMsg}`,
         } as any
       ]);
     }
@@ -284,10 +284,10 @@ export default function App() {
         <header className="h-14 md:h-16 flex-shrink-0 flex items-center justify-between px-4 md:px-6 glass rounded-2xl border border-white/10 mb-3 md:mb-4 shadow-glow-sm relative z-50">
           <div className="flex items-center gap-3 md:gap-4">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-space-black flex items-center justify-center shadow-glow-md overflow-hidden border border-tether-teal/20">
-              <img src="/imgs/mascot-owl-no-bg.png" alt="OmniWDK" className="w-full h-full object-contain" />
+              <img src="/imgs/mascot-owl-no-bg.png" alt="OmniAgent" className="w-full h-full object-contain" />
             </div>
             <div className="flex flex-col">
-              <h1 className="text-sm md:text-lg font-heading font-bold tracking-tight bg-clip-text text-transparent bg-[linear-gradient(135deg,#26A17B,#00D1FF)] uppercase truncate max-w-[150px] md:max-w-none">OmniWDK</h1>
+              <h1 className="text-sm md:text-lg font-heading font-bold tracking-tight bg-clip-text text-transparent bg-[linear-gradient(135deg,#26A17B,#00D1FF)] uppercase truncate max-w-[150px] md:max-w-none">OmniAgent</h1>
               <div className="flex items-center gap-2">
                 <span className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-tether-teal"></span>
                 <span className="text-[7px] md:text-[9px] font-heading tracking-widest text-neutral-gray-light uppercase">Strategist Active</span>

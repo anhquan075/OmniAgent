@@ -9,7 +9,7 @@ async function main() {
     const [signer] = await ethers.getSigners();
     console.log('Deployer:', signer.address);
     
-    const vault = await ethers.getContractAt('WDKVault', vaultAddr, signer);
+    const vault = await ethers.getContractAt('OmniAgentVault', vaultAddr, signer);
     const engine = await ethers.getContractAt('StrategyEngine', engineAddr, signer);
     const aave = await ethers.getContractAt('AaveLendingAdapter', aaveAddr, signer);
     const lz = await ethers.getContractAt('LayerZeroBridgeReceiver', lzAddr, signer);

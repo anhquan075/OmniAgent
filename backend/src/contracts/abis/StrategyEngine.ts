@@ -798,7 +798,7 @@ export const StrategyEngineAbi = [
     "name": "vault",
     "outputs": [
       {
-        "internalType": "contract WDKVault",
+        "internalType": "contract OmniAgentVault",
         "name": "",
         "type": "address"
       }

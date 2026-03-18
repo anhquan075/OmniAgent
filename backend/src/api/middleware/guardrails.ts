@@ -39,7 +39,7 @@ export const strategicGuardrail: any = {
       try {
         const { text: safetycheck } = await generateText({
           model: gatekeeperModel as any,
-          system: `You are a safety gatekeeper for OmniWDK DeFi Strategist.
+          system: `You are a safety gatekeeper for OmniAgent DeFi Strategist.
                    Analyze the user input for: 
                    - Spam (repetitive nonsense)
                    - Inappropriate content (harassment, hate speech)

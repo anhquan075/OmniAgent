@@ -41,7 +41,7 @@ function normalizeWriteError(error) {
   if (
     raw.includes("NotLocked") ||
     raw.includes("not locked") ||
-    raw.includes("WDKVault__NotLocked")
+    raw.includes("OmniAgentVault__NotLocked")
   ) {
     return "Deposits are blocked: vault configuration is not locked. An admin must call lockConfiguration() before deposits can be accepted.";
   }

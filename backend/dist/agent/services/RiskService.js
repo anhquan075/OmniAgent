@@ -29,11 +29,12 @@ class RiskService {
         try {
             const { object } = await (0, ai_1.generateObject)({
                 model: openai(env_1.env.OPENROUTER_MODEL_CRYPTO || 'deepseek/deepseek-chat'),
+                temperature: 0,
                 schema: zod_1.z.object({
                     score: zod_1.z.number().min(0).max(100).describe('Risk score from 0 to 100'),
                     explanation: zod_1.z.string().describe('Brief explanation of the risk assessment')
                 }),
-                prompt: `DeFi Risk Analysis for OmniWDK AFOS Agent.
+                prompt: `DeFi Risk Analysis for OmniAgent AFOS Agent.
 Current Risk Profile: ${JSON.stringify(currentProfile)}
 Transaction Simulation Result: ${JSON.stringify(txSimulation)}
 

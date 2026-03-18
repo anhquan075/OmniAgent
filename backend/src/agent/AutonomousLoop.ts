@@ -5,6 +5,7 @@ import { agentTools } from './tools';
 import { EventEmitter } from 'events';
 import { robotFleetService } from '@/services/RobotFleetService';
 import { logger } from '@/utils/logger';
+import { healthMonitor } from './services/HealthMonitor';
 
 // Event Emitter for Dashboard Stream
 export const agentEvents = new EventEmitter();
@@ -17,8 +18,8 @@ const openai = createOpenAI({
   baseURL: env.OPENROUTER_BASE_URL,
 });
 
-const SYSTEM_PROMPT = `You are the OmniWDK AFOS Strategist, an autonomous AI agent managing a DeFi vault.
-Directive: Yield optimization for USDT and XAUT via Tether WDK & OmniWDK.
+const SYSTEM_PROMPT = `You are the OmniAgent AFOS Strategist, an autonomous AI agent managing a DeFi vault.
+Directive: Yield optimization for USDT and XAUT via Tether WDK & OmniAgent.
 You are a Multi-VM Native Agent. You monitor and manage assets across EVM (BNB), Solana, and TON blockchains simultaneously.
 
 WORKFLOW:
@@ -66,6 +67,19 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
   logger.info({ modelId }, '[AutonomousLoop] Starting cycle');
   
   agentEvents.emit('cycle:start', { timestamp: new Date(), modelId });
+
+  const wdkAddress = env.WDK_VAULT_ADDRESS;
+  if (wdkAddress) {
+    const healthAlert = await healthMonitor.monitorPosition(wdkAddress);
+    if (healthAlert) {
+      logger.warn({ alert: healthAlert }, '[AutonomousLoop] Health factor alert detected');
+      agentEvents.emit('health:alert', healthAlert);
+      
+      if (healthAlert.type === 'emergency') {
+        logger.error('[AutonomousLoop] EMERGENCY: Health factor critical - prioritizing deleveraging');
+      }
+    }
+  }
 
   // Calculate fleet earnings since last cycle
   const fleetStatus = robotFleetService.getFleetStatus();
@@ -287,7 +301,7 @@ export async function startAutonomousLoop(initialDelayMs?: number): Promise<void
   
   isRunning = true;
   const INITIAL_DELAY = initialDelayMs || 5000; // Start almost immediately (5s) for first run
-  logger.info('--- OmniWDK Autonomous AI SDK Loop Started ---');
+  logger.info('--- OmniAgent Autonomous AI SDK Loop Started ---');
 
   const scheduleNext = (delay: number) => {
     if (!isRunning) return;

@@ -7,7 +7,7 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
 /**
  * @title GroupSyndicate
- * @notice A collaborative savings pool (Ajo model) built on top of WDKVault.
+ * @notice A collaborative savings pool (Ajo model) built on top of OmniAgentVault.
  * Users contribute a fixed amount each round, and the WDK Agent orchestrates
  * a payout to a rotating beneficiary, including accrued yield.
  */
@@ -76,7 +76,7 @@ contract GroupSyndicate {
         // Transfer from member to syndicate
         asset.safeTransferFrom(msg.sender, address(this), contributionAmount);
         
-        // Deposit into the WDKVault for yield generation
+        // Deposit into the OmniAgentVault for yield generation
         vault.deposit(contributionAmount, address(this));
 
         emit Contributed(msg.sender, currentRound, contributionAmount);

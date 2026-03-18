@@ -78,10 +78,10 @@ async function main() {
   )).waitForDeployment();
   logger.info(`CircuitBreaker: ${await breaker.getAddress()}`);
 
-  const WDKVault = await ethers.getContractFactory("WDKVault");
-  const vault = await (await WDKVault.deploy(usdtAddr, "OmniWDK WDK Vault", "OWDK", deployer.address, 500)).waitForDeployment();
+  const OmniAgentVault = await ethers.getContractFactory("OmniAgentVault");
+  const vault = await (await OmniAgentVault.deploy(usdtAddr, "OmniAgent WDK Vault", "OWDK", deployer.address, 500)).waitForDeployment();
   const vaultAddr = await vault.getAddress();
-  logger.info(`WDKVault: ${vaultAddr}`);
+  logger.info(`OmniAgentVault: ${vaultAddr}`);
 
   const StrategyEngine = await ethers.getContractFactory("StrategyEngine");
   const engine = await (await StrategyEngine.deploy(

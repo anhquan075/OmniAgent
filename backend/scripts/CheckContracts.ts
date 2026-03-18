@@ -16,16 +16,16 @@ async function main() {
   const rpcUrl = "http://127.0.0.1:8545";
   const provider = new ethers.JsonRpcProvider(rpcUrl);
 
-  // Check WDKVault
+  // Check OmniAgentVault
   const vaultAddr = process.env.WDK_VAULT_ADDRESS!;
-  logger.info(`\nChecking WDKVault at ${vaultAddr}`);
+  logger.info(`\nChecking OmniAgentVault at ${vaultAddr}`);
   const vaultCode = await provider.getCode(vaultAddr);
   logger.info(`Code length: ${vaultCode.length} bytes`);
   
   if (vaultCode === '0x') {
-    logger.error("WDKVault contract not deployed!");
+    logger.error("OmniAgentVault contract not deployed!");
   } else {
-    logger.info("WDKVault contract exists");
+    logger.info("OmniAgentVault contract exists");
     
     // Try to call balanceOf
     try {

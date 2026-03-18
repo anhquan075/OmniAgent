@@ -83,7 +83,7 @@ async function reportToDashboard(node: string, details: any = {}) {
  */
 export const agentTools = {
   get_vault_status: tool({
-    description: 'Get current status, total assets, health, and buffer utilization of the WDKVault.',
+    description: 'Get current status, total assets, health, and buffer utilization of the OmniAgentVault.',
     parameters: z.object({
       context: z.string().describe('Reason/context for this action.')
     }),

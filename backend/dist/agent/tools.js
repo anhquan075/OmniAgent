@@ -22,6 +22,7 @@ const env_1 = require("@/config/env");
 const ethers_2 = require("@/contracts/clients/ethers");
 const axios_1 = __importDefault(require("axios"));
 const logger_1 = require("@/utils/logger");
+const RobotFleetService_1 = require("@/services/RobotFleetService");
 function validateWDKSecretSeed() {
     const seed = env_1.env.WDK_SECRET_SEED;
     if (!seed) {
@@ -70,7 +71,7 @@ async function reportToDashboard(node, details = {}) {
  */
 exports.agentTools = {
     get_vault_status: (0, ai_1.tool)({
-        description: 'Get current status, total assets, health, and buffer utilization of the WDKVault.',
+        description: 'Get current status, total assets, health, and buffer utilization of the OmniAgentVault.',
         parameters: zod_1.z.object({
             context: zod_1.z.string().describe('Reason/context for this action.')
         }),
@@ -546,8 +547,16 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ amount, dstEid, context }) => {
             try {
+                const LZ_ADAPTER_ABI = [
+                    'function onVaultDeposit(uint256 amount) external',
+                    'function withdrawToVault(uint256 amount) external returns (uint256)',
+                    'function managedAssets() view returns (uint256)',
+                    'function quote(uint32 dstEid, uint256 amount, bytes options) view returns (uint256 nativeFee)',
+                    'function vault() view returns (address)',
+                    'function asset() view returns (address)'
+                ];
                 const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const lzAdapter = new ethers_1.ethers.Contract(env_1.env.WDK_LZ_ADAPTER_ADDRESS, bridgeAbi.LZ_ADAPTER, signer);
+                const lzAdapter = new ethers_1.ethers.Contract(env_1.env.WDK_LZ_ADAPTER_ADDRESS, LZ_ADAPTER_ABI, signer);
                 const refundAddress = await signer.getAddress();
                 const usdtAmount = ethers_1.ethers.parseUnits(amount, 6);
                 const tx = await lzAdapter.send(dstEid, '0x', '0x', refundAddress, { value: usdtAmount });
@@ -613,8 +622,13 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ to, amount, context }) => {
             try {
-                const check = policyGuard.validateTransaction('bnb_transfer', { to, amount });
-                if (!check.allowed) {
+                const check = policyGuard.validateTransaction({
+                    toAddress: to,
+                    amount,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('bnb_transfer', { error: check.reason });
                     return { error: check.reason };
                 }
@@ -640,8 +654,15 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ tokenIn, tokenOut, amountIn, context }) => {
             try {
-                const check = policyGuard.validateTransaction('bnb_swap', { tokenIn, tokenOut, amountIn });
-                if (!check.allowed) {
+                const check = policyGuard.validateSwapTransaction({
+                    fromToken: tokenIn,
+                    toToken: tokenOut,
+                    amount: amountIn,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000',
+                    estimatedSlippageBps: 50
+                });
+                if (check.violated) {
                     await reportToDashboard('bnb_swap', { error: check.reason });
                     return { error: check.reason };
                 }
@@ -666,8 +687,13 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ asset, amount, context }) => {
             try {
-                const check = policyGuard.validateTransaction('bnb_supply_aave', { asset, amount });
-                if (!check.allowed) {
+                const check = policyGuard.validateTransaction({
+                    toAddress: asset,
+                    amount,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('bnb_supply_aave', { error: check.reason });
                     return { error: check.reason };
                 }
@@ -692,8 +718,13 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ asset, amount, context }) => {
             try {
-                const check = policyGuard.validateTransaction('bnb_withdraw_aave', { asset, amount });
-                if (!check.allowed) {
+                const check = policyGuard.validateTransaction({
+                    toAddress: asset,
+                    amount,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('bnb_withdraw_aave', { error: check.reason });
                     return { error: check.reason };
                 }
@@ -718,8 +749,13 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ amount, dstChain, context }) => {
             try {
-                const check = policyGuard.validateTransaction('bnb_bridge_layerzero', { amount, dstChain });
-                if (!check.allowed) {
+                const check = policyGuard.validateTransaction({
+                    toAddress: dstChain,
+                    amount,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('bnb_bridge_layerzero', { error: check.reason });
                     return { error: check.reason };
                 }
@@ -785,8 +821,13 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ to, amount, context }) => {
             try {
-                const check = policyGuard.validateTransaction('sol_transfer', { to, amount });
-                if (!check.allowed) {
+                const check = policyGuard.validateTransaction({
+                    toAddress: to,
+                    amount,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('sol_transfer', { error: check.reason });
                     return { error: check.reason };
                 }
@@ -812,8 +853,15 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ tokenIn, tokenOut, amountIn, context }) => {
             try {
-                const check = policyGuard.validateTransaction('sol_swap', { tokenIn, tokenOut, amountIn });
-                if (!check.allowed) {
+                const check = policyGuard.validateSwapTransaction({
+                    fromToken: tokenIn,
+                    toToken: tokenOut,
+                    amount: amountIn,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000',
+                    estimatedSlippageBps: 50
+                });
+                if (check.violated) {
                     await reportToDashboard('sol_swap', { error: check.reason });
                     return { error: check.reason };
                 }
@@ -881,8 +929,13 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ to, amount, context }) => {
             try {
-                const check = policyGuard.validateTransaction('ton_transfer', { to, amount });
-                if (!check.allowed) {
+                const check = policyGuard.validateTransaction({
+                    toAddress: to,
+                    amount: amount,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('ton_transfer', { error: check.reason });
                     return { error: check.reason };
                 }
@@ -932,8 +985,13 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ amount, context }) => {
             try {
-                const check = policyGuard.validateTransaction('wdk_vault_deposit', { amount });
-                if (!check.allowed) {
+                const check = policyGuard.validateTransaction({
+                    toAddress: env_1.env.WDK_VAULT_ADDRESS,
+                    amount: amount,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('wdk_vault_deposit', { error: check.reason });
                     return { error: check.reason };
                 }
@@ -961,8 +1019,13 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ amount, context }) => {
             try {
-                const check = policyGuard.validateTransaction('wdk_vault_withdraw', { amount });
-                if (!check.allowed) {
+                const check = policyGuard.validateTransaction({
+                    toAddress: env_1.env.WDK_VAULT_ADDRESS,
+                    amount: amount,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('wdk_vault_withdraw', { error: check.reason });
                     return { error: check.reason };
                 }
@@ -1030,8 +1093,13 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ context }) => {
             try {
-                const check = policyGuard.validateTransaction('wdk_engine_execute_cycle', {});
-                if (!check.allowed) {
+                const check = policyGuard.validateTransaction({
+                    toAddress: env_1.env.WDK_ENGINE_ADDRESS,
+                    amount: '0',
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('wdk_engine_execute_cycle', { error: check.reason });
                     return { error: check.reason };
                 }
@@ -1095,8 +1163,13 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ amount, context }) => {
             try {
-                const check = policyGuard.validateTransaction('wdk_aave_supply', { amount });
-                if (!check.allowed) {
+                const check = policyGuard.validateTransaction({
+                    toAddress: env_1.env.WDK_AAVE_ADAPTER_ADDRESS,
+                    amount: amount,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('wdk_aave_supply', { error: check.reason });
                     return { error: check.reason };
                 }
@@ -1123,8 +1196,13 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ amount, context }) => {
             try {
-                const check = policyGuard.validateTransaction('wdk_aave_withdraw', { amount });
-                if (!check.allowed) {
+                const check = policyGuard.validateTransaction({
+                    toAddress: env_1.env.WDK_AAVE_ADAPTER_ADDRESS,
+                    amount: amount,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('wdk_aave_withdraw', { error: check.reason });
                     return { error: check.reason };
                 }
@@ -1154,8 +1232,13 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ provider_address, amount, service_type, context }) => {
             try {
-                const check = policyGuard.validateTransaction('x402_pay_subagent', { provider_address, amount, service_type });
-                if (!check.allowed) {
+                const check = policyGuard.validateTransaction({
+                    toAddress: provider_address,
+                    amount: amount,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('x402_pay_subagent', { error: check.reason });
                     return { error: check.reason };
                 }
@@ -1251,7 +1334,7 @@ exports.agentTools = {
                 const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
                 const accountSalt = salt || ethers_1.ethers.toBeHex(0);
                 // Get factory and create account
-                const factoryContract = new ethers_1.ethers.Contract(env_1.env.WDK_ACCOUNT_FACTORY_ADDRESS, ['function createAccount(address owner, uint256 salt) external returns (address)'], signer);
+                const factoryContract = new ethers_1.ethers.Contract(env_1.env.ERC4337_FACTORY_ADDRESS, ['function createAccount(address owner, uint256 salt) external returns (address)'], signer);
                 const signerAddress = await signer.getAddress();
                 const tx = await factoryContract.createAccount(signerAddress, accountSalt);
                 await tx.wait();
@@ -1276,7 +1359,8 @@ exports.agentTools = {
                 const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
                 const accountSalt = salt || ethers_1.ethers.toBeHex(0);
                 // Get factory and predict address
-                const factoryContract = new ethers_1.ethers.Contract(env_1.env.WDK_ACCOUNT_FACTORY_ADDRESS, ['function getAddress(address owner, uint256 salt) external view returns (address)'], new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const FACTORY_ABI = ['function getAddress(address owner, uint256 salt) external view returns (address)'];
+                const factoryContract = new ethers_1.ethers.Contract(env_1.env.ERC4337_FACTORY_ADDRESS, FACTORY_ABI, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
                 const signerAddress = await signer.getAddress();
                 const address = await factoryContract.getAddress(signerAddress, accountSalt);
                 await reportToDashboard('erc4337_get_account_address', { address });
@@ -1320,13 +1404,19 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ to, data, value, context }) => {
             try {
-                const check = policyGuard.validateTransaction('erc4337_execute', { to, data, value });
-                if (!check.allowed) {
+                const check = policyGuard.validateTransaction({
+                    toAddress: to,
+                    amount: value || '0',
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('erc4337_execute', { error: check.reason });
                     return { error: check.reason };
                 }
                 const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const accountContract = new ethers_1.ethers.Contract(env_1.env.WDK_ACCOUNT_ADDRESS, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
+                const signerAddress = await signer.getAddress();
+                const accountContract = new ethers_1.ethers.Contract(signerAddress, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
                 const txValue = value ? ethers_1.ethers.parseEther(value) : 0n;
                 const tx = await accountContract.execute(to, txValue, data);
                 await tx.wait();
@@ -1352,13 +1442,20 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ calls, context }) => {
             try {
-                const check = policyGuard.validateTransaction('erc4337_execute_batch', { callCount: calls.length });
-                if (!check.allowed) {
+                const totalValue = calls.reduce((sum, c) => sum + (c.value ? ethers_1.ethers.parseEther(c.value) : 0n), 0n);
+                const check = policyGuard.validateTransaction({
+                    toAddress: calls[0]?.to || ethers_1.ethers.ZeroAddress,
+                    amount: totalValue.toString(),
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('erc4337_execute_batch', { error: check.reason });
                     return { error: check.reason };
                 }
                 const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const accountContract = new ethers_1.ethers.Contract(env_1.env.WDK_ACCOUNT_ADDRESS, ['function executeBatch(address[] dests, uint256[] values, bytes[] calldatas) external'], signer);
+                const signerAddress = await signer.getAddress();
+                const accountContract = new ethers_1.ethers.Contract(signerAddress, ['function executeBatch(address[] dests, uint256[] values, bytes[] calldatas) external'], signer);
                 const dests = calls.map(c => c.to);
                 const values = calls.map(c => c.value ? ethers_1.ethers.parseEther(c.value) : 0n);
                 const calldatas = calls.map(c => c.data);
@@ -1382,15 +1479,21 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ amount, context }) => {
             try {
-                const check = policyGuard.validateTransaction('erc4337_add_deposit', { amount });
-                if (!check.allowed) {
+                const check = policyGuard.validateTransaction({
+                    toAddress: env_1.env.ERC4337_ENTRYPOINT_ADDRESS,
+                    amount: amount,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('erc4337_add_deposit', { error: check.reason });
                     return { error: check.reason };
                 }
                 const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const entryPointContract = new ethers_1.ethers.Contract(env_1.env.WDK_ENTRYPOINT_ADDRESS, ['function depositTo(address account) external payable'], signer);
+                const signerAddress = await signer.getAddress();
+                const entryPointContract = new ethers_1.ethers.Contract(env_1.env.ERC4337_ENTRYPOINT_ADDRESS, ['function depositTo(address account) external payable'], signer);
                 const depositAmount = ethers_1.ethers.parseEther(amount);
-                const tx = await entryPointContract.depositTo(env_1.env.WDK_ACCOUNT_ADDRESS || await signer.getAddress(), { value: depositAmount });
+                const tx = await entryPointContract.depositTo(signerAddress, { value: depositAmount });
                 await tx.wait();
                 await reportToDashboard('erc4337_add_deposit', { txHash: tx.hash, amount });
                 return { success: true, txHash: tx.hash, amount };
@@ -1411,7 +1514,9 @@ exports.agentTools = {
         execute: async ({ account_address, context }) => {
             try {
                 const provider = new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL);
-                const targetAddress = account_address || env_1.env.WDK_ACCOUNT_ADDRESS || (await ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, provider).getAddress());
+                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, provider);
+                const signerAddress = await signer.getAddress();
+                const targetAddress = account_address || signerAddress;
                 const balance = await provider.getBalance(targetAddress);
                 await reportToDashboard('erc4337_get_balance', { balance: balance.toString(), address: targetAddress });
                 return { success: true, balance: balance.toString(), address: targetAddress };
@@ -1432,8 +1537,10 @@ exports.agentTools = {
         execute: async ({ account_address, context }) => {
             try {
                 const provider = new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL);
-                const targetAddress = account_address || env_1.env.WDK_ACCOUNT_ADDRESS || (await ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, provider).getAddress());
-                const entryPointContract = new ethers_1.ethers.Contract(env_1.env.WDK_ENTRYPOINT_ADDRESS, ['function balanceOf(address account) external view returns (uint256)'], provider);
+                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, provider);
+                const signerAddress = await signer.getAddress();
+                const targetAddress = account_address || signerAddress;
+                const entryPointContract = new ethers_1.ethers.Contract(env_1.env.ERC4337_ENTRYPOINT_ADDRESS, ['function balanceOf(address account) external view returns (uint256)'], provider);
                 const deposit = await entryPointContract.balanceOf(targetAddress);
                 await reportToDashboard('erc4337_get_deposit', { deposit: deposit.toString(), address: targetAddress });
                 return { success: true, deposit: deposit.toString(), address: targetAddress };
@@ -1455,17 +1562,23 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ token_address, amount, to, context }) => {
             try {
-                const check = policyGuard.validateTransaction('erc4337_withdraw_token', { token_address, amount, to });
-                if (!check.allowed) {
+                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const recipient = to || await signer.getAddress();
+                const check = policyGuard.validateTransaction({
+                    toAddress: recipient,
+                    amount: amount,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('erc4337_withdraw_token', { error: check.reason });
                     return { error: check.reason };
                 }
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const recipient = to || await signer.getAddress();
                 // Call transfer through account
+                const signerAddress = await signer.getAddress();
                 const erc20Interface = new ethers_1.ethers.Interface(['function transfer(address to, uint256 amount) external returns (bool)']);
                 const data = erc20Interface.encodeFunctionData('transfer', [recipient, ethers_1.ethers.parseUnits(amount, 6)]);
-                const accountContract = new ethers_1.ethers.Contract(env_1.env.WDK_ACCOUNT_ADDRESS, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
+                const accountContract = new ethers_1.ethers.Contract(signerAddress, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
                 const tx = await accountContract.execute(token_address, 0, data);
                 await tx.wait();
                 await reportToDashboard('erc4337_withdraw_token', { txHash: tx.hash, token: token_address, amount, to: recipient });
@@ -1487,15 +1600,21 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ amount, to, context }) => {
             try {
-                const check = policyGuard.validateTransaction('erc4337_withdraw_native', { amount, to });
-                if (!check.allowed) {
+                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const recipient = to || await signer.getAddress();
+                const check = policyGuard.validateTransaction({
+                    toAddress: recipient,
+                    amount: amount,
+                    currentRiskLevel: 'LOW',
+                    portfolioValue: '1000000'
+                });
+                if (check.violated) {
                     await reportToDashboard('erc4337_withdraw_native', { error: check.reason });
                     return { error: check.reason };
                 }
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const recipient = to || await signer.getAddress();
+                const signerAddress = await signer.getAddress();
                 const withdrawAmount = ethers_1.ethers.parseEther(amount);
-                const accountContract = new ethers_1.ethers.Contract(env_1.env.WDK_ACCOUNT_ADDRESS, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
+                const accountContract = new ethers_1.ethers.Contract(signerAddress, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
                 const tx = await accountContract.execute(recipient, withdrawAmount, '0x');
                 await tx.wait();
                 await reportToDashboard('erc4337_withdraw_native', { txHash: tx.hash, amount, to: recipient });
@@ -1518,10 +1637,11 @@ exports.agentTools = {
         execute: async ({ token_address, paymaster_address, context }) => {
             try {
                 const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const signerAddress = await signer.getAddress();
                 // Approve paymaster to spend tokens
                 const erc20Interface = new ethers_1.ethers.Interface(['function approve(address spender, uint256 amount) external returns (bool)']);
                 const data = erc20Interface.encodeFunctionData('approve', [paymaster_address, ethers_1.ethers.MaxUint256]);
-                const accountContract = new ethers_1.ethers.Contract(env_1.env.WDK_ACCOUNT_ADDRESS, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
+                const accountContract = new ethers_1.ethers.Contract(signerAddress, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
                 const tx = await accountContract.execute(token_address, 0, data);
                 await tx.wait();
                 await reportToDashboard('erc4337_set_token_approval', { txHash: tx.hash, token: token_address, paymaster: paymaster_address });
@@ -1545,7 +1665,9 @@ exports.agentTools = {
         execute: async ({ token_address, paymaster_address, account_address, context }) => {
             try {
                 const provider = new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL);
-                const targetAddress = account_address || env_1.env.WDK_ACCOUNT_ADDRESS || (await ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, provider).getAddress());
+                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, provider);
+                const signerAddress = await signer.getAddress();
+                const targetAddress = account_address || signerAddress;
                 const erc20Contract = new ethers_1.ethers.Contract(token_address, ['function allowance(address owner, address spender) external view returns (uint256)'], provider);
                 const allowance = await erc20Contract.allowance(targetAddress, paymaster_address);
                 const isApproved = allowance > 0n;
@@ -1554,6 +1676,128 @@ exports.agentTools = {
             }
             catch (e) {
                 logger_1.logger.error(e, '[Tools] Error in erc4337_is_token_approved');
+                throw e;
+            }
+        }
+    }),
+    // ============================================
+    // Robot Fleet Operations
+    // ============================================
+    robot_fleet_status: (0, ai_1.tool)({
+        description: 'Get the current status of the Robot Fleet including robot list, total earnings, and recent events.',
+        parameters: zod_1.z.object({
+            context: zod_1.z.string().describe('Reason for checking fleet status.')
+        }),
+        // @ts-ignore
+        execute: async ({ context }) => {
+            try {
+                const status = RobotFleetService_1.robotFleetService.getFleetStatus();
+                await reportToDashboard('robot_fleet_status', {
+                    robotCount: status.robots.length,
+                    fleetTotalEarned: status.fleetTotalEarned,
+                    enabled: status.enabled
+                });
+                return {
+                    enabled: status.enabled,
+                    robots: status.robots,
+                    fleetTotalEarned: status.fleetTotalEarned,
+                    recentEvents: status.recentEvents,
+                    latestTxHash: status.latestTxHash,
+                    latestTxValue: status.latestTxValue
+                };
+            }
+            catch (e) {
+                logger_1.logger.error(e, '[Tools] Error in robot_fleet_status');
+                throw e;
+            }
+        }
+    }),
+    robot_fleet_start: (0, ai_1.tool)({
+        description: 'Start the Robot Fleet simulator. This activates the fleet of robots that can perform tasks and earn yields.',
+        parameters: zod_1.z.object({
+            context: zod_1.z.string().describe('Reason for starting the fleet.')
+        }),
+        // @ts-ignore
+        execute: async ({ context }) => {
+            try {
+                const currentStatus = RobotFleetService_1.robotFleetService.getFleetStatus();
+                if (currentStatus.enabled) {
+                    return { success: true, message: 'Robot Fleet is already running', robots: currentStatus.robots };
+                }
+                await RobotFleetService_1.robotFleetService.startSimulator();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                const newStatus = RobotFleetService_1.robotFleetService.getFleetStatus();
+                await reportToDashboard('robot_fleet_start', {
+                    robotCount: newStatus.robots.length,
+                    fleetTotalEarned: newStatus.fleetTotalEarned
+                });
+                return {
+                    success: true,
+                    message: 'Robot Fleet started successfully',
+                    robots: newStatus.robots,
+                    fleetTotalEarned: newStatus.fleetTotalEarned
+                };
+            }
+            catch (e) {
+                logger_1.logger.error(e, '[Tools] Error in robot_fleet_start');
+                throw e;
+            }
+        }
+    }),
+    robot_fleet_get_events: (0, ai_1.tool)({
+        description: 'Get recent events from the Robot Fleet including task completions, earnings, and transactions.',
+        parameters: zod_1.z.object({
+            limit: zod_1.z.number().optional().describe('Maximum number of events to return (default: 10)'),
+            context: zod_1.z.string().describe('Reason for getting events.')
+        }),
+        // @ts-ignore
+        execute: async ({ limit = 10, context }) => {
+            try {
+                const events = RobotFleetService_1.robotFleetService.getRecentEvents();
+                const limitedEvents = events.slice(-limit);
+                await reportToDashboard('robot_fleet_get_events', {
+                    eventCount: limitedEvents.length
+                });
+                return {
+                    success: true,
+                    events: limitedEvents,
+                    totalEvents: events.length
+                };
+            }
+            catch (e) {
+                logger_1.logger.error(e, '[Tools] Error in robot_fleet_get_events');
+                throw e;
+            }
+        }
+    }),
+    robot_fleet_get_robots: (0, ai_1.tool)({
+        description: 'Get detailed information about all robots in the fleet including their status, earnings, and task count.',
+        parameters: zod_1.z.object({
+            context: zod_1.z.string().describe('Reason for getting robot information.')
+        }),
+        // @ts-ignore
+        execute: async ({ context }) => {
+            try {
+                const robots = RobotFleetService_1.robotFleetService.getRobots();
+                const status = RobotFleetService_1.robotFleetService.getFleetStatus();
+                await reportToDashboard('robot_fleet_get_robots', {
+                    robotCount: robots.length,
+                    workingCount: robots.filter(r => r.status === 'Working').length,
+                    idleCount: robots.filter(r => r.status === 'Idle').length
+                });
+                return {
+                    success: true,
+                    robots: robots,
+                    summary: {
+                        total: robots.length,
+                        working: robots.filter(r => r.status === 'Working').length,
+                        idle: robots.filter(r => r.status === 'Idle').length,
+                        totalEarned: status.fleetTotalEarned
+                    }
+                };
+            }
+            catch (e) {
+                logger_1.logger.error(e, '[Tools] Error in robot_fleet_get_robots');
                 throw e;
             }
         }

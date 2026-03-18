@@ -103,7 +103,7 @@ body {
   background: linear-gradient(135deg, #26A17B, #1A7A5E);
 }
 
-/* OmniWDK Glassmorphism Standard */
+/* OmniAgent Glassmorphism Standard */
 .glass {
   background: rgba(30, 35, 41, 0.4);
   backdrop-filter: blur(16px);

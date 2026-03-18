@@ -82,7 +82,7 @@ const isMain = process.argv[1]?.endsWith('src/index.ts') ||
                process.argv[1]?.endsWith('dist/index.js');
 
 if (isMain) {
-  logger.info(`[OmniWDK] WDK Strategist API starting on port ${port}`);
+  logger.info(`[OmniAgent] WDK Strategist API starting on port ${port}`);
 
   serve({
     fetch: app.fetch,

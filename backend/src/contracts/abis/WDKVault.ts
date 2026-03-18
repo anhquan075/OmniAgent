@@ -1,4 +1,4 @@
-export const WDKVaultAbi = [
+export const OmniAgentVaultAbi = [
   {
     "inputs": [
       {
@@ -246,62 +246,62 @@ export const WDKVaultAbi = [
         "type": "address"
       }
     ],
-    "name": "WDKVault__AdapterReportingFailure",
+    "name": "OmniAgentVault__AdapterReportingFailure",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "WDKVault__BufferTooHigh",
+    "name": "OmniAgentVault__BufferTooHigh",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "WDKVault__CallerNotEngine",
+    "name": "OmniAgentVault__CallerNotEngine",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "WDKVault__ConfigurationLocked",
+    "name": "OmniAgentVault__ConfigurationLocked",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "WDKVault__EngineNotSet",
+    "name": "OmniAgentVault__EngineNotSet",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "WDKVault__InsufficientLiquidity",
+    "name": "OmniAgentVault__InsufficientLiquidity",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "WDKVault__InvalidFlashAdapter",
+    "name": "OmniAgentVault__InvalidFlashAdapter",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "WDKVault__LpNotSet",
+    "name": "OmniAgentVault__LpNotSet",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "WDKVault__NotLocked",
+    "name": "OmniAgentVault__NotLocked",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "WDKVault__PegArbNotApproved",
+    "name": "OmniAgentVault__PegArbNotApproved",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "WDKVault__SecondaryNotSet",
+    "name": "OmniAgentVault__SecondaryNotSet",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "WDKVault__VenusDecimalsInvalid",
+    "name": "OmniAgentVault__VenusDecimalsInvalid",
     "type": "error"
   },
   {
@@ -312,7 +312,7 @@ export const WDKVaultAbi = [
         "type": "uint256"
       }
     ],
-    "name": "WDKVault__VenusMintFailed",
+    "name": "OmniAgentVault__VenusMintFailed",
     "type": "error"
   },
   {
@@ -323,17 +323,17 @@ export const WDKVaultAbi = [
         "type": "uint256"
       }
     ],
-    "name": "WDKVault__VenusRedeemFailed",
+    "name": "OmniAgentVault__VenusRedeemFailed",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "WDKVault__WDKNotSet",
+    "name": "OmniAgentVault__WDKNotSet",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "WDKVault__ZeroAddress",
+    "name": "OmniAgentVault__ZeroAddress",
     "type": "error"
   },
   {

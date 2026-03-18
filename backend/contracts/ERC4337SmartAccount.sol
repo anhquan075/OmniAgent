@@ -6,7 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title SimpleAccount - Minimal ERC-4337 compatible smart contract wallet
-/// @notice This is a simplified version for OmniWDK hackathon demo
+/// @notice This is a simplified version for OmniAgent hackathon demo
 /// @dev Follows ERC-4337 EntryPoint interface patterns
 
 interface IEntryPoint {
@@ -208,7 +208,7 @@ contract SimpleAccount {
 }
 
 /// @title Paymaster - Sponsored gas for ERC-4337 user operations
-/// @notice Allows OmniWDK to sponsor gas for user transactions
+/// @notice Allows OmniAgent to sponsor gas for user transactions
 contract Paymaster is Ownable {
     using SafeERC20 for IERC20;
 

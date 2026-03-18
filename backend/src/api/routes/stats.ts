@@ -42,14 +42,17 @@ stats.get('/', async (c) => {
     
     const [canExecute, executeReason] = executionStatus || [false, "0x00"];
 
+    // USDT has 6 decimals
+    const USDT_DECIMALS = 6;
+
     // Format results
     const response = {
       vault: {
-        totalAssets: ethers.formatUnits(totalAssets || 0n, 18),
+        totalAssets: ethers.formatUnits(totalAssets || 0n, USDT_DECIMALS),
         bufferUtilizationBps: (bufferStatus?.utilizationBps || 0n).toString(),
-        bufferCurrent: ethers.formatUnits(bufferStatus?.current || 0n, 18),
-        bufferTarget: ethers.formatUnits(bufferStatus?.target || 0n, 18),
-        usdtBalance: ethers.formatUnits(usdtBalance || 0n, 18)
+        bufferCurrent: ethers.formatUnits(bufferStatus?.current || 0n, USDT_DECIMALS),
+        bufferTarget: ethers.formatUnits(bufferStatus?.target || 0n, USDT_DECIMALS),
+        usdtBalance: ethers.formatUnits(usdtBalance || 0n, USDT_DECIMALS)
       },
       risk: {
         level: Number(riskMetrics?.monteCarloDrawdownBps || 0) >= 2000 ? 'HIGH' : Number(riskMetrics?.monteCarloDrawdownBps || 0) >= 1000 ? 'MEDIUM' : 'LOW',

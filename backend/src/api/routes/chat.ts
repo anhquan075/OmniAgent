@@ -154,7 +154,7 @@ chat.post('/', async (c) => {
               } else if (toolName === 'execute_rebalance') {
                 status = 'Settlement';
                 progress = 95;
-                thought = 'Finalizing atomic rebalance via OmniWDK settlement layer...';
+                thought = 'Finalizing atomic rebalance via OmniAgent settlement layer...';
               } else if (toolName === 'yield_sweep') {
                 status = 'Yield Harvest';
                 progress = 85;
@@ -199,9 +199,9 @@ chat.post('/', async (c) => {
             }
           },
           system: isSmallTalk 
-            ? `You are the OmniWDK AFOS Strategist. Keep responses brief and professional. Just answer the user's question directly in natural language.`
-               : `You are the OmniWDK AFOS Strategist. 
-                Directive: yield optimization for USDT and XAUT via Tether WDK & OmniWDK.
+            ? `You are the OmniAgent AFOS Strategist. Keep responses brief and professional. Just answer the user's question directly in natural language.`
+               : `You are the OmniAgent AFOS Strategist. 
+                Directive: yield optimization for USDT and XAUT via Tether WDK & OmniAgent.
                
                CRITICAL INSTRUCTION: You MUST ALWAYS provide a final text summary after using tools.
                

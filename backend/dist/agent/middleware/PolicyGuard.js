@@ -3,8 +3,53 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PolicyGuard = void 0;
 exports.getPolicyGuard = getPolicyGuard;
 exports.setPolicyGuard = setPolicyGuard;
+const ethers_1 = require("ethers");
 const constants_1 = require("@/lib/constants");
 const logger_1 = require("@/utils/logger");
+const zod_1 = require("zod");
+const ai_1 = require("ai");
+const openai_1 = require("@ai-sdk/openai");
+const env_1 = require("@/config/env");
+const TransactionSchema = zod_1.z.object({
+    toAddress: zod_1.z.string().refine((val) => ethers_1.ethers.isAddress(val), {
+        message: "Invalid Ethereum address",
+    }),
+    amount: zod_1.z.string().refine((val) => {
+        try {
+            BigInt(val);
+            return true;
+        }
+        catch {
+            return false;
+        }
+    }, {
+        message: "Amount must be a valid BigInt string",
+    }),
+    currentRiskLevel: zod_1.z.enum(['LOW', 'MEDIUM', 'HIGH']),
+    portfolioValue: zod_1.z.string(),
+});
+const SwapSchema = zod_1.z.object({
+    fromToken: zod_1.z.string().refine((val) => ethers_1.ethers.isAddress(val), {
+        message: "Invalid fromToken address",
+    }),
+    toToken: zod_1.z.string().refine((val) => ethers_1.ethers.isAddress(val), {
+        message: "Invalid toToken address",
+    }),
+    amount: zod_1.z.string().refine((val) => {
+        try {
+            BigInt(val);
+            return true;
+        }
+        catch {
+            return false;
+        }
+    }, {
+        message: "Amount must be a valid BigInt string",
+    }),
+    currentRiskLevel: zod_1.z.enum(['LOW', 'MEDIUM', 'HIGH']),
+    portfolioValue: zod_1.z.string(),
+    estimatedSlippageBps: zod_1.z.number().min(0).max(10000).optional(),
+});
 class PolicyGuard {
     policy;
     dailyTransactionCount = 0;
@@ -307,6 +352,77 @@ class PolicyGuard {
             volumeUsed: this.dailyVolume.toString(),
             volumeLimit: this.policy.dailyMaxVolume,
         };
+    }
+    validateTransactionWithSchema(params) {
+        try {
+            const parsed = TransactionSchema.parse(params);
+            return this.validateTransaction(parsed);
+        }
+        catch (error) {
+            return {
+                violated: true,
+                reason: `Schema validation failed: ${error.errors?.[0]?.message || error.message}`,
+                severity: 'MEDIUM',
+            };
+        }
+    }
+    validateSwapWithSchema(params) {
+        try {
+            const parsed = SwapSchema.parse(params);
+            return this.validateSwapTransaction(parsed);
+        }
+        catch (error) {
+            return {
+                violated: true,
+                reason: `Schema validation failed: ${error.errors?.[0]?.message || error.message}`,
+                severity: 'MEDIUM',
+            };
+        }
+    }
+    async aiReviewTransaction(params) {
+        try {
+            const openai = (0, openai_1.createOpenAI)({
+                apiKey: env_1.env.OPENROUTER_API_KEY,
+                baseURL: env_1.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
+            });
+            const { object } = await (0, ai_1.generateObject)({
+                model: openai(env_1.env.OPENROUTER_MODEL_CRYPTO || 'deepseek/deepseek-chat'),
+                temperature: 0,
+                schema: zod_1.z.object({
+                    approved: zod_1.z.boolean().describe('Whether the transaction should be approved'),
+                    reason: zod_1.z.string().describe('Brief explanation of the decision'),
+                    riskLevel: zod_1.z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).describe('Estimated risk level')
+                }),
+                prompt: `Review this DeFi transaction for security and risk:
+
+Transaction Details:
+- Type: ${params.transactionType}
+- To: ${params.toAddress}
+- Amount: ${params.amount} USDT
+- Context: ${params.context || 'No additional context'}
+
+Is this transaction safe to execute? Consider:
+1. Address reputation and whitelist status
+2. Transaction amount relative to portfolio
+3. Smart contract interaction risks
+4. Cross-chain bridging risks if applicable
+
+Provide a decision with reason and risk level.`
+            });
+            if (!object.approved) {
+                return {
+                    violated: true,
+                    reason: `AI review rejected: ${object.reason}`,
+                    severity: object.riskLevel,
+                };
+            }
+            logger_1.logger.info({ reason: object.reason, riskLevel: object.riskLevel }, '[PolicyGuard] AI review passed');
+            return { violated: false, reason: 'AI review passed', severity: 'LOW' };
+        }
+        catch (error) {
+            logger_1.logger.warn({ error: error.message }, '[PolicyGuard] AI review failed, falling back to standard validation');
+            return { violated: false, reason: 'AI review unavailable, using standard validation', severity: 'LOW' };
+        }
     }
 }
 exports.PolicyGuard = PolicyGuard;

@@ -11,6 +11,7 @@ const tools_1 = require("./tools");
 const events_1 = require("events");
 const RobotFleetService_1 = require("@/services/RobotFleetService");
 const logger_1 = require("@/utils/logger");
+const HealthMonitor_1 = require("./services/HealthMonitor");
 // Event Emitter for Dashboard Stream
 exports.agentEvents = new events_1.EventEmitter();
 // Track fleet earnings across cycles
@@ -19,8 +20,8 @@ const openai = (0, openai_1.createOpenAI)({
     apiKey: env_1.env.OPENROUTER_API_KEY,
     baseURL: env_1.env.OPENROUTER_BASE_URL,
 });
-const SYSTEM_PROMPT = `You are the OmniWDK AFOS Strategist, an autonomous AI agent managing a DeFi vault.
-Directive: Yield optimization for USDT and XAUT via Tether WDK & OmniWDK.
+const SYSTEM_PROMPT = `You are the OmniAgent AFOS Strategist, an autonomous AI agent managing a DeFi vault.
+Directive: Yield optimization for USDT and XAUT via Tether WDK & OmniAgent.
 You are a Multi-VM Native Agent. You monitor and manage assets across EVM (BNB), Solana, and TON blockchains simultaneously.
 
 WORKFLOW:
@@ -58,6 +59,17 @@ async function runAutonomousCycle() {
     const modelId = env_1.env.OPENROUTER_MODEL_CRYPTO || 'deepseek/deepseek-chat';
     logger_1.logger.info({ modelId }, '[AutonomousLoop] Starting cycle');
     exports.agentEvents.emit('cycle:start', { timestamp: new Date(), modelId });
+    const wdkAddress = env_1.env.WDK_VAULT_ADDRESS;
+    if (wdkAddress) {
+        const healthAlert = await HealthMonitor_1.healthMonitor.monitorPosition(wdkAddress);
+        if (healthAlert) {
+            logger_1.logger.warn({ alert: healthAlert }, '[AutonomousLoop] Health factor alert detected');
+            exports.agentEvents.emit('health:alert', healthAlert);
+            if (healthAlert.type === 'emergency') {
+                logger_1.logger.error('[AutonomousLoop] EMERGENCY: Health factor critical - prioritizing deleveraging');
+            }
+        }
+    }
     // Calculate fleet earnings since last cycle
     const fleetStatus = RobotFleetService_1.robotFleetService.getFleetStatus();
     const currentTotal = parseFloat(fleetStatus.fleetTotalEarned || "0");
@@ -245,7 +257,7 @@ async function startAutonomousLoop(initialDelayMs) {
     }
     isRunning = true;
     const INITIAL_DELAY = initialDelayMs || 5000; // Start almost immediately (5s) for first run
-    logger_1.logger.info('--- OmniWDK Autonomous AI SDK Loop Started ---');
+    logger_1.logger.info('--- OmniAgent Autonomous AI SDK Loop Started ---');
     const scheduleNext = (delay) => {
         if (!isRunning)
             return;

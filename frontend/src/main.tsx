@@ -24,7 +24,7 @@ const tetherTheme = darkTheme({
   overlayBlur: 'small',
 });
 
-// Customizing colors to match OmniWDK (WDK Edition) palette
+// Customizing colors to match OmniAgent (WDK Edition) palette
 tetherTheme.colors.modalBackground = '#0B0E11';
 tetherTheme.colors.modalBorder = 'rgba(38, 161, 123, 0.2)';
 tetherTheme.colors.modalText = '#F8F9FA';

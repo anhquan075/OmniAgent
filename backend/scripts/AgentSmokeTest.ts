@@ -69,7 +69,7 @@ async function main() {
     if (!receipt2) await new Promise(r => setTimeout(r, 1000));
   }
   
-  const vault = await ethers.getContractAt("WDKVault", vaultAddr);
+  const vault = await ethers.getContractAt("OmniAgentVault", vaultAddr);
   logger.info({ vaultAddr, agentAddr }, 'Checking balance at vault');
   const bal = await vault.balanceOf(agentAddr);
   logger.info(`Deposit successful. Agent Vault Balance: ${ethers.formatUnits(bal, 6)} OWDK`);

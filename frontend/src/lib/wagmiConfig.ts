@@ -35,7 +35,7 @@ function getSupportedChains() {
 }
 
 export const wagmiConfig = getDefaultConfig({
-  appName: 'OmniWDK',
+  appName: 'OmniAgent',
   projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID, // Get from https://cloud.walletconnect.com
   chains: getSupportedChains(),
   ssr: false,

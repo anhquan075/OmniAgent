@@ -11,7 +11,7 @@ const provider = new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL);
 const getContracts = () => {
     const engineAbi = abis_1.StrategyEngineAbi;
     const breakerAbiActual = abis_1.CircuitBreakerAbi;
-    const vaultAbiActual = abis_1.WDKVaultAbi;
+    const vaultAbiActual = abis_1.OmniAgentVaultAbi;
     const oracleAbiActual = abis_1.ZKRiskOracleAbi;
     const auctionAbiActual = abis_1.ExecutionAuctionAbi;
     const syndicateAbiActual = abis_1.GroupSyndicateAbi;

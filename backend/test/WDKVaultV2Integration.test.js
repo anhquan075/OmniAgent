@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { loadFixture, time, impersonateAccount, setBalance } = require("@nomicfoundation/hardhat-network-helpers");
 
-describe("WDKVault V2 Integration", function () {
+describe("OmniAgentVault V2 Integration", function () {
   async function deployV2Fixture() {
     const [deployer, user, executor] = await ethers.getSigners();
 
@@ -77,10 +77,10 @@ describe("WDKVault V2 Integration", function () {
     const MockLendingAdapter = await ethers.getContractFactory("MockLendingAdapter");
     const lendingAdapter = await MockLendingAdapter.deploy(usdt.target, deployer.address);
 
-    // Deploy WDKVault
-    const WDKVault = await ethers.getContractFactory("WDKVault");
-    const vault = await WDKVault.deploy(
-      usdt.target, "WDKVault V2", "pvUSDT", deployer.address, 500
+    // Deploy OmniAgentVault
+    const OmniAgentVault = await ethers.getContractFactory("OmniAgentVault");
+    const vault = await OmniAgentVault.deploy(
+      usdt.target, "OmniAgentVault V2", "pvUSDT", deployer.address, 500
     );
 
     // Deploy StrategyEngine

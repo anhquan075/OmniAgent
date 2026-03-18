@@ -8,7 +8,7 @@ import {IManagedAdapter} from "./interfaces/IManagedAdapter.sol";
 import {IPancakeV3Pool} from "./interfaces/IPancakeV3Pool.sol";
 import {RiskPolicy} from "./RiskPolicy.sol";
 import {SharpeTracker} from "./SharpeTracker.sol";
-import {WDKVault} from "./WDKVault.sol";
+import {OmniAgentVault} from "./OmniAgentVault.sol";
 
 interface IAaveAdapter {
     function getHealthFactor() external view returns (uint256);
@@ -65,7 +65,7 @@ contract StrategyEngine {
     error StrategyEngine__YieldOverflow();
     error StrategyEngine__LendingHealthTooLow(uint256 current, uint256 min);
 
-    WDKVault public immutable vault;
+    OmniAgentVault public immutable vault;
     RiskPolicy public immutable policy;
     IPriceOracle public immutable priceOracle;
     ICircuitBreaker public immutable circuitBreaker;
@@ -93,7 +93,7 @@ contract StrategyEngine {
         if (sharpeTracker_ == address(0)) revert StrategyEngine__ZeroAddress();
         if (initialPrice_ == 0) revert StrategyEngine__ZeroPrice();
 
-        vault = WDKVault(vault_);
+        vault = OmniAgentVault(vault_);
         policy = RiskPolicy(policy_);
         priceOracle = IPriceOracle(oracle_);
         circuitBreaker = ICircuitBreaker(breaker_);
