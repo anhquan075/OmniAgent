@@ -3,26 +3,24 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.agentTools = exports.wdk = void 0;
+exports.normalizedAgentTools = exports.agentTools = void 0;
+exports.getWdk = getWdk;
 const ethers_1 = require("ethers");
-const wdk_1 = __importDefault(require("@tetherto/wdk"));
-const wdk_wallet_evm_1 = __importDefault(require("@tetherto/wdk-wallet-evm"));
-const wdk_wallet_solana_1 = __importDefault(require("@tetherto/wdk-wallet-solana"));
-const wdk_wallet_ton_1 = __importDefault(require("@tetherto/wdk-wallet-ton"));
 const RiskService_1 = require("./services/RiskService");
 const BridgeService_1 = require("./services/BridgeService");
 const SimulationService_1 = require("./services/SimulationService");
 const x402_client_1 = require("./x402-client");
 const PolicyGuard_1 = require("./middleware/PolicyGuard");
+const wdk_loader_1 = require("../lib/wdk-loader");
 const WdkExecutor_1 = require("./middleware/WdkExecutor");
 const ProfitSimulator_1 = require("./services/ProfitSimulator");
 const ai_1 = require("ai");
 const zod_1 = require("zod");
-const env_1 = require("@/config/env");
-const ethers_2 = require("@/contracts/clients/ethers");
+const env_1 = require("../config/env");
+const ethers_2 = require("../contracts/clients/ethers");
 const axios_1 = __importDefault(require("axios"));
-const logger_1 = require("@/utils/logger");
-const RobotFleetService_1 = require("@/services/RobotFleetService");
+const logger_1 = require("../utils/logger");
+const RobotFleetService_1 = require("../services/RobotFleetService");
 function validateWDKSecretSeed() {
     const seed = env_1.env.WDK_SECRET_SEED;
     if (!seed) {
@@ -39,17 +37,59 @@ function validateWDKSecretSeed() {
     }
 }
 validateWDKSecretSeed();
-// Initialize WDK
-exports.wdk = new wdk_1.default(env_1.env.WDK_SECRET_SEED);
-exports.wdk.registerWallet('bnb', wdk_wallet_evm_1.default, { provider: env_1.env.BNB_RPC_URL });
-exports.wdk.registerWallet('solana', wdk_wallet_solana_1.default, { rpcUrl: env_1.env.SOLANA_RPC_URL });
-exports.wdk.registerWallet('ton', wdk_wallet_ton_1.default, { rpcUrl: env_1.env.TON_RPC_URL });
+let wdkPromise = null;
+async function getWdk() {
+    if (!wdkPromise) {
+        wdkPromise = (async () => {
+            const [WDK, WalletEVM, WalletSolana, WalletTON] = await Promise.all([
+                (0, wdk_loader_1.getWDK)(),
+                (0, wdk_loader_1.getWalletEVM)(),
+                (0, wdk_loader_1.getWalletSolana)(),
+                (0, wdk_loader_1.getWalletTON)()
+            ]);
+            await Promise.all([
+                WDK.registerWallet('bnb', WalletEVM, { provider: env_1.env.BNB_RPC_URL }),
+                WDK.registerWallet('solana', WalletSolana, { rpcUrl: env_1.env.SOLANA_RPC_URL }),
+                WDK.registerWallet('ton', WalletTON, { rpcUrl: env_1.env.TON_RPC_URL })
+            ]);
+            return WDK;
+        })();
+    }
+    return wdkPromise;
+}
 const { engine, vault, usdt, zkOracle, breaker, auction } = (0, ethers_2.getContracts)();
-const bridgeService = new BridgeService_1.BridgeService(exports.wdk);
-const x402 = new x402_client_1.X402Client(exports.wdk, env_1.env.WDK_USDT_ADDRESS);
+let bridgeServicePromise = null;
+let x402Promise = null;
+let wdkExecutorPromise = null;
+async function getBridgeService() {
+    if (!bridgeServicePromise) {
+        bridgeServicePromise = (async () => {
+            const wdk = await getWdk();
+            return new BridgeService_1.BridgeService(wdk);
+        })();
+    }
+    return bridgeServicePromise;
+}
+async function getX402Client() {
+    if (!x402Promise) {
+        x402Promise = (async () => {
+            const wdk = await getWdk();
+            return new x402_client_1.X402Client(wdk, env_1.env.WDK_USDT_ADDRESS);
+        })();
+    }
+    return x402Promise;
+}
+async function getWdkExecutor() {
+    if (!wdkExecutorPromise) {
+        wdkExecutorPromise = (async () => {
+            const wdk = await getWdk();
+            return new WdkExecutor_1.WdkExecutor(wdk);
+        })();
+    }
+    return wdkExecutorPromise;
+}
 const profitSimulator = (0, ProfitSimulator_1.createProfitSimulator)(env_1.env.BNB_RPC_URL);
 const policyGuard = (0, PolicyGuard_1.getPolicyGuard)();
-const wdkExecutor = new WdkExecutor_1.WdkExecutor(exports.wdk);
 // Helper to report agent state
 async function reportToDashboard(node, details = {}) {
     const serverUrl = `http://localhost:${env_1.env.PORT}/api/agent/report`;
@@ -132,7 +172,7 @@ exports.agentTools = {
             const networks = ['bnb', 'solana', 'ton'];
             for (const network of networks) {
                 try {
-                    const account = await exports.wdk.getAccount(network);
+                    const account = await (await getWdk()).getAccount(network);
                     const address = await account.getAddress();
                     let nativeBalance = "0";
                     try {
@@ -176,7 +216,7 @@ exports.agentTools = {
         }),
         // @ts-ignore
         execute: async ({ context }) => {
-            const riskService = new RiskService_1.RiskService(zkOracle, breaker, exports.wdk);
+            const riskService = new RiskService_1.RiskService(zkOracle, breaker, await getWdk());
             const profile = await riskService.getRiskProfile();
             await reportToDashboard('analyzeRisk', { riskLevel: profile.level, drawdown: profile.drawdownBps, ...profile });
             return profile;
@@ -189,7 +229,7 @@ exports.agentTools = {
         }),
         // @ts-ignore
         execute: async ({ reason }) => {
-            const riskService = new RiskService_1.RiskService(null, breaker, exports.wdk);
+            const riskService = new RiskService_1.RiskService(null, breaker, await getWdk());
             const isPaused = await breaker.isPaused();
             if (!isPaused) {
                 const tx = await riskService.triggerEmergencyPause(reason);
@@ -234,9 +274,9 @@ exports.agentTools = {
         }),
         // @ts-ignore
         execute: async ({ context }) => {
-            const bnbAccount = await exports.wdk.getAccount('bnb');
+            const bnbAccount = await (await getWdk()).getAccount('bnb');
             const fromAddress = await bnbAccount.getAddress();
-            const riskService = new RiskService_1.RiskService(zkOracle, breaker, exports.wdk);
+            const riskService = new RiskService_1.RiskService(zkOracle, breaker, await getWdk());
             const profile = await riskService.getRiskProfile();
             const policyViolation = policyGuard.validateSwapTransaction({
                 fromToken: env_1.env.WDK_USDT_ADDRESS,
@@ -270,19 +310,19 @@ exports.agentTools = {
                         const myBid = currentBid > 0n ? currentBid + (currentBid * 500n / 10000n) : minBid;
                         const allowance = await usdt.allowance(fromAddress, await auction.getAddress());
                         if (allowance < myBid) {
-                            await wdkExecutor.sendTransaction('bnb', {
+                            await (await getWdkExecutor()).sendTransaction('bnb', {
                                 to: env_1.env.WDK_USDT_ADDRESS,
                                 data: usdt.interface.encodeFunctionData("approve", [await auction.getAddress(), ethers_1.ethers.MaxUint256])
                             }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
                         }
-                        const bidTx = await wdkExecutor.sendTransaction('bnb', {
+                        const bidTx = await (await getWdkExecutor()).sendTransaction('bnb', {
                             to: await auction.getAddress(),
                             data: auction.interface.encodeFunctionData("bid", [myBid])
                         }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
                         return { actionTaken: 'AUCTION_BID_PLACED', txHash: bidTx.hash };
                     }
                     if (phase === 2 && status.winner.toLowerCase() === fromAddress.toLowerCase()) {
-                        const execTx = await wdkExecutor.sendTransaction('bnb', {
+                        const execTx = await (await getWdkExecutor()).sendTransaction('bnb', {
                             to: await auction.getAddress(),
                             data: auction.interface.encodeFunctionData("winnerExecute", [])
                         }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
@@ -317,7 +357,7 @@ exports.agentTools = {
             });
             logger_1.logger.debug({ profitSim }, '[Rebalance] Profit simulation');
             try {
-                const tx = await wdkExecutor.sendTransaction('bnb', {
+                const tx = await (await getWdkExecutor()).sendTransaction('bnb', {
                     to: txRequest.to,
                     data: txRequest.data,
                     value: txRequest.value
@@ -342,7 +382,7 @@ exports.agentTools = {
         }),
         // @ts-ignore
         execute: async ({ threshold }) => {
-            const riskService = new RiskService_1.RiskService(zkOracle, breaker, exports.wdk);
+            const riskService = new RiskService_1.RiskService(zkOracle, breaker, await getWdk());
             const profile = await riskService.getRiskProfile();
             const policyViolation = policyGuard.validateBridgeTransaction({
                 fromChain: 'bnb',
@@ -355,7 +395,7 @@ exports.agentTools = {
                 logger_1.logger.warn({ reason: policyViolation.reason }, '[Bridge] Policy violation');
                 return { actionTaken: 'BLOCKED_BY_POLICY', reason: policyViolation.reason };
             }
-            const opportunity = await bridgeService.analyzeBridgeOpportunity('bnb', threshold);
+            const opportunity = await (await getBridgeService()).analyzeBridgeOpportunity('bnb', threshold);
             if (opportunity.shouldBridge) {
                 const currentYield = 0;
                 const expectedYieldDifference = (opportunity.expectedYield || 2.0) - currentYield;
@@ -370,7 +410,7 @@ exports.agentTools = {
                     logger_1.logger.info({ margin: profitSim.profitMargin }, '[Bridge] Not viable');
                     return { actionTaken: 'SKIPPED_NOT_PROFITABLE', profitMargin: profitSim.profitMargin };
                 }
-                const bridgeResult = await bridgeService.executeBridge('bnb', opportunity.targetChain || '', 100);
+                const bridgeResult = await (await getBridgeService()).executeBridge('bnb', opportunity.targetChain || '', 100);
                 if (bridgeResult.success) {
                     policyGuard.recordTransaction('100000000');
                     const res = { actionTaken: 'BRIDGED_CAPITAL', txHash: bridgeResult.hash, profitSimulation: profitSim };
@@ -389,7 +429,7 @@ exports.agentTools = {
         }),
         // @ts-ignore
         execute: async ({ serviceUrl, providerAddress }) => {
-            const riskService = new RiskService_1.RiskService(zkOracle, breaker, exports.wdk);
+            const riskService = new RiskService_1.RiskService(zkOracle, breaker, await getWdk());
             const profile = await riskService.getRiskProfile();
             const policyViolation = policyGuard.validateSwapTransaction({
                 fromToken: env_1.env.WDK_USDT_ADDRESS,
@@ -414,7 +454,7 @@ exports.agentTools = {
                     slippage: 0,
                 });
                 logger_1.logger.debug({ paymentSim }, '[X402] Payment simulation');
-                const insightData = await x402.payAndFetch(serviceUrl, providerAddress, paymentAmount, profile.level, portfolioValue.toString());
+                const insightData = await (await getX402Client()).payAndFetch(serviceUrl, providerAddress, paymentAmount, profile.level, portfolioValue.toString());
                 policyGuard.recordTransaction(paymentAmount);
                 return {
                     status: "success",
@@ -434,8 +474,8 @@ exports.agentTools = {
         }),
         // @ts-ignore
         execute: async ({ context }) => {
-            const bnbAccount = await exports.wdk.getAccount('bnb');
-            const spendingAccount = await exports.wdk.getAccount('bnb', 1);
+            const bnbAccount = await (await getWdk()).getAccount('bnb');
+            const spendingAccount = await (await getWdk()).getAccount('bnb', 1);
             const spendingAddress = await spendingAccount.getAddress();
             try {
                 const myAddress = await bnbAccount.getAddress();
@@ -453,9 +493,9 @@ exports.agentTools = {
                     });
                     logger_1.logger.debug({ yieldSim }, '[YieldSweep] Yield simulation');
                     try {
-                        const riskService = new RiskService_1.RiskService(zkOracle, breaker, exports.wdk);
+                        const riskService = new RiskService_1.RiskService(zkOracle, breaker, await getWdk());
                         const profile = await riskService.getRiskProfile();
-                        const tx = await wdkExecutor.sendTransaction('bnb', {
+                        const tx = await (await getWdkExecutor()).sendTransaction('bnb', {
                             to: await vault.getAddress(),
                             data: vault.interface.encodeFunctionData("withdrawYield", [spendingAddress])
                         }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: yieldAmount.toString() });
@@ -490,11 +530,11 @@ exports.agentTools = {
         execute: async ({ amount }) => {
             if (!env_1.env.WDK_AAVE_ADAPTER_ADDRESS)
                 return { status: "failed", error: "Aave adapter address not configured" };
-            const riskService = new RiskService_1.RiskService(zkOracle, breaker, exports.wdk);
+            const riskService = new RiskService_1.RiskService(zkOracle, breaker, await getWdk());
             const profile = await riskService.getRiskProfile();
             const usdtAmount = ethers_1.ethers.parseUnits(amount, 6);
             try {
-                const tx = await wdkExecutor.sendTransaction('bnb', {
+                const tx = await (await getWdkExecutor()).sendTransaction('bnb', {
                     to: env_1.env.WDK_AAVE_ADAPTER_ADDRESS,
                     data: new ethers_1.Interface(["function onVaultDeposit(uint256 amount) external"]).encodeFunctionData("onVaultDeposit", [usdtAmount])
                 }, {
@@ -518,11 +558,11 @@ exports.agentTools = {
         execute: async ({ amount }) => {
             if (!env_1.env.WDK_AAVE_ADAPTER_ADDRESS)
                 return { status: "failed", error: "Aave adapter address not configured" };
-            const riskService = new RiskService_1.RiskService(zkOracle, breaker, exports.wdk);
+            const riskService = new RiskService_1.RiskService(zkOracle, breaker, await getWdk());
             const profile = await riskService.getRiskProfile();
             const usdtAmount = ethers_1.ethers.parseUnits(amount, 6);
             try {
-                const tx = await wdkExecutor.sendTransaction('bnb', {
+                const tx = await (await getWdkExecutor()).sendTransaction('bnb', {
                     to: env_1.env.WDK_AAVE_ADAPTER_ADDRESS,
                     data: new ethers_1.Interface(["function withdrawToVault(uint256 amount) external returns (uint256)"]).encodeFunctionData("withdrawToVault", [usdtAmount])
                 }, {
@@ -579,7 +619,7 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ context }) => {
             try {
-                const account = await exports.wdk.getAccount('bnb');
+                const account = await (await getWdk()).getAccount('bnb');
                 const address = await account.getAddress();
                 await reportToDashboard('bnb_create_wallet', { address, network: 'bnb' });
                 return { success: true, address, network: 'bnb' };
@@ -599,7 +639,7 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ address, context }) => {
             try {
-                const targetAddress = address || (await exports.wdk.getAccount('bnb').then(a => a.getAddress()));
+                const targetAddress = address || (await (await getWdk()).getAccount('bnb').then((a) => a.getAddress()));
                 const provider = new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL);
                 const balanceWei = await provider.getBalance(targetAddress);
                 const balanceBnb = ethers_1.ethers.formatEther(balanceWei);
@@ -632,7 +672,7 @@ exports.agentTools = {
                     await reportToDashboard('bnb_transfer', { error: check.reason });
                     return { error: check.reason };
                 }
-                const account = await exports.wdk.getAccount('bnb');
+                const account = await (await getWdk()).getAccount('bnb');
                 const result = await account.transfer({ to, amount });
                 await reportToDashboard('bnb_transfer', { txHash: result?.txHash || result?.hash, to, amount });
                 return { success: true, txHash: result?.txHash || result?.hash, to, amount };
@@ -666,7 +706,7 @@ exports.agentTools = {
                     await reportToDashboard('bnb_swap', { error: check.reason });
                     return { error: check.reason };
                 }
-                const account = await exports.wdk.getAccount('bnb');
+                const account = await (await getWdk()).getAccount('bnb');
                 const result = await account.swap({ tokenIn, tokenOut, amountIn });
                 await reportToDashboard('bnb_swap', { txHash: result?.txHash || result?.hash, tokenIn, tokenOut, amountIn });
                 return { success: true, txHash: result?.txHash || result?.hash, tokenIn, tokenOut, amountIn };
@@ -697,7 +737,7 @@ exports.agentTools = {
                     await reportToDashboard('bnb_supply_aave', { error: check.reason });
                     return { error: check.reason };
                 }
-                const account = await exports.wdk.getAccount('bnb');
+                const account = await (await getWdk()).getAccount('bnb');
                 const result = await account.supplyAave({ asset, amount });
                 await reportToDashboard('bnb_supply_aave', { txHash: result?.txHash || result?.hash, asset, amount });
                 return { success: true, txHash: result?.txHash || result?.hash, asset, amount };
@@ -728,7 +768,7 @@ exports.agentTools = {
                     await reportToDashboard('bnb_withdraw_aave', { error: check.reason });
                     return { error: check.reason };
                 }
-                const account = await exports.wdk.getAccount('bnb');
+                const account = await (await getWdk()).getAccount('bnb');
                 const result = await account.withdrawAave({ asset, amount });
                 await reportToDashboard('bnb_withdraw_aave', { txHash: result?.txHash || result?.hash, asset, amount });
                 return { success: true, txHash: result?.txHash || result?.hash, asset, amount };
@@ -759,7 +799,7 @@ exports.agentTools = {
                     await reportToDashboard('bnb_bridge_layerzero', { error: check.reason });
                     return { error: check.reason };
                 }
-                const account = await exports.wdk.getAccount('bnb');
+                const account = await (await getWdk()).getAccount('bnb');
                 const result = await account.bridgeLayerZero({ amount, dstChain });
                 await reportToDashboard('bnb_bridge_layerzero', { txHash: result?.txHash || result?.hash, amount, dstChain });
                 return { success: true, txHash: result?.txHash || result?.hash, amount, dstChain };
@@ -779,7 +819,7 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ context }) => {
             try {
-                const account = await exports.wdk.getAccount('solana');
+                const account = await (await getWdk()).getAccount('solana');
                 const address = await account.getAddress();
                 await reportToDashboard('sol_create_wallet', { address, network: 'solana' });
                 return { success: true, address, network: 'solana' };
@@ -799,8 +839,8 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ address, context }) => {
             try {
-                const targetAddress = address || (await exports.wdk.getAccount('solana').then(a => a.getAddress()));
-                const account = await exports.wdk.getAccount('solana');
+                const targetAddress = address || (await (await getWdk()).getAccount('solana').then((a) => a.getAddress()));
+                const account = await (await getWdk()).getAccount('solana');
                 const balance = await account.getBalance(targetAddress);
                 await reportToDashboard('sol_get_balance', { balance, address: targetAddress });
                 return { success: true, nativeBalance: balance };
@@ -831,7 +871,7 @@ exports.agentTools = {
                     await reportToDashboard('sol_transfer', { error: check.reason });
                     return { error: check.reason };
                 }
-                const account = await exports.wdk.getAccount('solana');
+                const account = await (await getWdk()).getAccount('solana');
                 const result = await account.transfer({ to, amount });
                 await reportToDashboard('sol_transfer', { txHash: result?.txHash || result?.hash, to, amount });
                 return { success: true, txHash: result?.txHash || result?.hash, to, amount };
@@ -865,7 +905,7 @@ exports.agentTools = {
                     await reportToDashboard('sol_swap', { error: check.reason });
                     return { error: check.reason };
                 }
-                const account = await exports.wdk.getAccount('solana');
+                const account = await (await getWdk()).getAccount('solana');
                 const result = await account.swap({ tokenIn, tokenOut, amountIn });
                 await reportToDashboard('sol_swap', { txHash: result?.txHash || result?.hash, tokenIn, tokenOut, amountIn });
                 return { success: true, txHash: result?.txHash || result?.hash, tokenIn, tokenOut, amountIn };
@@ -887,7 +927,7 @@ exports.agentTools = {
         execute: async ({ wallet_index, context }) => {
             try {
                 const walletIndex = wallet_index || 0;
-                const account = await exports.wdk.getAccount('ton', walletIndex);
+                const account = await (await getWdk()).getAccount('ton', walletIndex);
                 const address = await account.getAddress();
                 await reportToDashboard('ton_create_wallet', { address, network: 'ton' });
                 return { success: true, address, network: 'ton' };
@@ -907,8 +947,8 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ address, context }) => {
             try {
-                const targetAddress = address || (await exports.wdk.getAccount('ton').then(a => a.getAddress()));
-                const account = await exports.wdk.getAccount('ton');
+                const targetAddress = address || (await (await getWdk()).getAccount('ton').then((a) => a.getAddress()));
+                const account = await (await getWdk()).getAccount('ton');
                 const balance = await account.getBalance(targetAddress);
                 await reportToDashboard('ton_get_balance', { balance, address: targetAddress });
                 return { success: true, nativeBalance: balance };
@@ -939,7 +979,7 @@ exports.agentTools = {
                     await reportToDashboard('ton_transfer', { error: check.reason });
                     return { error: check.reason };
                 }
-                const account = await exports.wdk.getAccount('ton');
+                const account = await (await getWdk()).getAccount('ton');
                 const result = await account.transfer({ to, amount });
                 await reportToDashboard('ton_transfer', { txHash: result?.txHash || result?.hash, to, amount });
                 return { success: true, txHash: result?.txHash || result?.hash, to, amount };
@@ -1330,16 +1370,17 @@ exports.agentTools = {
         }),
         // @ts-ignore
         execute: async ({ salt, context }) => {
+            if (!env_1.env.ERC4337_FACTORY_ADDRESS) {
+                return { error: 'ERC4337_FACTORY_ADDRESS not configured. Set it in .env file.' };
+            }
             try {
                 const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const accountSalt = salt || ethers_1.ethers.toBeHex(0);
-                // Get factory and create account
-                const factoryContract = new ethers_1.ethers.Contract(env_1.env.ERC4337_FACTORY_ADDRESS, ['function createAccount(address owner, uint256 salt) external returns (address)'], signer);
                 const signerAddress = await signer.getAddress();
-                const tx = await factoryContract.createAccount(signerAddress, accountSalt);
+                const factoryContract = new ethers_1.ethers.Contract(env_1.env.ERC4337_FACTORY_ADDRESS, ['function createAccount(address owner) external returns (address)'], signer);
+                const tx = await factoryContract.createAccount(signerAddress);
                 await tx.wait();
-                await reportToDashboard('erc4337_create_account', { txHash: tx.hash, salt: accountSalt });
-                return { success: true, txHash: tx.hash, salt: accountSalt };
+                await reportToDashboard('erc4337_create_account', { txHash: tx.hash });
+                return { success: true, txHash: tx.hash };
             }
             catch (e) {
                 logger_1.logger.error(e, '[Tools] Error in erc4337_create_account');
@@ -1348,21 +1389,21 @@ exports.agentTools = {
         }
     }),
     erc4337_get_account_address: (0, ai_1.tool)({
-        description: 'Get predicted smart account address',
+        description: 'Get smart account address for owner',
         parameters: zod_1.z.object({
-            salt: zod_1.z.string().optional().describe('Salt used for account creation'),
-            context: zod_1.z.string().describe('Reason for getting account address.')
+            owner: zod_1.z.string().optional().describe('Owner address (defaults to agent wallet)')
         }),
         // @ts-ignore
-        execute: async ({ salt, context }) => {
+        execute: async ({ owner }) => {
+            if (!env_1.env.ERC4337_FACTORY_ADDRESS) {
+                return { error: 'ERC4337_FACTORY_ADDRESS not configured. Set it in .env file.' };
+            }
             try {
                 const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const accountSalt = salt || ethers_1.ethers.toBeHex(0);
-                // Get factory and predict address
-                const FACTORY_ABI = ['function getAddress(address owner, uint256 salt) external view returns (address)'];
+                const ownerAddress = owner || await signer.getAddress();
+                const FACTORY_ABI = ['function getAccountAddress(address owner) external view returns (address)'];
                 const factoryContract = new ethers_1.ethers.Contract(env_1.env.ERC4337_FACTORY_ADDRESS, FACTORY_ABI, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const signerAddress = await signer.getAddress();
-                const address = await factoryContract.getAddress(signerAddress, accountSalt);
+                const address = await factoryContract.getAccountAddress(ownerAddress);
                 await reportToDashboard('erc4337_get_account_address', { address });
                 return { success: true, address };
             }
@@ -1803,3 +1844,16 @@ exports.agentTools = {
         }
     })
 };
+// Proxy to normalize tool names (trim whitespace from AI model tool calls)
+exports.normalizedAgentTools = new Proxy(exports.agentTools, {
+    get(target, prop) {
+        const trimmedProp = typeof prop === 'string' ? prop.trim() : prop;
+        if (trimmedProp !== prop) {
+            logger_1.logger.debug({ original: prop, trimmed: trimmedProp }, '[Tools] Tool name had whitespace - normalizing');
+        }
+        const tool = target[trimmedProp];
+        if (tool)
+            return tool;
+        return target[prop];
+    }
+});

@@ -1,4 +1,3 @@
-import WDK from '@tetherto/wdk';
 import { WdkExecutor } from './middleware/WdkExecutor';
 import { getContracts } from '@/contracts/clients/ethers';
 import { logger } from '@/utils/logger';
@@ -7,10 +6,10 @@ import { logger } from '@/utils/logger';
  * X402Client handles machine-to-machine payments for infrastructure.
  */
 export class X402Client {
-  private wdk: WDK;
+  private wdk: any;
   private usdtAddress: string;
 
-  constructor(wdk: WDK, usdtAddress: string) {
+  constructor(wdk: any, usdtAddress: string) {
     this.wdk = wdk;
     this.usdtAddress = usdtAddress;
   }

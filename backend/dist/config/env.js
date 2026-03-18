@@ -38,7 +38,7 @@ const zod_1 = require("zod");
 const dotenv = __importStar(require("dotenv"));
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
-const logger_1 = require("@/utils/logger");
+const logger_1 = require("../utils/logger");
 // Load .env file (primary configuration)
 const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
 const envPath = path.resolve(process.cwd(), envFile);
@@ -86,9 +86,13 @@ const envSchema = zod_1.z.object({
     VELORA_FACTORY_ADDRESS: zod_1.z.string().default('0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f'),
     DEPLOYMENT_MODE: zod_1.z.enum(['local', 'production']).default('local'),
     AGENT_CRON_SECRET: zod_1.z.string().optional(),
+    JWT_SECRET: zod_1.z.string().min(32).optional(),
     ERC4337_FACTORY_ADDRESS: zod_1.z.string().optional(),
     ERC4337_PAYMASTER_ADDRESS: zod_1.z.string().optional(),
     ERC4337_ENTRYPOINT_ADDRESS: zod_1.z.string().default('0x5FF137D4a0ADCA4B1FB0b8274Ea4dE461a706c12'),
+    MOCK_AAVE_POOL_ADDRESS: zod_1.z.string().optional(),
+    MOCK_BRIDGE_ADDRESS: zod_1.z.string().optional(),
+    MOCK_ATOKEN_ADDRESS: zod_1.z.string().optional(),
 });
 const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {

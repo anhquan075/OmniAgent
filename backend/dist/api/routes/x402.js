@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const hono_1 = require("hono");
-const logger_1 = require("@/utils/logger");
+const logger_1 = require("../../utils/logger");
 const x402 = new hono_1.Hono();
 x402.get('/risk-analysis', async (c) => {
     logger_1.logger.info('[X402] Received request for risk-analysis');

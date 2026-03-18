@@ -4,12 +4,12 @@ exports.PolicyGuard = void 0;
 exports.getPolicyGuard = getPolicyGuard;
 exports.setPolicyGuard = setPolicyGuard;
 const ethers_1 = require("ethers");
-const constants_1 = require("@/lib/constants");
-const logger_1 = require("@/utils/logger");
+const constants_1 = require("../../lib/constants");
+const logger_1 = require("../../utils/logger");
 const zod_1 = require("zod");
 const ai_1 = require("ai");
 const openai_1 = require("@ai-sdk/openai");
-const env_1 = require("@/config/env");
+const env_1 = require("../../config/env");
 const TransactionSchema = zod_1.z.object({
     toAddress: zod_1.z.string().refine((val) => ethers_1.ethers.isAddress(val), {
         message: "Invalid Ethereum address",

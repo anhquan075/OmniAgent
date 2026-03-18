@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.strategicGuardrail = void 0;
 const ai_1 = require("ai");
 const openai_1 = require("@ai-sdk/openai");
-const logger_1 = require("@/utils/logger");
+const logger_1 = require("../../utils/logger");
 // Lightweight model for cost-efficient guardrails
 const gatekeeperModel = (0, openai_1.createOpenAI)({
     apiKey: process.env.OPENROUTER_API_KEY,

@@ -4,10 +4,10 @@ const hono_1 = require("hono");
 const ai_1 = require("ai");
 const openai_1 = require("@ai-sdk/openai");
 const zod_1 = require("zod");
-const env_1 = require("@/config/env");
-const logger_1 = require("@/utils/logger");
-const tools_1 = require("@/agent/tools");
+const logger_1 = require("../../utils/logger");
+const tools_1 = require("../../agent/tools");
 const chat_store_1 = require("../../utils/chat-store");
+const LLMRouter_1 = require("../../services/LLMRouter");
 const chat = new hono_1.Hono();
 // Zod schema for suggestions
 const suggestionsSchema = zod_1.z.array(zod_1.z.object({
@@ -77,25 +77,24 @@ chat.post('/', async (c) => {
             return true;
         return false;
     });
-    // 1. Intent detection: Detect if crypto/DeFi query
-    const cryptoKeywords = /\b(vault|strategy|rebalance|usdt|xaut|gold|crypto|defi|yield|risk|depeg|peg|asset|allocation|emergency|circuit|breaker|sharpe|bridge|cross-chain|solana|bnb|ethereum|price|oracle|tether|stablecoin|liquidity|apy|apr)\b/i;
-    const isCryptoQuery = cryptoKeywords.test(userText);
-    const isSmallTalk = /^(hi|hello|hey|greetings|how are you|thanks|thank you|cool|ok|who are you|bye|good morning|good afternoon|good evening)(\s|[.!?]|$)/i.test(userText.trim());
     const openai = (0, openai_1.createOpenAI)({
         apiKey: process.env.OPENROUTER_API_KEY,
         baseURL: process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
     });
-    // 2. Model selection: Use DeepSeek for crypto/DeFi, Gemini for general
-    const modelId = isCryptoQuery
-        ? (env_1.env.OPENROUTER_MODEL_CRYPTO || "deepseek/deepseek-chat")
-        : (env_1.env.OPENROUTER_MODEL_GENERAL || "google/gemini-2.0-flash-001");
-    logger_1.logger.info({ userText: userText.slice(0, 50), isCryptoQuery, modelId }, '[Chat] Processing query');
+    const routerDecision = await LLMRouter_1.llmRouter.smartRoute(userText);
+    const modelId = routerDecision.recommendedModel;
+    logger_1.logger.info({
+        userText: userText.slice(0, 50),
+        intent: routerDecision.intent,
+        confidence: routerDecision.confidence,
+        modelId
+    }, '[Chat] Processing query with LLM router');
     const baseModel = openai.chat(modelId);
     const stream = (0, ai_1.createUIMessageStream)({
         execute: async ({ writer }) => {
             try {
                 // Immediate feedback - Only show for non-small talk
-                if (!isSmallTalk) {
+                if (routerDecision.intent !== 'small_talk') {
                     writer.write({
                         type: 'data-status',
                         id: 'agent-status',
@@ -112,12 +111,12 @@ chat.post('/', async (c) => {
                     maxSteps: 10,
                     maxToolRoundtrips: 3,
                     temperature: 0,
-                    tools: isSmallTalk ? {} : tools_1.agentTools,
+                    tools: routerDecision.intent === 'small_talk' ? {} : tools_1.normalizedAgentTools,
                     onStepFinish: (arg) => {
                         const toolResults = arg?.toolResults;
                         const toolCalls = arg?.toolCalls;
                         // 1. Telemetry updates - Only for non-small talk
-                        if (!isSmallTalk && toolCalls && toolCalls.length > 0) {
+                        if (routerDecision.intent !== 'small_talk' && toolCalls && toolCalls.length > 0) {
                             const lastCall = toolCalls[toolCalls.length - 1];
                             const toolName = lastCall?.toolName;
                             let status = 'Processing';
@@ -183,24 +182,54 @@ chat.post('/', async (c) => {
                             }
                         }
                     },
-                    system: isSmallTalk
+                    system: routerDecision.intent === 'small_talk'
                         ? `You are the OmniAgent AFOS Strategist. Keep responses brief and professional. Just answer the user's question directly in natural language.`
                         : `You are the OmniAgent AFOS Strategist. 
                 Directive: yield optimization for USDT and XAUT via Tether WDK & OmniAgent.
+                
+               AVAILABLE TOOLS - Use these to answer user queries:
+               
+               VAULT & STRATEGY TOOLS:
+               - get_vault_status: Get vault total assets, buffer status, health
+               - analyze_risk: Get ZK-risk profile (LOW/MEDIUM/HIGH), drawdown, Sharpe ratio
+               - check_strategy: Check if rebalancing is needed, preview next decision
+               - wdk_vault_get_balance: Get user's vault balance
+               - wdk_vault_get_state: Get vault buffer state
+               - wdk_engine_get_cycle_state: Get engine cycle state and decision preview
+               - wdk_engine_get_risk_metrics: Get health factor from engine
+               
+               MULTI-CHAIN TOOLS:
+               - get_all_chain_balances: Get BNB, SOL, TON balances across all chains
+               - bnb_get_balance: Get BNB and USDT balance on BNB Chain
+               - sol_get_balance: Get SOL balance on Solana
+               - ton_get_balance: Get TON balance on TON
+               
+               AAVE LENDING TOOLS:
+               - wdk_aave_supply: Supply USDT to Aave V3
+               - wdk_aave_withdraw: Withdraw USDT from Aave V3
+               
+               X402 PAYMENT TOOLS:
+               - x402_list_services: List available sub-agent services
+               - x402_get_balance: Get USDT balance for x402 payments
+               - x402_fleet_status: Get robot fleet status and earnings
                
                CRITICAL INSTRUCTION: You MUST ALWAYS provide a final text summary after using tools.
                
                WORKFLOW:
-               1. Use tools to gather data (analyze_risk, get_vault_status, check_strategy, etc.)
+               1. Use tools to gather data based on user's question
                2. AFTER tools return results, you MUST write a natural language response explaining:
                   - What you found
                   - What the data means
                   - What actions were taken or recommended
                3. NEVER end your response with just tool calls - ALWAYS follow up with explanatory text
                
-               If you use analyze_risk, tell the user what the risk level is and what it means.
-               If you use get_vault_status, tell the user the vault's current state in plain English.
-               If you use check_strategy, explain whether rebalancing is needed and why.
+               QUICK REFERENCE:
+               - Vault status → get_vault_status
+               - Risk analysis → analyze_risk
+               - Rebalance check → check_strategy
+               - Chain balances → get_all_chain_balances
+               - Engine metrics → wdk_engine_get_risk_metrics
+               - Aave position → wdk_aave_supply or wdk_aave_withdraw
                
                RESPONSE FORMAT: Tools → Text Summary (MANDATORY)
                
@@ -211,7 +240,7 @@ chat.post('/', async (c) => {
                 await writer.merge(result.toUIMessageStream());
                 // FIX: Manual Chat Synthesis Loop
                 // If the model stops after a tool result (without text), force a summary generation.
-                if (!isSmallTalk) {
+                if (routerDecision.intent !== 'small_talk') {
                     try {
                         const response = await result.response;
                         const generatedMessages = response.messages;
@@ -248,7 +277,7 @@ chat.post('/', async (c) => {
                         logger_1.logger.error(err, '[Chat] Error in synthesis loop');
                     }
                 }
-                if (!isSmallTalk) {
+                if (routerDecision.intent !== 'small_talk') {
                     // Spawn suggestion generation in background - don't await
                     (async () => {
                         try {

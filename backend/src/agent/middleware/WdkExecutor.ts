@@ -1,12 +1,11 @@
 import { ethers } from "ethers";
-import WDK from '@tetherto/wdk';
 import { getPolicyGuard, PolicyViolation } from './PolicyGuard';
 import { logger } from '@/utils/logger';
 
 export class WdkExecutor {
-  private wdk: WDK;
+  private wdk: any;
 
-  constructor(wdk: WDK) {
+  constructor(wdk: any) {
     this.wdk = wdk;
   }
 

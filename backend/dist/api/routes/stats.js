@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const hono_1 = require("hono");
-const ethers_1 = require("@/contracts/clients/ethers");
+const ethers_1 = require("../../contracts/clients/ethers");
 const ethers_2 = require("ethers");
-const env_1 = require("@/config/env");
-const logger_1 = require("@/utils/logger");
+const env_1 = require("../../config/env");
+const logger_1 = require("../../utils/logger");
 const stats = new hono_1.Hono();
 stats.get('/', async (c) => {
     try {
@@ -30,14 +30,16 @@ stats.get('/', async (c) => {
         ]);
         logger_1.logger.debug('[Stats] Formatting response');
         const [canExecute, executeReason] = executionStatus || [false, "0x00"];
+        // USDT has 6 decimals
+        const USDT_DECIMALS = 6;
         // Format results
         const response = {
             vault: {
-                totalAssets: ethers_2.ethers.formatUnits(totalAssets || 0n, 18),
+                totalAssets: ethers_2.ethers.formatUnits(totalAssets || 0n, USDT_DECIMALS),
                 bufferUtilizationBps: (bufferStatus?.utilizationBps || 0n).toString(),
-                bufferCurrent: ethers_2.ethers.formatUnits(bufferStatus?.current || 0n, 18),
-                bufferTarget: ethers_2.ethers.formatUnits(bufferStatus?.target || 0n, 18),
-                usdtBalance: ethers_2.ethers.formatUnits(usdtBalance || 0n, 18)
+                bufferCurrent: ethers_2.ethers.formatUnits(bufferStatus?.current || 0n, USDT_DECIMALS),
+                bufferTarget: ethers_2.ethers.formatUnits(bufferStatus?.target || 0n, USDT_DECIMALS),
+                usdtBalance: ethers_2.ethers.formatUnits(usdtBalance || 0n, USDT_DECIMALS)
             },
             risk: {
                 level: Number(riskMetrics?.monteCarloDrawdownBps || 0) >= 2000 ? 'HIGH' : Number(riskMetrics?.monteCarloDrawdownBps || 0) >= 1000 ? 'MEDIUM' : 'LOW',

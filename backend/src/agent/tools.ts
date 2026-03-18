@@ -192,7 +192,7 @@ export const agentTools = {
       
       for (const network of networks) {
         try {
-          const account = await wdk.getAccount(network);
+          const account = await (await getWdk()).getAccount(network);
           const address = await account.getAddress();
           
           let nativeBalance = "0";
@@ -238,7 +238,7 @@ export const agentTools = {
     }),
     // @ts-ignore
     execute: async ({ context }: { context: string }) => {
-      const riskService = new RiskService(zkOracle as any, breaker as any, wdk);
+      const riskService = new RiskService(zkOracle as any, breaker as any, await getWdk());
       const profile = await riskService.getRiskProfile();
       await reportToDashboard('analyzeRisk', { riskLevel: profile.level, drawdown: profile.drawdownBps, ...profile });
       return profile;
@@ -252,7 +252,7 @@ export const agentTools = {
     }),
     // @ts-ignore
     execute: async ({ reason }: { reason: string }) => {
-      const riskService = new RiskService(null as any, breaker as any, wdk);
+      const riskService = new RiskService(null as any, breaker as any, await getWdk());
       
       const isPaused = await breaker.isPaused();
       if (!isPaused) {
@@ -296,10 +296,10 @@ export const agentTools = {
     }),
     // @ts-ignore
     execute: async ({ context }: { context: string }) => {
-      const bnbAccount = await wdk.getAccount('bnb');
+      const bnbAccount = await (await getWdk()).getAccount('bnb');
       const fromAddress = await bnbAccount.getAddress();
 
-      const riskService = new RiskService(zkOracle as any, breaker as any, wdk);
+      const riskService = new RiskService(zkOracle as any, breaker as any, await getWdk());
       const profile = await riskService.getRiskProfile();
 
       const policyViolation = policyGuard.validateSwapTransaction({
@@ -338,13 +338,13 @@ export const agentTools = {
 
             const allowance = await usdt.allowance(fromAddress, await auction.getAddress());
             if (allowance < myBid) {
-              await wdkExecutor.sendTransaction('bnb', {
+              await (await getWdkExecutor()).sendTransaction('bnb', {
                 to: env.WDK_USDT_ADDRESS,
                 data: usdt.interface.encodeFunctionData("approve", [await auction.getAddress(), ethers.MaxUint256])
               }, { riskLevel: profile.level as any, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
             }
 
-            const bidTx = await wdkExecutor.sendTransaction('bnb', {
+            const bidTx = await (await getWdkExecutor()).sendTransaction('bnb', {
               to: await auction.getAddress(),
               data: auction.interface.encodeFunctionData("bid", [myBid])
             }, { riskLevel: profile.level as any, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
@@ -352,7 +352,7 @@ export const agentTools = {
           } 
           
           if (phase === 2 && status.winner.toLowerCase() === fromAddress.toLowerCase()) {
-            const execTx = await wdkExecutor.sendTransaction('bnb', {
+            const execTx = await (await getWdkExecutor()).sendTransaction('bnb', {
               to: await auction.getAddress(),
               data: auction.interface.encodeFunctionData("winnerExecute", [])
             }, { riskLevel: profile.level as any, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
@@ -393,7 +393,7 @@ export const agentTools = {
       logger.debug({ profitSim }, '[Rebalance] Profit simulation');
 
       try {
-        const tx = await wdkExecutor.sendTransaction('bnb', {
+        const tx = await (await getWdkExecutor()).sendTransaction('bnb', {
           to: txRequest.to,
           data: txRequest.data,
           value: txRequest.value
@@ -419,7 +419,7 @@ export const agentTools = {
     }),
     // @ts-ignore
     execute: async ({ threshold }: { threshold: number }) => {
-      const riskService = new RiskService(zkOracle as any, breaker as any, wdk);
+      const riskService = new RiskService(zkOracle as any, breaker as any, await getWdk());
       const profile = await riskService.getRiskProfile();
 
       const policyViolation = policyGuard.validateBridgeTransaction({
@@ -435,7 +435,7 @@ export const agentTools = {
         return { actionTaken: 'BLOCKED_BY_POLICY', reason: policyViolation.reason };
       }
 
-      const opportunity = await bridgeService.analyzeBridgeOpportunity('bnb', threshold);
+      const opportunity = await (await getBridgeService()).analyzeBridgeOpportunity('bnb', threshold);
 
       if (opportunity.shouldBridge) {
         const currentYield = 0;
@@ -454,7 +454,7 @@ export const agentTools = {
           return { actionTaken: 'SKIPPED_NOT_PROFITABLE', profitMargin: profitSim.profitMargin };
         }
 
-        const bridgeResult = await bridgeService.executeBridge('bnb', opportunity.targetChain || '', 100);
+        const bridgeResult = await (await getBridgeService()).executeBridge('bnb', opportunity.targetChain || '', 100);
         if (bridgeResult.success) {
           policyGuard.recordTransaction('100000000');
           const res = { actionTaken: 'BRIDGED_CAPITAL', txHash: bridgeResult.hash, profitSimulation: profitSim };
@@ -474,7 +474,7 @@ export const agentTools = {
     }),
     // @ts-ignore
     execute: async ({ serviceUrl, providerAddress }: { serviceUrl: string, providerAddress: string }) => {
-      const riskService = new RiskService(zkOracle as any, breaker as any, wdk);
+      const riskService = new RiskService(zkOracle as any, breaker as any, await getWdk());
       const profile = await riskService.getRiskProfile();
 
       const policyViolation = policyGuard.validateSwapTransaction({
@@ -505,7 +505,7 @@ export const agentTools = {
 
         logger.debug({ paymentSim }, '[X402] Payment simulation');
 
-        const insightData = await x402.payAndFetch(serviceUrl, providerAddress, paymentAmount, profile.level as any, portfolioValue.toString());
+        const insightData = await (await getX402Client()).payAndFetch(serviceUrl, providerAddress, paymentAmount, profile.level as any, portfolioValue.toString());
         
         policyGuard.recordTransaction(paymentAmount);
 
@@ -527,8 +527,8 @@ export const agentTools = {
     }),
     // @ts-ignore
     execute: async ({ context }: { context: string }) => {
-      const bnbAccount = await wdk.getAccount('bnb');
-      const spendingAccount = await wdk.getAccount('bnb', 1);
+      const bnbAccount = await (await getWdk()).getAccount('bnb');
+      const spendingAccount = await (await getWdk()).getAccount('bnb', 1);
       const spendingAddress = await spendingAccount.getAddress();
 
       try {
@@ -551,9 +551,9 @@ export const agentTools = {
           logger.debug({ yieldSim }, '[YieldSweep] Yield simulation');
 
           try {
-            const riskService = new RiskService(zkOracle as any, breaker as any, wdk);
+            const riskService = new RiskService(zkOracle as any, breaker as any, await getWdk());
             const profile = await riskService.getRiskProfile();
-            const tx = await wdkExecutor.sendTransaction('bnb', {
+            const tx = await (await getWdkExecutor()).sendTransaction('bnb', {
               to: await vault.getAddress(),
               data: vault.interface.encodeFunctionData("withdrawYield", [spendingAddress])
             }, { riskLevel: profile.level as any, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: yieldAmount.toString() });
@@ -587,12 +587,12 @@ export const agentTools = {
     // @ts-ignore
     execute: async ({ amount }: { amount: string }) => {
       if (!env.WDK_AAVE_ADAPTER_ADDRESS) return { status: "failed", error: "Aave adapter address not configured" };
-      const riskService = new RiskService(zkOracle as any, breaker as any, wdk);
+      const riskService = new RiskService(zkOracle as any, breaker as any, await getWdk());
       const profile = await riskService.getRiskProfile();
       const usdtAmount = ethers.parseUnits(amount, 6);
       
       try {
-        const tx = await wdkExecutor.sendTransaction('bnb', {
+        const tx = await (await getWdkExecutor()).sendTransaction('bnb', {
           to: env.WDK_AAVE_ADAPTER_ADDRESS,
           data: new Interface(["function onVaultDeposit(uint256 amount) external"]).encodeFunctionData("onVaultDeposit", [usdtAmount])
         }, { 
@@ -615,12 +615,12 @@ export const agentTools = {
     // @ts-ignore
     execute: async ({ amount }: { amount: string }) => {
       if (!env.WDK_AAVE_ADAPTER_ADDRESS) return { status: "failed", error: "Aave adapter address not configured" };
-      const riskService = new RiskService(zkOracle as any, breaker as any, wdk);
+      const riskService = new RiskService(zkOracle as any, breaker as any, await getWdk());
       const profile = await riskService.getRiskProfile();
       const usdtAmount = ethers.parseUnits(amount, 6);
       
       try {
-        const tx = await wdkExecutor.sendTransaction('bnb', {
+        const tx = await (await getWdkExecutor()).sendTransaction('bnb', {
           to: env.WDK_AAVE_ADAPTER_ADDRESS,
           data: new Interface(["function withdrawToVault(uint256 amount) external returns (uint256)"]).encodeFunctionData("withdrawToVault", [usdtAmount])
         }, { 
@@ -679,7 +679,7 @@ export const agentTools = {
     // @ts-ignore
     execute: async ({ context }: { context: string }) => {
       try {
-        const account = await wdk.getAccount('bnb');
+        const account = await (await getWdk()).getAccount('bnb');
         const address = await account.getAddress();
         await reportToDashboard('bnb_create_wallet', { address, network: 'bnb' });
         return { success: true, address, network: 'bnb' };
@@ -699,7 +699,7 @@ export const agentTools = {
     // @ts-ignore
     execute: async ({ address, context }: { address?: string; context: string }) => {
        try {
-         const targetAddress = address || (await wdk.getAccount('bnb').then(a => a.getAddress()));
+         const targetAddress = address || (await (await getWdk()).getAccount('bnb').then((a: any) => a.getAddress()));
          const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
          const balanceWei = await provider.getBalance(targetAddress as string);
         const balanceBnb = ethers.formatEther(balanceWei);
@@ -734,7 +734,7 @@ export const agentTools = {
           return { error: check.reason };
         }
 
-        const account = await wdk.getAccount('bnb');
+        const account = await (await getWdk()).getAccount('bnb');
         const result = await (account as any).transfer({ to, amount });
         
         await reportToDashboard('bnb_transfer', { txHash: result?.txHash || result?.hash, to, amount });
@@ -770,7 +770,7 @@ export const agentTools = {
           return { error: check.reason };
         }
 
-        const account = await wdk.getAccount('bnb');
+        const account = await (await getWdk()).getAccount('bnb');
         const result = await (account as any).swap({ tokenIn, tokenOut, amountIn });
         
         await reportToDashboard('bnb_swap', { txHash: result?.txHash || result?.hash, tokenIn, tokenOut, amountIn });
@@ -803,7 +803,7 @@ export const agentTools = {
           return { error: check.reason };
         }
 
-        const account = await wdk.getAccount('bnb');
+        const account = await (await getWdk()).getAccount('bnb');
         const result = await (account as any).supplyAave({ asset, amount });
         
         await reportToDashboard('bnb_supply_aave', { txHash: result?.txHash || result?.hash, asset, amount });
@@ -836,7 +836,7 @@ export const agentTools = {
           return { error: check.reason };
         }
 
-        const account = await wdk.getAccount('bnb');
+        const account = await (await getWdk()).getAccount('bnb');
         const result = await (account as any).withdrawAave({ asset, amount });
         
         await reportToDashboard('bnb_withdraw_aave', { txHash: result?.txHash || result?.hash, asset, amount });
@@ -869,7 +869,7 @@ export const agentTools = {
            return { error: check.reason };
          }
 
-        const account = await wdk.getAccount('bnb');
+        const account = await (await getWdk()).getAccount('bnb');
         const result = await (account as any).bridgeLayerZero({ amount, dstChain });
         
         await reportToDashboard('bnb_bridge_layerzero', { txHash: result?.txHash || result?.hash, amount, dstChain });
@@ -890,7 +890,7 @@ export const agentTools = {
     // @ts-ignore
     execute: async ({ context }: { context: string }) => {
       try {
-        const account = await wdk.getAccount('solana');
+        const account = await (await getWdk()).getAccount('solana');
         const address = await account.getAddress();
         await reportToDashboard('sol_create_wallet', { address, network: 'solana' });
         return { success: true, address, network: 'solana' };
@@ -910,8 +910,8 @@ export const agentTools = {
     // @ts-ignore
     execute: async ({ address, context }: { address?: string; context: string }) => {
       try {
-        const targetAddress = address || (await wdk.getAccount('solana').then(a => a.getAddress()));
-        const account = await wdk.getAccount('solana');
+        const targetAddress = address || (await (await getWdk()).getAccount('solana').then((a: any) => a.getAddress()));
+        const account = await (await getWdk()).getAccount('solana');
         const balance = await (account as any).getBalance(targetAddress);
         
         await reportToDashboard('sol_get_balance', { balance, address: targetAddress });
@@ -944,7 +944,7 @@ export const agentTools = {
           return { error: check.reason };
         }
 
-        const account = await wdk.getAccount('solana');
+        const account = await (await getWdk()).getAccount('solana');
         const result = await (account as any).transfer({ to, amount });
         
         await reportToDashboard('sol_transfer', { txHash: result?.txHash || result?.hash, to, amount });
@@ -980,7 +980,7 @@ export const agentTools = {
           return { error: check.reason };
         }
 
-        const account = await wdk.getAccount('solana');
+        const account = await (await getWdk()).getAccount('solana');
         const result = await (account as any).swap({ tokenIn, tokenOut, amountIn });
         
         await reportToDashboard('sol_swap', { txHash: result?.txHash || result?.hash, tokenIn, tokenOut, amountIn });
@@ -1003,7 +1003,7 @@ export const agentTools = {
     execute: async ({ wallet_index, context }: { wallet_index?: number; context: string }) => {
       try {
         const walletIndex = wallet_index || 0;
-        const account = await wdk.getAccount('ton', walletIndex);
+        const account = await (await getWdk()).getAccount('ton', walletIndex);
         const address = await account.getAddress();
         await reportToDashboard('ton_create_wallet', { address, network: 'ton' });
         return { success: true, address, network: 'ton' };
@@ -1023,8 +1023,8 @@ export const agentTools = {
     // @ts-ignore
     execute: async ({ address, context }: { address?: string; context: string }) => {
       try {
-        const targetAddress = address || (await wdk.getAccount('ton').then(a => a.getAddress()));
-        const account = await wdk.getAccount('ton');
+        const targetAddress = address || (await (await getWdk()).getAccount('ton').then((a: any) => a.getAddress()));
+        const account = await (await getWdk()).getAccount('ton');
         const balance = await (account as any).getBalance(targetAddress);
         
         await reportToDashboard('ton_get_balance', { balance, address: targetAddress });
@@ -1057,7 +1057,7 @@ export const agentTools = {
           return { error: check.reason };
         }
 
-        const account = await wdk.getAccount('ton');
+        const account = await (await getWdk()).getAccount('ton');
         const result = await (account as any).transfer({ to, amount });
         
         await reportToDashboard('ton_transfer', { txHash: result?.txHash || result?.hash, to, amount });

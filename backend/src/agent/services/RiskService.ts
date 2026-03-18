@@ -1,5 +1,4 @@
 import { ethers, BaseContract, Contract } from 'ethers';
-import WDK from '@tetherto/wdk';
 import { generateObject } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
@@ -18,13 +17,13 @@ export interface RiskProfile {
 export class RiskService {
   private zkOracle: Contract;
   private breaker: Contract;
-  private wdk: WDK;
+  private wdk: any;
 
   // Thresholds
   private readonly HIGH_RISK_DRAWDOWN_BPS = 2000; // 20% expected drawdown
   private readonly MEDIUM_RISK_DRAWDOWN_BPS = 1000; // 10% expected drawdown
 
-  constructor(zkOracleContract: Contract, circuitBreakerContract: Contract, wdk: WDK) {
+  constructor(zkOracleContract: Contract, circuitBreakerContract: Contract, wdk: any) {
     this.zkOracle = zkOracleContract;
     this.breaker = circuitBreakerContract;
     this.wdk = wdk;

@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BridgeService = void 0;
-const env_1 = require("@/config/env");
-const logger_1 = require("@/utils/logger");
+const env_1 = require("../../config/env");
+const logger_1 = require("../../utils/logger");
 /**
  * BridgeService handles autonomous cross-chain movements using WDK.
  */

@@ -16,15 +16,18 @@ const dashboard_1 = __importDefault(require("./api/routes/dashboard"));
 const robot_fleet_1 = __importDefault(require("./api/routes/robot-fleet"));
 const x402_1 = __importDefault(require("./api/routes/x402"));
 const mcp_1 = __importDefault(require("./api/routes/mcp"));
+const security_1 = require("./api/middleware/security");
 const AutonomousLoop_1 = require("./agent/AutonomousLoop");
-const security_1 = require("./config/security");
+const security_2 = require("./config/security");
 const RobotFleetService_1 = require("./services/RobotFleetService");
 const logger_1 = require("./utils/logger");
 const app = new hono_1.Hono();
+// Apply security middleware
+(0, security_1.createSecurityMiddleware)(app);
 // Global Error Handler
 app.onError((err, c) => {
     logger_1.logger.error(err, '[Hono Error]');
-    return c.json({ error: 'Internal Server Error', message: err.message }, 500);
+    return c.json({ error: 'Internal Server Error', message: 'An unexpected error occurred' }, 500);
 });
 // Middleware
 app.use('*', (0, hono_pino_1.pinoLogger)({
@@ -94,7 +97,7 @@ if (isMain) {
         }
         // Validate critical environment variables before starting agent
         try {
-            (0, security_1.validateEnvironment)();
+            (0, security_2.validateEnvironment)();
         }
         catch (e) {
             logger_1.logger.error(e, '[Config] Environment validation failed');

@@ -1,4 +1,3 @@
-import WDK from '@tetherto/wdk';
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
 
@@ -6,9 +5,9 @@ import { logger } from '@/utils/logger';
  * BridgeService handles autonomous cross-chain movements using WDK.
  */
 export class BridgeService {
-  private wdk: WDK;
+  private wdk: any;
 
-  constructor(wdk: WDK, bnbRpc?: string, solanaRpc?: string, tonRpc?: string) {
+  constructor(wdk: any, bnbRpc?: string, solanaRpc?: string, tonRpc?: string) {
     this.wdk = wdk;
   }
 
