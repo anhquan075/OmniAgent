@@ -195,25 +195,16 @@ export function validateJWT() {
     }
     
     const authHeader = c.req.header('Authorization');
-    if (!authHeader) {
-      logger.warn({ path, ip: c.req.header('CF-Connecting-IP') }, '[Security] Missing Authorization header');
-      return c.json({ error: 'Unauthorized', message: 'Authorization header required' }, 401);
+    if (authHeader && authHeader !== 'Bearer undefined' && authHeader !== 'Bearer null') {
+      const token = authHeader.replace('Bearer ', '');
+      if (token) {
+        const payload = await verifyToken(token);
+        if (payload) {
+          c.set('jwtPayload', payload);
+          c.set('userId', payload.sub);
+        }
+      }
     }
-    
-    const token = authHeader.replace('Bearer ', '');
-    if (!token) {
-      logger.warn({ path, ip: c.req.header('CF-Connecting-IP') }, '[Security] Missing token');
-      return c.json({ error: 'Unauthorized', message: 'Token required' }, 401);
-    }
-    
-    const payload = await verifyToken(token);
-    if (!payload) {
-      logger.warn({ path, ip: c.req.header('CF-Connecting-IP') }, '[Security] Invalid or expired token');
-      return c.json({ error: 'Unauthorized', message: 'Invalid or expired token' }, 401);
-    }
-    
-    c.set('jwtPayload', payload);
-    c.set('userId', payload.sub);
     
     await next();
   };
