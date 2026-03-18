@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const node_server_1 = require("@hono/node-server");
 const hono_1 = require("hono");
 const hono_pino_1 = require("hono-pino");
 const cors_1 = require("hono/cors");
@@ -81,44 +82,33 @@ const isMain = process.argv[1]?.endsWith('src/index.ts') ||
     process.argv[1]?.endsWith('dist/index.js');
 if (isMain) {
     logger_1.logger.info(`[OmniAgent] WDK Strategist API starting on port ${port}`);
-    startServer();
-    async function startServer() {
-        const { serve } = await import('@hono/node-server');
-        serve({
-            fetch: app.fetch,
-            port
-        }, async (info) => {
-            logger_1.logger.info(`[Server] Server is running on http://localhost:${info.port}`);
-            // Start robot fleet simulator
-            try {
-                await RobotFleetService_1.robotFleetService.startSimulator();
-                logger_1.logger.info('[RobotFleet] Robot Fleet Simulator started successfully');
-            }
-            catch (e) {
-                logger_1.logger.warn(e, '[RobotFleet] Robot fleet simulator failed to start');
-            }
-            // Validate critical environment variables before starting agent
-            try {
-                (0, security_2.validateEnvironment)();
-            }
-            catch (e) {
-                logger_1.logger.error(e, '[Config] Environment validation failed');
-                logger_1.logger.warn('[Agent] Autonomous Agent Loop will NOT start due to missing/invalid secrets');
-                return;
-            }
-            if (env_1.env.DEPLOYMENT_MODE === 'production') {
-                logger_1.logger.info('[Deployment] Production mode: autonomous loop disabled (use POST /api/agent/run-cycle via cron)');
-                return;
-            }
-            if (process.env.ALLOW_AGENT_RUN !== 'true') {
-                logger_1.logger.warn('[Agent] Autonomous Agent Loop skipped (ALLOW_AGENT_RUN not set)');
-                return;
-            }
-            logger_1.logger.info('[Agent] Starting Integrated Autonomous Loop (Dynamic Scheduling)');
-            (0, AutonomousLoop_1.startAutonomousLoop)().catch((e) => {
-                logger_1.logger.error(e, '[Agent] Failed to start Autonomous Loop');
-            });
+    (0, node_server_1.serve)({
+        fetch: app.fetch,
+        port
+    }, async (info) => {
+        logger_1.logger.info(`[Server] Server is running on http://localhost:${info.port}`);
+        try {
+            await RobotFleetService_1.robotFleetService.startSimulator();
+        }
+        catch (e) {
+            logger_1.logger.warn(e, '[RobotFleet] Robot fleet simulator failed to start');
+        }
+        try {
+            (0, security_2.validateEnvironment)();
+        }
+        catch (e) {
+            logger_1.logger.error(e, '[Config] Environment validation failed');
+            return;
+        }
+        if (env_1.env.DEPLOYMENT_MODE === 'production') {
+            return;
+        }
+        if (process.env.ALLOW_AGENT_RUN !== 'true') {
+            return;
+        }
+        (0, AutonomousLoop_1.startAutonomousLoop)().catch((e) => {
+            logger_1.logger.error(e, '[Agent] Failed to start Autonomous Loop');
         });
-    }
+    });
 }
 exports.default = app;
