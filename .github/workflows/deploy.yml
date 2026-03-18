@@ -48,6 +48,9 @@ jobs:
           pnpm tsc functions/_worker.ts --outDir functions --module NodeNext --moduleResolution NodeNext --target ESNext --esModuleInterop --skipLibCheck
 
       - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           cd backend
           npx wrangler pages deploy . --project-name omni-agent
