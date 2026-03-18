@@ -1,8 +1,5 @@
 import { Hono } from 'hono';
 import { logger } from '@/utils/logger';
-import { env } from '@/config/env';
-import * as jose from 'jose';
-import type { KeyLike } from 'jose';
 
 type Cache = {
   ip: string;
@@ -62,77 +59,6 @@ const SECURITY_HEADERS = {
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
 };
 
-const PUBLIC_ENDPOINTS = [
-  '/health',
-  '/api/stats',
-  '/api/mcp',
-];
-
-const PROTECTED_ENDPOINTS = [
-  '/api/chat',
-  '/api/agent/run-cycle',
-  '/api/agent/webhook',
-  '/api/robot-fleet',
-];
-
-let jwtSecret: Uint8Array | undefined;
-
-async function getJWTSecret(): Promise<Uint8Array | undefined> {
-  if (jwtSecret) return jwtSecret;
-  
-  if (env.JWT_SECRET && env.JWT_SECRET.length >= 32) {
-    jwtSecret = new TextEncoder().encode(env.JWT_SECRET);
-    return jwtSecret;
-  }
-  
-  if (!env.JWT_SECRET) {
-    logger.debug('[Security] JWT_SECRET not configured');
-  } else {
-    logger.warn('[Security] JWT_SECRET too short (min 32 chars)');
-  }
-  return undefined;
-}
-
-export interface JWTPayload {
-  sub: string;
-  iat?: number;
-  exp?: number;
-  roles?: string[];
-  permissions?: string[];
-}
-
-export async function createToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): Promise<string | null> {
-  const secret = await getJWTSecret();
-  if (!secret) {
-    logger.warn('[JWT] Cannot create token - no valid secret');
-    return null;
-  }
-  
-  const token = await new jose.SignJWT({ ...payload })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('1h')
-    .sign(secret);
-  
-  return token;
-}
-
-export async function verifyToken(token: string): Promise<JWTPayload | null> {
-  const secret = await getJWTSecret();
-  if (!secret) {
-    logger.warn('[JWT] Cannot verify token - no valid secret');
-    return null;
-  }
-  
-  try {
-    const { payload } = await jose.jwtVerify(token, secret);
-    return payload as JWTPayload;
-  } catch (error) {
-    logger.debug({ error: (error as Error).message }, '[JWT] Token verification failed');
-    return null;
-  }
-}
-
 export function createRateLimiter(limit: number, windowMs: number) {
   return async (c: any, next: () => Promise<void>) => {
     const ip = c.req.header('CF-Connecting-IP') || c.req.header('X-Real-IP') || c.req.header('X-Forwarded-For')?.split(',')[0]?.trim() || 'unknown';
@@ -176,36 +102,16 @@ export function securityHeaders() {
 
 export function validateJWT() {
   return async (c: any, next: () => Promise<void>) => {
-    const path = c.req.path;
-    
-    const isPublic = PUBLIC_ENDPOINTS.some(endpoint => path.startsWith(endpoint));
-    if (isPublic) {
-      return await next();
+    const origin = c.req.header('Origin');
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://omni-wdk.vercel.app',
+    ];
+    if (origin && !allowedOrigins.includes(origin)) {
+      logger.warn({ origin }, '[Security] Rejected invalid origin');
+      return c.json({ error: 'Forbidden', message: 'Invalid origin' }, 403);
     }
-    
-    const isProtected = PROTECTED_ENDPOINTS.some(endpoint => path.startsWith(endpoint));
-    if (!isProtected) {
-      return await next();
-    }
-    
-    const jwtSecret = await getJWTSecret();
-    if (!jwtSecret) {
-      logger.debug('[Security] JWT_SECRET not configured, skipping JWT validation');
-      return await next();
-    }
-    
-    const authHeader = c.req.header('Authorization');
-    if (authHeader && authHeader !== 'Bearer undefined' && authHeader !== 'Bearer null') {
-      const token = authHeader.replace('Bearer ', '');
-      if (token) {
-        const payload = await verifyToken(token);
-        if (payload) {
-          c.set('jwtPayload', payload);
-          c.set('userId', payload.sub);
-        }
-      }
-    }
-    
     await next();
   };
 }
@@ -277,5 +183,5 @@ export function createSecurityMiddleware(app: Hono) {
   app.use('*', requestLogger());
   app.use('*', validateJWT());
   
-  logger.info('[Security] Middleware applied with JWT auth');
+  logger.info('[Security] Middleware applied (CORS + rate limit)');
 }

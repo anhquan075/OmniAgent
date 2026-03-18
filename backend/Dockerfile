@@ -1,4 +1,4 @@
-FROM node:20-alpine AS build
+FROM node:20-bookworm-slim AS build
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
@@ -12,10 +12,10 @@ COPY backend/src/ ./src/
 
 RUN pnpm run build
 
-FROM node:20-alpine AS production
+FROM node:20-bookworm-slim AS production
 
 RUN corepack enable && corepack prepare pnpm@latest --activate && \
-    addgroup -S appgroup && adduser -S appuser -G appgroup
+    groupadd -S appgroup && useradd -S appuser -G appgroup
 
 WORKDIR /app
 
@@ -27,7 +27,6 @@ RUN pnpm config set store-dir /root/.pnpm-store
 
 ENV NODE_ENV=production
 ENV PORT=3001
-ENV USER=appuser
 
 EXPOSE 8000
 
