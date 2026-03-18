@@ -77,7 +77,7 @@ function ContractAddressBadge({ label, address, icon: Icon, bscScanAddr }) {
 export default function OmniAgentVaultV2Client() {
   const [, setStatus] = useState("Loading live data...");
   const [busyAction, setBusyAction] = useState(null);
-  const { networkMode, isTestnet, isCreditcoin, setNetworkMode } = useNetworkMode();
+  const { networkMode, isTestnet, setNetworkMode } = useNetworkMode();
   const networkConfig = NETWORK_CONFIGS[networkMode];
   const {
     vaultAddress,
@@ -373,7 +373,7 @@ export default function OmniAgentVaultV2Client() {
     <section className="panel panel--enhanced">
       <VaultTopNavbar busyAction={busyAction} />
 
-      {(isTestnet || isCreditcoin) && (
+      {(isTestnet) && (
         <VaultTestnetDevPanel
           tokenAddress={tokenAddress}
           signer={wallet.signer}

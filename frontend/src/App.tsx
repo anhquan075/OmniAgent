@@ -1,22 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ShieldAlertIcon, ActivityIcon, CoinsIcon, BarChart3Icon, ZapIcon, LayoutDashboardIcon, ShieldCheckIcon, GlobeIcon, ServerIcon, LinkIcon, BrainCircuitIcon, MenuIcon, XIcon, BotIcon, Zap, Loader2, ExternalLink } from 'lucide-react';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount } from 'wagmi';
-import { useQueryClient } from '@tanstack/react-query';
+import { getApiUrl } from "@/lib/api";
 import { useChat } from "@ai-sdk/react";
-import { lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
-import { useQuery } from '@tanstack/react-query';
-import { z } from 'zod';
-import { motion, AnimatePresence } from 'framer-motion';
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  BotIcon,
+  BrainCircuitIcon,
+  ExternalLink,
+  Loader2,
+  MenuIcon,
+  ServerIcon,
+  XIcon,
+  Zap,
+} from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { useAccount } from "wagmi";
 import { ChatContainer } from "./components/chat/ChatContainer";
 import { ChatHistorySidebar } from "./components/chat/ChatHistorySidebar";
-import { WDKBalance } from "./components/shared/WDKBalance";
 import AgentBrain from "./components/dashboard/AgentBrain";
 import FleetStatus from "./components/dashboard/FleetStatus";
 import MCPServerDemo from "./components/dashboard/MCPServerDemo";
-import { GuestSplash } from "./components/shared/GuestSplash";
 import { ConnectionModal } from "./components/shared/ConnectionModal";
-
+import { GuestSplash } from "./components/shared/GuestSplash";
 interface BentoCardProps {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -24,43 +30,53 @@ interface BentoCardProps {
   className?: string;
 }
 
-const BentoCard = ({ title, icon: Icon, children, className = "" }: BentoCardProps) => (
-  <div className={`rounded-2xl p-4 md:p-6 flex flex-col gap-4 shadow-2xl transition-all duration-500 group bg-space-black/60 backdrop-blur-xl border border-white/10 hover:border-tether-teal/30 hover:shadow-[0_0_20px_rgba(38,161,123,0.1)] relative overflow-hidden ${className}`}>
+const BentoCard = ({
+  title,
+  icon: Icon,
+  children,
+  className = "",
+}: BentoCardProps) => (
+  <div
+    className={`rounded-2xl p-4 md:p-6 flex flex-col gap-4 shadow-2xl transition-all duration-500 group bg-space-black/60 backdrop-blur-xl border border-white/10 hover:border-tether-teal/30 hover:shadow-[0_0_20px_rgba(38,161,123,0.1)] relative overflow-hidden ${className}`}
+  >
     <div className="absolute top-0 right-0 w-32 h-32 bg-tether-teal/5 rounded-full blur-[60px] pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
     <div className="flex items-center justify-between flex-shrink-0 relative z-10">
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-lg bg-white/5 text-tether-teal group-hover:scale-110 transition-transform font-heading border border-white/5 group-hover:border-tether-teal/30 group-hover:bg-tether-teal/10">
           <Icon className="w-4 h-4" />
         </div>
-        <h3 className="font-heading text-[10px] tracking-[0.2em] text-neutral-gray-light uppercase group-hover:text-white transition-colors">{title}</h3>
+        <h3 className="font-heading text-[10px] tracking-[0.2em] text-neutral-gray-light uppercase group-hover:text-white transition-colors">
+          {title}
+        </h3>
       </div>
       <div className="w-1.5 h-1.5 rounded-full bg-tether-teal/40 shadow-[0_0_8px_rgba(38,161,123,0.4)] animate-pulse"></div>
     </div>
-    <div className="flex-1 min-h-0 relative z-10">
-      {children}
-    </div>
+    <div className="flex-1 min-h-0 relative z-10">{children}</div>
   </div>
 );
 
-const INITIAL_SESSION_ID = 'session-' + Date.now();
+const INITIAL_SESSION_ID = "session-" + Date.now();
 
 export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
   const [mcpToolsExpanded, setMcpToolsExpanded] = useState(true);
   const [minting, setMinting] = useState(false);
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [notification, setNotification] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
   const queryClient = useQueryClient();
   const { address, isConnected } = useAccount();
 
   // Local state for input as per modern ai-sdk best practices
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   // Live Stats Fetching
   const { data: stats, refetch: refetchStats } = useQuery({
-    queryKey: ['agent-stats'],
+    queryKey: ["agent-stats"],
     queryFn: async () => {
-      const res = await fetch('/api/stats');
-      if (!res.ok) throw new Error('Stats fetch failed');
+      const res = await fetch(getApiUrl("/api/stats"));
+      if (!res.ok) throw new Error("Stats fetch failed");
       return res.json();
     },
     refetchInterval: 10000,
@@ -68,72 +84,106 @@ export default function App() {
 
   const handleMint = async () => {
     if (!isConnected || !address) {
-      setNotification({ type: 'error', message: 'Please connect wallet first' });
+      setNotification({
+        type: "error",
+        message: "Please connect wallet first",
+      });
       setTimeout(() => setNotification(null), 5000);
       return;
     }
     setNotification(null);
     setMinting(true);
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${API_URL}/api/mcp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch(getApiUrl("/api/mcp"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          jsonrpc: '2.0',
+          jsonrpc: "2.0",
           id: Date.now(),
-          method: 'tools/call',
-          params: { name: 'wdk_mint_test_token', arguments: { amount: '10000', recipient: address, context: 'User minting via dashboard' } }
-        })
+          method: "tools/call",
+          params: {
+            name: "wdk_mint_test_token",
+            arguments: {
+              amount: "10000",
+              recipient: address,
+              context: "User minting via dashboard",
+            },
+          },
+        }),
       });
       const data = await response.json();
       if (data.error) {
-        setNotification({ type: 'error', message: data.error.message || 'Minting failed' });
+        setNotification({
+          type: "error",
+          message: data.error.message || "Minting failed",
+        });
       } else {
-        setNotification({ type: 'success', message: 'Minted 10,000 USDT' });
+        setNotification({ type: "success", message: "Minted 10,000 USDT" });
         setTimeout(() => refetchStats(), 2000);
       }
     } catch (error) {
-      setNotification({ type: 'error', message: error instanceof Error ? error.message : 'Minting failed' });
+      setNotification({
+        type: "error",
+        message: error instanceof Error ? error.message : "Minting failed",
+      });
     } finally {
       setMinting(false);
       setTimeout(() => setNotification(null), 5000);
     }
   };
 
-  const agentState = stats?.system?.isPaused ? 'IDLE' : (stats?.system?.canExecute ? 'EXECUTING' : (stats?.system ? 'SCANNING' : 'IDLE'));
-  
+  const agentState = stats?.system?.isPaused
+    ? "IDLE"
+    : stats?.system?.canExecute
+      ? "EXECUTING"
+      : stats?.system
+        ? "SCANNING"
+        : "IDLE";
+
   const [sessions, setSessions] = useState([
-    { id: INITIAL_SESSION_ID, title: 'Strategy Setup', lastMessage: 'WDK Monitoring Active', timestamp: new Date() }
+    {
+      id: INITIAL_SESSION_ID,
+      title: "Strategy Setup",
+      lastMessage: "WDK Monitoring Active",
+      timestamp: new Date(),
+    },
   ]);
   const [activeSessionId, setActiveSessionId] = useState(INITIAL_SESSION_ID);
 
-  const { messages, sendMessage, status, setMessages,     stop,
+  const {
+    messages,
+    sendMessage,
+    status,
+    setMessages,
+    stop,
     regenerate,
     error,
-    addToolResult
+    addToolResult,
   } = useChat({
-    api: '/api/chat',
+    api: "/api/chat",
     id: activeSessionId,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     initialMessages: [
       {
         id: "initial-1",
         role: "assistant",
-        content: "System initialized. I am your **OmniAgent Strategist**. I am currently monitoring cross-chain liquidity for USDT and XAUT yield optimization.",
-      } as any
+        content:
+          "System initialized. I am your **OmniAgent Strategist**. I am currently monitoring cross-chain liquidity for USDT and XAUT yield optimization.",
+      } as any,
     ],
     experimental_onData: (dataPart: any) => {
-      if (dataPart.type === 'data-notification') {
-        console.log(`[Notification] ${dataPart.data.level}: ${dataPart.data.message}`);
+      if (dataPart.type === "data-notification") {
+        console.log(
+          `[Notification] ${dataPart.data.level}: ${dataPart.data.message}`,
+        );
       }
     },
     onError: (err) => {
       console.error("[App] useChat Error:", err);
-    }
+    },
   } as any);
 
-  const isLoading = status === 'submitted' || status === 'streaming';
+  const isLoading = status === "submitted" || status === "streaming";
 
   const initialUpdatedRef = useRef(false);
 
@@ -145,15 +195,22 @@ export default function App() {
       {
         id: "initial-1",
         role: "assistant",
-        content: "System initialized. I am your **OmniAgent Strategist**. I am currently monitoring cross-chain liquidity for USDT and XAUT yield optimization.",
-      } as any
+        content:
+          "System initialized. I am your **OmniAgent Strategist**. I am currently monitoring cross-chain liquidity for USDT and XAUT yield optimization.",
+      } as any,
     ]);
   }, [activeSessionId, setMessages]);
 
   // Update initial message when wallet connects or stats arrive
   useEffect(() => {
-    if (isConnected && address && messages?.length === 1 && messages[0].id === "initial-1" && !initialUpdatedRef.current) {
-      const portfolioMsg = stats?.vault?.totalAssets 
+    if (
+      isConnected &&
+      address &&
+      messages?.length === 1 &&
+      messages[0].id === "initial-1" &&
+      !initialUpdatedRef.current
+    ) {
+      const portfolioMsg = stats?.vault?.totalAssets
         ? ` My sensors indicate a total vault value of **${stats.vault.totalAssets} USDT** with **${(stats.risk?.drawdownBps || 0) / 100}%** expected drawdown.`
         : "";
 
@@ -163,7 +220,7 @@ export default function App() {
           id: "initial-1",
           role: "assistant",
           content: `System initialized. Welcome back, Commander **${address.slice(0, 6)}...${address.slice(-4)}**. I am your **OmniAgent Autonomous Strategist**. All settlement rails are hot.${portfolioMsg}`,
-        } as any
+        } as any,
       ]);
     }
   }, [isConnected, address, setMessages, stats, messages?.length]);
@@ -177,21 +234,26 @@ export default function App() {
 
   const handleNewChat = () => {
     // Stop any active stream first
-    if (status === 'streaming' || status === 'submitted') {
+    if (status === "streaming" || status === "submitted") {
       stop();
     }
-    
+
     const newId = Date.now().toString();
-    const newSession = { id: newId, title: 'New Command', lastMessage: 'No commands yet', timestamp: new Date() };
-    
-    setSessions(prev => [newSession, ...prev]);
-    
+    const newSession = {
+      id: newId,
+      title: "New Command",
+      lastMessage: "No commands yet",
+      timestamp: new Date(),
+    };
+
+    setSessions((prev) => [newSession, ...prev]);
+
     // CRITICAL: Change activeSessionId FIRST
     // This causes useChat hook to re-initialize with new `id` prop and load initialMessages
     // If we setMessages() before changing activeSessionId, the hook reset clears our messages
     initialUpdatedRef.current = false;
     setActiveSessionId(newId);
-    
+
     // Let useChat hook initialize with initialMessages on the new session ID
     // The hook will use initialMessages from config when id changes
     setIsMobileMenuOpen(false);
@@ -201,18 +263,22 @@ export default function App() {
   useEffect(() => {
     if (messages && messages.length > 1) {
       const lastMsg = messages[messages.length - 1];
-      if (lastMsg.role === 'user') {
+      if (lastMsg.role === "user") {
         let content = "Command sent";
         const msgContent = (lastMsg as any).content;
-        if (typeof msgContent === 'string') {
+        if (typeof msgContent === "string") {
           content = msgContent;
         } else if ((lastMsg as any).parts) {
           content = (lastMsg as any).parts
-            .filter((p: any) => p.type === 'text')
+            .filter((p: any) => p.type === "text")
             .map((p: any) => p.text)
-            .join('');
+            .join("");
         }
-        setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, lastMessage: content } : s));
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === activeSessionId ? { ...s, lastMessage: content } : s,
+          ),
+        );
       }
     }
   }, [messages, activeSessionId]);
@@ -221,26 +287,31 @@ export default function App() {
     setInput(e.target.value);
   };
 
-  const onHandleSubmit = async (e?: React.FormEvent | { preventDefault: () => void }, overrideText?: string) => {
+  const onHandleSubmit = async (
+    e?: React.FormEvent | { preventDefault: () => void },
+    overrideText?: string,
+  ) => {
     if (e && e.preventDefault) e.preventDefault();
-    
+
     const text = (overrideText || input).trim();
     if (!text) return;
 
     // Validate messages array exists and is not empty
     if (!Array.isArray(messages) || messages.length === 0) {
-      console.warn("[App] Cannot send message - invalid messages state", { messages });
+      console.warn("[App] Cannot send message - invalid messages state", {
+        messages,
+      });
       return;
     }
 
-    if (status === 'streaming' || status === 'submitted') {
+    if (status === "streaming" || status === "submitted") {
       stop();
     }
 
-    setInput('');
-    
+    setInput("");
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
       await sendMessage({ text });
     } catch (err) {
       console.error("[App] Failed to send message:", err);
@@ -257,14 +328,13 @@ export default function App() {
 
   return (
     <div className="h-screen w-full bg-space-black text-white font-sans flex flex-col items-center selection:bg-tether-teal/30 overflow-hidden">
-      
       <AnimatePresence>
         {!isConnected && <GuestSplash key="splash" />}
       </AnimatePresence>
 
-      <ConnectionModal 
-        isOpen={isConnectionModalOpen} 
-        onClose={() => setIsConnectionModalOpen(false)} 
+      <ConnectionModal
+        isOpen={isConnectionModalOpen}
+        onClose={() => setIsConnectionModalOpen(false)}
       />
 
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -276,27 +346,34 @@ export default function App() {
           Dashboard Container with Action Gate 
           When not connected, clicking anywhere on the blurred dashboard triggers the modal.
       */}
-      <div 
+      <div
         onClick={!isConnected ? handleRestrictedAction : undefined}
-        className={`w-full h-full flex flex-col relative z-10 p-3 md:p-6 overflow-hidden transition-all duration-1000 ${!isConnected ? 'blur-2xl scale-110 opacity-30 cursor-pointer' : 'blur-0 scale-100 opacity-100'}`}
+        className={`w-full h-full flex flex-col relative z-10 p-3 md:p-6 overflow-hidden transition-all duration-1000 ${!isConnected ? "blur-2xl scale-110 opacity-30 cursor-pointer" : "blur-0 scale-100 opacity-100"}`}
       >
-        
         <header className="h-14 md:h-16 flex-shrink-0 flex items-center justify-between px-4 md:px-6 glass rounded-2xl border border-white/10 mb-3 md:mb-4 shadow-glow-sm relative z-50">
           <div className="flex items-center gap-3 md:gap-4">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-space-black flex items-center justify-center shadow-glow-md overflow-hidden border border-tether-teal/20">
-              <img src="/imgs/mascot-owl-no-bg.png" alt="OmniAgent" className="w-full h-full object-contain" />
+              <img
+                src="/imgs/mascot-owl-no-bg.png"
+                alt="OmniAgent"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div className="flex flex-col">
-              <h1 className="text-sm md:text-lg font-heading font-bold tracking-tight bg-clip-text text-transparent bg-[linear-gradient(135deg,#26A17B,#00D1FF)] uppercase truncate max-w-[150px] md:max-w-none">OmniAgent</h1>
+              <h1 className="text-sm md:text-lg font-heading font-bold tracking-tight bg-clip-text text-transparent bg-[linear-gradient(135deg,#26A17B,#00D1FF)] uppercase truncate max-w-[150px] md:max-w-none">
+                OmniAgent
+              </h1>
               <div className="flex items-center gap-2">
                 <span className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-tether-teal"></span>
-                <span className="text-[7px] md:text-[9px] font-heading tracking-widest text-neutral-gray-light uppercase">Strategist Active</span>
+                <span className="text-[7px] md:text-[9px] font-heading tracking-widest text-neutral-gray-light uppercase">
+                  Strategist Active
+                </span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2 md:gap-4">
             <div className="h-8 border-l border-white/10 mx-1 md:mx-2 hidden lg:block"></div>
-            
+
             {/* Mint Button - positioned left of BNB Chain badge */}
             <div className="flex items-center gap-1">
               <button
@@ -304,21 +381,27 @@ export default function App() {
                 disabled={minting || !isConnected}
                 className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-semibold rounded-md border transition-all disabled:opacity-50"
                 style={{
-                  background: minting ? 'rgba(234, 179, 8, 0.04)' : 'rgba(234, 179, 8, 0.12)',
-                  borderColor: 'rgba(234, 179, 8, 0.4)',
-                  color: '#FBBF24',
-                  cursor: minting || !isConnected ? 'not-allowed' : 'pointer',
+                  background: minting
+                    ? "rgba(234, 179, 8, 0.04)"
+                    : "rgba(234, 179, 8, 0.12)",
+                  borderColor: "rgba(234, 179, 8, 0.4)",
+                  color: "#FBBF24",
+                  cursor: minting || !isConnected ? "not-allowed" : "pointer",
                 }}
               >
-                {minting ? <Loader2 size={11} className="animate-spin" /> : <Zap size={11} />}
-                {minting ? 'Minting...' : 'Mint 10k'}
+                {minting ? (
+                  <Loader2 size={11} className="animate-spin" />
+                ) : (
+                  <Zap size={11} />
+                )}
+                {minting ? "Minting..." : "Mint 10k"}
               </button>
               <a
                 href="https://testnet.bscscan.com/token/0xdea54eC5150Aa35ef2686b02EdD20b050430Ad7D"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1"
-                style={{ color: 'rgba(251, 191, 36, 0.5)' }}
+                style={{ color: "rgba(251, 191, 36, 0.5)" }}
                 onClick={(e) => e.stopPropagation()}
               >
                 <ExternalLink size={10} />
@@ -327,11 +410,23 @@ export default function App() {
 
             <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 mr-2 shadow-glow-sm">
               <div className="w-5 h-5 rounded-full bg-[#F3BA2F]/10 flex items-center justify-center border border-[#F3BA2F]/20">
-                <img src="/coins/bnb.png" alt="BNB Chain" className="w-3.5 h-3.5 object-contain" />
+                <img
+                  src="/coins/bnb.png"
+                  alt="BNB Chain"
+                  className="w-3.5 h-3.5 object-contain"
+                />
               </div>
               <div className="flex flex-col leading-none">
-                <span className="text-[9px] font-bold text-[#F3BA2F] uppercase">BNB Chain</span>
-                <span className="text-[7px] text-neutral-gray uppercase tracking-wider">{import.meta.env.VITE_DEFAULT_NETWORK?.includes('mainnet') || import.meta.env.VITE_DEFAULT_NETWORK?.includes('bsc') && !import.meta.env.VITE_DEFAULT_NETWORK?.includes('testnet') ? 'Mainnet' : 'Testnet'}</span>
+                <span className="text-[9px] font-bold text-[#F3BA2F] uppercase">
+                  BNB Chain
+                </span>
+                <span className="text-[7px] text-neutral-gray uppercase tracking-wider">
+                  {import.meta.env.VITE_DEFAULT_NETWORK?.includes("mainnet") ||
+                  (import.meta.env.VITE_DEFAULT_NETWORK?.includes("bsc") &&
+                    !import.meta.env.VITE_DEFAULT_NETWORK?.includes("testnet"))
+                    ? "Mainnet"
+                    : "Testnet"}
+                </span>
               </div>
             </div>
 
@@ -341,85 +436,118 @@ export default function App() {
                 initial={{ opacity: 0, y: -5, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 className={`absolute top-full right-0 mt-2 px-3 py-2 rounded-lg border text-[11px] font-medium whitespace-nowrap z-50 ${
-                  notification.type === 'success' 
-                    ? 'bg-green-500/20 border-green-500/40 text-green-400' 
-                    : 'bg-red-500/20 border-red-500/40 text-red-400'
+                  notification.type === "success"
+                    ? "bg-green-500/20 border-green-500/40 text-green-400"
+                    : "bg-red-500/20 border-red-500/40 text-red-400"
                 }`}
               >
-                {notification.type === 'success' ? '✓' : '✗'} {notification.message}
+                {notification.type === "success" ? "✓" : "✗"}{" "}
+                {notification.message}
               </motion.div>
             )}
             <div className="scale-75 md:scale-100 origin-right">
-              <ConnectButton chainStatus="none" showBalance={false} accountStatus="address" />
+              <ConnectButton
+                chainStatus="none"
+                showBalance={false}
+                accountStatus="address"
+              />
             </div>
-            <button 
+            <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="lg:hidden p-2 rounded-lg bg-white/5 border border-white/10 text-tether-teal"
             >
-              {isMobileMenuOpen ? <XIcon className="w-5 h-5" /> : <MenuIcon className="w-5 h-5" />}
+              {isMobileMenuOpen ? (
+                <XIcon className="w-5 h-5" />
+              ) : (
+                <MenuIcon className="w-5 h-5" />
+              )}
             </button>
           </div>
         </header>
 
         <div className="flex-1 flex flex-col lg:flex-row gap-3 md:gap-6 relative overflow-hidden">
-
           {/* Column 1: Monitoring */}
-          <div className={`
-            ${isMobileMenuOpen ? 'fixed inset-0 top-[68px] md:top-[80px] z-40 bg-space-black/95 p-6 overflow-y-auto' : 'hidden'} 
+          <div
+            className={`
+            ${isMobileMenuOpen ? "fixed inset-0 top-[68px] md:top-[80px] z-40 bg-space-black/95 p-6 overflow-y-auto" : "hidden"} 
             lg:relative lg:inset-auto lg:flex lg:flex-[2.5] xl:flex-[2] lg:flex-col lg:gap-4 xl:gap-6 lg:min-w-0 lg:min-h-0 lg:bg-transparent lg:overflow-hidden
-          `}>
-            <BentoCard title="MCP Tools" icon={ServerIcon} className={`shrink-0 transition-all duration-300 ${mcpToolsExpanded ? 'h-[400px] md:h-[480px]' : 'h-[40px]'}`}>
-              <MCPServerDemo isExpanded={mcpToolsExpanded} onToggleExpand={setMcpToolsExpanded} />
+          `}
+          >
+            <BentoCard
+              title="MCP Tools"
+              icon={ServerIcon}
+              className={`shrink-0 transition-all duration-300 ${mcpToolsExpanded ? "h-[400px] md:h-[480px]" : "h-[40px]"}`}
+            >
+              <MCPServerDemo
+                isExpanded={mcpToolsExpanded}
+                onToggleExpand={setMcpToolsExpanded}
+              />
             </BentoCard>
 
             <div className="flex-1 min-h-0 glass-dark rounded-3xl overflow-hidden border border-white/10 relative mt-4 lg:mt-0">
-              <ChatHistorySidebar 
+              <ChatHistorySidebar
                 sessions={sessions}
                 activeSessionId={activeSessionId}
-                onSelectSession={(id) => { setActiveSessionId(id); setIsMobileMenuOpen(false); }}
+                onSelectSession={(id) => {
+                  setActiveSessionId(id);
+                  setIsMobileMenuOpen(false);
+                }}
                 onNewChat={handleNewChat}
-                onDeleteSession={(id) => setSessions(s => s.filter(x => x.id !== id))}
+                onDeleteSession={(id) =>
+                  setSessions((s) => s.filter((x) => x.id !== id))
+                }
               />
             </div>
           </div>
 
           {/* Column 2: Agent Terminal */}
-          <div className={`flex-[7] xl:flex-[6] flex flex-col min-w-0 min-h-0 glass-dark rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative ${isMobileMenuOpen ? 'hidden lg:flex' : 'flex'}`}>
+          <div
+            className={`flex-[7] xl:flex-[6] flex flex-col min-w-0 min-h-0 glass-dark rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative ${isMobileMenuOpen ? "hidden lg:flex" : "flex"}`}
+          >
             <div className="flex-1 flex flex-col min-h-0">
-               <ChatContainer
-                 messages={messages}
-                 sendMessage={sendMessage}
-                 status={status}
-                 input={input}
-                 handleInputChange={onInputChange}
-                 handleSubmit={onHandleSubmit}
-                 setMessages={setMessages}
-                 regenerate={regenerate}
-                 stop={stop}
-                 error={error}
-                 data={stats ? [ { type: 'data-status', data: stats } ] : []}
-               />
+              <ChatContainer
+                messages={messages}
+                sendMessage={sendMessage}
+                status={status}
+                input={input}
+                handleInputChange={onInputChange}
+                handleSubmit={onHandleSubmit}
+                setMessages={setMessages}
+                regenerate={regenerate}
+                stop={stop}
+                error={error}
+                data={stats ? [{ type: "data-status", data: stats }] : []}
+              />
             </div>
           </div>
 
           {/* Column 3: Operational State */}
-          <div className={`
-            ${isMobileMenuOpen ? 'fixed inset-0 top-[68px] md:top-[80px] z-40 bg-space-black/95 p-6 overflow-y-auto' : 'hidden'} 
+          <div
+            className={`
+            ${isMobileMenuOpen ? "fixed inset-0 top-[68px] md:top-[80px] z-40 bg-space-black/95 p-6 overflow-y-auto" : "hidden"} 
             xl:relative xl:inset-auto xl:flex xl:flex-[2.5] 2xl:flex-[2] xl:flex-col xl:gap-4 2xl:gap-6 xl:min-w-0 xl:min-h-0 xl:bg-transparent xl:overflow-hidden xl:pl-1
-          `}>
+          `}
+          >
             <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-6 pr-1">
-              <BentoCard title="Robot Fleet Operations" icon={BotIcon} className="min-h-[280px] shrink-0">
+              <BentoCard
+                title="Robot Fleet Operations"
+                icon={BotIcon}
+                className="min-h-[280px] shrink-0"
+              >
                 <FleetStatus />
               </BentoCard>
 
-              <BentoCard title="Agent Live Strategy" icon={BrainCircuitIcon} className="flex-1 min-h-[300px]">
+              <BentoCard
+                title="Agent Live Strategy"
+                icon={BrainCircuitIcon}
+                className="flex-1 min-h-[300px]"
+              >
                 <div className="h-full overflow-y-auto custom-scrollbar pr-2">
                   <AgentBrain stats={stats} />
                 </div>
               </BentoCard>
             </div>
           </div>
-
         </div>
 
         <footer className="h-10 md:h-12 flex-shrink-0 flex items-center justify-between mt-2 md:mt-4 px-2 opacity-40">
@@ -427,11 +555,18 @@ export default function App() {
             Economic Infrastructure Powered by Tether WDK
           </p>
           <div className="flex items-center gap-2 md:gap-4 text-[7px] md:text-[9px] font-mono whitespace-nowrap">
-            <span className="hidden sm:inline">NETWORK: <span className="text-tether-teal uppercase">Multi-Chain</span></span>
-            <span>SETTLEMENT: <span className="text-cyber-cyan uppercase">{stats?.system?.isPaused ? 'PAUSED' : 'ONLINE'}</span></span>
+            <span className="hidden sm:inline">
+              NETWORK:{" "}
+              <span className="text-tether-teal uppercase">Multi-Chain</span>
+            </span>
+            <span>
+              SETTLEMENT:{" "}
+              <span className="text-cyber-cyan uppercase">
+                {stats?.system?.isPaused ? "PAUSED" : "ONLINE"}
+              </span>
+            </span>
           </div>
         </footer>
-
       </div>
     </div>
   );

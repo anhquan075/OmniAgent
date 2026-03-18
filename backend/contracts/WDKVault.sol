@@ -15,7 +15,7 @@ import {TransientReentrancyGuard} from "./TransientReentrancyGuard.sol";
 
 /**
  * @title OmniAgentVault
- * @notice OmniAgent OmniAgentVault V2 (Polkadot Hub Adaptation)
+ * @notice OmniAgent OmniAgentVault V2
  */
 contract OmniAgentVault is ERC4626, Ownable, TransientReentrancyGuard {
     using SafeERC20 for IERC20;

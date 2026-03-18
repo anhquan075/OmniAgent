@@ -1,3 +1,4 @@
+import { getApiUrl } from "@/lib/api";
 import {
   BotIcon,
   ChevronDownIcon,
@@ -800,7 +801,7 @@ export default function MCPServerDemo({
       if (address) headers["x-user-wallet"] = address;
       if (isConnected) headers["x-wallet-connected"] = "true";
 
-      const response = await fetch("/api/mcp", {
+      const response = await fetch(getApiUrl("/api/mcp"), {
         method: "POST",
         headers,
         body: JSON.stringify({

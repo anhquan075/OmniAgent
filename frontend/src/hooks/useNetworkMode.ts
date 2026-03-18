@@ -20,8 +20,6 @@ export function useNetworkMode() {
   return {
     networkMode,
     isTestnet: true,
-    isPolkadotHub: false,
-    isCreditcoin: false,
     toggleNetworkMode,
     setNetworkMode,
   };

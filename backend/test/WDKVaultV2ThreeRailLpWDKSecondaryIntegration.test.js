@@ -13,7 +13,7 @@ describe("OmniAgentVault V2 — Three-Rail LP Integration", function () {
     // Mock tokens
     const MockERC20 = await ethers.getContractFactory("MockERC20");
     const usdt = await MockERC20.deploy("USDT", "USDT");
-    // Force 6 decimals for USDT/WDKS to match Polkadot Hub USDC
+    // Force 6 decimals for USDT/WDKS to match BUIDL USDC
     await usdt.setDecimals(6);
     const wdks = await MockERC20.deploy("WDKS", "WDKS");
     await wdks.setDecimals(6);
