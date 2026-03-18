@@ -1,8 +1,4 @@
 name = "omni-agent"
 compatibility_date = "2024-09-23"
-compatibility_flags = ["nodejs_compat"]
 
-pages_build_output_dir = "public"
-
-[vars]
-NODE_VERSION = "18"
+pages_build_output_dir = "dist"
