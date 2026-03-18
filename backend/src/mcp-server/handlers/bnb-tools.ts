@@ -1,12 +1,17 @@
 import { McpTool, McpExecutionContext, MCP_ERRORS } from '../types/mcp-protocol';
 import { ethers } from 'ethers';
-import WDK from '@tetherto/wdk';
-import WalletEVM from '@tetherto/wdk-wallet-evm';
 import { getPolicyGuard } from '@/agent/middleware/PolicyGuard';
 import { env } from '@/config/env';
+import { getWdkForBNB } from '@/lib/wdk-loader';
 
-const wdk = new WDK(env.WDK_SECRET_SEED);
-wdk.registerWallet('bnb', WalletEVM, { provider: env.BNB_RPC_URL } as any);
+let wdkPromise: Promise<any> | null = null;
+
+async function getWdk() {
+  if (!wdkPromise) {
+    wdkPromise = getWdkForBNB();
+  }
+  return wdkPromise;
+}
 
 const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
 const signer = env.PRIVATE_KEY 
@@ -199,6 +204,7 @@ export async function handleBnbTool(name: string, params: Record<string, unknown
     switch (name) {
       case 'bnb_createWallet': {
         const walletIndex = (params.walletIndex as number) || 0;
+        const wdk = await getWdk();
         const account = await wdk.getAccount('bnb', walletIndex);
         const address = await account.getAddress();
         return { success: true, data: { address, network: 'bnb' } };
@@ -208,6 +214,7 @@ export async function handleBnbTool(name: string, params: Record<string, unknown
         let targetAddress = params.address as string;
         if (!targetAddress) {
           try {
+            const wdk = await getWdk();
             const account = await wdk.getAccount('bnb');
             targetAddress = await account.getAddress();
           } catch (e) {
@@ -278,6 +285,7 @@ export async function handleBnbTool(name: string, params: Record<string, unknown
           return { success: false, error: { code: MCP_ERRORS.POLICY_VIOLATION, message: policyViolation.reason } };
         }
 
+        const wdk = await getWdk();
         const account = await wdk.getAccount('bnb');
         
         if (tokenAddress && tokenAddress !== ethers.ZeroAddress) {

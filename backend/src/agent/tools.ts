@@ -1,13 +1,10 @@
 import { ethers, Interface, Contract } from "ethers";
-import WDK from '@tetherto/wdk';
-import WalletEVM from '@tetherto/wdk-wallet-evm';
-import WalletSolana from '@tetherto/wdk-wallet-solana';
-import WalletTON from '@tetherto/wdk-wallet-ton';
 import { RiskService } from './services/RiskService';
 import { BridgeService } from './services/BridgeService';
 import { SimulationService } from './services/SimulationService';
 import { X402Client } from './x402-client';
 import { getPolicyGuard } from './middleware/PolicyGuard';
+import { getWDK, getWalletEVM, getWalletSolana, getWalletTON } from '@/lib/wdk-loader';
 import { WdkExecutor } from './middleware/WdkExecutor';
 import { createProfitSimulator } from './services/ProfitSimulator';
 import { tool } from "ai";
@@ -48,18 +45,66 @@ function validateWDKSecretSeed(): void {
 
 validateWDKSecretSeed();
 
-// Initialize WDK
-export const wdk = new WDK(env.WDK_SECRET_SEED);
-wdk.registerWallet('bnb', WalletEVM, { provider: env.BNB_RPC_URL } as any);
-wdk.registerWallet('solana', WalletSolana, { rpcUrl: env.SOLANA_RPC_URL } as any);
-wdk.registerWallet('ton', WalletTON, { rpcUrl: env.TON_RPC_URL } as any);
+let wdkPromise: Promise<any> | null = null;
+
+export async function getWdk() {
+  if (!wdkPromise) {
+    wdkPromise = (async () => {
+      const [WDK, WalletEVM, WalletSolana, WalletTON] = await Promise.all([
+        getWDK(),
+        getWalletEVM(),
+        getWalletSolana(),
+        getWalletTON()
+      ]);
+      await Promise.all([
+        WDK.registerWallet('bnb', WalletEVM, { provider: env.BNB_RPC_URL } as any),
+        WDK.registerWallet('solana', WalletSolana, { rpcUrl: env.SOLANA_RPC_URL } as any),
+        WDK.registerWallet('ton', WalletTON, { rpcUrl: env.TON_RPC_URL } as any)
+      ]);
+      return WDK;
+    })();
+  }
+  return wdkPromise;
+}
 
 const { engine, vault, usdt, zkOracle, breaker, auction } = getContracts();
-const bridgeService = new BridgeService(wdk);
-const x402 = new X402Client(wdk, env.WDK_USDT_ADDRESS);
+
+let bridgeServicePromise: Promise<BridgeService> | null = null;
+let x402Promise: Promise<X402Client> | null = null;
+let wdkExecutorPromise: Promise<WdkExecutor> | null = null;
+
+async function getBridgeService() {
+  if (!bridgeServicePromise) {
+    bridgeServicePromise = (async () => {
+      const wdk = await getWdk();
+      return new BridgeService(wdk);
+    })();
+  }
+  return bridgeServicePromise;
+}
+
+async function getX402Client() {
+  if (!x402Promise) {
+    x402Promise = (async () => {
+      const wdk = await getWdk();
+      return new X402Client(wdk, env.WDK_USDT_ADDRESS);
+    })();
+  }
+  return x402Promise;
+}
+
+async function getWdkExecutor() {
+  if (!wdkExecutorPromise) {
+    wdkExecutorPromise = (async () => {
+      const wdk = await getWdk();
+      return new WdkExecutor(wdk);
+    })();
+  }
+  return wdkExecutorPromise;
+}
+
 const profitSimulator = createProfitSimulator(env.BNB_RPC_URL);
 const policyGuard = getPolicyGuard();
-const wdkExecutor = new WdkExecutor(wdk);
 
 
 // Helper to report agent state

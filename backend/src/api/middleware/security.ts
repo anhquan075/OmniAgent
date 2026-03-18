@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { logger } from '@/utils/logger';
 import { env } from '@/config/env';
 import * as jose from 'jose';
+import type { KeyLike } from 'jose';
 
 type Cache = {
   ip: string;
@@ -74,9 +75,9 @@ const PROTECTED_ENDPOINTS = [
   '/api/robot-fleet',
 ];
 
-let jwtSecret: jose.KeyLike | undefined;
+let jwtSecret: Uint8Array | undefined;
 
-async function getJWTSecret(): Promise<jose.KeyLike | undefined> {
+async function getJWTSecret(): Promise<Uint8Array | undefined> {
   if (jwtSecret) return jwtSecret;
   
   if (env.JWT_SECRET && env.JWT_SECRET.length >= 32) {

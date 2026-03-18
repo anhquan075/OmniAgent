@@ -1,25 +1,55 @@
 import { McpTool, McpExecutionContext, MCP_ERRORS } from '../types/mcp-protocol';
 import { ethers } from 'ethers';
-import WDK from '@tetherto/wdk';
-import WalletSolana from '@tetherto/wdk-wallet-solana';
 import { getPolicyGuard } from '@/agent/middleware/PolicyGuard';
 import { env } from '@/config/env';
 import { Connection, LAMPORTS_PER_SOL, PublicKey, Keypair, Transaction, SystemProgram, sendAndConfirmTransaction } from '@solana/web3.js';
-import bs58 from 'bs58';
+import { getWDK, getWalletSolana } from '@/lib/wdk-loader';
 
-const wdk = new WDK(env.WDK_SECRET_SEED);
-wdk.registerWallet('solana', WalletSolana, { rpcUrl: env.SOLANA_RPC_URL } as any);
+let wdkPromise: Promise<any> | null = null;
+let solConnection: Connection | null = null;
 const policyGuard = getPolicyGuard();
-const solConnection = new Connection(env.SOLANA_RPC_URL);
+
+async function getWdk() {
+  if (!wdkPromise) {
+    wdkPromise = (async () => {
+      const [WDK, WalletSolana] = await Promise.all([
+        getWDK(),
+        getWalletSolana()
+      ]);
+      await WDK.registerWallet('solana', WalletSolana, { rpcUrl: env.SOLANA_RPC_URL } as any);
+      return WDK;
+    })();
+  }
+  return wdkPromise;
+}
+
+function getSolConnection() {
+  if (!solConnection) {
+    solConnection = new Connection(env.SOLANA_RPC_URL);
+  }
+  return solConnection;
+}
 
 let solKeypair: Keypair | null = null;
-if (env.SOLANA_PRIVATE_KEY) {
-  try {
-    const decoded = bs58.decode(env.SOLANA_PRIVATE_KEY);
-    solKeypair = Keypair.fromSecretKey(decoded);
-    policyGuard.addToWhitelist(solKeypair.publicKey.toBase58());
-  } catch (e) {
-    console.error('[MCP] Failed to parse SOL key:', e);
+let bs58Promise: Promise<any> | null = null;
+
+async function getBs58() {
+  if (!bs58Promise) {
+    bs58Promise = import('bs58').then(m => m.default);
+  }
+  return bs58Promise;
+}
+
+async function initSolKeypair() {
+  if (env.SOLANA_PRIVATE_KEY && !solKeypair) {
+    try {
+      const bs58 = await getBs58();
+      const decoded = bs58.decode(env.SOLANA_PRIVATE_KEY);
+      solKeypair = Keypair.fromSecretKey(decoded);
+      policyGuard.addToWhitelist(solKeypair.publicKey.toBase58());
+    } catch (e) {
+      console.error('[MCP] Failed to parse SOL key:', e);
+    }
   }
 }
 
@@ -127,17 +157,19 @@ export async function handleSolanaTool(name: string, params: Record<string, unkn
     switch (name) {
       case 'sol_createWallet': {
         const walletIndex = (params.walletIndex as number) || 0;
+        const wdk = await getWdk();
         const account = await wdk.getAccount('solana', walletIndex);
         const address = await account.getAddress();
         return { success: true, data: { address, network: 'solana' } };
       }
 
       case 'sol_getBalance': {
-        const targetAddress = (params.address as string) || (await wdk.getAccount('solana').then(a => a.getAddress()));
+        const wdk = await getWdk();
+        const targetAddress = (params.address as string) || (await wdk.getAccount('solana').then((a: any) => a.getAddress()));
         
         try {
           const pubKey = new PublicKey(targetAddress);
-          const balance = await solConnection.getBalance(pubKey);
+          const balance = await getSolConnection().getBalance(pubKey);
           const balanceSol = balance / LAMPORTS_PER_SOL;
           
           return { success: true, data: {
@@ -157,6 +189,7 @@ export async function handleSolanaTool(name: string, params: Record<string, unkn
         const to = params.to as string;
         const amount = params.amount as string;
         
+        await initSolKeypair();
         if (!solKeypair) {
           return { success: false, error: { code: MCP_ERRORS.TOOL_EXECUTION_FAILED, message: 'Solana private key not configured' } };
         }
@@ -173,7 +206,7 @@ export async function handleSolanaTool(name: string, params: Record<string, unkn
             })
           );
           
-          const signature = await sendAndConfirmTransaction(solConnection, tx, [solKeypair]);
+          const signature = await sendAndConfirmTransaction(getSolConnection(), tx, [solKeypair]);
           
           return { success: true, data: { txHash: signature, status: 'confirmed' } };
         } catch (error) {

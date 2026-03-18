@@ -1,14 +1,33 @@
 import { McpTool, McpExecutionContext, MCP_ERRORS } from '../types/mcp-protocol';
-import WDK from '@tetherto/wdk';
-import WalletTON from '@tetherto/wdk-wallet-ton';
 import { getPolicyGuard } from '@/agent/middleware/PolicyGuard';
 import { env } from '@/config/env';
 import { TonClient, Address } from '@ton/ton';
+import { getWDK, getWalletTON } from '@/lib/wdk-loader';
 
-const wdk = new WDK(env.WDK_SECRET_SEED);
-wdk.registerWallet('ton', WalletTON, { rpcUrl: env.TON_RPC_URL } as any);
+let wdkPromise: Promise<any> | null = null;
+let tonClient: TonClient | null = null;
 const policyGuard = getPolicyGuard();
-const tonClient = new TonClient({ endpoint: env.TON_RPC_URL });
+
+async function getWdk() {
+  if (!wdkPromise) {
+    wdkPromise = (async () => {
+      const [WDK, WalletTON] = await Promise.all([
+        getWDK(),
+        getWalletTON()
+      ]);
+      await WDK.registerWallet('ton', WalletTON, { rpcUrl: env.TON_RPC_URL } as any);
+      return WDK;
+    })();
+  }
+  return wdkPromise;
+}
+
+function getTonClient() {
+  if (!tonClient) {
+    tonClient = new TonClient({ endpoint: env.TON_RPC_URL });
+  }
+  return tonClient;
+}
 
 export const tonTools: McpTool[] = [
   {
@@ -89,17 +108,19 @@ export async function handleTonTool(name: string, params: Record<string, unknown
     switch (name) {
       case 'ton_createWallet': {
         const walletIndex = (params.walletIndex as number) || 0;
+        const wdk = await getWdk();
         const account = await wdk.getAccount('ton', walletIndex);
         const address = await account.getAddress();
         return { success: true, data: { address, network: 'ton' } };
       }
 
       case 'ton_getBalance': {
-        const targetAddress = (params.address as string) || (await wdk.getAccount('ton').then(a => a.getAddress()));
+        const wdk = await getWdk();
+        const targetAddress = (params.address as string) || (await wdk.getAccount('ton').then((a: any) => a.getAddress()));
         
         try {
           const addr = Address.parse(targetAddress);
-          const balance = await tonClient.getBalance(addr);
+          const balance = await getTonClient().getBalance(addr);
           const balanceTon = Number(balance) / 1e9;
           
           return { success: true, data: {
@@ -120,6 +141,7 @@ export async function handleTonTool(name: string, params: Record<string, unknown
         const amount = params.amount as string;
         
         try {
+          const wdk = await getWdk();
           const account = await wdk.getAccount('ton');
           const address = await account.getAddress();
           const recipient = Address.parse(to);

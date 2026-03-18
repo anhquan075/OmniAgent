@@ -1,15 +1,36 @@
-import { McpTool, MCP_ERRORS } from '../types/mcp-protocol';
+import { McpTool, McpExecutionContext, MCP_ERRORS } from '../types/mcp-protocol';
 import { ethers } from 'ethers';
-import WDK from '@tetherto/wdk';
-import WalletEVM, { WalletAccountEvm } from '@tetherto/wdk-wallet-evm';
 import { env } from '@/config/env';
+import { getWDK, getWalletEVM, getWalletAccountEvm } from '@/lib/wdk-loader';
 
-const wdk = new WDK(env.WDK_SECRET_SEED);
-wdk.registerWallet('bnb', WalletEVM, { provider: env.BNB_RPC_URL } as any);
+let wdkPromise: Promise<any> | null = null;
+let walletAccountPromise: Promise<any> | null = null;
 
-const walletAccount = new WalletAccountEvm(env.WDK_SECRET_SEED, "0'/0/0", {
-  provider: env.BNB_RPC_URL
-});
+async function initWDK() {
+  if (!wdkPromise) {
+    wdkPromise = (async () => {
+      const [WDK, WalletEVM] = await Promise.all([
+        getWDK(),
+        getWalletEVM()
+      ]);
+      await WDK.registerWallet('bnb', WalletEVM, { provider: env.BNB_RPC_URL } as any);
+      return WDK;
+    })();
+  }
+  return wdkPromise;
+}
+
+async function getWalletAccount() {
+  if (!walletAccountPromise) {
+    walletAccountPromise = (async () => {
+      const WalletAccountEvm = await getWalletAccountEvm();
+      return new WalletAccountEvm(env.WDK_SECRET_SEED, "0'/0/0", {
+        provider: env.BNB_RPC_URL
+      });
+    })();
+  }
+  return walletAccountPromise;
+}
 
 const MOCK_AAVE_POOL_ADDRESS = env.MOCK_AAVE_POOL_ADDRESS;
 const MOCK_BRIDGE_ADDRESS = env.MOCK_BRIDGE_ADDRESS;
@@ -330,7 +351,7 @@ export const wdkTools: McpTool[] = [
   }
 ];
 
-export async function handleWdkTool(name: string, params: Record<string, unknown>) {
+export async function handleWdkTool(name: string, params: Record<string, unknown>, context: McpExecutionContext) {
   try {
     switch (name) {
       case 'wdk_mint_test_token': {
@@ -338,6 +359,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         const usdtAddress = env.WDK_USDT_ADDRESS;
         if (!usdtAddress) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'USDT address not configured' } };
 
+        const walletAccount = await getWalletAccount();
         const address = await walletAccount.getAddress();
         
         // Use ethers for minting (test token only)
@@ -360,6 +382,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       case 'wdk_vault_deposit': {
         const amount = (params.amount as string) || '100';
         
+        const walletAccount = await getWalletAccount();
         const address = await walletAccount.getAddress();
         
         const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
@@ -399,6 +422,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       case 'wdk_vault_withdraw': {
         const amount = (params.amount as string) || '10';
         
+        const walletAccount = await getWalletAccount();
         const address = await walletAccount.getAddress();
         
         const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
@@ -421,6 +445,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       }
       
       case 'wdk_vault_getBalance': {
+        const walletAccount = await getWalletAccount();
         const address = (params.account as string) || await walletAccount.getAddress();
         
         const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
@@ -496,6 +521,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       }
       
       case 'wdk_aave_getPosition': {
+        const walletAccount = await getWalletAccount();
         const userAddress = (params.user as string) || await walletAccount.getAddress();
         const data = await getAavePosition(userAddress);
         
