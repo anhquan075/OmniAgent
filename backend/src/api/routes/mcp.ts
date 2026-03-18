@@ -93,9 +93,13 @@ mcpRoute.post('/', async (c) => {
 
     if (method === 'tools/call') {
       const { name, arguments: args } = params;
-      const toolName = String(name).trim();
+      const rawToolName = String(name);
+      const toolName = rawToolName.trim();
       const requestId = String(id || `req-${Date.now()}`);
 
+      if (rawToolName !== toolName) {
+        logger.warn({ raw: rawToolName, trimmed: toolName }, '[MCP] Tool name had whitespace - trimmed');
+      }
       logger.info({ tool: toolName, args: JSON.stringify(args).slice(0, 100), requestId }, '[MCP] Executing tool');
 
       const context: McpExecutionContext = {
