@@ -15,7 +15,7 @@ RUN pnpm run build
 FROM node:20-bookworm-slim AS production
 
 RUN corepack enable && corepack prepare pnpm@latest --activate && \
-    groupadd -S appgroup && useradd -S appuser -G appgroup
+    addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
 WORKDIR /app
 
@@ -28,7 +28,7 @@ RUN pnpm config set store-dir /root/.pnpm-store
 ENV NODE_ENV=production
 ENV PORT=3001
 
-EXPOSE 8000
+EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1
