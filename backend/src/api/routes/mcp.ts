@@ -93,9 +93,10 @@ mcpRoute.post('/', async (c) => {
 
     if (method === 'tools/call') {
       const { name, arguments: args } = params;
+      const toolName = String(name).trim();
       const requestId = String(id || `req-${Date.now()}`);
 
-      logger.info({ tool: name, args: JSON.stringify(args).slice(0, 100), requestId }, '[MCP] Executing tool');
+      logger.info({ tool: toolName, args: JSON.stringify(args).slice(0, 100), requestId }, '[MCP] Executing tool');
 
       const context: McpExecutionContext = {
         requestId,
@@ -105,10 +106,10 @@ mcpRoute.post('/', async (c) => {
         walletMode: userWalletAddress ? 'user' : 'agent'
       };
 
-      const result = await registry.executeTool(name, args || {}, context);
+      const result = await registry.executeTool(toolName, args || {}, context);
 
       if (!result.success) {
-        logger.error({ tool: name, error: result.error }, '[MCP] Tool execution failed');
+        logger.error({ tool: toolName, error: result.error }, '[MCP] Tool execution failed');
         return c.json({
           jsonrpc: '2.0',
           id,
@@ -119,7 +120,7 @@ mcpRoute.post('/', async (c) => {
         });
       }
 
-      logger.info({ tool: name, success: true }, '[MCP] Tool executed successfully');
+      logger.info({ tool: toolName, success: true }, '[MCP] Tool executed successfully');
       return c.json({
         jsonrpc: '2.0',
         id,
