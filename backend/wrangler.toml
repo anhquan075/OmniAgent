@@ -1,16 +1,8 @@
 name = "omni-agent"
-compatibility_date = "2024-01-01"
-main = "dist/index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+pages_build_output_dir = "public"
 
 [vars]
 NODE_VERSION = "18"
-
-[build]
-command = "npm run build"
-cwd = "."
-
-[env.production]
-vars = { ENVIRONMENT = "production" }
-
-[env.staging]
-vars = { ENVIRONMENT = "staging" }

@@ -1,4 +1,3 @@
-import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { pinoLogger } from 'hono-pino';
 import { cors } from 'hono/cors';
@@ -87,8 +86,11 @@ const isMain = process.argv[1]?.endsWith('src/index.ts') ||
 
 if (isMain) {
   logger.info(`[OmniAgent] WDK Strategist API starting on port ${port}`);
+  startServer();
 
-  serve({
+  async function startServer() {
+    const { serve } = await import('@hono/node-server');
+    serve({
     fetch: app.fetch,
     port
   }, async (info) => {
@@ -127,6 +129,7 @@ if (isMain) {
       logger.error(e, '[Agent] Failed to start Autonomous Loop');
     });
   });
+  }
 }
 
 export default app;

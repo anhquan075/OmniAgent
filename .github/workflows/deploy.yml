@@ -36,19 +36,21 @@ jobs:
           cd backend
           pnpm install --frozen-lockfile
 
-      - name: TypeScript type check
+      - name: Install wrangler
+        run: |
+          cd backend
+          pnpm add -D wrangler@latest
+
+      - name: Build
         run: |
           cd backend
           pnpm run build
+          pnpm tsc functions/_worker.ts --outDir functions --module NodeNext --moduleResolution NodeNext --target ESNext --esModuleInterop --skipLibCheck
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: omni-agent
-          directory: backend
-          # branch: main
+        run: |
+          cd backend
+          npx wrangler pages deploy . --project-name omni-agent
 
       - name: Post Deployment URL
         run: |
