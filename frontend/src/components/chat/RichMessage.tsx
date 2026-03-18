@@ -42,9 +42,8 @@ export function RichMessage({ role, content, parts, toolInvocations, timestamp, 
   };
 
   const renderToolInvocation = (part: any) => {
-    const { toolCallId, toolName, state, args } = part;
-    const result = part.result;
-
+    const { toolCallId, toolName, state, args, input, output, result } = part;
+    
     const toolTitles: Record<string, string> = {
       get_vault_status: 'Vault Analytics',
       get_all_chain_balances: 'Multi-Chain Balance',
@@ -58,26 +57,41 @@ export function RichMessage({ role, content, parts, toolInvocations, timestamp, 
       check_cross_chain_yields: 'Cross-Chain Yield',
     };
 
-    const title = toolTitles[toolName] || toolName;
-    const isCompleted = state === 'result';
+    let toolState: string = 'input-available';
     
-    // Map to Tool component status
-    let status = 'input-available';
-    if (isCompleted) status = 'output-available';
-    // TODO: Handle error state if `part.error` exists or result indicates error
+    if (state === 'result' || state === 'output-available') {
+      toolState = 'output-available';
+    } else if (state === 'output-error' || part.error) {
+      toolState = 'output-error';
+    } else if (state === 'input-streaming') {
+      toolState = 'input-streaming';
+    } else if (state === 'call' || state === 'tool-call') {
+      toolState = 'input-available';
+    }
+
+    const title = toolTitles[toolName] || toolName;
+    const isCompleted = toolState === 'output-available' || toolState === 'output-error';
+    const hasError = toolState === 'output-error';
+    const isPending = toolState === 'input-streaming';
 
     return (
       <Tool key={toolCallId} defaultOpen={!isCompleted} className="border-white/5 bg-white/5">
         <ToolHeader 
           toolName={toolName} 
           title={title} 
-          state={status} 
+          state={toolState} 
           type="function"
         />
         <ToolContent>
-          {args && Object.keys(args).length > 0 && (
-            <ToolInput input={args} />
-          )}
+          {/* Render tool input/args - for both pending and completed states */}
+          {(args && Object.keys(args).length > 0) || (input && Object.keys(input).length > 0) ? (
+            <ToolInput input={input || args || {}} />
+          ) : isPending ? (
+            <div className="flex items-center gap-2 p-3 text-[10px] text-neutral-gray">
+              <div className="w-2 h-2 rounded-full bg-cyber-cyan animate-pulse" />
+              Collecting parameters...
+            </div>
+          ) : null}
           
           {isCompleted && (
             <>
@@ -123,7 +137,7 @@ export function RichMessage({ role, content, parts, toolInvocations, timestamp, 
                     </div>
                  </div>
               ) : (
-                <ToolOutput output={result} />
+                <ToolOutput output={output || result} errorText={hasError ? (result?.error || 'Tool execution failed') : undefined} />
               )}
             </>
           )}
