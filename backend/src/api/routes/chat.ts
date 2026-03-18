@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
 
-import { agentTools } from '@/agent/tools';
+import { agentTools, normalizedAgentTools } from '@/agent/tools';
 import { loadChat, saveChat } from '../../utils/chat-store';
 
 const chat = new Hono();
@@ -129,7 +129,7 @@ chat.post('/', async (c) => {
           maxSteps: 10,
           maxToolRoundtrips: 3,
           temperature: 0,
-          tools: isSmallTalk ? {} : agentTools as any,
+          tools: isSmallTalk ? {} : normalizedAgentTools as any,
           onStepFinish: (arg: any) => {
             const toolResults = arg?.toolResults;
             const toolCalls = arg?.toolCalls;

@@ -1946,3 +1946,16 @@ export const agentTools = {
     }
   })
 };
+
+// Proxy to normalize tool names (trim whitespace from AI model tool calls)
+export const normalizedAgentTools = new Proxy(agentTools, {
+  get(target, prop) {
+    const trimmedProp = typeof prop === 'string' ? prop.trim() : prop;
+    if (trimmedProp !== prop) {
+      logger.debug({ original: prop, trimmed: trimmedProp }, '[Tools] Tool name had whitespace - normalizing');
+    }
+    const tool = target[trimmedProp as keyof typeof target];
+    if (tool) return tool;
+    return target[prop as keyof typeof target];
+  }
+});
