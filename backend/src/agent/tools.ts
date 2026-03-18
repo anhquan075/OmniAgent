@@ -1429,18 +1429,20 @@ export const agentTools = {
     }),
     // @ts-ignore
     execute: async ({ salt, context }: { salt?: string; context: string }) => {
+      if (!env.ERC4337_FACTORY_ADDRESS) {
+        return { error: 'ERC4337_FACTORY_ADDRESS not configured. Set it in .env file.' };
+      }
       try {
         const signer = ethers.Wallet.fromPhrase(env.WDK_SECRET_SEED, new ethers.JsonRpcProvider(env.BNB_RPC_URL));
-        const accountSalt = salt || ethers.toBeHex(0);
         
-        // Get factory and create account
-        const factoryContract = new ethers.Contract(env.ERC4337_FACTORY_ADDRESS!, ['function createAccount(address owner, uint256 salt) external returns (address)'], signer);
         const signerAddress = await signer.getAddress();
-        const tx = await factoryContract.createAccount(signerAddress, accountSalt);
+        
+        const factoryContract = new ethers.Contract(env.ERC4337_FACTORY_ADDRESS, ['function createAccount(address owner) external returns (address)'], signer);
+        const tx = await factoryContract.createAccount(signerAddress);
         await tx.wait();
         
-        await reportToDashboard('erc4337_create_account', { txHash: tx.hash, salt: accountSalt });
-        return { success: true, txHash: tx.hash, salt: accountSalt };
+        await reportToDashboard('erc4337_create_account', { txHash: tx.hash });
+        return { success: true, txHash: tx.hash };
       } catch (e: any) {
         logger.error(e, '[Tools] Error in erc4337_create_account');
         throw e;
@@ -1449,23 +1451,23 @@ export const agentTools = {
   }),
 
   erc4337_get_account_address: tool({
-    description: 'Get predicted smart account address',
+    description: 'Get smart account address for owner',
     parameters: z.object({
-      salt: z.string().optional().describe('Salt used for account creation'),
-      context: z.string().describe('Reason for getting account address.')
+      owner: z.string().optional().describe('Owner address (defaults to agent wallet)')
     }),
     // @ts-ignore
-    execute: async ({ salt, context }: { salt?: string; context: string }) => {
+    execute: async ({ owner }: { owner?: string }) => {
+      if (!env.ERC4337_FACTORY_ADDRESS) {
+        return { error: 'ERC4337_FACTORY_ADDRESS not configured. Set it in .env file.' };
+      }
       try {
         const signer = ethers.Wallet.fromPhrase(env.WDK_SECRET_SEED, new ethers.JsonRpcProvider(env.BNB_RPC_URL));
-        const accountSalt = salt || ethers.toBeHex(0);
+        const ownerAddress = owner || await signer.getAddress();
         
-        // Get factory and predict address
-         const FACTORY_ABI = ['function getAddress(address owner, uint256 salt) external view returns (address)'];
-         const factoryContract = new ethers.Contract(env.ERC4337_FACTORY_ADDRESS!, FACTORY_ABI, new ethers.JsonRpcProvider(env.BNB_RPC_URL));
-         const signerAddress = await signer.getAddress();
-         const address = await (factoryContract as any).getAddress(signerAddress, accountSalt);
-        
+        const FACTORY_ABI = ['function getAccountAddress(address owner) external view returns (address)'];
+        const factoryContract = new ethers.Contract(env.ERC4337_FACTORY_ADDRESS, FACTORY_ABI, new ethers.JsonRpcProvider(env.BNB_RPC_URL));
+        const address = await factoryContract.getAccountAddress(ownerAddress);
+       
         await reportToDashboard('erc4337_get_account_address', { address });
         return { success: true, address };
       } catch (e: any) {

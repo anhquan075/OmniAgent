@@ -20,7 +20,7 @@ interface IEntryPoint {
 contract SimpleAccountFactory is Ownable {
     using SafeERC20 for IERC20;
 
-    mapping(address => address) public owners;
+    mapping(address => address) public ownerToAccount;
     mapping(address => bool) public isAccount;
     
     IEntryPoint public immutable entryPoint;
@@ -32,41 +32,22 @@ contract SimpleAccountFactory is Ownable {
     }
 
     /// @notice Create a new smart account for a given owner
-    /// @param owner The EOA that will control this smart account
-    /// @return account The address of the newly created account
     function createAccount(address owner) external returns (address account) {
-        bytes32 salt = keccak256(abi.encodePacked(owner, block.chainid));
-        bytes memory bytecode = type(SimpleAccount).creationCode;
-        assembly {
-            account := create2(0, add(bytecode, 32), mload(bytecode), salt)
-        }
-        require(account != address(0), "create2 failed");
+        require(ownerToAccount[owner] == address(0), "account exists");
         
-        owners[account] = owner;
+        account = address(new SimpleAccount(owner, address(this), address(entryPoint)));
+        ownerToAccount[owner] = account;
         isAccount[account] = true;
         
         emit AccountCreated(account, owner);
     }
 
-    /// @notice Get the predicted account address before creation
-    /// @param owner The intended owner of the account
-    /// @return The predicted account address
+    /// @notice Get the account address for an owner
     function getAccountAddress(address owner) external view returns (address) {
-        bytes32 salt = keccak256(abi.encodePacked(owner, block.chainid));
-        bytes32 hash = keccak256(
-            abi.encodePacked(
-                bytes1(0xff),
-                address(this),
-                salt,
-                keccak256(type(SimpleAccount).creationCode)
-            )
-        );
-        return address(bytes20(hash));
+        return ownerToAccount[owner];
     }
 
     /// @notice Validate if an address is a deployed account
-    /// @param account The address to check
-    /// @return True if it's a valid account
     function isValidAccount(address account) external view returns (bool) {
         return isAccount[account];
     }
@@ -86,10 +67,10 @@ contract SimpleAccount {
         _;
     }
 
-    constructor() {
-        accountFactory = msg.sender;
-        owner = SimpleAccountFactory(msg.sender).owners(address(this));
-        entryPoint_ = SimpleAccountFactory(msg.sender).entryPoint();
+    constructor(address _owner, address _factory, address _entryPoint) {
+        accountFactory = _factory;
+        owner = _owner;
+        entryPoint_ = IEntryPoint(_entryPoint);
     }
 
     /// @notice Execute a transaction (called by EntryPoint)

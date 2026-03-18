@@ -6,7 +6,7 @@ const FACTORY_ABI = [
   'function createAccount(address owner) external returns (address account)',
   'function getAccountAddress(address owner) external view returns (address)',
   'function isValidAccount(address account) external view returns (bool)',
-  'function owners(address account) external view returns (address)'
+  'function ownerToAccount(address owner) external view returns (address)'
 ];
 
 const ACCOUNT_ABI = [

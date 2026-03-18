@@ -111,7 +111,8 @@ flowchart LR
 | **X402** | 5 | Pay sub-agents, fleet status, list services |
 | **WDK Vault** | 6 | Deposit, withdraw, balance, state |
 | **WDK Engine** | 3 | Execute cycle, risk metrics |
-| **Aave** | 3 | Supply, withdraw, position |
+| **Aave (Mock)** | 1 | Get position (testnet mock) |
+| **Bridge (Mock)** | 1 | Get quote (testnet mock) |
 | **BNB** | 7 | Wallet, transfer, swap, bridge, Aave |
 | **Solana** | 4 | Wallet, transfer, swap |
 | **TON** | 3 | Wallet, transfer |
@@ -180,6 +181,10 @@ PRIVATE_KEY=""
 
 # Server port (default: 3001)
 PORT=3001
+
+# Mock Contracts for Testnet (deployed via DeployMockAaveAndBridge.ts)
+MOCK_AAVE_POOL_ADDRESS=0xa9B209611603CE09bEbCFF63a1A3d44D0C4A6f48
+MOCK_BRIDGE_ADDRESS=0x8c3E36830eD27759C0f65A665D067Fe77041aa0C
 ```
 
 ### Full Environment Variables Reference
@@ -689,6 +694,44 @@ curl http://localhost:3001/api/stats
 **Deployment Date:** January 24, 2025  
 **Network:** BNB Testnet (Chain ID: 97)  
 **Total Vault Assets:** 150,000 USDT
+
+---
+
+### Mock Contracts (Testnet)
+
+For testing Aave and Bridge tools without mainnet, deploy mock contracts:
+
+```bash
+cd backend
+npx hardhat run scripts/DeployMockAaveAndBridge.ts --network bnbTestnet
+```
+
+**Deployed Mock Contracts:**
+
+| Contract | Address | Explorer |
+|----------|---------|----------|
+| **MockAavePool** | `0xa9B209611603CE09bEbCFF63a1A3d44D0C4A6f48` | [View on BSCScan](https://testnet.bscscan.com/address/0xa9B209611603CE09bEbCFF63a1A3d44D0C4A6f48) |
+| **MockBridge** | `0x8c3E36830eD27759C0f65A665D067Fe77041aa0C` | [View on BSCScan](https://testnet.bscscan.com/address/0x8c3E36830eD27759C0f65A665D067Fe77041aa0C) |
+| **aUSDT (aToken)** | `0xddfAe15c7f1DB6d1e10a3d8bAEA62a2948648ebD` | [View on BSCScan](https://testnet.bscscan.com/address/0xddfAe15c7f1DB6d1e10a3d8bAEA62a2948648ebD) |
+
+Add to `.env`:
+```bash
+MOCK_AAVE_POOL_ADDRESS=0xa9B209611603CE09bEbCFF63a1A3d44D0C4A6f48
+MOCK_BRIDGE_ADDRESS=0x8c3E36830eD27759C0f65A665D067Fe77041aa0C
+```
+
+**Test Mock Tools:**
+```bash
+# Test Aave position
+curl -X POST http://localhost:3001/api/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wdk_aave_getPosition","arguments":{}}}'
+
+# Test Bridge quote
+curl -X POST http://localhost:3001/api/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wdk_bridge_usdt0_status","arguments":{"amount":"100","destinationChainId":"ethereum"}}}'
+```
 
 ---
 

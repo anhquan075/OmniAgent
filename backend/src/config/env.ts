@@ -63,6 +63,10 @@ const envSchema = z.object({
   ERC4337_FACTORY_ADDRESS: z.string().optional(),
   ERC4337_PAYMASTER_ADDRESS: z.string().optional(),
   ERC4337_ENTRYPOINT_ADDRESS: z.string().default('0x5FF137D4a0ADCA4B1FB0b8274Ea4dE461a706c12'),
+
+  MOCK_AAVE_POOL_ADDRESS: z.string().optional(),
+  MOCK_BRIDGE_ADDRESS: z.string().optional(),
+  MOCK_ATOKEN_ADDRESS: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

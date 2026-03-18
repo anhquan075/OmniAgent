@@ -8,7 +8,7 @@ import {IManagedAdapter} from "./interfaces/IManagedAdapter.sol";
 import {IPancakeV3Pool} from "./interfaces/IPancakeV3Pool.sol";
 import {RiskPolicy} from "./RiskPolicy.sol";
 import {SharpeTracker} from "./SharpeTracker.sol";
-import {OmniAgentVault} from "./OmniAgentVault.sol";
+import {OmniAgentVault} from "./WDKVault.sol";
 
 interface IAaveAdapter {
     function getHealthFactor() external view returns (uint256);

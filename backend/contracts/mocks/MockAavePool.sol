@@ -10,6 +10,9 @@ contract MockAavePool {
 
     address public asset;
     address public aToken;
+    
+    mapping(address => uint256) public deposits;
+    mapping(address => uint256) public borrows;
 
     constructor(address asset_, address aToken_) {
         asset = asset_;
@@ -19,19 +22,29 @@ contract MockAavePool {
     function supply(address asset_, uint256 amount, address onBehalfOf, uint16) external {
         require(asset_ == asset, "Wrong asset");
         IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
+        deposits[onBehalfOf] += amount;
         MockERC20(aToken).mint(onBehalfOf, amount);
     }
 
     function withdraw(address asset_, uint256 amount, address to) external returns (uint256) {
         require(asset_ == asset, "Wrong asset");
+        require(deposits[msg.sender] >= amount, "Insufficient deposits");
+        deposits[msg.sender] -= amount;
         MockERC20(aToken).burn(msg.sender, amount);
         IERC20(asset).safeTransfer(to, amount);
         return amount;
     }
 
-    function getUserAccountData(address)
+    function borrow(address asset_, uint256 amount, address onBehalfOf) external {
+        require(asset_ == asset, "Wrong asset");
+        require(deposits[onBehalfOf] >= amount, "Insufficient collateral");
+        borrows[onBehalfOf] += amount;
+        IERC20(asset).safeTransfer(onBehalfOf, amount);
+    }
+
+    function getUserAccountData(address user)
         external
-        pure
+        view
         returns (
             uint256 totalCollateralBase,
             uint256 totalDebtBase,
@@ -41,6 +54,10 @@ contract MockAavePool {
             uint256 healthFactor
         )
     {
-        return (1000e18, 0, 1000e18, 8000, 7500, 2e18);
+        return (deposits[user], borrows[user], deposits[user], 8000, 7500, deposits[user] > 0 ? 2e18 : 0);
+    }
+    
+    function getAccountData(address user) external view returns (uint256 totalCollateralBase, uint256 totalDebtBase, uint256 healthFactor) {
+        return (deposits[user], borrows[user], deposits[user] > 0 ? 2e18 : 0);
     }
 }

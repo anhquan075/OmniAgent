@@ -13,22 +13,25 @@
     "test": "hardhat test",
     "test:local-execute-cycle": "hardhat run scripts/LocalExecuteCycleFlow.js --network hardhat",
     "test:hono": "vitest run src/api/routes/stats.test.ts",
-    "test:smoke:testnet": "hardhat run scripts/FullFlowTestnetSmoke.js --network bnbTestnet",
+    "test:smoke:testnet": "hardhat run scripts/FullFlownetSmokeTest.js --network bnbTestnet",
     "deploy:full": "hardhat run scripts/DeployStackWithSeed.ts --network localhost",
     "smoke:agent": "hardhat run scripts/AgentSmokeTest.ts --network localhost",
     "node": "hardhat node",
     "dev": "tsx watch src/index.ts",
     "build": "tsc && tsc-alias",
+    "build:cloudflare": "npm run build",
     "start": "node dist/index.js",
     "robot:start": "tsx src/scripts/robot-simulator.ts",
     "robot:dev": "tsx watch src/scripts/robot-simulator.ts",
     "frontend:dev": "pnpm --dir ../frontend run dev",
-    "frontend:build": "pnpm --dir ../frontend run build"
+    "frontend:build": "pnpm --dir ../frontend run build",
+    "deploy:pages": "wrangler pages deploy dist --project-name omni-agent"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
     "@nomicfoundation/hardhat-toolbox": "^6.1.2",
     "@types/axios": "^0.14.4",
     "@types/cors": "^2.8.19",
@@ -40,7 +43,8 @@
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.0",
+    "wrangler": "^3.97.0"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.41",

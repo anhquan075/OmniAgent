@@ -1,0 +1,21 @@
+name = "omni-agent"
+compatibility_date = "2024-01-01"
+
+[vars]
+NODE_VERSION = "18"
+
+# Cloudflare Pages configuration
+pages_build_output_dir = "public"
+
+[build]
+command = "echo 'Using Cloudflare Pages Functions'"
+cwd = "."
+
+# Functions directory (for Cloudflare Pages Functions)
+functions_dir = "functions"
+
+[env.production]
+vars = { ENVIRONMENT = "production" }
+
+[env.staging]
+vars = { ENVIRONMENT = "staging" }

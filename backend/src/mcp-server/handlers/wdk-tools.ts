@@ -2,8 +2,6 @@ import { McpTool, MCP_ERRORS } from '../types/mcp-protocol';
 import { ethers } from 'ethers';
 import WDK from '@tetherto/wdk';
 import WalletEVM, { WalletAccountEvm } from '@tetherto/wdk-wallet-evm';
-import AaveProtocolEvm from '@tetherto/wdk-protocol-lending-aave-evm';
-import BridgeUsdt0Evm from '@tetherto/wdk-protocol-bridge-usdt0-evm';
 import { env } from '@/config/env';
 
 const wdk = new WDK(env.WDK_SECRET_SEED);
@@ -13,12 +11,36 @@ const walletAccount = new WalletAccountEvm(env.WDK_SECRET_SEED, "0'/0/0", {
   provider: env.BNB_RPC_URL
 });
 
-async function getAaveProtocol() {
-  return new AaveProtocolEvm(walletAccount);
+const MOCK_AAVE_POOL_ADDRESS = env.MOCK_AAVE_POOL_ADDRESS;
+const MOCK_BRIDGE_ADDRESS = env.MOCK_BRIDGE_ADDRESS;
+
+async function getAavePosition(userAddress: string) {
+  if (!MOCK_AAVE_POOL_ADDRESS) throw new Error('MOCK_AAVE_POOL_ADDRESS not configured');
+  const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
+  const poolAbi = [
+    'function getAccountData(address user) external view returns (uint256 totalCollateralBase, uint256 totalDebtBase, uint256 healthFactor)'
+  ];
+  const pool = new ethers.Contract(MOCK_AAVE_POOL_ADDRESS, poolAbi, provider);
+  const data = await pool.getAccountData(userAddress);
+  return {
+    totalCollateralBase: data.totalCollateralBase.toString(),
+    totalDebtBase: data.totalDebtBase.toString(),
+    healthFactor: data.healthFactor.toString()
+  };
 }
 
-async function getBridgeProtocol() {
-  return new BridgeUsdt0Evm(walletAccount);
+async function getBridgeQuote(amount: string, destinationChainId: string) {
+  if (!MOCK_BRIDGE_ADDRESS) throw new Error('MOCK_BRIDGE_ADDRESS not configured');
+  const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
+  const bridgeAbi = [
+    'function quote() external view returns (uint256 nativeFee, uint256 bridgeFeeBps)'
+  ];
+  const bridge = new ethers.Contract(MOCK_BRIDGE_ADDRESS, bridgeAbi, provider);
+  const quote = await bridge.quote();
+  return {
+    nativeFee: quote.nativeFee.toString(),
+    bridgeFee: (BigInt(amount) * BigInt(quote.bridgeFeeBps) / 10000n).toString()
+  };
 }
 
 export const wdkTools: McpTool[] = [
@@ -191,10 +213,55 @@ export const wdkTools: McpTool[] = [
     riskLevel: 'low',
     category: 'utility'
   },
-  
+  {
+    name: 'wdk_aave_getPosition',
+    description: 'Get current Aave position info from mock pool on testnet',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        user: { type: 'string', description: 'User address to check position for (optional, defaults to agent address)' }
+      },
+      required: []
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        supplied: { type: 'string' },
+        borrowed: { type: 'string' },
+        healthFactor: { type: 'string' }
+      }
+    },
+    version: '1.0.0',
+    blockchain: 'bnb',
+    riskLevel: 'low',
+    category: 'lending'
+  },
+  {
+    name: 'wdk_bridge_usdt0_status',
+    description: 'Get bridge quote/status from mock bridge on testnet',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        amount: { type: 'string', description: 'Amount to bridge', default: '100' },
+        destinationChainId: { type: 'string', description: 'Destination chain ID' }
+      },
+      required: ['destinationChainId']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        nativeFee: { type: 'string' },
+        bridgeFee: { type: 'string' }
+      }
+    },
+    version: '1.0.0',
+    blockchain: 'bnb',
+    riskLevel: 'low',
+    category: 'bridge'
+  },
   {
     name: 'wdk_aave_supply',
-    description: 'Supply USDT to Aave V3 via WDK protocol module',
+    description: 'Supply USDT to mock Aave pool on testnet',
     inputSchema: {
       type: 'object',
       properties: {
@@ -216,7 +283,7 @@ export const wdkTools: McpTool[] = [
   },
   {
     name: 'wdk_aave_withdraw',
-    description: 'Withdraw USDT from Aave V3 via WDK protocol module',
+    description: 'Withdraw USDT from mock Aave pool on testnet',
     inputSchema: {
       type: 'object',
       properties: {
@@ -237,36 +304,12 @@ export const wdkTools: McpTool[] = [
     category: 'lending'
   },
   {
-    name: 'wdk_aave_getPosition',
-    description: 'Get current Aave position info via WDK protocol module',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        user: { type: 'string', description: 'User address to check position for (optional, defaults to agent address)' }
-      },
-      required: []
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        supplied: { type: 'string' },
-        borrowed: { type: 'string' },
-        healthFactor: { type: 'string' }
-      }
-    },
-    version: '1.0.0',
-    blockchain: 'bnb',
-    riskLevel: 'low',
-    category: 'lending'
-  },
-  
-  {
     name: 'wdk_bridge_usdt0',
-    description: 'Bridge USDT0 to another EVM chain via WDK protocol module',
+    description: 'Bridge USDT via mock bridge on testnet',
     inputSchema: {
       type: 'object',
       properties: {
-        amount: { type: 'string', description: 'Amount of USDT0 to bridge', default: '100' },
+        amount: { type: 'string', description: 'Amount of USDT to bridge', default: '100' },
         destinationChainId: { type: 'string', description: 'Destination chain ID (e.g., "ethereum", "arbitrum")' },
         recipientAddress: { type: 'string', description: 'Recipient address on destination chain (optional)' }
       },
@@ -283,29 +326,6 @@ export const wdkTools: McpTool[] = [
     version: '1.0.0',
     blockchain: 'bnb',
     riskLevel: 'high',
-    category: 'bridge'
-  },
-  {
-    name: 'wdk_bridge_usdt0_status',
-    description: 'Get bridge quote/status for USDT0 bridging',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        amount: { type: 'string', description: 'Amount to bridge', default: '100' },
-        destinationChainId: { type: 'string', description: 'Destination chain ID' }
-      },
-      required: ['destinationChainId']
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        nativeFee: { type: 'string' },
-        estimatedReceive: { type: 'string' }
-      }
-    },
-    version: '1.0.0',
-    blockchain: 'bnb',
-    riskLevel: 'low',
     category: 'bridge'
   }
 ];
@@ -459,72 +479,14 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         }};
       }
       
-      case 'wdk_aave_supply': {
-        const amount = params.amount as string;
-        if (!amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Amount is required' } };
-        
-        const aave = await getAaveProtocol();
-        const usdtAmount = ethers.parseUnits(amount, 6);
-        
-        
-        const result = await aave.supply({
-          token: env.WDK_USDT_ADDRESS,
-          amount: usdtAmount
-        });
-        
-        return { success: true, data: { txHash: result.hash, action: 'AAVE_SUPPLY' } };
-      }
-      
-      case 'wdk_aave_withdraw': {
-        const amount = params.amount as string;
-        if (!amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Amount is required' } };
-        
-        const aave = await getAaveProtocol();
-        const usdtAmount = ethers.parseUnits(amount, 6);
-        
-        
-        const result = await aave.withdraw({
-          token: env.WDK_USDT_ADDRESS,
-          amount: usdtAmount
-        });
-        
-        return { success: true, data: { txHash: result.hash, amountWithdrawn: amount } };
-      }
-      
       case 'wdk_aave_getPosition': {
         const userAddress = (params.user as string) || await walletAccount.getAddress();
-        
-         const aave = await getAaveProtocol();
-         
-        const data = await aave.getAccountData(userAddress);
+        const data = await getAavePosition(userAddress);
         
         return { success: true, data: {
-          supplied: String(data.totalCollateralBase),
-          borrowed: String(data.totalDebtBase),
-          healthFactor: String(data.healthFactor)
-        }};
-      }
-      
-      case 'wdk_bridge_usdt0': {
-        const amount = (params.amount as string) || '100';
-        const destinationChainId = params.destinationChainId as string;
-        if (!destinationChainId) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Destination chain ID is required' } };
-        
-        const bridge = await getBridgeProtocol();
-        const usdtAmount = ethers.parseUnits(amount, 6);
-        
-        const recipientAddress = params.recipientAddress as string || await walletAccount.getAddress();
-        const result = await bridge.bridge({
-          targetChain: destinationChainId,
-          recipient: recipientAddress,
-          token: env.WDK_USDT_ADDRESS,
-          amount: usdtAmount
-        });
-        
-        return { success: true, data: {
-          txHash: result.hash,
-          destinationChainId,
-          estimatedReceive: amount
+          supplied: data.totalCollateralBase,
+          borrowed: data.totalDebtBase,
+          healthFactor: data.healthFactor
         }};
       }
       
@@ -533,21 +495,96 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         const destinationChainId = params.destinationChainId as string;
         if (!destinationChainId) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Destination chain ID is required' } };
         
-        const bridge = await getBridgeProtocol();
-        const usdtAmount = ethers.parseUnits(amount, 6);
-        
-        const recipientAddress = params.recipientAddress as string || await walletAccount.getAddress();
-        const quote = await bridge.quoteBridge({
-          targetChain: destinationChainId,
-          recipient: recipientAddress,
-          token: env.WDK_USDT_ADDRESS,
-          amount: usdtAmount
-        });
+        const quote = await getBridgeQuote(amount, destinationChainId);
         
         return { success: true, data: {
-          nativeFee: quote.fee.toString(),
-          bridgeFee: quote.bridgeFee?.toString() || '0'
+          nativeFee: quote.nativeFee,
+          bridgeFee: quote.bridgeFee
         }};
+      }
+      
+      case 'wdk_aave_supply': {
+        const amount = params.amount as string;
+        if (!amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Amount is required' } };
+        if (!MOCK_AAVE_POOL_ADDRESS) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'MOCK_AAVE_POOL_ADDRESS not configured' } };
+        
+        const signer = ethers.Wallet.fromPhrase(env.WDK_SECRET_SEED, new ethers.JsonRpcProvider(env.BNB_RPC_URL));
+        const usdtAmount = ethers.parseUnits(amount, 6);
+        const userAddress = await signer.getAddress();
+        
+        const usdtAbi = [
+          'function approve(address spender, uint256 amount) external returns (bool)',
+          'function allowance(address owner, address spender) external view returns (uint256)'
+        ];
+        const usdt = new ethers.Contract(env.WDK_USDT_ADDRESS!, usdtAbi, signer);
+        
+        const currentAllowance = await usdt.allowance(userAddress, MOCK_AAVE_POOL_ADDRESS);
+        if (currentAllowance < usdtAmount) {
+          const approveTx = await usdt.approve(MOCK_AAVE_POOL_ADDRESS, ethers.MaxUint256);
+          await approveTx.wait();
+        }
+        
+        const poolAbi = [
+          'function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode) external'
+        ];
+        const pool = new ethers.Contract(MOCK_AAVE_POOL_ADDRESS, poolAbi, signer);
+        
+        const tx = await pool.supply(env.WDK_USDT_ADDRESS!, usdtAmount, userAddress, 0);
+        await tx.wait();
+        
+        return { success: true, data: { txHash: tx.hash, action: 'AAVE_SUPPLY' } };
+      }
+      
+      case 'wdk_aave_withdraw': {
+        const amount = params.amount as string;
+        if (!amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Amount is required' } };
+        if (!MOCK_AAVE_POOL_ADDRESS) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'MOCK_AAVE_POOL_ADDRESS not configured' } };
+        
+        const signer = ethers.Wallet.fromPhrase(env.WDK_SECRET_SEED, new ethers.JsonRpcProvider(env.BNB_RPC_URL));
+        const poolAbi = [
+          'function withdraw(address asset, uint256 amount, address to) external returns (uint256)'
+        ];
+        const pool = new ethers.Contract(MOCK_AAVE_POOL_ADDRESS, poolAbi, signer);
+        const usdtAmount = ethers.parseUnits(amount, 6);
+        const userAddress = await signer.getAddress();
+        
+        const tx = await pool.withdraw(env.WDK_USDT_ADDRESS!, usdtAmount, userAddress);
+        await tx.wait();
+        
+        return { success: true, data: { txHash: tx.hash, amountWithdrawn: amount } };
+      }
+      
+      case 'wdk_bridge_usdt0': {
+        const amount = (params.amount as string) || '100';
+        const destinationChainId = params.destinationChainId as string;
+        if (!destinationChainId) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Destination chain ID is required' } };
+        if (!MOCK_BRIDGE_ADDRESS) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'MOCK_BRIDGE_ADDRESS not configured' } };
+        
+        const signer = ethers.Wallet.fromPhrase(env.WDK_SECRET_SEED, new ethers.JsonRpcProvider(env.BNB_RPC_URL));
+        const usdtAmount = ethers.parseUnits(amount, 6);
+        const recipientAddress = (params.recipientAddress as string) || await signer.getAddress();
+        
+        const usdtAbi = [
+          'function approve(address spender, uint256 amount) external returns (bool)',
+          'function allowance(address owner, address spender) external view returns (uint256)'
+        ];
+        const usdt = new ethers.Contract(env.WDK_USDT_ADDRESS!, usdtAbi, signer);
+        
+        const currentAllowance = await usdt.allowance(await signer.getAddress(), MOCK_BRIDGE_ADDRESS);
+        if (currentAllowance < usdtAmount) {
+          const approveTx = await usdt.approve(MOCK_BRIDGE_ADDRESS, ethers.MaxUint256);
+          await approveTx.wait();
+        }
+        
+        const bridgeAbi = [
+          'function bridge(address token, uint256 amount, uint256 destinationChainId, address recipient) external returns (bytes32 requestId)'
+        ];
+        const bridge = new ethers.Contract(MOCK_BRIDGE_ADDRESS, bridgeAbi, signer);
+        
+        const tx = await bridge.bridge(env.WDK_USDT_ADDRESS!, usdtAmount, 1, recipientAddress);
+        await tx.wait();
+        
+        return { success: true, data: { txHash: tx.hash, destinationChainId, estimatedReceive: amount } };
       }
       
       default:
