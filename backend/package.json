@@ -50,6 +50,7 @@
     "@ai-sdk/openai": "^3.0.41",
     "@hono/node-server": "^1.19.11",
     "@modelcontextprotocol/sdk": "^1.27.1",
+    "@openrouter/ai-sdk-provider": "^2.3.3",
     "@openzeppelin/contracts": "^5.4.0",
     "@solana/web3.js": "^1.98.4",
     "@tetherto/wdk": "^1.0.0-beta.6",

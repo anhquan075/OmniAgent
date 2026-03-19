@@ -102,7 +102,6 @@ export class AaveHealthMonitor {
     const alert = this.checkHealthFactor(position.healthFactor);
     if (alert) {
       this.alertHistory.push(alert);
-      console.log(alert.message);
     }
 
     return alert;

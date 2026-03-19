@@ -5,9 +5,6 @@ export class ToolRegistry {
   private version: string = '1.0.0';
 
   registerTool(tool: McpTool, handler: ToolHandler): void {
-    if (this.tools.has(tool.name)) {
-      console.warn(`[ToolRegistry] Tool ${tool.name} already registered, overwriting`);
-    }
     this.tools.set(tool.name, { tool, handler });
     
     if (tool.name.includes('_')) {

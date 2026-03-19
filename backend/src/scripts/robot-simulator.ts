@@ -1,9 +1,7 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import { ethers } from 'ethers';
 import * as dotenv from 'dotenv';
 import { EventEmitter } from 'events';
-import { robotFleetConfig as staticFleetConfig, FleetConfig as FleetConfigType } from '../config/robot-fleet';
+import { robotFleetConfig, FleetConfig as FleetConfigType } from '../config/robot-fleet';
 import { logger } from '../utils/logger';
 import {
   RobotFleetPaymentHandler,
@@ -73,25 +71,10 @@ export function getFleetStatus() {
 }
 
 function loadConfig(): FleetConfig {
-  let config = { ...staticFleetConfig } as FleetConfig;
-  
-  const configPath = path.resolve(__dirname, '../../config/robot-fleet.json');
-  if (fs.existsSync(configPath)) {
-    try {
-      const configData = fs.readFileSync(configPath, 'utf-8');
-      const jsonConfig = JSON.parse(configData);
-      config = { ...config, ...jsonConfig };
-    } catch (e) {
-      logger.warn('[RobotFleet] Failed to load robot-fleet.json, using static config');
-    }
-  }
+  const config = { ...robotFleetConfig } as FleetConfig;
 
   config.rpcUrl = process.env.BNB_RPC_URL || config.rpcUrl || 'https://bsc-testnet.public.blastapi.io';
   config.privateKey = process.env.PRIVATE_KEY || process.env.ROBOT_FLEET_PRIVATE_KEY || process.env.WDK_SECRET_SEED || config.privateKey;
-  
-  if (!config.agentWalletAddress) {
-    config.agentWalletAddress = "0x26CEefE4F0C3558237016F213914764047f671bA";
-  }
 
   return config;
 }

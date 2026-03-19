@@ -1,5 +1,5 @@
 import { logger } from '@/utils/logger';
-import { createOpenAI } from '@ai-sdk/openai';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { convertToModelMessages, createUIMessageStream, createUIMessageStreamResponse, generateText, streamText } from 'ai';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -61,39 +61,106 @@ const suggestionsSchema = z.array(
 
 // Fallback suggestions
 const fallbackSuggestions = [
-  { label: 'Analyze Drawdown', prompt: 'Show me the Monte Carlo drawdown analysis for this strategy.' },
-  { label: 'Check Rails', prompt: 'Are the settlement rails active on Solana and TON?' },
-  { label: 'Vault Status', prompt: 'What is the current vault health and liquidity?' }
+  { label: 'Vault Status', prompt: 'What is the current vault status and liquidity?' },
+  { label: 'Check Yields', prompt: 'What are the best cross-chain yield opportunities right now?' },
+  { label: 'Risk Analysis', prompt: 'Run a Monte Carlo risk analysis on my current allocation.' }
 ];
 
+interface Suggestion {
+  label: string;
+  prompt: string;
+}
+
 async function generateSuggestions(
-  model: any,
+  openrouter: ReturnType<typeof createOpenRouter>,
+  modelId: string,
   messages: any[],
-  assistantResponse: string
-): Promise<typeof fallbackSuggestions> {
+  intent: string
+): Promise<Suggestion[]> {
+  const conversationContext = messages
+    .filter((m: any) => m.role === 'user' || m.role === 'assistant')
+    .map((m: any) => {
+      let content = '';
+      if (typeof m.content === 'string') {
+        content = m.content;
+      } else if (Array.isArray(m.parts)) {
+        content = m.parts
+          .filter((p: any) => p.type === 'text')
+          .map((p: any) => p.text)
+          .join(' ');
+      } else if (m.content?.text) {
+        content = m.content.text;
+      }
+      return `[${m.role.toUpperCase()}]: ${content}`;
+    })
+    .join('\n');
+
+  const truncatedContext = conversationContext.slice(-2000);
+
   try {
     const result = await generateText({
-      model,
-      temperature: 0,
-      prompt: `Based on the following conversation and assistant response, generate 3 relevant follow-up suggestions that the user might ask next.
+      model: openrouter.chat(modelId),
+      temperature: 0.7,
+      system: `You are a helpful assistant that generates 3 short follow-up questions the user might want to ask next.
 
-Assistant's response: "${assistantResponse.slice(0, 400)}"
+Based on the conversation context, generate 3 contextual follow-up questions that would naturally follow from what was discussed.
 
-Generate 3 contextual suggestions with:
-- label: Short label (4-6 words max)
-- prompt: Complete, specific follow-up question
+Rules:
+- Each question should be specific and actionable
+- Questions should be 5-10 words as labels, with full question as prompt
+- Vary the questions - cover different aspects (analysis, action, details)
+- Questions should feel like natural next steps in the conversation
 
-Topics: DeFi strategies, yield optimization, vault management, settlement rails.
-
-Return JSON array: [{"label": "...", "prompt": "..."}, ...]`,
+Return JSON array: [{"label": "Short Label", "prompt": "Full question here?"}, ...]`,
+      prompt: `CONVERSATION CONTEXT:\n${truncatedContext}\n\nINTENT: ${intent}\n\nGenerate 3 follow-up questions the user might naturally ask next.`,
     });
 
-    const suggestions = JSON.parse(result.text);
-    if (Array.isArray(suggestions) && suggestions.length > 0) {
-      return suggestions.slice(0, 3);
+    let text = result.text.trim();
+    const jsonMatch = text.match(/\[[\s\S]*?\]/);
+    if (jsonMatch) {
+      try {
+        const suggestions = JSON.parse(jsonMatch[0]);
+        if (Array.isArray(suggestions) && suggestions.length > 0) {
+          return suggestions.slice(0, 3);
+        }
+      } catch {
+        logger.warn({ rawText: text.slice(0, 200) }, '[Chat] JSON parse failed, using fallback');
+      }
+    } else {
+      logger.warn({ rawText: text.slice(0, 200) }, '[Chat] No JSON array found in suggestion response');
     }
-  } catch (err) {
-    logger.error(err, '[Chat] Error generating suggestions');
+  } catch (err: any) {
+    const isRateLimit = err?.status === 429 || err?.message?.includes('429');
+    if (isRateLimit) {
+      await new Promise(r => setTimeout(r, 2000));
+      try {
+        const retry = await generateText({
+          model: openrouter.chat(modelId),
+          temperature: 0.7,
+          system: `You are a helpful assistant that generates 3 short follow-up questions the user might want to ask next.
+
+Based on the conversation context, generate 3 contextual follow-up questions.
+
+Rules:
+- Each question should be specific and actionable
+- Questions should be 5-10 words as labels, with full question as prompt
+- Return JSON array only: [{"label": "Short Label", "prompt": "Full question here?"}, ...]`,
+          prompt: `CONVERSATION CONTEXT:\n${truncatedContext}\n\nINTENT: ${intent}\n\nGenerate 3 follow-up questions. Return JSON array only.`,
+        });
+        let text = retry.text.trim();
+        const match = text.match(/\[[\s\S]*?\]/);
+        if (match) {
+          const suggestions = JSON.parse(match[0]);
+          if (Array.isArray(suggestions) && suggestions.length > 0) {
+            return suggestions.slice(0, 3);
+          }
+        }
+      } catch (retryErr) {
+        logger.error(retryErr, '[Chat] Suggestion retry also failed');
+      }
+    } else {
+      logger.error({ err, truncatedContext: truncatedContext.slice(0, 100) }, '[Chat] Error generating suggestions');
+    }
   }
   return fallbackSuggestions;
 }
@@ -141,15 +208,22 @@ chat.post('/', async (c) => {
   }
 
   const normalizedMessages = validMessages.map((m: any) => {
-    if (m.role === 'user' && typeof m.content === 'string') {
-      return { ...m, content: [{ type: 'text' as const, text: m.content }] };
+    if (m.role === 'user') {
+      if (typeof m.content === 'string') {
+        return { ...m, parts: [{ type: 'text' as const, text: m.content }] };
+      } else if (Array.isArray(m.content)) {
+        return { ...m, parts: m.content.map((c: any) => 
+          typeof c === 'string' ? { type: 'text' as const, text: c } : c
+        )};
+      } else if (m.content?.text) {
+        return { ...m, parts: [{ type: 'text' as const, text: m.content.text }] };
+      }
     }
     return m;
   });
 
-  const openai = createOpenAI({
+  const openrouter = createOpenRouter({
     apiKey: process.env.OPENROUTER_API_KEY,
-    baseURL: process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
   });
 
   const routerDecision = await llmRouter.smartRoute(userText);
@@ -162,7 +236,7 @@ chat.post('/', async (c) => {
     modelId 
   }, '[Chat] Processing query with LLM router');
   
-  const baseModel = openai.chat(modelId);
+  const baseModel = openrouter.chat(modelId);
 
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
@@ -184,12 +258,18 @@ chat.post('/', async (c) => {
 
         const modelMessages = await convertToModelMessages(normalizedMessages);
 
+        const supportsNativeReasoning = modelId.includes('grok') || (modelId.includes('claude') && modelId.includes('thinking'));
         const result = await streamText({
-          model: baseModel as any,
+          model: baseModel,
           maxSteps: 10,
           maxToolRoundtrips: 3,
           temperature: 0,
           tools: routerDecision.intent === 'small_talk' ? {} : normalizedAgentTools as any,
+          providerOptions: supportsNativeReasoning ? {
+            openrouter: {
+              reasoning: { effort: 'high' },
+            },
+          } : undefined,
           onStepFinish: (arg: any) => {
             const toolResults = arg?.toolResults ?? [];
             const toolCalls = arg?.toolCalls ?? [];
@@ -253,74 +333,6 @@ chat.post('/', async (c) => {
                 }
               }
             }
-
-            if (toolResults && toolResults.length > 0) {
-              const lastResult = toolResults[toolResults.length - 1];
-              const toolName = lastResult.toolName;
-              
-              const actionTitle = toolName.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-              let actionDesc = '';
-              
-              if (lastResult.result?.actionTaken) {
-                actionDesc = `Action: ${lastResult.result.actionTaken}`;
-              } else if (lastResult.result?.status) {
-                actionDesc = `Status: ${lastResult.result.status}`;
-              } else if (lastResult.result?.txHash) {
-                actionDesc = `Tx: ${lastResult.result.txHash.slice(0, 16)}...`;
-              } else if (lastResult.result?.success !== undefined) {
-                actionDesc = lastResult.result.success ? 'Completed successfully' : 'Failed';
-              }
-              
-              if (actionDesc) {
-                addRecentAction({ title: actionTitle, description: actionDesc, hash: lastResult.result?.txHash });
-              }
-              
-              if (toolName?.includes('x402') && lastResult?.result?.amount) {
-                updateX402Revenue(lastResult.result.amount);
-              }
-              if (toolName?.includes('x402') && lastResult?.result?.amount) {
-                updateX402Revenue(lastResult.result.amount);
-              }
-            }
-
-            if (toolResults && toolResults.length > 0) {
-              const lastResult = toolResults[toolResults.length - 1];
-              const toolName = lastResult.toolName;
-              
-              let internalLogic = "";
-              if (toolName === 'analyze_risk') {
-                internalLogic = `Risk profile verified at level ${lastResult.result.level}. Drawdown within nominal limits (${lastResult.result.drawdownBps} bps).`;
-              } else if (toolName === 'get_vault_status') {
-                internalLogic = `Vault health confirmed. Total Assets: ${lastResult.result.totalAssets} USD₮. Liquidity depth is optimal.`;
-              } else if (toolName === 'check_strategy') {
-                internalLogic = lastResult.result.canExecute 
-                  ? `Strategy engine triggered. Target allocation: ${(lastResult.result.decision.targetWDKBps / 100).toFixed(2)}% WDK.`
-                  : `Strategy idle: ${lastResult.result.reason || "Optimal allocation maintained."}`;
-              } else if (toolName === 'yield_sweep') {
-                internalLogic = lastResult.result.actionTaken === 'YIELD_SWEPT'
-                  ? `Yield sweep successful. Tx: ${lastResult.result.txHash}`
-                  : `Yield sweep skipped: ${lastResult.result.message || "No yield to sweep."}`;
-              } else {
-                // Generic fallback for other tools
-                internalLogic = `Executed ${toolName} successfully.`;
-              }
-              if (internalLogic) {
-                const reasoningId = `reasoning_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-                writer.write({
-                  type: 'reasoning-start',
-                  id: reasoningId,
-                });
-                writer.write({
-                  type: 'reasoning-delta',
-                  id: reasoningId,
-                  delta: internalLogic
-                });
-                writer.write({
-                  type: 'reasoning-end',
-                  id: reasoningId
-                });
-              }
-            }
           },
 system: routerDecision.intent === 'small_talk'
              ? `You are the OmniAgent Strategist. Keep responses brief and professional.`
@@ -337,85 +349,70 @@ RESPONSE FORMAT: Direct answer after tool results.`,
            messages: modelMessages,
         } as any); // Cast to any to bypass potential version mismatch errors in the types
 
-        // Bridge to UI stream (Pass 1)
-        await writer.merge(result.toUIMessageStream());
+        const streamPromise = writer.merge(result.toUIMessageStream());
 
-        // FIX: Manual Chat Synthesis Loop
-        // If the model stops after a tool result (without text), force a summary generation.
+        if (routerDecision.intent !== 'small_talk') {
+          generateSuggestions(openrouter, modelId, normalizedMessages, routerDecision.intent)
+            .then((suggestions) => {
+              writer.write({ type: 'data-suggestions', data: suggestions });
+            })
+            .catch((err) => {
+              logger.error(err, '[Chat] Error in suggestion generation');
+              writer.write({ type: 'data-suggestions', data: fallbackSuggestions });
+            });
+        }
+
+        try {
+          await streamPromise;
+        } catch (streamError: any) {
+          logger.error(streamError, '[Chat] Stream error');
+          const isRateLimit = streamError?.status === 429 || streamError?.message?.includes('429');
+          writer.write({
+            type: 'data-notification',
+            data: { 
+              message: isRateLimit 
+                ? 'Rate limit reached. Please wait a moment and try again.' 
+                : `Stream Error: ${streamError.message}`,
+              level: 'error' 
+            },
+            transient: true,
+          });
+        }
+
         if (routerDecision.intent !== 'small_talk') {
           try {
             const response = await result.response;
             const generatedMessages = response.messages;
             
-            logger.info({ messageCount: generatedMessages.length }, '[Chat] Stream finished');
-            if (generatedMessages.length > 0) {
-                const lastMsg = generatedMessages[generatedMessages.length - 1];
-                logger.debug({ role: lastMsg.role, contentPreview: JSON.stringify(lastMsg.content).slice(0, 100) }, '[Chat] Last message details');
-            }
-
             if (generatedMessages && generatedMessages.length > 0) {
               const lastMsg = generatedMessages[generatedMessages.length - 1];
-
-              // Check if the conversation ended on a tool execution (role: 'tool')
               const endedOnTool = lastMsg.role === 'tool';
-              logger.debug({ endedOnTool }, '[Chat] Termination check');
 
               if (endedOnTool) {
-                logger.info('[Chat] Model stopped after tool usage without summary. Forcing synthesis...');
-                
                 writer.write({
                   type: 'data-status',
                   id: 'agent-status',
-                  data: { status: 'Synthesizing', progress: 99, thought: 'Generating strategic summary...' },
+                  data: { status: 'Complete', progress: 100, thought: 'Analysis complete.' },
                   transient: true,
                 });
-
-                const summaryResult = await streamText({
-                  model: baseModel as any,
-                  messages: [
-                    ...generatedMessages,
-                    { role: 'user', content: 'Summarize the above tool results and answer the user query.' }
-                  ],
-                  temperature: 0
-                });
-
-                await writer.merge(summaryResult.toUIMessageStream());
               }
             }
           } catch (err) {
-            logger.error(err, '[Chat] Error in synthesis loop');
+            logger.error(err, '[Chat] Error in post-stream');
           }
-        }
-
-        if (routerDecision.intent !== 'small_talk') {
-          // Spawn suggestion generation in background - don't await
-          (async () => {
-            try {
-              const response = await result.response;
-              const generatedMessages = response.messages;
-              let assistantText = '';
-              
-              if (generatedMessages && generatedMessages.length > 0) {
-                const lastMsg = generatedMessages[generatedMessages.length - 1];
-                if (lastMsg.role === 'assistant' && typeof lastMsg.content === 'string') {
-                  assistantText = lastMsg.content;
-                }
-              }
-
-              const suggestions = await generateSuggestions(baseModel as any, generatedMessages || [], assistantText);
-              writer.write({ type: 'data-suggestions', data: suggestions });
-            } catch (err) {
-              logger.error(err, '[Chat] Error in suggestion generation');
-              writer.write({ type: 'data-suggestions', data: fallbackSuggestions });
-            }
-          })();
         }
       } catch (error: any) {
         if (error.name === 'AbortError') return;
         logger.error(error, '[Chat] Execution Error');
+        const isRateLimit = error?.status === 429 || error?.message?.includes('429');
         writer.write({
           type: 'data-notification',
-          data: { message: `Execution Error: ${error.message}`, level: 'error' },
+          data: { 
+            message: isRateLimit 
+              ? 'Rate limit reached. Please wait a moment and try again.' 
+              : `Execution Error: ${error.message}`,
+            level: 'error' 
+          },
           transient: true,
         });
       }

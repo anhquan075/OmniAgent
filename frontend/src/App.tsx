@@ -94,8 +94,13 @@ export default function App() {
   } | null>(null);
   // Track streaming agent status from SSE data-status events
   const [agentStreamStatus, setAgentStreamStatus] = useState<any[]>([]);
-  // Track dynamic suggestions from AI
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const initialSuggestions = [
+    { label: 'Vault Status', prompt: 'Show me the current vault status and liquidity.' },
+    { label: 'Check Yields', prompt: 'What are the best cross-chain yield opportunities right now?' },
+    { label: 'Risk Analysis', prompt: 'Run a Monte Carlo risk analysis on my current allocation.' },
+  ];
+  const [suggestions, setSuggestions] = useState<any[]>(initialSuggestions);
+  const [pendingSuggestions, setPendingSuggestions] = useState<any[]>([]);
   const queryClient = useQueryClient();
   const { address, isConnected } = useAccount();
 
@@ -201,15 +206,11 @@ export default function App() {
           "System initialized. I am your **OmniAgent Strategist**. I am currently monitoring cross-chain liquidity for USDT and XAUT yield optimization.",
       } as any,
     ],
-    experimental_onData: (dataPart: any) => {
-      if (dataPart.type === "data-notification") {
-        console.log(
-          `[Notification] ${dataPart.data.level}: ${dataPart.data.message}`,
-        );
-      } else if (dataPart.type === "data-status") {
+    onData: (dataPart: any) => {
+      if (dataPart.type === "data-status") {
         setAgentStreamStatus(prev => [...prev.slice(-10), dataPart]);
       } else if (dataPart.type === "data-suggestions") {
-        setSuggestions(Array.isArray(dataPart.data) ? dataPart.data : []);
+        setPendingSuggestions(Array.isArray(dataPart.data) ? dataPart.data : []);
       }
     },
     onError: (err) => {
@@ -233,6 +234,7 @@ export default function App() {
           "System initialized. I am your **OmniAgent Strategist**. I am currently monitoring cross-chain liquidity for USDT and XAUT yield optimization.",
       } as any,
     ]);
+    setSuggestions(initialSuggestions);
   }, [activeSessionId, setMessages]);
 
   // Update initial message when wallet connects or stats arrive
@@ -258,6 +260,14 @@ export default function App() {
       ]);
     }
   }, [isConnected, address, setMessages, stats, messages?.length]);
+
+  // Apply pending suggestions when streaming finishes
+  useEffect(() => {
+    if (status === 'ready' && pendingSuggestions.length > 0) {
+      setSuggestions(pendingSuggestions);
+      setPendingSuggestions([]);
+    }
+  }, [status, pendingSuggestions]);
 
   // Automatically close ConnectionModal when connected
   useEffect(() => {
@@ -332,9 +342,6 @@ export default function App() {
 
     // Validate messages array exists and is not empty
     if (!Array.isArray(messages) || messages.length === 0) {
-      console.warn("[App] Cannot send message - invalid messages state", {
-        messages,
-      });
       return;
     }
 

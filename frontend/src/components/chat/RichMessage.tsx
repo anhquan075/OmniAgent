@@ -216,6 +216,7 @@ export function RichMessage({ role, content, parts, toolInvocations, timestamp, 
         ) : null;
 
       case 'reasoning':
+        if (!part.reasoning || !String(part.reasoning).trim()) return null;
         return (
           <Reasoning key={index} isStreaming={isStreaming}>
             <ReasoningTrigger />

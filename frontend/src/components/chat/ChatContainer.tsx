@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChatHistory } from './ChatHistory';
 import { MessageInput } from './MessageInput';
 import { cn } from '@/lib/utils';
-import { CpuIcon, ZapIcon, ShieldCheckIcon, BarChart3Icon, BrainCircuitIcon, CoinsIcon, BotIcon } from 'lucide-react';
+import { ZapIcon, BrainCircuitIcon } from 'lucide-react';
 import { OperationalPlan, TaskStatus } from './TaskStep';
 import { Conversation } from '../ai-elements/Conversation';
 
@@ -24,16 +24,6 @@ interface ChatContainerProps {
   suggestions?: any[];
 }
 
-const SUGGESTED_ACTIONS = [
-  { label: 'Vault Status', icon: BarChart3Icon, prompt: 'Show me the current vault status and buffer utilization.' },
-  { label: 'Check Risk', icon: ShieldCheckIcon, prompt: 'What are the current ZK-risk parameters?' },
-  { label: 'My Balance', icon: CoinsIcon, prompt: 'What is my current wallet balance on BNB Chain?' },
-  { label: 'Get USDT', icon: ZapIcon, prompt: 'Check my USDT balance in the vault.' },
-  { label: 'Bridge Funds', icon: ZapIcon, prompt: 'Show me how to bridge USDT to another chain.' },
-  { label: 'Smart Account', icon: ZapIcon, prompt: 'Show me my ERC-4337 smart account details.' },
-  { label: 'Robot Fleet', icon: BotIcon, prompt: 'What is the status of the robot fleet?' },
-  { label: 'Start Fleet', icon: BotIcon, prompt: 'Start the robot fleet simulator.' },
-];
 
 export function ChatContainer({ 
   messages = [], 
@@ -100,7 +90,7 @@ export function ChatContainer({
     return null;
   }, [messages, status, suggestions]);
 
-  const [persistentSuggestions, setPersistentSuggestions] = useState(SUGGESTED_ACTIONS);
+  const [persistentSuggestions, setPersistentSuggestions] = useState<any[]>([]);
 
   useEffect(() => {
     if (dynamicSuggestions && dynamicSuggestions.length > 0) {
@@ -294,7 +284,7 @@ export function ChatContainer({
       {/* Input Anchored Area */}
       <div className="p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent border-t border-white/5">
         {/* Suggested Actions Chips */}
-        {activeSuggestions && (
+        {activeSuggestions.length > 0 && (
           <div className={cn(
             "flex items-center gap-2 mb-4 overflow-x-auto pb-2 scrollbar-none no-scrollbar px-1 transition-opacity duration-300",
             isActuallyStreaming && "opacity-40 pointer-events-none"
