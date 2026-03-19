@@ -67,6 +67,7 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
   logger.info({ modelId }, '[AutonomousLoop] Starting cycle');
   
   agentEvents.emit('cycle:start', { timestamp: new Date(), modelId });
+  updateDashboardState({ type: 'cycle:start', data: { timestamp: new Date(), modelId } });
 
   const wdkAddress = env.WDK_VAULT_ADDRESS;
   if (wdkAddress) {
@@ -178,12 +179,14 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
       decision: schedulingDecision,
       robotEarningsDetected 
     });
+    updateDashboardState({ type: 'cycle:end', data: { success: true, summary: summaryText, decision: schedulingDecision, robotEarningsDetected } });
 
     return cycleResult;
   } catch (error: any) {
     logger.error(error, '[AutonomousLoop] Cycle failed');
     
     agentEvents.emit('cycle:error', { error: error.message });
+    updateDashboardState({ type: 'cycle:error', data: { error: error.message } });
 
     return {
       text: "",
@@ -293,6 +296,56 @@ function parseSchedulingDecision(text: string): {
 let currentTimeout: NodeJS.Timeout | null = null;
 let isRunning = false;
 
+// Polling state for dashboard
+interface DashboardState {
+  status: 'idle' | 'running' | 'sleeping' | 'error';
+  lastCycleEnd?: string;
+  lastCycleSummary?: string;
+  nextWakeTime?: string;
+  recentEvents: Array<{
+    type: string;
+    data: any;
+    timestamp: string;
+  }>;
+}
+
+let dashboardState: DashboardState = {
+  status: 'idle',
+  recentEvents: [],
+};
+
+export function updateDashboardState(event: { type: string; data?: any }): void {
+  const entry = {
+    type: event.type,
+    data: event.data,
+    timestamp: new Date().toISOString(),
+  };
+  dashboardState.recentEvents.unshift(entry);
+  if (dashboardState.recentEvents.length > 20) dashboardState.recentEvents.pop();
+
+  if (event.type === 'cycle:start') {
+    dashboardState.status = 'running';
+    dashboardState.lastCycleSummary = undefined;
+  } else if (event.type === 'cycle:end') {
+    dashboardState.status = 'sleeping';
+    dashboardState.lastCycleEnd = new Date().toISOString();
+    dashboardState.lastCycleSummary = event.data?.summary?.slice(0, 500);
+    dashboardState.nextWakeTime = event.data?.decision?.nextRunDelay
+      ? new Date(Date.now() + event.data.decision.nextRunDelay).toISOString()
+      : undefined;
+  } else if (event.type === 'cycle:error') {
+    dashboardState.status = 'error';
+    dashboardState.lastCycleEnd = new Date().toISOString();
+  } else if (event.type === 'status:sleeping') {
+    dashboardState.status = 'sleeping';
+    dashboardState.nextWakeTime = event.data?.wakeTime;
+  }
+}
+
+export function getDashboardState(): DashboardState {
+  return { ...dashboardState };
+}
+
 export async function startAutonomousLoop(initialDelayMs?: number): Promise<void> {
   if (isRunning) {
     logger.warn('[AutonomousLoop] Loop already running');
@@ -308,6 +361,7 @@ export async function startAutonomousLoop(initialDelayMs?: number): Promise<void
     
     logger.info({ delay, wakeTime: new Date(Date.now() + delay).toISOString() }, '[AutonomousLoop] Sleeping');
     agentEvents.emit('status:sleeping', { duration: delay, wakeTime: new Date(Date.now() + delay) });
+    updateDashboardState({ type: 'status:sleeping', data: { duration: delay, wakeTime: new Date(Date.now() + delay) } });
     
     currentTimeout = setTimeout(async () => {
       await run();

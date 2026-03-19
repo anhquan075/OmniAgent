@@ -1,9 +1,13 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
-import { agentEvents } from '../../agent/AutonomousLoop';
+import { agentEvents, getDashboardState } from '../../agent/AutonomousLoop';
 import { logger } from '@/utils/logger';
 
 const dashboard = new Hono();
+
+dashboard.get('/status', (c) => {
+  return c.json(getDashboardState());
+});
 
 dashboard.get('/events', async (c) => {
   logger.info('[Dashboard] Client connected to SSE stream');
