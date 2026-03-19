@@ -92,6 +92,8 @@ export default function App() {
     type: "success" | "error";
     message: string;
   } | null>(null);
+  // Track streaming agent status from SSE data-status events
+  const [agentStreamStatus, setAgentStreamStatus] = useState<any[]>([]);
   const queryClient = useQueryClient();
   const { address, isConnected } = useAccount();
 
@@ -202,6 +204,8 @@ export default function App() {
         console.log(
           `[Notification] ${dataPart.data.level}: ${dataPart.data.message}`,
         );
+      } else if (dataPart.type === "data-status") {
+        setAgentStreamStatus(prev => [...prev.slice(-10), dataPart]);
       }
     },
     onError: (err) => {
@@ -544,7 +548,7 @@ export default function App() {
                 regenerate={regenerate}
                 stop={stop}
                 error={error}
-                data={stats ? [{ type: "data-status", data: stats }] : []}
+                data={agentStreamStatus.length > 0 ? agentStreamStatus : (stats ? [{ type: "data-status", data: stats }] : [])}
               />
             </div>
           </div>
