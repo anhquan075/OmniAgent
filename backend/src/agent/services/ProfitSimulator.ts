@@ -239,11 +239,11 @@ export class ProfitSimulator {
     const inputBN = BigInt(params.inputAmount);
     const gasCostBN = BigInt(gasEstimate.totalGasCost);
 
-    // Calculate extra yield from higher APY
     const principal = Number(ethers.formatUnits(inputBN, 6));
-    const yieldDiffDaily = (principal * params.expectedYieldDifference) / 365 / 100;
+    const yieldDiffBps = Math.floor(params.expectedYieldDifference * 100);
+    const yieldDiffDaily = (principal * yieldDiffBps) / 365 / 10000;
     const totalExtraYield = yieldDiffDaily * params.holdingPeriodDays;
-    const extraYieldBN = ethers.parseUnits(totalExtraYield.toString(), 6);
+    const extraYieldBN = BigInt(Math.round(totalExtraYield * 1e6));
 
     // Net profit = extra yield - gas cost
     const netProfit = extraYieldBN - gasCostBN;
