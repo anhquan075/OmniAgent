@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Truck, Sparkles, Scan, Shield, Radar, Zap, Lock, Eye, Activity, ShieldAlert, Target, LucideIcon } from 'lucide-react';
 import { getApiUrl } from '../lib/api';
 
@@ -10,6 +10,15 @@ export interface RobotEvent {
   timestamp: string;
   icon: LucideIcon;
   txHash?: string;
+}
+
+interface FleetStatus {
+  enabled: boolean;
+  robots: Array<{ id: string; type: string; icon: string; status: string; totalEarned: string; taskCount: number }>;
+  fleetTotalEarned: string;
+  recentEvents: Array<{ robotId: string; type: string; icon: string; taskName: string; earnings: string; timestamp: string; txHash?: string }>;
+  latestTxHash?: string | null;
+  latestTxValue?: string | null;
 }
 
 interface UseRobotFleetEventsResult {
@@ -32,97 +41,72 @@ const ICON_MAP: Record<string, LucideIcon> = {
   "[B]": Target,
 };
 
+const POLL_INTERVAL = 5000;
+
 export const useRobotFleetEvents = (): UseRobotFleetEventsResult => {
   const [events, setEvents] = useState<RobotEvent[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const seenTxHashesRef = useRef<Set<string>>(new Set());
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      const res = await fetch(getApiUrl('/api/robot-fleet/status'), {
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const status: FleetStatus = await res.json();
+
+      if (!seenTxHashesRef.current.size) {
+        setIsConnected(true);
+        setError(null);
+        for (const tx of status.recentEvents) {
+          if (tx.txHash) seenTxHashesRef.current.add(tx.txHash);
+        }
+        return;
+      }
+
+      const newEvents: RobotEvent[] = [];
+      for (const tx of status.recentEvents) {
+        if (tx.txHash && !seenTxHashesRef.current.has(tx.txHash)) {
+          seenTxHashesRef.current.add(tx.txHash);
+          const iconName = tx.icon || 'Truck';
+          newEvents.push({
+            ...tx,
+            icon: ICON_MAP[iconName] || Truck,
+          });
+        }
+      }
+
+      if (newEvents.length > 0) {
+        setEvents((prev) => [...newEvents, ...prev].slice(0, 50));
+      }
+
+      setIsConnected(true);
+      setError(null);
+    } catch (err: any) {
+      if (err.name === 'AbortError' || err.message?.includes('abort')) return;
+      setIsConnected(false);
+      setError(err instanceof Error ? err : new Error(String(err)));
+    }
+  }, []);
 
   useEffect(() => {
-    const connect = () => {
-      try {
-        const eventSource = new EventSource(getApiUrl('/api/robot-fleet/events'));
-        eventSourceRef.current = eventSource;
-
-        eventSource.onopen = () => {
-          setIsConnected(true);
-          setError(null);
-        };
-
-        const handleFleetEvent = (e: MessageEvent) => {
-          try {
-            const data = JSON.parse(e.data);
-            
-            if (data.type === 'fleet:task-completed' && data.event) {
-              const eventData = data.event;
-              const iconName = eventData.icon || 'Truck';
-              const IconComponent = ICON_MAP[iconName] || Truck;
-              
-              const formattedEvent = {
-                ...eventData,
-                icon: IconComponent
-              };
-              
-              addEvent(formattedEvent);
-              return;
-            }
-
-            if (data.type === 'fleet:status') {
-              const statusEvent = {
-                ...data,
-                icon: ICON_MAP['Delivery'],
-                robotId: 'SYSTEM',
-                taskName: 'Fleet Status Sync',
-                earnings: data.latestTxValue || '0',
-                timestamp: new Date().toISOString(),
-                type: 'fleet:status'
-              };
-              addEvent(statusEvent as any);
-            }
-          } catch (err) {
-            console.error('Failed to parse fleet-event message', err);
-          }
-        };
-
-        eventSource.addEventListener('fleet-event', handleFleetEvent as any);
-
-        eventSource.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.type === 'connected') {
-              console.log('Robot Fleet Stream Connected');
-            }
-          } catch (e) {}
-        };
-
-        eventSource.onerror = (err) => {
-          console.error('SSE Error', err);
-          setIsConnected(false);
-          setError(new Error('Connection lost'));
-          eventSource.close();
-        };
-
-      } catch (e) {
-        console.error('Failed to create EventSource', e);
-        setError(e as Error);
-      }
-    };
-
-    const addEvent = (newEvent: RobotEvent) => {
-      setEvents((prev) => {
-        const updated = [newEvent, ...prev];
-        return updated.slice(0, 50);
-      });
-    };
-
-    connect();
+    fetchStatus();
+    intervalRef.current = setInterval(fetchStatus, POLL_INTERVAL);
 
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, []);
+  }, [fetchStatus]);
 
   return { events, isConnected, error };
 };
