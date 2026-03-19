@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { RobotEvent } from '../../hooks/useRobotFleetEvents';
 
 interface ActivityFeedProps {
@@ -8,10 +8,6 @@ interface ActivityFeedProps {
 const ActivityFeed: React.FC<ActivityFeedProps> = ({ events }) => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const chronologicalEvents = [...events].reverse();
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [events]);
 
   return (
     <div className="flex flex-col h-full">
