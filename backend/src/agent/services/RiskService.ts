@@ -1,6 +1,7 @@
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
 import { createOpenAI } from '@ai-sdk/openai';
+import { generateText } from 'ai';
 import { Contract } from 'ethers';
 import { z } from 'zod';
 
@@ -38,20 +39,18 @@ export class RiskService {
     });
 
     try {
-      const { object } = await generateText({
+      const result = await generateText({
         model: openai(env.OPENROUTER_MODEL_CRYPTO || 'x-ai/grok-4.1-fast'),
         temperature: 0,
-        schema: z.object({
-          score: z.number().min(0).max(100).describe('Risk score from 0 to 100'),
-          explanation: z.string().describe('Brief explanation of the risk assessment')
-        }),
         prompt: `DeFi Risk Analysis for OmniAgent AFOS Agent.
 Current Risk Profile: ${JSON.stringify(currentProfile)}
 Transaction Simulation Result: ${JSON.stringify(txSimulation)}
 
 Analyze the simulation for potential anomalies, protocol failures, or excessive risk.
-Return a score from 0 (Safe) to 100 (Extremely Risky) and a concise explanation.`,
+Return JSON: {"score": 0-100, "explanation": "..."}`,
       });
+
+      const object = JSON.parse(result.text);
 
       logger.info({ score: object.score, explanation: object.explanation }, '[RiskService] AI Risk Score');
       return object;

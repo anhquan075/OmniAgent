@@ -1,14 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.strategicGuardrail = void 0;
-const ai_1 = require("ai");
-const openai_1 = require("@ai-sdk/openai");
 const logger_1 = require("../../utils/logger");
+const openai_1 = require("@ai-sdk/openai");
+const ai_1 = require("ai");
 // Lightweight model for cost-efficient guardrails
 const gatekeeperModel = (0, openai_1.createOpenAI)({
     apiKey: process.env.OPENROUTER_API_KEY,
     baseURL: process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
-}).chat('google/gemini-2.0-flash-001');
+}).chat('google/gemini-2.5-flash-lite');
 const extractUserContent = (prompt) => {
     if (!prompt || !Array.isArray(prompt) || prompt.length === 0)
         return '';
@@ -42,6 +42,7 @@ exports.strategicGuardrail = {
                    
                    Respond ONLY with 'SAFE' or 'REJECT: [Reason]'.`,
                     prompt: userContent,
+                    temperature: 0
                 });
                 if (safetycheck.includes('REJECT')) {
                     return {

@@ -2,16 +2,18 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.agentEvents = void 0;
 exports.runAutonomousCycle = runAutonomousCycle;
+exports.updateDashboardState = updateDashboardState;
+exports.getDashboardState = getDashboardState;
 exports.startAutonomousLoop = startAutonomousLoop;
 exports.stopAutonomousLoop = stopAutonomousLoop;
-const ai_1 = require("ai");
-const openai_1 = require("@ai-sdk/openai");
 const env_1 = require("../config/env");
-const tools_1 = require("./tools");
-const events_1 = require("events");
 const RobotFleetService_1 = require("../services/RobotFleetService");
 const logger_1 = require("../utils/logger");
+const openai_1 = require("@ai-sdk/openai");
+const ai_1 = require("ai");
+const events_1 = require("events");
 const HealthMonitor_1 = require("./services/HealthMonitor");
+const tools_1 = require("./tools");
 // Event Emitter for Dashboard Stream
 exports.agentEvents = new events_1.EventEmitter();
 // Track fleet earnings across cycles
@@ -56,9 +58,10 @@ Guidelines for scheduling:
 IMPORTANT: You MUST continue the conversation until you provide a final technical summary with NEXT_RUN_DECISION. Do not stop after a tool call. Use tool results to decide your next move.
 STANCE: Technical, analytical, security-first.`;
 async function runAutonomousCycle() {
-    const modelId = env_1.env.OPENROUTER_MODEL_CRYPTO || 'deepseek/deepseek-chat';
+    const modelId = env_1.env.OPENROUTER_MODEL_CRYPTO || 'x-ai/grok-4.1-fast';
     logger_1.logger.info({ modelId }, '[AutonomousLoop] Starting cycle');
     exports.agentEvents.emit('cycle:start', { timestamp: new Date(), modelId });
+    updateDashboardState({ type: 'cycle:start', data: { timestamp: new Date(), modelId } });
     const wdkAddress = env_1.env.WDK_VAULT_ADDRESS;
     if (wdkAddress) {
         const healthAlert = await HealthMonitor_1.healthMonitor.monitorPosition(wdkAddress);
@@ -99,6 +102,7 @@ async function runAutonomousCycle() {
             tools: tools_1.agentTools,
             maxSteps: 10,
             system: currentSystemPrompt,
+            temperature: 0,
             prompt: "Perform a full autonomous strategy cycle. Start with risk analysis and do not stop until you provide a final summary with NEXT_RUN_DECISION.",
             onStepFinish: (step) => {
                 const callCount = step.toolCalls?.length || 0;
@@ -120,6 +124,7 @@ async function runAutonomousCycle() {
             const summaryResult = await (0, ai_1.generateText)({
                 model: openai.chat(modelId),
                 system: currentSystemPrompt,
+                temperature: 0,
                 messages: [
                     { role: 'user', content: "Perform a full autonomous strategy cycle. Start with risk analysis and do not stop until you provide a final summary with NEXT_RUN_DECISION." },
                     ...messageHistory,
@@ -152,11 +157,13 @@ async function runAutonomousCycle() {
             decision: schedulingDecision,
             robotEarningsDetected
         });
+        updateDashboardState({ type: 'cycle:end', data: { success: true, summary: summaryText, decision: schedulingDecision, robotEarningsDetected } });
         return cycleResult;
     }
     catch (error) {
         logger_1.logger.error(error, '[AutonomousLoop] Cycle failed');
         exports.agentEvents.emit('cycle:error', { error: error.message });
+        updateDashboardState({ type: 'cycle:error', data: { error: error.message } });
         return {
             text: "",
             messages: [],
@@ -250,6 +257,43 @@ function parseSchedulingDecision(text) {
 }
 let currentTimeout = null;
 let isRunning = false;
+let dashboardState = {
+    status: 'idle',
+    recentEvents: [],
+};
+function updateDashboardState(event) {
+    const entry = {
+        type: event.type,
+        data: event.data,
+        timestamp: new Date().toISOString(),
+    };
+    dashboardState.recentEvents.unshift(entry);
+    if (dashboardState.recentEvents.length > 20)
+        dashboardState.recentEvents.pop();
+    if (event.type === 'cycle:start') {
+        dashboardState.status = 'running';
+        dashboardState.lastCycleSummary = undefined;
+    }
+    else if (event.type === 'cycle:end') {
+        dashboardState.status = 'sleeping';
+        dashboardState.lastCycleEnd = new Date().toISOString();
+        dashboardState.lastCycleSummary = event.data?.summary?.slice(0, 500);
+        dashboardState.nextWakeTime = event.data?.decision?.nextRunDelay
+            ? new Date(Date.now() + event.data.decision.nextRunDelay).toISOString()
+            : undefined;
+    }
+    else if (event.type === 'cycle:error') {
+        dashboardState.status = 'error';
+        dashboardState.lastCycleEnd = new Date().toISOString();
+    }
+    else if (event.type === 'status:sleeping') {
+        dashboardState.status = 'sleeping';
+        dashboardState.nextWakeTime = event.data?.wakeTime;
+    }
+}
+function getDashboardState() {
+    return { ...dashboardState };
+}
 async function startAutonomousLoop(initialDelayMs) {
     if (isRunning) {
         logger_1.logger.warn('[AutonomousLoop] Loop already running');
@@ -263,6 +307,7 @@ async function startAutonomousLoop(initialDelayMs) {
             return;
         logger_1.logger.info({ delay, wakeTime: new Date(Date.now() + delay).toISOString() }, '[AutonomousLoop] Sleeping');
         exports.agentEvents.emit('status:sleeping', { duration: delay, wakeTime: new Date(Date.now() + delay) });
+        updateDashboardState({ type: 'status:sleeping', data: { duration: delay, wakeTime: new Date(Date.now() + delay) } });
         currentTimeout = setTimeout(async () => {
             await run();
         }, delay);

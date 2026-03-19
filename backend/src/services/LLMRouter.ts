@@ -130,7 +130,6 @@ export class LLMRouter {
 
       const result = await generateText({
         model: routerModel,
-        schema: routerSchema,
         temperature: 0,
         prompt: `Analyze the following user query and determine the best model to use.
 
@@ -148,9 +147,9 @@ Instructions:
 - Keep reasoning brief (1-2 sentences)
 
 Respond with JSON: {"intent": "...", "confidence": 0.0-1.0, "recommendedModel": "...", "reasoning": "..."}`,
-      } as any);
+      });
 
-      const decision = result.object as RouterDecision;
+      const decision = JSON.parse(result.text) as RouterDecision;
       
       logger.info({
         query: query.slice(0, 100),

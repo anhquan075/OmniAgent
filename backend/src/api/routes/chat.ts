@@ -34,7 +34,6 @@ async function generateSuggestions(
     const result = await generateText({
       model,
       temperature: 0,
-      schema: suggestionsSchema,
       prompt: `Based on the following conversation and assistant response, generate 3 relevant follow-up suggestions that the user might ask next.
 
 Assistant's response: "${assistantResponse.slice(0, 400)}"
@@ -43,10 +42,12 @@ Generate 3 contextual suggestions with:
 - label: Short label (3-4 words max)
 - prompt: Complete, specific follow-up question
 
-Topics: DeFi strategies, yield optimization, vault management, settlement rails.`,
-    } as any);
+Topics: DeFi strategies, yield optimization, vault management, settlement rails.
 
-    const suggestions = result.object as typeof fallbackSuggestions;
+Return JSON array: [{"label": "...", "prompt": "..."}, ...]`,
+    });
+
+    const suggestions = JSON.parse(result.text);
     if (Array.isArray(suggestions) && suggestions.length > 0) {
       return suggestions.slice(0, 3);
     }

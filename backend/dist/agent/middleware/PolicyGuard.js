@@ -3,13 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PolicyGuard = void 0;
 exports.getPolicyGuard = getPolicyGuard;
 exports.setPolicyGuard = setPolicyGuard;
-const ethers_1 = require("ethers");
+const env_1 = require("../../config/env");
 const constants_1 = require("../../lib/constants");
 const logger_1 = require("../../utils/logger");
-const zod_1 = require("zod");
-const ai_1 = require("ai");
 const openai_1 = require("@ai-sdk/openai");
-const env_1 = require("../../config/env");
+const ai_1 = require("ai");
+const ethers_1 = require("ethers");
+const zod_1 = require("zod");
 const TransactionSchema = zod_1.z.object({
     toAddress: zod_1.z.string().refine((val) => ethers_1.ethers.isAddress(val), {
         message: "Invalid Ethereum address",
@@ -385,14 +385,9 @@ class PolicyGuard {
                 apiKey: env_1.env.OPENROUTER_API_KEY,
                 baseURL: env_1.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
             });
-            const { object } = await (0, ai_1.generateObject)({
-                model: openai(env_1.env.OPENROUTER_MODEL_CRYPTO || 'deepseek/deepseek-chat'),
+            const result = await (0, ai_1.generateText)({
+                model: openai(env_1.env.OPENROUTER_MODEL_CRYPTO || 'x-ai/grok-4.1-fast'),
                 temperature: 0,
-                schema: zod_1.z.object({
-                    approved: zod_1.z.boolean().describe('Whether the transaction should be approved'),
-                    reason: zod_1.z.string().describe('Brief explanation of the decision'),
-                    riskLevel: zod_1.z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).describe('Estimated risk level')
-                }),
                 prompt: `Review this DeFi transaction for security and risk:
 
 Transaction Details:
@@ -407,8 +402,9 @@ Is this transaction safe to execute? Consider:
 3. Smart contract interaction risks
 4. Cross-chain bridging risks if applicable
 
-Provide a decision with reason and risk level.`
+Provide a decision with reason and risk level. Return JSON: {"approved": true/false, "reason": "...", "riskLevel": "LOW|MEDIUM|HIGH|CRITICAL"}`,
             });
+            const object = JSON.parse(result.text);
             if (!object.approved) {
                 return {
                     violated: true,

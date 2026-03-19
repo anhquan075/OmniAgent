@@ -2,6 +2,7 @@ import { env } from '@/config/env';
 import { ZERO_ADDRESS } from '@/lib/constants';
 import { logger } from '@/utils/logger';
 import { createOpenAI } from '@ai-sdk/openai';
+import { generateText } from 'ai';
 import { ethers } from 'ethers';
 import { z } from 'zod';
 const TransactionSchema = z.object({
@@ -471,14 +472,9 @@ export class PolicyGuard {
         baseURL: env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
       });
 
-      const { object } = await generateText({
+      const result = await generateText({
         model: openai(env.OPENROUTER_MODEL_CRYPTO || 'x-ai/grok-4.1-fast'),
         temperature: 0,
-        schema: z.object({
-          approved: z.boolean().describe('Whether the transaction should be approved'),
-          reason: z.string().describe('Brief explanation of the decision'),
-          riskLevel: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).describe('Estimated risk level')
-        }),
         prompt: `Review this DeFi transaction for security and risk:
 
 Transaction Details:
@@ -493,8 +489,10 @@ Is this transaction safe to execute? Consider:
 3. Smart contract interaction risks
 4. Cross-chain bridging risks if applicable
 
-Provide a decision with reason and risk level.`
+Provide a decision with reason and risk level. Return JSON: {"approved": true/false, "reason": "...", "riskLevel": "LOW|MEDIUM|HIGH|CRITICAL"}`,
       });
+
+      const object = JSON.parse(result.text);
 
       if (!object.approved) {
         return {

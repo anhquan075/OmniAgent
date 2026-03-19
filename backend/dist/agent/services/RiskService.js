@@ -1,11 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RiskService = void 0;
-const ai_1 = require("ai");
-const openai_1 = require("@ai-sdk/openai");
-const zod_1 = require("zod");
 const env_1 = require("../../config/env");
 const logger_1 = require("../../utils/logger");
+const openai_1 = require("@ai-sdk/openai");
+const ai_1 = require("ai");
 class RiskService {
     zkOracle;
     breaker;
@@ -27,20 +26,17 @@ class RiskService {
             baseURL: env_1.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
         });
         try {
-            const { object } = await (0, ai_1.generateObject)({
-                model: openai(env_1.env.OPENROUTER_MODEL_CRYPTO || 'deepseek/deepseek-chat'),
+            const result = await (0, ai_1.generateText)({
+                model: openai(env_1.env.OPENROUTER_MODEL_CRYPTO || 'x-ai/grok-4.1-fast'),
                 temperature: 0,
-                schema: zod_1.z.object({
-                    score: zod_1.z.number().min(0).max(100).describe('Risk score from 0 to 100'),
-                    explanation: zod_1.z.string().describe('Brief explanation of the risk assessment')
-                }),
                 prompt: `DeFi Risk Analysis for OmniAgent AFOS Agent.
 Current Risk Profile: ${JSON.stringify(currentProfile)}
 Transaction Simulation Result: ${JSON.stringify(txSimulation)}
 
 Analyze the simulation for potential anomalies, protocol failures, or excessive risk.
-Return a score from 0 (Safe) to 100 (Extremely Risky) and a concise explanation.`,
+Return JSON: {"score": 0-100, "explanation": "..."}`,
             });
+            const object = JSON.parse(result.text);
             logger_1.logger.info({ score: object.score, explanation: object.explanation }, '[RiskService] AI Risk Score');
             return object;
         }

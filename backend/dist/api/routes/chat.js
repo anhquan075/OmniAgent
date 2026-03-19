@@ -1,13 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const hono_1 = require("hono");
-const ai_1 = require("ai");
-const openai_1 = require("@ai-sdk/openai");
-const zod_1 = require("zod");
 const logger_1 = require("../../utils/logger");
+const openai_1 = require("@ai-sdk/openai");
+const ai_1 = require("ai");
+const hono_1 = require("hono");
+const zod_1 = require("zod");
 const tools_1 = require("../../agent/tools");
-const chat_store_1 = require("../../utils/chat-store");
 const LLMRouter_1 = require("../../services/LLMRouter");
+const chat_store_1 = require("../../utils/chat-store");
 const chat = new hono_1.Hono();
 // Zod schema for suggestions
 const suggestionsSchema = zod_1.z.array(zod_1.z.object({
@@ -22,9 +22,9 @@ const fallbackSuggestions = [
 ];
 async function generateSuggestions(model, messages, assistantResponse) {
     try {
-        const result = await (0, ai_1.generateObject)({
+        const result = await (0, ai_1.generateText)({
             model,
-            schema: suggestionsSchema,
+            temperature: 0,
             prompt: `Based on the following conversation and assistant response, generate 3 relevant follow-up suggestions that the user might ask next.
 
 Assistant's response: "${assistantResponse.slice(0, 400)}"
@@ -33,9 +33,11 @@ Generate 3 contextual suggestions with:
 - label: Short label (3-4 words max)
 - prompt: Complete, specific follow-up question
 
-Topics: DeFi strategies, yield optimization, vault management, settlement rails.`,
+Topics: DeFi strategies, yield optimization, vault management, settlement rails.
+
+Return JSON array: [{"label": "...", "prompt": "..."}, ...]`,
         });
-        const suggestions = result.object;
+        const suggestions = JSON.parse(result.text);
         if (Array.isArray(suggestions) && suggestions.length > 0) {
             return suggestions.slice(0, 3);
         }

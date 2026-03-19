@@ -5,6 +5,9 @@ const streaming_1 = require("hono/streaming");
 const AutonomousLoop_1 = require("../../agent/AutonomousLoop");
 const logger_1 = require("../../utils/logger");
 const dashboard = new hono_1.Hono();
+dashboard.get('/status', (c) => {
+    return c.json((0, AutonomousLoop_1.getDashboardState)());
+});
 dashboard.get('/events', async (c) => {
     logger_1.logger.info('[Dashboard] Client connected to SSE stream');
     c.header('Content-Type', 'text/event-stream');
