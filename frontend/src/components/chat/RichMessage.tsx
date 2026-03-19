@@ -184,6 +184,17 @@ export function RichMessage({ role, content, parts, toolInvocations, timestamp, 
           </div>
         );
       
+      case 'step-start':
+        return index > 0 ? (
+          <div key={index} className="text-neutral-gray py-2 opacity-40">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+              <span className="text-[8px] font-mono uppercase tracking-widest">Step {index + 1}</span>
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            </div>
+          </div>
+        ) : null;
+
       case 'reasoning':
         return (
           <Reasoning key={index} isStreaming={isStreaming}>

@@ -20,6 +20,7 @@ interface ChatContainerProps {
   stop: () => void;
   error?: Error;
   data?: any[];
+  suggestions?: any[];
 }
 
 const SUGGESTED_ACTIONS = [
@@ -45,7 +46,8 @@ export function ChatContainer({
   setMessages, 
   regenerate,  stop,
   error,
-  data 
+  data,
+  suggestions
 }: ChatContainerProps) {  
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -78,9 +80,13 @@ export function ChatContainer({
     return null;
   }, [data, safeMessages]);
 
-  // Extract dynamic suggestions from the last message
+  // Extract dynamic suggestions - prefer passed prop, fallback to message parts
   const dynamicSuggestions = React.useMemo(() => {
-    // Allow extraction during streaming or ready state to show suggestions as they arrive
+    // Priority 1: Use suggestions passed from App (via experimental_onData)
+    if (suggestions && suggestions.length > 0) {
+      return suggestions;
+    }
+    // Priority 2: Extract from message parts
     if ((status !== 'ready' && status !== 'streaming') || !messages || messages.length === 0) return null;
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.role !== 'assistant') return null;
@@ -91,7 +97,7 @@ export function ChatContainer({
       return suggestionPart?.data || null;
     }
     return null;
-  }, [messages, status]);
+  }, [messages, status, suggestions]);
 
   const [persistentSuggestions, setPersistentSuggestions] = useState(SUGGESTED_ACTIONS);
 

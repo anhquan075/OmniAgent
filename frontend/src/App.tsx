@@ -94,6 +94,8 @@ export default function App() {
   } | null>(null);
   // Track streaming agent status from SSE data-status events
   const [agentStreamStatus, setAgentStreamStatus] = useState<any[]>([]);
+  // Track dynamic suggestions from AI
+  const [suggestions, setSuggestions] = useState<any[]>([]);
   const queryClient = useQueryClient();
   const { address, isConnected } = useAccount();
 
@@ -206,6 +208,8 @@ export default function App() {
         );
       } else if (dataPart.type === "data-status") {
         setAgentStreamStatus(prev => [...prev.slice(-10), dataPart]);
+      } else if (dataPart.type === "data-suggestions") {
+        setSuggestions(Array.isArray(dataPart.data) ? dataPart.data : []);
       }
     },
     onError: (err) => {
@@ -549,6 +553,8 @@ export default function App() {
                 stop={stop}
                 error={error}
                 data={agentStreamStatus.length > 0 ? agentStreamStatus : (stats ? [{ type: "data-status", data: stats }] : [])}
+                addToolOutput={addToolResult}
+                suggestions={suggestions}
               />
             </div>
           </div>

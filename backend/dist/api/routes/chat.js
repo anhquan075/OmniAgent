@@ -9,6 +9,41 @@ const tools_1 = require("../../agent/tools");
 const LLMRouter_1 = require("../../services/LLMRouter");
 const chat_store_1 = require("../../utils/chat-store");
 const chat = new hono_1.Hono();
+/**
+ * Generate AVAILABLE TOOLS section dynamically from tool definitions
+ */
+function generateAvailableToolsPrompt() {
+    const tools = [];
+    for (const [name, toolDef] of Object.entries(tools_1.normalizedAgentTools)) {
+        // Extract description from tool definition
+        const description = toolDef.description || `Tool: ${name}`;
+        // Extract parameter schema if available
+        let params = '';
+        try {
+            const paramsObj = toolDef.parameters;
+            if (paramsObj && paramsObj._def && paramsObj._def.shape) {
+                const shape = paramsObj._def.shape();
+                const paramNames = Object.keys(shape).filter(k => k !== 'ZodDefault');
+                if (paramNames.length > 0) {
+                    params = ` (${paramNames.join(', ')})`;
+                }
+            }
+        }
+        catch (e) {
+            // Ignore param extraction errors
+        }
+        tools.push(`- ${name}${params}: ${description}`);
+    }
+    return tools.join('\n');
+}
+// Cache the tools prompt (regenerate only if needed)
+let cachedToolsPrompt = null;
+function getAvailableToolsPrompt() {
+    if (!cachedToolsPrompt) {
+        cachedToolsPrompt = generateAvailableToolsPrompt();
+    }
+    return cachedToolsPrompt;
+}
 // Zod schema for suggestions
 const suggestionsSchema = zod_1.z.array(zod_1.z.object({
     label: zod_1.z.string().describe('Short label for the suggestion (max 3-4 words)'),
@@ -30,7 +65,7 @@ async function generateSuggestions(model, messages, assistantResponse) {
 Assistant's response: "${assistantResponse.slice(0, 400)}"
 
 Generate 3 contextual suggestions with:
-- label: Short label (3-4 words max)
+- label: Short label (4-6 words max)
 - prompt: Complete, specific follow-up question
 
 Topics: DeFi strategies, yield optimization, vault management, settlement rails.
@@ -53,6 +88,10 @@ chat.post('/', async (c) => {
     const body = rawBody || {};
     const { messages: rawMessages, id } = body;
     const messages = Array.isArray(rawMessages) ? rawMessages : [];
+    logger_1.logger.info({ count: messages.length, hasInitial: messages.some(m => m.id === 'initial-1') }, '[Chat] Messages received');
+    if (messages.length > 0) {
+        logger_1.logger.debug({ firstMsg: JSON.stringify(messages[0]).slice(0, 200) }, '[Chat] First message');
+    }
     const chatId = id || 'default-chat-id';
     const lastUserMessage = messages.length > 0 ? messages[messages.length - 1] : null;
     let userText = "";
@@ -67,18 +106,26 @@ chat.post('/', async (c) => {
             userText = lastUserMessage.content.text || '';
         }
     }
-    // Filter messages to ensure they have valid content
     const validMessages = messages.filter((m) => {
         if (!m?.role)
             return false;
         if (typeof m.content === 'string')
             return true;
-        if (Array.isArray(m.content))
+        if (Array.isArray(m.content) && m.content.length > 0)
             return true;
         if (m.content?.text)
             return true;
+        if (Array.isArray(m.parts) && m.parts.length > 0)
+            return true;
+        if (Array.isArray(m.toolInvocations) && m.toolInvocations.length > 0)
+            return true;
         return false;
     });
+    logger_1.logger.info({ validCount: validMessages.length }, '[Chat] Valid messages after filter');
+    if (validMessages.length === 0) {
+        logger_1.logger.warn({ messages: JSON.stringify(messages).slice(0, 500) }, '[Chat] All messages filtered out');
+        return c.json({ error: 'No valid messages provided' }, 400);
+    }
     const openai = (0, openai_1.createOpenAI)({
         apiKey: process.env.OPENROUTER_API_KEY,
         baseURL: process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
@@ -103,11 +150,13 @@ chat.post('/', async (c) => {
                         data: {
                             status: 'Connecting',
                             progress: 10,
-                            thought: 'Initializing link to WDK settlement rails...'
+                            thought: 'Initializing link to WDK settlement rails...',
+                            ts: Date.now()
                         },
+                        transient: true,
                     });
                 }
-                let coreMessages = validMessages;
+                const modelMessages = await (0, ai_1.convertToModelMessages)(validMessages);
                 const result = await (0, ai_1.streamText)({
                     model: baseModel,
                     maxSteps: 10,
@@ -147,7 +196,8 @@ chat.post('/', async (c) => {
                             writer.write({
                                 type: 'data-status',
                                 id: 'agent-status',
-                                data: { status, progress, thought },
+                                data: { status, progress, thought, ts: Date.now() },
+                                transient: true,
                             });
                         }
                         // 2. Add an internal reasoning "thought" message part if tool results exist
@@ -177,66 +227,36 @@ chat.post('/', async (c) => {
                                 internalLogic = `Executed ${toolName} successfully.`;
                             }
                             if (internalLogic) {
+                                const reasoningId = `reasoning_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+                                writer.write({
+                                    type: 'reasoning-start',
+                                    id: reasoningId,
+                                });
                                 writer.write({
                                     type: 'reasoning-delta',
+                                    id: reasoningId,
                                     delta: internalLogic
+                                });
+                                writer.write({
+                                    type: 'reasoning-end',
+                                    id: reasoningId
                                 });
                             }
                         }
                     },
                     system: routerDecision.intent === 'small_talk'
-                        ? `You are the OmniAgent AFOS Strategist. Keep responses brief and professional. Just answer the user's question directly in natural language.`
-                        : `You are the OmniAgent AFOS Strategist. 
-                Directive: yield optimization for USDT and XAUT via Tether WDK & OmniAgent.
-                
-               AVAILABLE TOOLS - Use these to answer user queries:
-               
-               VAULT & STRATEGY TOOLS:
-               - get_vault_status: Get vault total assets, buffer status, health
-               - analyze_risk: Get ZK-risk profile (LOW/MEDIUM/HIGH), drawdown, Sharpe ratio
-               - check_strategy: Check if rebalancing is needed, preview next decision
-               - wdk_vault_get_balance: Get user's vault balance
-               - wdk_vault_get_state: Get vault buffer state
-               - wdk_engine_get_cycle_state: Get engine cycle state and decision preview
-               - wdk_engine_get_risk_metrics: Get health factor from engine
-               
-               MULTI-CHAIN TOOLS:
-               - get_all_chain_balances: Get BNB, SOL, TON balances across all chains
-               - bnb_get_balance: Get BNB and USDT balance on BNB Chain
-               - sol_get_balance: Get SOL balance on Solana
-               - ton_get_balance: Get TON balance on TON
-               
-               AAVE LENDING TOOLS:
-               - wdk_aave_supply: Supply USDT to Aave V3
-               - wdk_aave_withdraw: Withdraw USDT from Aave V3
-               
-               X402 PAYMENT TOOLS:
-               - x402_list_services: List available sub-agent services
-               - x402_get_balance: Get USDT balance for x402 payments
-               - x402_fleet_status: Get robot fleet status and earnings
-               
-               CRITICAL INSTRUCTION: You MUST ALWAYS provide a final text summary after using tools.
-               
-               WORKFLOW:
-               1. Use tools to gather data based on user's question
-               2. AFTER tools return results, you MUST write a natural language response explaining:
-                  - What you found
-                  - What the data means
-                  - What actions were taken or recommended
-               3. NEVER end your response with just tool calls - ALWAYS follow up with explanatory text
-               
-               QUICK REFERENCE:
-               - Vault status → get_vault_status
-               - Risk analysis → analyze_risk
-               - Rebalance check → check_strategy
-               - Chain balances → get_all_chain_balances
-               - Engine metrics → wdk_engine_get_risk_metrics
-               - Aave position → wdk_aave_supply or wdk_aave_withdraw
-               
-               RESPONSE FORMAT: Tools → Text Summary (MANDATORY)
-               
-               STANCE: Technical, analytical, security-first.`,
-                    messages: coreMessages,
+                        ? `You are the OmniAgent Strategist. Keep responses brief and professional.`
+                        : `You are the OmniAgent Strategist for yield optimization.
+
+AVAILABLE TOOLS:
+${getAvailableToolsPrompt()}
+
+WORKFLOW:
+1. Call tools to gather data
+2. Provide clear response with findings
+
+RESPONSE FORMAT: Direct answer after tool results.`,
+                    messages: modelMessages,
                 }); // Cast to any to bypass potential version mismatch errors in the types
                 // Bridge to UI stream (Pass 1)
                 await writer.merge(result.toUIMessageStream());
@@ -262,6 +282,7 @@ chat.post('/', async (c) => {
                                     type: 'data-status',
                                     id: 'agent-status',
                                     data: { status: 'Synthesizing', progress: 99, thought: 'Generating strategic summary...' },
+                                    transient: true,
                                 });
                                 const summaryResult = await (0, ai_1.streamText)({
                                     model: baseModel,
