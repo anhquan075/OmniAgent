@@ -99,6 +99,37 @@ export function RichMessage({ role, content, parts, toolInvocations, timestamp, 
                 <div className="mt-2">
                    <BalanceCard {...result} />
                 </div>
+              ) : toolName === 'analyze_risk' ? (
+                <div className="space-y-3 mt-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-3 rounded-xl bg-black/20 border border-white/5 text-center">
+                      <span className="text-[8px] font-heading text-neutral-gray uppercase block mb-1">Risk Level</span>
+                      <span className={clsx(
+                        "text-lg font-heading font-bold",
+                        result?.level === 'HIGH' ? "text-red-400" : result?.level === 'MEDIUM' ? "text-yellow-400" : "text-tether-teal"
+                      )}>
+                        {result?.level || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="p-3 rounded-xl bg-black/20 border border-white/5 text-center">
+                      <span className="text-[8px] font-heading text-neutral-gray uppercase block mb-1">Drawdown</span>
+                      <span className="text-lg font-heading font-bold text-cyber-cyan">
+                        {result?.drawdownBps || 0} bps
+                      </span>
+                    </div>
+                    <div className="p-3 rounded-xl bg-black/20 border border-white/5 text-center">
+                      <span className="text-[8px] font-heading text-neutral-gray uppercase block mb-1">Sharpe</span>
+                      <span className="text-lg font-heading font-bold text-bnb-gold">
+                        {result?.sharpe || 0}
+                      </span>
+                    </div>
+                  </div>
+                  {result?.message && (
+                    <div className="p-3 rounded-xl bg-tether-teal/5 border border-tether-teal/20">
+                      <span className="text-[9px] font-mono text-tether-teal">{result.message}</span>
+                    </div>
+                  )}
+                </div>
               ) : toolName === 'get_all_chain_balances' ? (
                 <div className="mt-2 space-y-2">
                   {result.balances?.map((chain: any, i: number) => (
@@ -183,7 +214,7 @@ export function RichMessage({ role, content, parts, toolInvocations, timestamp, 
             <MessageResponse>{part.text}</MessageResponse>
           </div>
         );
-      
+
       case 'step-start':
         return index > 0 ? (
           <div key={index} className="text-neutral-gray py-2 opacity-40">
@@ -205,10 +236,10 @@ export function RichMessage({ role, content, parts, toolInvocations, timestamp, 
           </Reasoning>
         );
 
-      case 'tool-invocation':
-        return renderToolInvocation(part);
-
       default:
+        if (part.type === 'tool-invocation' || part.type?.startsWith('tool-') || part.type === 'dynamic-tool') {
+          return renderToolInvocation(part);
+        }
         return null;
     }
   };
