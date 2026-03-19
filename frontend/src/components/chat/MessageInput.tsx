@@ -37,6 +37,8 @@ export function MessageInput({ input, handleInputChange, handleSubmit, status, s
   );
 
   const onTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (isActuallyStreaming) return;
+    
     const value = e.target.value;
     handleInputChange(e);
     
@@ -79,6 +81,10 @@ export function MessageInput({ input, handleInputChange, handleSubmit, status, s
   };
 
   const handleSubmitWrapper = (e: React.FormEvent<HTMLFormElement>, overrideText?: string) => {
+    if (isActuallyStreaming) {
+      e.preventDefault();
+      return;
+    }
     const text = overrideText !== undefined ? overrideText : input;
     if (!text.trim()) {
       e.preventDefault();
@@ -118,8 +124,12 @@ export function MessageInput({ input, handleInputChange, handleSubmit, status, s
             onKeyDown={handleKeyDown}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-            placeholder="Command the AFOS Strategist or use / for slash commands..."
-            className="bg-transparent border-none focus-visible:ring-0 min-h-[44px] py-2.5 px-1 text-sm font-sans placeholder:text-neutral-gray/50 resize-none"
+            placeholder={isActuallyStreaming ? "Waiting for response..." : "Command the AFOS Strategist or use / for slash commands..."}
+            disabled={isActuallyStreaming}
+            className={cn(
+              "bg-transparent border-none focus-visible:ring-0 min-h-[44px] py-2.5 px-1 text-sm font-sans placeholder:text-neutral-gray/50 resize-none",
+              isActuallyStreaming && "opacity-50 cursor-not-allowed"
+            )}
           />
         </PromptInputBody>
 

@@ -4,6 +4,36 @@ import { ethers } from 'ethers';
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
 
+// In-memory store for live agent data (shared across requests)
+const agentLiveData = {
+  lastReasoning: '',
+  lastThought: '',
+  x402Revenue: '0.00',
+  recentActions: [] as Array<{ title: string; description: string; time: string; hash?: string }>,
+  maxActions: 20
+};
+
+export function updateAgentReasoning(reasoning: string) {
+  agentLiveData.lastReasoning = reasoning;
+  agentLiveData.lastThought = reasoning;
+}
+
+export function updateX402Revenue(amount: string) {
+  agentLiveData.x402Revenue = amount;
+}
+
+export function addRecentAction(action: { title: string; description: string; hash?: string }) {
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  agentLiveData.recentActions.unshift({ ...action, time });
+  if (agentLiveData.recentActions.length > agentLiveData.maxActions) {
+    agentLiveData.recentActions.pop();
+  }
+}
+
+export function getAgentLiveData() {
+  return { ...agentLiveData };
+}
+
 const stats = new Hono();
 
 stats.get('/', async (c) => {
@@ -69,6 +99,10 @@ stats.get('/', async (c) => {
         targetWDKBps: Number(preview?.targetWDKBps || 0n),
         state: Number(preview?.state || 0n)
       },
+      lastReasoning: agentLiveData.lastReasoning,
+      lastThought: agentLiveData.lastThought,
+      x402Revenue: agentLiveData.x402Revenue,
+      recentActions: agentLiveData.recentActions,
       timestamp: Date.now()
     };
 

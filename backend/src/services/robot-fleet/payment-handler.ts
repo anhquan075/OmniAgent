@@ -30,6 +30,8 @@ export class RobotFleetPaymentHandler {
   private readonly TIMEOUT_MS = 120000; // 2 minutes
   private readonly MAX_RETRIES = 3;
   private readonly BASE_BACKOFF_MS = 1000;
+  private readonly GAS_BUFFER_PERCENT = 50n;
+  private readonly FALLBACK_GAS_LIMIT = 100000n;
 
   constructor(
     private wallet: ethers.Wallet,
@@ -46,7 +48,6 @@ export class RobotFleetPaymentHandler {
     options?: { gasLimit?: bigint; maxRetries?: number }
   ): Promise<TransactionResult> {
     const maxRetries = options?.maxRetries ?? this.MAX_RETRIES;
-    const gasLimit = options?.gasLimit ?? 21000n;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
@@ -63,8 +64,26 @@ export class RobotFleetPaymentHandler {
         // Get current nonce
         const nonce = await this.getNonce();
 
+        let gasLimit: bigint;
+        if (options?.gasLimit) {
+          gasLimit = options.gasLimit;
+        } else {
+          try {
+            const estimated = await this.provider.estimateGas({
+              from: this.wallet.address,
+              to: toAddress,
+              value: amountWei
+            });
+            gasLimit = estimated + (estimated * this.GAS_BUFFER_PERCENT / 100n);
+            logger.debug({ estimated: estimated.toString(), gasLimit: gasLimit.toString() }, '[PaymentHandler] Gas estimated');
+          } catch (estimateError: any) {
+            logger.warn({ error: estimateError.message }, '[PaymentHandler] Gas estimation failed, using fallback');
+            gasLimit = this.FALLBACK_GAS_LIMIT;
+          }
+        }
+
         logger.info(
-          { amount, to: toAddress, nonce, attempt: attempt + 1 },
+          { amount, to: toAddress, nonce, gasLimit: gasLimit.toString(), attempt: attempt + 1 },
           '[PaymentHandler] Sending transaction'
         );
 

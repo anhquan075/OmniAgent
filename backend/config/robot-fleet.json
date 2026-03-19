@@ -13,5 +13,5 @@
   ],
   "taskInterval": { "min": 5000, "max": 15000 },
   "earningsRange": { "min": "0.0001", "max": "0.0005" },
-  "agentWalletAddress": "0xB789D888A53D34f6701C1A5876101Cb32dbF17cF"
+  "agentWalletAddress": "0x26CEefE4F0C3558237016F213914764047f671bA"
 }

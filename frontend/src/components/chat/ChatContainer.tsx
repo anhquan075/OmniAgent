@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatHistory } from './ChatHistory';
 import { MessageInput } from './MessageInput';
+import { cn } from '@/lib/utils';
 import { CpuIcon, ZapIcon, ShieldCheckIcon, BarChart3Icon, BrainCircuitIcon, CoinsIcon, BotIcon } from 'lucide-react';
 import { OperationalPlan, TaskStatus } from './TaskStep';
 import { Conversation } from '../ai-elements/Conversation';
@@ -294,17 +295,22 @@ export function ChatContainer({
       <div className="p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent border-t border-white/5">
         {/* Suggested Actions Chips */}
         {activeSuggestions && (
-          <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2 scrollbar-none no-scrollbar px-1">
+          <div className={cn(
+            "flex items-center gap-2 mb-4 overflow-x-auto pb-2 scrollbar-none no-scrollbar px-1 transition-opacity duration-300",
+            isActuallyStreaming && "opacity-40 pointer-events-none"
+          )}>
              {activeSuggestions.map((action: any) => (
                <button
                  key={action.label}
                   onClick={() => {
+                    if (isActuallyStreaming) return;
                     const text = (action.prompt || "").trim();
                     if (!text) return;
                     if (!Array.isArray(messages) || messages.length === 0) return;
                     sendMessage({ text });
                   }}
-                 className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[9px] font-heading tracking-widest text-neutral-gray-light hover:bg-tether-teal/10 hover:border-tether-teal/30 hover:text-tether-teal transition-all duration-300"
+                  disabled={isActuallyStreaming}
+                 className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[9px] font-heading tracking-widest text-neutral-gray-light hover:bg-tether-teal/10 hover:border-tether-teal/30 hover:text-tether-teal transition-all duration-300 disabled:cursor-not-allowed"
               >
                 {action.icon && <action.icon className="w-3 h-3" />}
                 {action.label}

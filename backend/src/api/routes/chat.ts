@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { normalizedAgentTools } from '@/agent/tools';
 import { llmRouter } from '@/services/LLMRouter';
 import { loadChat, saveChat } from '../../utils/chat-store';
+import { updateAgentReasoning, updateX402Revenue, addRecentAction } from './stats';
 
 const chat = new Hono();
 
@@ -225,10 +226,63 @@ chat.post('/', async (c) => {
                 data: { status, progress, thought, ts: Date.now() },
                 transient: true,
               });
+              
+              updateAgentReasoning(thought);
+              
+              const lastResult = toolResults[toolResults.length - 1];
+              if (lastResult) {
+                const actionTitle = toolName.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+                let actionDesc = '';
+                
+                if (lastResult.result?.actionTaken) {
+                  actionDesc = `Action: ${lastResult.result.actionTaken}`;
+                } else if (lastResult.result?.status) {
+                  actionDesc = `Status: ${lastResult.result.status}`;
+                } else if (lastResult.result?.txHash) {
+                  actionDesc = `Tx: ${lastResult.result.txHash.slice(0, 16)}...`;
+                } else if (lastResult.result?.success !== undefined) {
+                  actionDesc = lastResult.result.success ? 'Completed successfully' : 'Failed';
+                }
+                
+                if (actionDesc) {
+                  addRecentAction({ title: actionTitle, description: actionDesc, hash: lastResult.result?.txHash });
+                }
+                
+                if (toolName?.includes('x402') && lastResult?.result?.amount) {
+                  updateX402Revenue(lastResult.result.amount);
+                }
+              }
             }
 
-            // 2. Add an internal reasoning "thought" message part if tool results exist
-            // This replaces the "Thought for 1 second" with actual internal logic
+            if (toolResults && toolResults.length > 0) {
+              const lastResult = toolResults[toolResults.length - 1];
+              const toolName = lastResult.toolName;
+              
+              const actionTitle = toolName.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+              let actionDesc = '';
+              
+              if (lastResult.result?.actionTaken) {
+                actionDesc = `Action: ${lastResult.result.actionTaken}`;
+              } else if (lastResult.result?.status) {
+                actionDesc = `Status: ${lastResult.result.status}`;
+              } else if (lastResult.result?.txHash) {
+                actionDesc = `Tx: ${lastResult.result.txHash.slice(0, 16)}...`;
+              } else if (lastResult.result?.success !== undefined) {
+                actionDesc = lastResult.result.success ? 'Completed successfully' : 'Failed';
+              }
+              
+              if (actionDesc) {
+                addRecentAction({ title: actionTitle, description: actionDesc, hash: lastResult.result?.txHash });
+              }
+              
+              if (toolName?.includes('x402') && lastResult?.result?.amount) {
+                updateX402Revenue(lastResult.result.amount);
+              }
+              if (toolName?.includes('x402') && lastResult?.result?.amount) {
+                updateX402Revenue(lastResult.result.amount);
+              }
+            }
+
             if (toolResults && toolResults.length > 0) {
               const lastResult = toolResults[toolResults.length - 1];
               const toolName = lastResult.toolName;

@@ -1,5 +1,6 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { bsc, bscTestnet } from 'wagmi/chains';
+import { createStorage, cookieStorage } from 'wagmi';
 
 /**
  * Get the initial chain based on VITE_DEFAULT_NETWORK environment variable
@@ -39,6 +40,9 @@ export const wagmiConfig = getDefaultConfig({
   projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID, // Get from https://cloud.walletconnect.com
   chains: getSupportedChains(),
   ssr: false,
+  storage: createStorage({
+    storage: cookieStorage,
+  }),
   theme: {
     blurs: {
       modalOverlay: 'blur(4px)',

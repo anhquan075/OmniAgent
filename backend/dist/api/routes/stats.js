@@ -1,10 +1,39 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.updateAgentReasoning = updateAgentReasoning;
+exports.updateX402Revenue = updateX402Revenue;
+exports.addRecentAction = addRecentAction;
+exports.getAgentLiveData = getAgentLiveData;
 const hono_1 = require("hono");
 const ethers_1 = require("../../contracts/clients/ethers");
 const ethers_2 = require("ethers");
 const env_1 = require("../../config/env");
 const logger_1 = require("../../utils/logger");
+// In-memory store for live agent data (shared across requests)
+const agentLiveData = {
+    lastReasoning: '',
+    lastThought: '',
+    x402Revenue: '0.00',
+    recentActions: [],
+    maxActions: 20
+};
+function updateAgentReasoning(reasoning) {
+    agentLiveData.lastReasoning = reasoning;
+    agentLiveData.lastThought = reasoning;
+}
+function updateX402Revenue(amount) {
+    agentLiveData.x402Revenue = amount;
+}
+function addRecentAction(action) {
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    agentLiveData.recentActions.unshift({ ...action, time });
+    if (agentLiveData.recentActions.length > agentLiveData.maxActions) {
+        agentLiveData.recentActions.pop();
+    }
+}
+function getAgentLiveData() {
+    return { ...agentLiveData };
+}
 const stats = new hono_1.Hono();
 stats.get('/', async (c) => {
     try {
@@ -61,6 +90,10 @@ stats.get('/', async (c) => {
                 targetWDKBps: Number(preview?.targetWDKBps || 0n),
                 state: Number(preview?.state || 0n)
             },
+            lastReasoning: agentLiveData.lastReasoning,
+            lastThought: agentLiveData.lastThought,
+            x402Revenue: agentLiveData.x402Revenue,
+            recentActions: agentLiveData.recentActions,
             timestamp: Date.now()
         };
         return c.json(response);

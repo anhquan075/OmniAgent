@@ -8,6 +8,7 @@ const zod_1 = require("zod");
 const tools_1 = require("../../agent/tools");
 const LLMRouter_1 = require("../../services/LLMRouter");
 const chat_store_1 = require("../../utils/chat-store");
+const stats_1 = require("./stats");
 const chat = new hono_1.Hono();
 /**
  * Generate AVAILABLE TOOLS section dynamically from tool definitions
@@ -121,11 +122,16 @@ chat.post('/', async (c) => {
             return true;
         return false;
     });
-    logger_1.logger.info({ validCount: validMessages.length }, '[Chat] Valid messages after filter');
     if (validMessages.length === 0) {
         logger_1.logger.warn({ messages: JSON.stringify(messages).slice(0, 500) }, '[Chat] All messages filtered out');
         return c.json({ error: 'No valid messages provided' }, 400);
     }
+    const normalizedMessages = validMessages.map((m) => {
+        if (m.role === 'user' && typeof m.content === 'string') {
+            return { ...m, content: [{ type: 'text', text: m.content }] };
+        }
+        return m;
+    });
     const openai = (0, openai_1.createOpenAI)({
         apiKey: process.env.OPENROUTER_API_KEY,
         baseURL: process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
@@ -156,7 +162,7 @@ chat.post('/', async (c) => {
                         transient: true,
                     });
                 }
-                const modelMessages = await (0, ai_1.convertToModelMessages)(validMessages);
+                const modelMessages = await (0, ai_1.convertToModelMessages)(normalizedMessages);
                 const result = await (0, ai_1.streamText)({
                     model: baseModel,
                     maxSteps: 10,
@@ -199,9 +205,58 @@ chat.post('/', async (c) => {
                                 data: { status, progress, thought, ts: Date.now() },
                                 transient: true,
                             });
+                            (0, stats_1.updateAgentReasoning)(thought);
+                            const lastResult = toolResults[toolResults.length - 1];
+                            if (lastResult) {
+                                const actionTitle = toolName.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+                                let actionDesc = '';
+                                if (lastResult.result?.actionTaken) {
+                                    actionDesc = `Action: ${lastResult.result.actionTaken}`;
+                                }
+                                else if (lastResult.result?.status) {
+                                    actionDesc = `Status: ${lastResult.result.status}`;
+                                }
+                                else if (lastResult.result?.txHash) {
+                                    actionDesc = `Tx: ${lastResult.result.txHash.slice(0, 16)}...`;
+                                }
+                                else if (lastResult.result?.success !== undefined) {
+                                    actionDesc = lastResult.result.success ? 'Completed successfully' : 'Failed';
+                                }
+                                if (actionDesc) {
+                                    (0, stats_1.addRecentAction)({ title: actionTitle, description: actionDesc, hash: lastResult.result?.txHash });
+                                }
+                                if (toolName?.includes('x402') && lastResult?.result?.amount) {
+                                    (0, stats_1.updateX402Revenue)(lastResult.result.amount);
+                                }
+                            }
                         }
-                        // 2. Add an internal reasoning "thought" message part if tool results exist
-                        // This replaces the "Thought for 1 second" with actual internal logic
+                        if (toolResults && toolResults.length > 0) {
+                            const lastResult = toolResults[toolResults.length - 1];
+                            const toolName = lastResult.toolName;
+                            const actionTitle = toolName.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+                            let actionDesc = '';
+                            if (lastResult.result?.actionTaken) {
+                                actionDesc = `Action: ${lastResult.result.actionTaken}`;
+                            }
+                            else if (lastResult.result?.status) {
+                                actionDesc = `Status: ${lastResult.result.status}`;
+                            }
+                            else if (lastResult.result?.txHash) {
+                                actionDesc = `Tx: ${lastResult.result.txHash.slice(0, 16)}...`;
+                            }
+                            else if (lastResult.result?.success !== undefined) {
+                                actionDesc = lastResult.result.success ? 'Completed successfully' : 'Failed';
+                            }
+                            if (actionDesc) {
+                                (0, stats_1.addRecentAction)({ title: actionTitle, description: actionDesc, hash: lastResult.result?.txHash });
+                            }
+                            if (toolName?.includes('x402') && lastResult?.result?.amount) {
+                                (0, stats_1.updateX402Revenue)(lastResult.result.amount);
+                            }
+                            if (toolName?.includes('x402') && lastResult?.result?.amount) {
+                                (0, stats_1.updateX402Revenue)(lastResult.result.amount);
+                            }
+                        }
                         if (toolResults && toolResults.length > 0) {
                             const lastResult = toolResults[toolResults.length - 1];
                             const toolName = lastResult.toolName;
