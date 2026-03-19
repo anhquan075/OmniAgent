@@ -18,8 +18,8 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ events }) => {
       <div className="px-3 py-2 text-[9px] font-heading uppercase tracking-[0.2em] text-neutral-gray border-b border-white/5 bg-black/40">
         Activity Feed
       </div>
-      <div className="flex-1 overflow-y-auto h-[200px] custom-scrollbar scroll-smooth">
-        <div className="p-3 space-y-2 min-h-full">
+      <div className="flex-1 overflow-y-auto max-h-[200px] custom-scrollbar scroll-smooth">
+        <div className="p-3 space-y-2">
           {chronologicalEvents.length === 0 ? (
             <div className="text-center text-[10px] text-neutral-gray py-6 font-mono flex flex-col items-center justify-center h-full">
               Awaiting fleet activity...
