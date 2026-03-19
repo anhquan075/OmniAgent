@@ -870,58 +870,45 @@ export default function MCPServerDemo({
   );
 
   return (
-    <div className="flex flex-col gap-3 h-full">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-2 sm:gap-3 h-full overflow-hidden">
+      <div className="flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <div
-              className={`w-2 h-2 rounded-full ${serverStatus === "connected" ? "bg-green-400 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : serverStatus === "connecting" ? "bg-yellow-400 animate-pulse" : "bg-red-400"}`}
+              className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${serverStatus === "connected" ? "bg-green-400 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : serverStatus === "connecting" ? "bg-yellow-400 animate-pulse" : "bg-red-400"}`}
             />
             <span
-              className={`text-[10px] font-mono uppercase tracking-wider ${serverStatus === "connected" ? "text-green-400" : serverStatus === "connecting" ? "text-yellow-400" : "text-red-400"}`}
+              className={`text-[9px] sm:text-[10px] font-mono uppercase tracking-wider ${serverStatus === "connected" ? "text-green-400" : serverStatus === "connecting" ? "text-yellow-400" : "text-red-400"}`}
             ></span>
           </div>
-          <span className="text-[10px] text-neutral-gray">
+          <span className="text-[9px] sm:text-[10px] text-neutral-gray">
             {totalTools} tools
           </span>
         </div>
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-1.5 text-[10px] text-neutral-gray hover:text-white transition-colors cursor-pointer"
-        >
-          {isExpanded ? (
-            <ChevronDownIcon className="w-3.5 h-3.5" />
-          ) : (
-            <ChevronRightIcon className="w-3.5 h-3.5" />
-          )}
-          <span className="uppercase tracking-wider">
-            {isExpanded ? "Collapse" : "Expand"}
-          </span>
-        </button>
       </div>
       {isExpanded && (
         <>
-          <div className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/10">
-            <div className="flex items-center gap-2">
-              <WalletIcon className="w-4 h-4 text-tether-teal" />
+          <div className="flex items-center justify-between p-1.5 sm:p-2 rounded-lg bg-white/5 border border-white/10">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <WalletIcon className="w-3 h-3 sm:w-4 sm:h-4 text-tether-teal" />
               <div className="flex flex-col">
-                <span className="text-[10px] text-white font-medium">
+                <span className="text-[9px] sm:text-[10px] text-white font-medium">
                   {isConnected && address
-                    ? `${address.slice(0, 6)}...${address.slice(-4)}`
-                    : "No wallet connected"}
+                    ? `${address.slice(0, 4)}...${address.slice(-3)}`
+                    : "No wallet"}
                 </span>
-                <span className="text-[8px] text-neutral-gray">
-                  {isConnected ? "Connected" : "Using agent wallet"}
+                <span className="text-[7px] sm:text-[8px] text-neutral-gray hidden sm:block">
+                  {isConnected ? "Connected" : "Agent wallet"}
                 </span>
               </div>
             </div>
             <div
-              className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-400" : "bg-yellow-400"}`}
+              className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${isConnected ? "bg-green-400" : "bg-yellow-400"}`}
             />
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 -mr-1">
-            <div className="grid grid-cols-1 gap-2">
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-0.5 sm:pr-1 -mr-0.5 sm:-mr-1">
+            <div className="grid grid-cols-1 gap-1.5 sm:gap-2">
               {toolCategories.map((category) => {
                 const Icon = category.icon;
                 const isExpandedCat = expandedCategories.includes(category.id);
@@ -933,22 +920,22 @@ export default function MCPServerDemo({
                   >
                     <button
                       onClick={() => toggleCategory(category.id)}
-                      className="w-full flex items-center gap-2 p-2.5 hover:bg-white/[0.03] transition-colors cursor-pointer"
+                      className="w-full flex items-center gap-1.5 sm:gap-2 p-2 sm:p-2.5 hover:bg-white/[0.03] transition-colors cursor-pointer"
                     >
                       <Icon
-                        className="w-4 h-4"
+                        className="w-3 h-3 sm:w-4 sm:h-4"
                         style={{ color: category.color }}
                       />
-                      <span className="text-[11px] font-medium text-white flex-1 text-left">
+                      <span className="text-[10px] sm:text-[11px] font-medium text-white flex-1 text-left truncate">
                         {category.name}
                       </span>
-                      <span className="text-[9px] text-white/30">
+                      <span className="text-[8px] sm:text-[9px] text-white/30">
                         {category.tools.length}
                       </span>
                       {isExpandedCat ? (
-                        <ChevronDownIcon className="w-3 h-3 text-white/30" />
+                        <ChevronDownIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white/30" />
                       ) : (
-                        <ChevronRightIcon className="w-3 h-3 text-white/30" />
+                        <ChevronRightIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white/30" />
                       )}
                     </button>
 
@@ -962,37 +949,36 @@ export default function MCPServerDemo({
                           return (
                             <div
                               key={tool.name}
-                              className="p-2.5 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition-all"
+                              className="p-2 sm:p-2.5 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition-all"
                             >
-                              <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start justify-between gap-1.5 sm:gap-2">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1.5 sm:gap-2">
                                     <span
-                                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                      className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full flex-shrink-0"
                                       style={{
                                         backgroundColor: category.color,
                                         boxShadow: `0 0 6px ${category.color}40`,
                                       }}
                                     />
-                                    <span className="text-[10px] font-mono text-white/90 truncate">
+                                    <span className="text-[9px] sm:text-[10px] font-mono text-white/90 truncate">
                                       {tool.name}
                                     </span>
                                   </div>
-                                  <div className="flex items-center gap-2 mt-1">
+                                  <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1 overflow-hidden">
                                     <span
-                                      className={`text-[8px] font-mono px-1.5 py-0.5 rounded ${risk.bg} ${risk.border} border`}
+                                      className={`text-[7px] sm:text-[8px] font-mono px-1 py-0.5 rounded ${risk.bg} ${risk.border} border flex-shrink-0`}
                                       style={{ color: risk.color }}
                                     >
                                       {risk.label}
                                     </span>
-                                    <span className="text-[8px] text-white/30">
+                                    <span className="text-[7px] sm:text-[8px] text-white/30 truncate hidden sm:block">
                                       {tool.description}
                                     </span>
                                   </div>
                                 </div>
                                 <button
                                   onClick={() => {
-                                    // Smart ZapIcon: Direct execute for parameterless tools, show form for others
                                     if (
                                       !tool.params ||
                                       tool.params.length === 0
@@ -1004,12 +990,12 @@ export default function MCPServerDemo({
                                       );
                                     }
                                   }}
-                                  className="p-1.5 rounded-md bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all cursor-pointer"
+                                  className="p-1 sm:p-1.5 rounded-md bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all cursor-pointer flex-shrink-0 active:scale-95"
                                 >
                                   {isThisTesting ? (
-                                    <Loader2Icon className="w-3 h-3 animate-spin" />
+                                    <Loader2Icon className="w-2.5 h-2.5 sm:w-3 sm:h-3 animate-spin" />
                                   ) : (
-                                    <ZapIcon className="w-3 h-3" />
+                                    <ZapIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                                   )}
                                 </button>
                               </div>
@@ -1017,8 +1003,8 @@ export default function MCPServerDemo({
                               {showArgsForTool &&
                                 tool.params &&
                                 tool.params.length > 0 && (
-                                  <div className="mt-2 pt-2 border-t border-white/10">
-                                    <div className="grid grid-cols-1 gap-2">
+                                  <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-white/10">
+                                    <div className="grid grid-cols-1 gap-1.5 sm:gap-2">
                                       {tool.params.map((param) => (
                                         <input
                                           key={param.name}
@@ -1036,13 +1022,13 @@ export default function MCPServerDemo({
                                                 e.target.value,
                                             }))
                                           }
-                                          className="w-full px-2 py-1.5 text-[10px] font-mono bg-black/30 border border-white/10 rounded text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none"
+                                          className="w-full px-1.5 sm:px-2 py-1 sm:py-1.5 text-[9px] sm:text-[10px] font-mono bg-black/30 border border-white/10 rounded text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none"
                                         />
                                       ))}
                                       <button
                                         onClick={() => testTool(tool.name)}
                                         disabled={isTesting}
-                                        className="px-3 py-1.5 text-[10px] font-medium bg-white/10 hover:bg-white/20 text-white rounded border border-white/20 cursor-pointer disabled:opacity-50"
+                                        className="px-2 sm:px-3 py-1 sm:py-1.5 text-[9px] sm:text-[10px] font-medium bg-white/10 hover:bg-white/20 text-white rounded border border-white/20 cursor-pointer disabled:opacity-50 active:scale-[0.98]"
                                       >
                                         Execute
                                       </button>
@@ -1061,31 +1047,31 @@ export default function MCPServerDemo({
           </div>
 
           {testResult && (
-            <div className="p-2.5 rounded-lg bg-black/60 border border-white/10">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[9px] text-neutral-gray font-mono">
+            <div className="p-1.5 sm:p-2.5 rounded-lg bg-black/60 border border-white/10 flex-shrink-0">
+              <div className="flex items-center justify-between mb-1 sm:mb-2">
+                <span className="text-[8px] sm:text-[9px] text-neutral-gray font-mono">
                   Response
                 </span>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5 sm:gap-1">
                   <button
                     onClick={() => copyToClipboard(testResult)}
-                    className="p-1 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors cursor-pointer"
+                    className="p-0.5 sm:p-1 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors cursor-pointer"
                   >
                     {copied ? (
-                      <CopyCheckIcon className="w-3 h-3 text-green-400" />
+                      <CopyCheckIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-green-400" />
                     ) : (
-                      <CopyIcon className="w-3 h-3" />
+                      <CopyIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                     )}
                   </button>
                   <button
                     onClick={() => setTestResult(null)}
-                    className="p-1 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors cursor-pointer"
+                    className="p-0.5 sm:p-1 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors cursor-pointer"
                   >
-                    <XIcon className="w-3 h-3" />
+                    <XIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                   </button>
                 </div>
               </div>
-              <pre className="text-[9px] font-mono text-green-400/80 overflow-x-auto max-h-[80px] leading-relaxed whitespace-pre-wrap break-all">
+              <pre className="text-[8px] sm:text-[9px] font-mono text-green-400/80 overflow-x-auto max-h-[60px] sm:max-h-[80px] leading-relaxed whitespace-pre-wrap break-all">
                 {testResult}
               </pre>
             </div>

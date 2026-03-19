@@ -25,9 +25,11 @@ import { ConnectionModal } from "./components/shared/ConnectionModal";
 import { GuestSplash } from "./components/shared/GuestSplash";
 interface BentoCardProps {
   title: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ElementType;
   children: React.ReactNode;
   className?: string;
+  onToggle?: () => void;
+  isExpanded?: boolean;
 }
 
 const BentoCard = ({
@@ -35,21 +37,45 @@ const BentoCard = ({
   icon: Icon,
   children,
   className = "",
+  onToggle,
+  isExpanded,
 }: BentoCardProps) => (
   <div
-    className={`rounded-2xl p-4 md:p-6 flex flex-col gap-4 shadow-2xl transition-all duration-500 group bg-space-black/60 backdrop-blur-xl border border-white/10 hover:border-tether-teal/30 hover:shadow-[0_0_20px_rgba(38,161,123,0.1)] relative overflow-hidden ${className}`}
+    className={`rounded-2xl p-3 sm:p-4 md:p-6 flex flex-col gap-2 sm:gap-4 shadow-2xl transition-all duration-500 group bg-space-black/60 backdrop-blur-xl border border-white/10 hover:border-tether-teal/30 hover:shadow-[0_0_20px_rgba(38,161,123,0.1)] relative overflow-hidden ${className}`}
   >
-    <div className="absolute top-0 right-0 w-32 h-32 bg-tether-teal/5 rounded-full blur-[60px] pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
+    <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-tether-teal/5 rounded-full blur-[40px] sm:blur-[60px] pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
     <div className="flex items-center justify-between flex-shrink-0 relative z-10">
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-white/5 text-tether-teal group-hover:scale-110 transition-transform font-heading border border-white/5 group-hover:border-tether-teal/30 group-hover:bg-tether-teal/10">
-          <Icon className="w-4 h-4" />
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="p-1.5 sm:p-2 rounded-lg bg-white/5 text-tether-teal group-hover:scale-110 transition-transform font-heading border border-white/5 group-hover:border-tether-teal/30 group-hover:bg-tether-teal/10">
+          <Icon className="w-3 h-3 sm:w-4 sm:h-4" />
         </div>
-        <h3 className="font-heading text-[10px] tracking-[0.2em] text-neutral-gray-light uppercase group-hover:text-white transition-colors">
+        <h3 className="font-heading text-[9px] sm:text-[10px] tracking-[0.15em] sm:tracking-[0.2em] text-neutral-gray-light uppercase group-hover:text-white transition-colors">
           {title}
         </h3>
       </div>
-      <div className="w-1.5 h-1.5 rounded-full bg-tether-teal/40 shadow-[0_0_8px_rgba(38,161,123,0.4)] animate-pulse"></div>
+      <div className="flex items-center gap-3">
+        {onToggle && isExpanded !== undefined && (
+          <button
+            onClick={onToggle}
+            className="flex items-center gap-1 text-neutral-gray hover:text-white transition-colors cursor-pointer"
+            aria-label={isExpanded ? "Collapse" : "Expand"}
+          >
+            {isExpanded ? (
+              <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            ) : (
+              <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            )}
+            <span className="hidden sm:inline uppercase tracking-wider text-[10px]">
+              {isExpanded ? "Collapse" : "Expand"}
+            </span>
+          </button>
+        )}
+        <div className="w-1.5 h-1.5 rounded-full bg-tether-teal/40 shadow-[0_0_8px_rgba(38,161,123,0.4)] animate-pulse"></div>
+      </div>
     </div>
     <div className="flex-1 min-h-0 relative z-10">{children}</div>
   </div>
@@ -476,7 +502,9 @@ export default function App() {
             <BentoCard
               title="MCP Tools"
               icon={ServerIcon}
-              className={`shrink-0 transition-all duration-300 ${mcpToolsExpanded ? "h-[400px] md:h-[480px]" : "h-[40px]"}`}
+              className={`shrink-0 transition-all duration-300 ${mcpToolsExpanded ? "h-[320px] sm:h-[360px] md:h-[400px] lg:h-[480px]" : "h-[64px] md:h-[80px]"}`}
+              onToggle={() => setMcpToolsExpanded(!mcpToolsExpanded)}
+              isExpanded={mcpToolsExpanded}
             >
               <MCPServerDemo
                 isExpanded={mcpToolsExpanded}
