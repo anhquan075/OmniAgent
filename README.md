@@ -26,6 +26,8 @@ OmniAgent is an autonomous, non-custodial yield routing stack. It introduces a n
 | **Agent Autonomy** | Adaptive loop that dynamically schedules based on ZK-Risk level |
 | **Economic Soundness** | X402 robot economy - AI pays AI using USDT |
 | **Real-World Applicability** | True Multi-VM (BNB + Solana + TON) |
+| **Visible Reasoning** | AI thinking shown in real-time via native model reasoning |
+| **Dynamic Suggestions** | Contextual follow-up prompts generated from full conversation |
 
 ---
 
@@ -104,7 +106,7 @@ flowchart LR
 
 ---
 
-## MCP Tools (45+ Total)
+## MCP Tools (30+ Total)
 
 | Category | Tools | Description |
 |----------|-------|-------------|
@@ -168,7 +170,28 @@ BNB_RPC_URL="https://bsc-testnet-dataseed.bnbchain.org"
 ```bash
 # OpenRouter Model Configuration (defaults provided)
 OPENROUTER_MODEL_GENERAL=google/gemini-2.5-flash-lite
-OPENROUTER_MODEL_CRYPTO=x-ai/grok-4.1-fast
+OPENROUTER_MODEL_CRYPTO=x-ai/grok-4o-mini
+
+# Robot Fleet Configuration
+ROBOT_FLEET_ENABLED=false
+ROBOT_FLEET_SIZE=8
+ROBOT_FLEET_TASK_INTERVAL_MIN=5000
+ROBOT_FLEET_TASK_INTERVAL_MAX=15000
+ROBOT_FLEET_EARNINGS_MIN=0.0001
+ROBOT_FLEET_EARNINGS_MAX=0.0025
+ROBOT_FLEET_AGENT_WALLET=
+# ROBOT_FLEET_ROBOTS=[{"id":"ROBO-001","type":"Yield Sentry","icon":"[S]"},...]
+
+# Logging (default: info)
+LOG_LEVEL=info
+NODE_ENV=development
+
+# Allow autonomous agent loop (default: true)
+ALLOW_AGENT_RUN=true
+
+# Agent reporting (optional - for agent status notifications)
+AGENT_REPORT_WEBHOOK_URL=
+AGENT_REPORT_INTERVAL_MS=60000
 
 # Solana RPC (default: https://api.mainnet-beta.solana.com)
 SOLANA_RPC_URL=""
@@ -199,7 +222,15 @@ MOCK_BRIDGE_ADDRESS=0x8c3E36830eD27759C0f65A665D067Fe77041aa0C
 | `SOLANA_RPC_URL` | No | https://api.mainnet-beta.solana.com | Solana RPC |
 | `TON_RPC_URL` | No | https://toncenter.com/api/v2/jsonRPC | TON RPC |
 | `OPENROUTER_MODEL_GENERAL` | No | google/gemini-2.5-flash-lite | General LLM model |
-| `OPENROUTER_MODEL_CRYPTO` | No | x-ai/grok-4.1-fast | Crypto LLM model |
+| `OPENROUTER_MODEL_CRYPTO` | No | x-ai/grok-4o-mini | Crypto LLM model (supports reasoning) |
+| `ROBOT_FLEET_ENABLED` | No | false | Enable robot fleet simulator |
+| `ROBOT_FLEET_SIZE` | No | 8 | Number of virtual robots |
+| `ROBOT_FLEET_AGENT_WALLET` | No | Derived from WDK_SECRET_SEED | Robot fleet agent wallet |
+| `LOG_LEVEL` | No | info | Log verbosity (debug, info, warn, error) |
+| `NODE_ENV` | No | development | Node environment |
+| `ALLOW_AGENT_RUN` | No | true | Enable autonomous loop |
+| `AGENT_REPORT_WEBHOOK_URL` | No | - | Webhook for agent status |
+| `AGENT_REPORT_INTERVAL_MS` | No | 60000 | Status report interval |
 
 ---
 
@@ -271,7 +302,7 @@ pnpm run dev
 Expected output:
 ```
 Server ready: http://localhost:3001
-[MCP] Registered 30 tools
+[MCP] Registered 40+ tools
 [AutonomousLoop] Starting...
 ```
 
@@ -313,9 +344,17 @@ POST /api/mcp
   "params": { "name": "bnb_getBalance", "arguments": {} }
 }
 
+// Chat - Streaming AI with tool execution + suggestions
+POST /api/chat
+// Streams: reasoning, tool calls, text deltas, suggestions
+// Returns: SSE with message parts + dynamic follow-up prompts
+
 // Dashboard Events - Server-Sent Events (SSE)
 GET /api/dashboard/events
 // Streams: cycle:start, step:finish, cycle:end, cycle:error
+
+// Stats - Current vault, risk, and system status
+GET /api/stats
 
 // Robot Fleet - SSE + REST
 GET /api/robot-fleet/events     // SSE stream
@@ -337,7 +376,9 @@ app.route('/api/mcp', mcpRoute);               // MCP HTTP endpoint
 ```
 
 **Key Files:**
+- `backend/src/api/routes/chat.ts` - Streaming AI chat + dynamic suggestions
 - `backend/src/api/routes/mcp.ts` - MCP HTTP handler (JSON-RPC)
+- `backend/src/api/routes/stats.ts` - Vault/risk system stats
 - `backend/src/api/routes/dashboard.ts` - SSE dashboard events
 - `backend/src/api/routes/robot-fleet.ts` - Robot fleet SSE + REST
 - `backend/src/services/RobotFleetService.ts` - In-process fleet manager
@@ -373,24 +414,23 @@ curl -X POST http://localhost:3001/api/mcp \
 ## Project Structure
 
 ```
-omnisdk/
+OmniAgent/
 ├── backend/
 │   ├── src/
-│   │   ├── api/routes/mcp.ts      # MCP endpoint
-│   │   ├── agent/middleware/PolicyGuard.ts
-│   │   ├── mcp-server/handlers/  # Tool implementations
-│   │   │   ├── bnb-tools.ts
-│   │   │   ├── solana-tools.ts
-│   │   │   ├── ton-tools.ts
-│   │   │   ├── wdk-tools.ts
-│   │   │   └── x402-tools.ts
-│   │   └── contracts/            # Solidity
+│   │   ├── api/routes/
+│   │   │   ├── chat.ts           # Streaming AI chat + suggestions
+│   │   │   ├── mcp.ts           # MCP HTTP endpoint
+│   │   │   ├── stats.ts          # Vault/risk system stats
+│   │   │   └── dashboard.ts      # SSE dashboard events
+│   │   ├── agent/                # Autonomous loop + PolicyGuard
+│   │   ├── mcp-server/handlers/ # Tool implementations
+│   │   └── config/               # Env config, security, robot fleet
 │   ├── hardhat.config.js
 │   └── .env.example
 ├── frontend/
 │   ├── src/
-│   │   └── components/dashboard/MCPServerDemo.tsx
-│   ├── vite.config.ts
+│   │   ├── App.tsx              # Chat UI with streaming + suggestions
+│   │   └── components/
 │   └── .env.example
 └── README.md
 ```
