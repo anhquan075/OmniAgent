@@ -1,9 +1,8 @@
-import { ethers, BaseContract, Contract } from 'ethers';
-import { generateObject } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
-import { z } from 'zod';
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
+import { createOpenAI } from '@ai-sdk/openai';
+import { Contract } from 'ethers';
+import { z } from 'zod';
 
 export interface RiskProfile {
   level: 'LOW' | 'MEDIUM' | 'HIGH';
@@ -39,8 +38,8 @@ export class RiskService {
     });
 
     try {
-      const { object } = await generateObject({
-        model: openai(env.OPENROUTER_MODEL_CRYPTO || 'deepseek/deepseek-chat'),
+      const { object } = await generateText({
+        model: openai(env.OPENROUTER_MODEL_CRYPTO || 'x-ai/grok-4.1-fast'),
         temperature: 0,
         schema: z.object({
           score: z.number().min(0).max(100).describe('Risk score from 0 to 100'),

@@ -167,8 +167,8 @@ BNB_RPC_URL="https://bsc-testnet-dataseed.bnbchain.org"
 
 ```bash
 # OpenRouter Model Configuration (defaults provided)
-OPENROUTER_MODEL_GENERAL=google/gemini-2.0-flash-001
-OPENROUTER_MODEL_CRYPTO=deepseek/deepseek-chat
+OPENROUTER_MODEL_GENERAL=google/gemini-2.5-flash-lite
+OPENROUTER_MODEL_CRYPTO=x-ai/grok-4.1-fast
 
 # Solana RPC (default: https://api.mainnet-beta.solana.com)
 SOLANA_RPC_URL=""
@@ -198,8 +198,8 @@ MOCK_BRIDGE_ADDRESS=0x8c3E36830eD27759C0f65A665D067Fe77041aa0C
 | `PRIVATE_KEY` | No | Derived from WDK_SECRET_SEED | For deployments |
 | `SOLANA_RPC_URL` | No | https://api.mainnet-beta.solana.com | Solana RPC |
 | `TON_RPC_URL` | No | https://toncenter.com/api/v2/jsonRPC | TON RPC |
-| `OPENROUTER_MODEL_GENERAL` | No | google/gemini-2.0-flash-001 | General LLM model |
-| `OPENROUTER_MODEL_CRYPTO` | No | deepseek/deepseek-chat | Crypto LLM model |
+| `OPENROUTER_MODEL_GENERAL` | No | google/gemini-2.5-flash-lite | General LLM model |
+| `OPENROUTER_MODEL_CRYPTO` | No | x-ai/grok-4.1-fast | Crypto LLM model |
 
 ---
 

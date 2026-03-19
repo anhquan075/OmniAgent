@@ -1,10 +1,9 @@
-import { ethers } from 'ethers';
+import { env } from '@/config/env';
 import { ZERO_ADDRESS } from '@/lib/constants';
 import { logger } from '@/utils/logger';
-import { z } from 'zod';
-import { generateObject } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
-import { env } from '@/config/env';
+import { ethers } from 'ethers';
+import { z } from 'zod';
 const TransactionSchema = z.object({
   toAddress: z.string().refine((val) => ethers.isAddress(val), {
     message: "Invalid Ethereum address",
@@ -472,8 +471,8 @@ export class PolicyGuard {
         baseURL: env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
       });
 
-      const { object } = await generateObject({
-        model: openai(env.OPENROUTER_MODEL_CRYPTO || 'deepseek/deepseek-chat'),
+      const { object } = await generateText({
+        model: openai(env.OPENROUTER_MODEL_CRYPTO || 'x-ai/grok-4.1-fast'),
         temperature: 0,
         schema: z.object({
           approved: z.boolean().describe('Whether the transaction should be approved'),

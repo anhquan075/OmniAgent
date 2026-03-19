@@ -1,13 +1,12 @@
-import { Hono } from 'hono';
-import { streamText, createUIMessageStream, createUIMessageStreamResponse, convertToModelMessages, wrapLanguageModel, smoothStream, generateObject } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
-import { z } from 'zod';
-import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createUIMessageStream, createUIMessageStreamResponse, generateText, streamText } from 'ai';
+import { Hono } from 'hono';
+import { z } from 'zod';
 
-import { agentTools, normalizedAgentTools } from '@/agent/tools';
-import { loadChat, saveChat } from '../../utils/chat-store';
+import { normalizedAgentTools } from '@/agent/tools';
 import { llmRouter } from '@/services/LLMRouter';
+import { loadChat, saveChat } from '../../utils/chat-store';
 
 const chat = new Hono();
 
@@ -32,8 +31,9 @@ async function generateSuggestions(
   assistantResponse: string
 ): Promise<typeof fallbackSuggestions> {
   try {
-    const result = await generateObject({
+    const result = await generateText({
       model,
+      temperature: 0,
       schema: suggestionsSchema,
       prompt: `Based on the following conversation and assistant response, generate 3 relevant follow-up suggestions that the user might ask next.
 

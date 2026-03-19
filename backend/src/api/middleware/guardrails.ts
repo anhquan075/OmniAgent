@@ -1,15 +1,14 @@
-import {
-  type LanguageModelMiddleware,
-  generateText,
-} from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
 import { logger } from '@/utils/logger';
+import { createOpenAI } from '@ai-sdk/openai';
+import {
+  generateText
+} from 'ai';
 
 // Lightweight model for cost-efficient guardrails
 const gatekeeperModel = createOpenAI({
   apiKey: process.env.OPENROUTER_API_KEY,
   baseURL: process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
-}).chat('google/gemini-2.0-flash-001');
+}).chat('google/gemini-2.5-flash-lite');
 
 const extractUserContent = (prompt: any[]): string => {
   if (!prompt || !Array.isArray(prompt) || prompt.length === 0) return '';
@@ -48,6 +47,7 @@ export const strategicGuardrail: any = {
                    
                    Respond ONLY with 'SAFE' or 'REJECT: [Reason]'.`,
           prompt: userContent,
+          temperature: 0
         });
 
         if (safetycheck.includes('REJECT')) {

@@ -1,11 +1,11 @@
-import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
 import { env } from '@/config/env';
-import { agentTools } from './tools';
-import { EventEmitter } from 'events';
 import { robotFleetService } from '@/services/RobotFleetService';
 import { logger } from '@/utils/logger';
+import { createOpenAI } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+import { EventEmitter } from 'events';
 import { healthMonitor } from './services/HealthMonitor';
+import { agentTools } from './tools';
 
 // Event Emitter for Dashboard Stream
 export const agentEvents = new EventEmitter();
@@ -63,7 +63,7 @@ export interface AutonomousCycleResult {
 }
 
 export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
-  const modelId = env.OPENROUTER_MODEL_CRYPTO || 'deepseek/deepseek-chat';
+  const modelId = env.OPENROUTER_MODEL_CRYPTO || 'x-ai/grok-4.1-fast';
   logger.info({ modelId }, '[AutonomousLoop] Starting cycle');
   
   agentEvents.emit('cycle:start', { timestamp: new Date(), modelId });
@@ -116,6 +116,7 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
       tools: agentTools as any,
       maxSteps: 10,
       system: currentSystemPrompt,
+      temperature: 0,
       prompt: "Perform a full autonomous strategy cycle. Start with risk analysis and do not stop until you provide a final summary with NEXT_RUN_DECISION.",
       onStepFinish: (step: any) => {
         const callCount = step.toolCalls?.length || 0;
@@ -141,6 +142,7 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
       const summaryResult = await generateText({
         model: openai.chat(modelId),
         system: currentSystemPrompt,
+        temperature: 0,
         messages: [
           { role: 'user', content: "Perform a full autonomous strategy cycle. Start with risk analysis and do not stop until you provide a final summary with NEXT_RUN_DECISION." },
           ...messageHistory,

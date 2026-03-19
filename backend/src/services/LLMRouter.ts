@@ -1,4 +1,4 @@
-import { generateObject } from 'ai';
+import { generateObject, generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { env } from '@/config/env';
@@ -35,7 +35,7 @@ const ROUTING_RULES = {
 
 const MODEL_CONFIGS = {
   general_chat: {
-    model: env.OPENROUTER_MODEL_GENERAL || 'google/gemini-2.0-flash-exp:free',
+    model: env.OPENROUTER_MODEL_GENERAL || 'google/gemini-2.5-flash-lite',
     description: 'General conversation and small talk'
   },
   crypto_defi: {
@@ -43,7 +43,7 @@ const MODEL_CONFIGS = {
     description: 'DeFi, crypto, and yield optimization'
   },
   small_talk: {
-    model: env.OPENROUTER_MODEL_GENERAL || 'google/gemini-2.0-flash-exp:free',
+    model: env.OPENROUTER_MODEL_GENERAL || 'google/gemini-2.5-flash-lite',
     description: 'Basic greetings and small talk'
   },
   technical_support: {
@@ -51,7 +51,7 @@ const MODEL_CONFIGS = {
     description: 'Technical support and debugging'
   },
   other: {
-    model: env.OPENROUTER_MODEL_GENERAL || 'google/gemini-2.0-flash-exp:free',
+    model: env.OPENROUTER_MODEL_GENERAL || 'google/gemini-2.5-flash-lite',
     description: 'General queries'
   }
 };
@@ -126,11 +126,12 @@ export class LLMRouter {
         return fastDecision;
       }
 
-      const routerModel = this.openai.chat(env.OPENROUTER_MODEL_GENERAL || 'google/gemini-2.0-flash-exp:free');
+      const routerModel = this.openai.chat(env.OPENROUTER_MODEL_GENERAL || 'google/gemini-2.5-flash-lite');
 
-      const result = await generateObject({
+      const result = await generateText({
         model: routerModel,
         schema: routerSchema,
+        temperature: 0,
         prompt: `Analyze the following user query and determine the best model to use.
 
 User Query: "${query}"

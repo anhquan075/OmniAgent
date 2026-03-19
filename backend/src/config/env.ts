@@ -47,8 +47,8 @@ const envSchema = z.object({
   SOLANA_PRIVATE_KEY: z.string().optional(),
   TON_PRIVATE_KEY: z.string().optional(),
   OPENROUTER_BASE_URL: z.string().default('https://openrouter.ai/api/v1'),
-  OPENROUTER_MODEL_GENERAL: z.string().default('google/gemini-2.0-flash-001'),
-  OPENROUTER_MODEL_CRYPTO: z.string().default('deepseek/deepseek-chat'),
+  OPENROUTER_MODEL_GENERAL: z.string().default('google/gemini-2.5-flash-lite'),
+  OPENROUTER_MODEL_CRYPTO: z.string().default('x-ai/grok-4.1-fast'),
 
   OPENCLAW_GATEWAY_URL: z.string().default('https://gateway.openclaw.com/api').optional(),
   OPENCLAW_API_KEY: z.string().optional(),
