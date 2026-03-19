@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { 
   UserIcon, 
   ShieldCheckIcon, 
@@ -16,6 +16,7 @@ import { BalanceCard } from './cards/BalanceCard';
 import { Message, MessageContent, MessageResponse } from '../ai-elements/Message';
 import { Reasoning, ReasoningTrigger, ReasoningContent, ReasoningRawContent } from '../ai-elements/Reasoning';
 import { Tool, ToolHeader, ToolContent, ToolInput, ToolOutput } from '../ai-elements/Tool';
+import { useToolTitles, getToolTitle } from '@/hooks/useToolTitles';
 
 interface RichMessageProps {
   role: string;
@@ -29,6 +30,7 @@ interface RichMessageProps {
 
 export function RichMessage({ role, content, parts, toolInvocations, timestamp, isStreaming = false, addToolOutput }: RichMessageProps) {
   const isAgent = role === 'assistant';
+  const { titles } = useToolTitles();
 
   const getFormattedTime = () => {
     if (!timestamp) return '';
@@ -43,19 +45,6 @@ export function RichMessage({ role, content, parts, toolInvocations, timestamp, 
 
   const renderToolInvocation = (part: any) => {
     const { toolCallId, toolName, state, args, input, output, result } = part;
-    
-    const toolTitles: Record<string, string> = {
-      get_vault_status: 'Vault Analytics',
-      get_all_chain_balances: 'Multi-Chain Balance',
-      check_risk: 'ZK Risk Proof',
-      execute_rebalance: 'Tactical Rebalance',
-      execute_syndicate_payout: 'Syndicate Payout',
-      x402_payment: 'x402 Settlement',
-      analyze_risk: 'Risk Analysis',
-      check_strategy: 'Strategy Check',
-      yield_sweep: 'Yield Sweep',
-      check_cross_chain_yields: 'Cross-Chain Yield',
-    };
 
     let toolState: string = 'input-available';
     
@@ -69,7 +58,7 @@ export function RichMessage({ role, content, parts, toolInvocations, timestamp, 
       toolState = 'input-available';
     }
 
-    const title = toolTitles[toolName] || toolName;
+    const title = getToolTitle(titles, toolName);
     const isCompleted = toolState === 'output-available' || toolState === 'output-error';
     const hasError = toolState === 'output-error';
     const isPending = toolState === 'input-streaming';
@@ -80,7 +69,7 @@ export function RichMessage({ role, content, parts, toolInvocations, timestamp, 
           toolName={toolName} 
           title={title} 
           state={toolState} 
-          type="function"
+          type={part.type}
         />
         <ToolContent>
           {/* Render tool input/args - for both pending and completed states */}
@@ -231,7 +220,7 @@ export function RichMessage({ role, content, parts, toolInvocations, timestamp, 
           <Reasoning key={index} isStreaming={isStreaming}>
             <ReasoningTrigger />
             <ReasoningContent>
-              {part.reasoning}
+              <span className="italic text-gray-400">{part.reasoning}</span>
             </ReasoningContent>
           </Reasoning>
         );

@@ -164,8 +164,8 @@ chat.post('/', async (c) => {
                     temperature: 0,
                     tools: routerDecision.intent === 'small_talk' ? {} : tools_1.normalizedAgentTools,
                     onStepFinish: (arg) => {
-                        const toolResults = arg?.toolResults;
-                        const toolCalls = arg?.toolCalls;
+                        const toolResults = arg?.toolResults ?? [];
+                        const toolCalls = arg?.toolCalls ?? [];
                         // 1. Telemetry updates - Only for non-small talk
                         if (routerDecision.intent !== 'small_talk' && toolCalls && toolCalls.length > 0) {
                             const lastCall = toolCalls[toolCalls.length - 1];

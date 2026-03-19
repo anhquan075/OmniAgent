@@ -73,9 +73,16 @@ export const ToolHeader = ({
         <div className="p-1.5 rounded-lg bg-white/10 text-neutral-gray-light group-hover:text-tether-teal transition-colors">
           <WrenchIcon className="size-3.5" />
         </div>
-        <span className="font-heading font-bold text-[10px] tracking-widest uppercase text-neutral-gray-light group-hover:text-white transition-colors">
-          {title ?? derivedName}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="font-heading font-bold text-[10px] tracking-widest uppercase text-neutral-gray-light group-hover:text-white transition-colors">
+            {title ?? derivedName}
+          </span>
+          {toolName && (
+            <Badge className="gap-1 rounded-full text-[8px] uppercase tracking-wider font-mono bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan px-2 py-0.5" variant="outline">
+              {toolName}()
+            </Badge>
+          )}
+        </div>
         {getStatusBadge(state)}
       </div>
       <ChevronDownIcon

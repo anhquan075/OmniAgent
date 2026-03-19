@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.normalizedAgentTools = exports.agentTools = void 0;
 exports.getWdk = getWdk;
+exports.getToolsMetadata = getToolsMetadata;
 const ethers_1 = require("ethers");
 const RiskService_1 = require("./services/RiskService");
 const BridgeService_1 = require("./services/BridgeService");
@@ -1857,3 +1858,26 @@ exports.normalizedAgentTools = new Proxy(exports.agentTools, {
         return target[prop];
     }
 });
+function getToolsMetadata() {
+    const tools = [];
+    for (const [name, toolDef] of Object.entries(exports.agentTools)) {
+        const def = toolDef;
+        const parameters = [];
+        // Extract parameter names from Zod schema
+        if (def.parameters?._def?.shape) {
+            try {
+                const shape = def.parameters._def.shape();
+                parameters.push(...Object.keys(shape).filter(k => k !== 'ZodDefault'));
+            }
+            catch (e) {
+                // Ignore
+            }
+        }
+        tools.push({
+            name,
+            description: def.description || `Tool: ${name}`,
+            parameters
+        });
+    }
+    return tools;
+}

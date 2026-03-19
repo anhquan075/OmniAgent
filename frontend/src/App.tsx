@@ -552,7 +552,7 @@ export default function App() {
                 regenerate={regenerate}
                 stop={stop}
                 error={error}
-                data={agentStreamStatus.length > 0 ? agentStreamStatus : (stats ? [{ type: "data-status", data: stats }] : [])}
+                data={agentStreamStatus}
                 addToolOutput={addToolResult}
                 suggestions={suggestions}
               />

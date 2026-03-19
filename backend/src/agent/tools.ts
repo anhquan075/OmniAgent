@@ -2006,3 +2006,39 @@ export const normalizedAgentTools = new Proxy(agentTools, {
     return target[prop as keyof typeof target];
   }
 });
+
+/**
+ * Extract tool metadata (name, description, parameters) for frontend consumption
+ */
+export interface ToolMetadata {
+  name: string;
+  description: string;
+  parameters: string[];
+}
+
+export function getToolsMetadata(): ToolMetadata[] {
+  const tools: ToolMetadata[] = [];
+  
+  for (const [name, toolDef] of Object.entries(agentTools)) {
+    const def = toolDef as any;
+    const parameters: string[] = [];
+    
+    // Extract parameter names from Zod schema
+    if (def.parameters?._def?.shape) {
+      try {
+        const shape = def.parameters._def.shape();
+        parameters.push(...Object.keys(shape).filter(k => k !== 'ZodDefault'));
+      } catch (e) {
+        // Ignore
+      }
+    }
+    
+    tools.push({
+      name,
+      description: def.description || `Tool: ${name}`,
+      parameters
+    });
+  }
+  
+  return tools;
+}
