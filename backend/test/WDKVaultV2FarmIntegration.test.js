@@ -58,7 +58,7 @@ describe("OmniAgentVault V2 — Farm Integration Tests", function () {
     await masterChef.addPool(stableSwapPool.target);
 
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
-    const oracle = await MockPriceOracle.deploy(100000000n, deployer.address);
+    const oracle = await MockPriceOracle.deploy(100000000n);
 
     const MockAsyncWDKMinter = await ethers.getContractFactory(
       "MockAsyncWDKMinter"
@@ -126,7 +126,7 @@ describe("OmniAgentVault V2 — Farm Integration Tests", function () {
       usdt.target,
       stableSwapPool.target,
       cake.target,
-      deployer.address, // wbnb
+      deployer.address, // nativeToken
       stableSwapPool.target, // pool
       masterChef.target,
       pancakeRouter.target,
@@ -438,7 +438,7 @@ describe("OmniAgentVault V2 — Farm Integration Tests", function () {
       const MockPriceOracle = await ethers.getContractFactory(
         "MockPriceOracle"
       );
-      const oracle2 = await MockPriceOracle.deploy(100000000n, user.address);
+      const oracle2 = await MockPriceOracle.deploy(100000000n);
 
       const RiskPolicy = await ethers.getContractFactory("RiskPolicy");
       const policy2 = await RiskPolicy.deploy(

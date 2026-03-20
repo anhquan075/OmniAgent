@@ -71,8 +71,7 @@ describe("OmniAgent OmniAgentVault", function () {
 
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
     const oracle = await MockPriceOracle.deploy(
-      ethers.parseUnits("1", 8),
-      deployer.address
+      ethers.parseUnits("1", 8)
     );
     await oracle.waitForDeployment();
 
@@ -191,7 +190,7 @@ describe("OmniAgent OmniAgentVault", function () {
     await policy.waitForDeployment();
 
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
-    const oracle = await MockPriceOracle.deploy(ethers.parseUnits("1", 8), deployer.address);
+    const oracle = await MockPriceOracle.deploy(ethers.parseUnits("1", 8));
     await oracle.waitForDeployment();
 
     const MockCircuitBreaker = await ethers.getContractFactory("MockCircuitBreakerAlwaysUnpaused");

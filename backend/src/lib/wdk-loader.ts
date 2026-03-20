@@ -1,11 +1,14 @@
 import { env } from '@/config/env';
+import { ethers } from 'ethers';
+import { WdkSignerAdapter } from './wdk-signer-adapter';
 
 let wdkInstance: any = null;
 let WalletEVM: any = null;
 let WalletSolana: any = null;
 let WalletTON: any = null;
 let WalletAccountEvm: any = null;
-let bnbWdkPromise: Promise<any> | null = null;
+let sepoliaWdkPromise: Promise<any> | null = null;
+let wdkSignerPromise: Promise<WdkSignerAdapter> | null = null;
 
 export async function getWDK() {
   if (!wdkInstance) {
@@ -47,16 +50,53 @@ export async function getWalletAccountEvm() {
   return WalletAccountEvm;
 }
 
-export async function getWdkForBNB() {
-  if (!bnbWdkPromise) {
-    bnbWdkPromise = (async () => {
+export async function getWdkForSepolia() {
+  if (!sepoliaWdkPromise) {
+    sepoliaWdkPromise = (async () => {
       const [WDK, WalletEVM] = await Promise.all([
         getWDK(),
         getWalletEVM()
       ]);
-      await WDK.registerWallet('bnb', WalletEVM, { provider: env.BNB_RPC_URL } as any);
+      await WDK.registerWallet('sepolia', WalletEVM, { provider: env.SEPOLIA_RPC_URL } as any);
       return WDK;
     })();
   }
-  return bnbWdkPromise;
+  return sepoliaWdkPromise;
+}
+
+let multiChainWdkPromise: Promise<any> | null = null;
+
+export async function getWdkMultiChain() {
+  if (!multiChainWdkPromise) {
+    multiChainWdkPromise = (async () => {
+      const [WDK, WalletEVM, WalletSolana, WalletTON] = await Promise.all([
+        getWDK(),
+        getWalletEVM(),
+        getWalletSolana(),
+        getWalletTON()
+      ]);
+      await Promise.all([
+        WDK.registerWallet('sepolia', WalletEVM, { provider: env.SEPOLIA_RPC_URL } as any),
+        WDK.registerWallet('solana', WalletSolana, { rpcUrl: env.SOLANA_RPC_URL } as any),
+        WDK.registerWallet('ton', WalletTON, { tonClient: { url: env.TON_RPC_URL, secretKey: env.TON_API_KEY } } as any)
+      ]);
+      return WDK;
+    })();
+  }
+  return multiChainWdkPromise;
+}
+
+export async function getWdkSigner(rpcUrl?: string): Promise<WdkSignerAdapter> {
+  const url = rpcUrl || env.SEPOLIA_RPC_URL;
+  const cacheKey = url;
+
+  if (!wdkSignerPromise) {
+    wdkSignerPromise = (async () => {
+      const AccountEvm = await getWalletAccountEvm();
+      const wdkAccount = new AccountEvm(env.WDK_SECRET_SEED, '0\'/0/0', { provider: url });
+      const provider = new ethers.JsonRpcProvider(url);
+      return new WdkSignerAdapter(wdkAccount, provider);
+    })();
+  }
+  return wdkSignerPromise;
 }

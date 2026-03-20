@@ -301,7 +301,7 @@ export const OmniAgentVaultAbi = [
   },
   {
     "inputs": [],
-    "name": "OmniAgentVault__VenusDecimalsInvalid",
+    "name": "OmniAgentVault__IdleDecimalsInvalid",
     "type": "error"
   },
   {
@@ -312,7 +312,7 @@ export const OmniAgentVaultAbi = [
         "type": "uint256"
       }
     ],
-    "name": "OmniAgentVault__VenusMintFailed",
+    "name": "OmniAgentVault__IdleMintFailed",
     "type": "error"
   },
   {
@@ -323,7 +323,7 @@ export const OmniAgentVaultAbi = [
         "type": "uint256"
       }
     ],
-    "name": "OmniAgentVault__VenusRedeemFailed",
+    "name": "OmniAgentVault__IdleRedeemFailed",
     "type": "error"
   },
   {
@@ -578,7 +578,7 @@ export const OmniAgentVaultAbi = [
         "type": "uint256"
       }
     ],
-    "name": "VenusIdleBufferSet",
+    "name": "IdleBufferSet",
     "type": "event"
   },
   {
@@ -1479,7 +1479,7 @@ export const OmniAgentVaultAbi = [
     "name": "venusVToken",
     "outputs": [
       {
-        "internalType": "contract IVenusVToken",
+        "internalType": "contract IIdleToken",
         "name": "",
         "type": "address"
       }

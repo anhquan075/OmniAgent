@@ -6,7 +6,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IStableSwapPool} from "../interfaces/IStableSwapPool.sol";
 
 /// @title MockStableSwapPoolWithLPSupport
-/// @notice Test double for PCS StableSwap that supports add/remove liquidity and LP token minting.
+/// @notice Test double for StableSwap that supports add/remove liquidity and LP token minting.
 /// @dev Coin index 0 = WDKS, 1 = USDT. Mints an internal LP token on add_liquidity.
 contract MockStableSwapPoolWithLPSupport is IStableSwapPool, ERC20 {
     IERC20 public token0; // WDKS (index 0)
@@ -30,10 +30,6 @@ contract MockStableSwapPoolWithLPSupport is IStableSwapPool, ERC20 {
         poolBalances[1] = _bal1;
         virtualPrice = _virtualPrice;
         feeBps = _feeBps;
-
-        // Allow this contract to transfer tokens from itself (needed for exchange)
-        token0.approve(address(this), type(uint256).max);
-        token1.approve(address(this), type(uint256).max);
     }
 
     // ── IStableSwapPool ──────────────────────────────────────────────────────

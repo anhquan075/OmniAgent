@@ -42,8 +42,8 @@ export function VaultTestnetDevPanel({
   cycleCountVal,
   blockExplorer,
   onMinted,
-  networkLabel = "BSC Testnet",
-  chainIdNum = 97,
+  networkLabel = "Sepolia",
+  chainIdNum = 11155111,
 }) {
   const [mintBusy, setMintBusy] = useState(false);
   const [mintMsg, setMintMsg] = useState(null);
@@ -193,7 +193,7 @@ export function VaultTestnetDevPanel({
               href={`${blockExplorer}/address/${tokenAddress}`}
               target="_blank"
               rel="noopener noreferrer"
-              title="View Testnet USD₮ on bscscan"
+              title="View Testnet USD₮ on Etherscan"
               onClick={(e) => e.stopPropagation()}
               style={{
                 color: "rgba(251,191,36,0.5)",

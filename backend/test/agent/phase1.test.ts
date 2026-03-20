@@ -47,7 +47,7 @@ describe('Phase 1 Core Upgrades Verification', () => {
       policyGuard.activateEmergency();
       const result = policyGuard.validateSwapTransaction({
         fromToken: 'USDT',
-        toToken: 'BNB',
+        toToken: 'WETH',
         amount: '1000000',
         currentRiskLevel: 'LOW',
         portfolioValue: '100000000',
@@ -60,7 +60,7 @@ describe('Phase 1 Core Upgrades Verification', () => {
     it('should block high risk level trades', () => {
       const result = policyGuard.validateSwapTransaction({
         fromToken: 'USDT',
-        toToken: 'BNB',
+        toToken: 'WETH',
         amount: '1000000',
         currentRiskLevel: 'HIGH',
         portfolioValue: '100000000',
@@ -77,7 +77,7 @@ describe('Phase 1 Core Upgrades Verification', () => {
 
       const result = policyGuard.validateSwapTransaction({
         fromToken: 'USDT',
-        toToken: 'BNB',
+        toToken: 'WETH',
         amount: '100000',
         currentRiskLevel: 'LOW',
         portfolioValue: '100000000',
@@ -90,7 +90,7 @@ describe('Phase 1 Core Upgrades Verification', () => {
     it('should block trades exceeding daily volume', () => {
       const result = policyGuard.validateSwapTransaction({
         fromToken: 'USDT',
-        toToken: 'BNB',
+        toToken: 'WETH',
         amount: ethers.parseUnits('1001', 6).toString(),
         currentRiskLevel: 'LOW',
         portfolioValue: ethers.parseUnits('5000', 6).toString(),
@@ -103,7 +103,7 @@ describe('Phase 1 Core Upgrades Verification', () => {
     it('should block trades exceeding max risk percentage', () => {
       const result = policyGuard.validateSwapTransaction({
         fromToken: 'USDT',
-        toToken: 'BNB',
+        toToken: 'WETH',
         amount: ethers.parseUnits('20', 6).toString(),
         currentRiskLevel: 'LOW',
         portfolioValue: ethers.parseUnits('100', 6).toString(),
@@ -116,7 +116,7 @@ describe('Phase 1 Core Upgrades Verification', () => {
     it('should allow safe transactions', () => {
       const result = policyGuard.validateSwapTransaction({
         fromToken: 'USDT',
-        toToken: 'BNB',
+        toToken: 'WETH',
         amount: ethers.parseUnits('1', 6).toString(),
         currentRiskLevel: 'LOW',
         portfolioValue: ethers.parseUnits('100', 6).toString(),
@@ -143,7 +143,7 @@ describe('Phase 1 Core Upgrades Verification', () => {
     it('should estimate gas correctly', async () => {
       const estimate = await simulator.estimateSwapGas({
         fromToken: 'USDT',
-        toToken: 'BNB',
+        toToken: 'WETH',
         amount: '1000000',
       });
 

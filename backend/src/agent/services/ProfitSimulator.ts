@@ -31,7 +31,7 @@ export class ProfitSimulator {
   private rpcUrl: string;
   private gasPrice: bigint = 0n;
   private lastGasPriceUpdate: Date = new Date();
-  private gasTokenPrice: number = 0; // BNB price in USD
+  private gasTokenPrice: number = 0; // ETH price in USD
 
   constructor(rpcUrl: string) {
     this.rpcUrl = rpcUrl;
@@ -65,22 +65,22 @@ export class ProfitSimulator {
   }
 
   /**
-   * Fetch BNB/USD price
+   * Fetch ETH/USD price
    */
   private async fetchGasTokenPrice(): Promise<number> {
     try {
       const response = await axios.get(
-        'https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd',
+        'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd',
         { timeout: 5000 }
       );
-      const price = response.data?.binancecoin?.usd || 0;
+      const price = response.data?.ethereum?.usd || 0;
       if (price > 0) {
         this.gasTokenPrice = price;
       }
       return this.gasTokenPrice;
     } catch (e) {
-      logger.error(e, '[ProfitSimulator] Failed to fetch BNB price');
-      return this.gasTokenPrice || 600; // Fallback estimate
+      logger.error(e, '[ProfitSimulator] Failed to fetch ETH price');
+      return this.gasTokenPrice || 3500; // Fallback estimate
     }
   }
 
@@ -94,7 +94,7 @@ export class ProfitSimulator {
     amount: string;
   }): Promise<GasEstimate> {
     const gasPrice = await this.fetchGasPrice();
-    const bnbPrice = await this.fetchGasTokenPrice();
+    const ethPrice = await this.fetchGasTokenPrice();
 
     // Conservative estimates:
     // - Simple swap: 150k-200k gas
@@ -103,7 +103,7 @@ export class ProfitSimulator {
     
     const gasCostBN = estimatedGas * gasPrice;
     const gasCostETH = ethers.formatEther(gasCostBN);
-    const gasCostUSDT = parseFloat(gasCostETH) * bnbPrice;
+    const gasCostUSDT = parseFloat(gasCostETH) * ethPrice;
 
     return {
       gasUsed: estimatedGas.toString(),
@@ -123,14 +123,14 @@ export class ProfitSimulator {
     amount: string;
   }): Promise<GasEstimate> {
     const gasPrice = await this.fetchGasPrice();
-    const bnbPrice = await this.fetchGasTokenPrice();
+    const ethPrice = await this.fetchGasTokenPrice();
 
     // Bridge operations are expensive
     const estimatedGas = 350000n;
     
     const gasCostBN = estimatedGas * gasPrice;
     const gasCostETH = ethers.formatEther(gasCostBN);
-    const gasCostUSDT = parseFloat(gasCostETH) * bnbPrice;
+    const gasCostUSDT = parseFloat(gasCostETH) * ethPrice;
 
     return {
       gasUsed: estimatedGas.toString(),

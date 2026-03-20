@@ -1,12 +1,17 @@
 import { Hono } from 'hono';
-import { ToolRegistry } from '../../mcp-server/tool-registry.js';
-import { bnbTools, handleBnbTool } from '../../mcp-server/handlers/bnb-tools.js';
-import { solanaTools, handleSolanaTool } from '../../mcp-server/handlers/solana-tools.js';
-import { tonTools, handleTonTool } from '../../mcp-server/handlers/ton-tools.js';
-import { wdkTools, handleWdkTool } from '../../mcp-server/handlers/wdk-tools.js';
-import { x402Tools, handleX402Tool } from '../../mcp-server/handlers/x402-tools.js';
-import { erc4337Tools, handleErc4337Tool } from '../../mcp-server/handlers/erc4337-tools.js';
-import { McpExecutionContext, McpTool } from '../../mcp-server/types/mcp-protocol.js';
+import { ToolRegistry } from '../../mcp-server/tool-registry';
+import { sepoliaTools, handleSepoliaTool } from '../../mcp-server/handlers/sepolia-tools';
+import { polygonTools, handlePolygonTool } from '../../mcp-server/handlers/polygon-tools';
+import { arbitrumTools, handleArbitrumTool } from '../../mcp-server/handlers/arbitrum-tools';
+import { gnosisTools, handleGnosisTool } from '../../mcp-server/handlers/gnosis-tools';
+// import { solanaTools, handleSolanaTool } from '../../mcp-server/handlers/solana-tools';
+// import { tonTools, handleTonTool } from '../../mcp-server/handlers/ton-tools';
+import { wdkTools, handleWdkTool } from '../../mcp-server/handlers/wdk-tools';
+import { x402Tools, handleX402Tool } from '../../mcp-server/handlers/x402-tools';
+import { erc4337Tools, handleErc4337Tool } from '../../mcp-server/handlers/erc4337-tools';
+import { broadcastSignedTransaction, getPendingTransaction, createPendingTransactionId } from '../../lib/user-wallet-signer';
+
+import { McpExecutionContext, McpTool } from '../../mcp-server/types/mcp-protocol';
 import { logger } from '@/utils/logger';
 
 const mcpRoute = new Hono();
@@ -14,21 +19,29 @@ const mcpRoute = new Hono();
 const registry = new ToolRegistry();
 
 function initMcpTools() {
-  for (const tool of bnbTools) {
+  for (const tool of sepoliaTools) {
     registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
-      return handleBnbTool(tool.name, params, context);
+      return handleSepoliaTool(tool.name, params, context);
     });
   }
-  for (const tool of solanaTools) {
+  for (const tool of polygonTools) {
     registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
-      return handleSolanaTool(tool.name, params, context);
+      return handlePolygonTool(tool.name, params, context);
     });
   }
-  for (const tool of tonTools) {
+  for (const tool of arbitrumTools) {
     registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
-      return handleTonTool(tool.name, params, context);
+      return handleArbitrumTool(tool.name, params, context);
     });
   }
+  for (const tool of gnosisTools) {
+    registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
+      return handleGnosisTool(tool.name, params, context);
+    });
+  }
+  // Solana/TON disabled - see imports above
+  // for (const tool of solanaTools) { ... }
+  // for (const tool of tonTools) { ... }
   for (const tool of wdkTools) {
     registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
       return handleWdkTool(tool.name, params, context);
@@ -181,6 +194,31 @@ mcpRoute.get('/', (c) => {
       walletConnected: isConnectedWallet
     }
   });
+});
+
+mcpRoute.post('/broadcast', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { signedTx, pendingTxId } = body;
+
+    if (!signedTx || !pendingTxId) {
+      return c.json({ success: false, error: 'Missing signedTx or pendingTxId' }, 400);
+    }
+
+    const result = await broadcastSignedTransaction(signedTx, pendingTxId);
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    return c.json({ success: false, error: error instanceof Error ? error.message : String(error) }, 400);
+  }
+});
+
+mcpRoute.get('/pending/:id', (c) => {
+  const id = c.req.param('id');
+  const pending = getPendingTransaction(id);
+  if (!pending) {
+    return c.json({ success: false, error: 'Transaction not found or expired' }, 404);
+  }
+  return c.json({ success: true, data: pending });
 });
 
 export default mcpRoute;

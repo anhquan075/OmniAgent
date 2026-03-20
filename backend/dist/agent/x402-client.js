@@ -20,7 +20,7 @@ class X402Client {
         const wdkExecutor = new WdkExecutor_1.WdkExecutor(this.wdk);
         const { usdt } = (0, ethers_1.getContracts)();
         // Execute Transfer using WdkExecutor (which enforces PolicyGuard)
-        const tx = await wdkExecutor.sendTransaction('bnb', {
+        const tx = await wdkExecutor.sendTransaction('sepolia', {
             to: this.usdtAddress,
             data: usdt.interface.encodeFunctionData("transfer", [providerAddress, amount])
         }, { riskLevel: currentRiskLevel, portfolioValue: portfolioValue, estimatedAmount: amount });

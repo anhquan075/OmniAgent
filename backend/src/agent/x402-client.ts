@@ -22,7 +22,7 @@ export class X402Client {
     const { usdt } = getContracts();
     
     // Execute Transfer using WdkExecutor (which enforces PolicyGuard)
-    const tx = await wdkExecutor.sendTransaction('bnb', {
+    const tx = await wdkExecutor.sendTransaction('sepolia', {
       to: this.usdtAddress,
       data: usdt.interface.encodeFunctionData("transfer", [providerAddress, amount])
     }, { riskLevel: currentRiskLevel, portfolioValue: portfolioValue, estimatedAmount: amount });

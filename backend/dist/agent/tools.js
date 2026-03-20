@@ -6,22 +6,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.normalizedAgentTools = exports.agentTools = void 0;
 exports.getWdk = getWdk;
 exports.getToolsMetadata = getToolsMetadata;
-const ethers_1 = require("ethers");
-const RiskService_1 = require("./services/RiskService");
+const env_1 = require("../config/env");
+const ethers_1 = require("../contracts/clients/ethers");
+const wdk_loader_1 = require("../lib/wdk-loader");
+const RobotFleetService_1 = require("../services/RobotFleetService");
+const logger_1 = require("../utils/logger");
+const ai_1 = require("ai");
+const axios_1 = __importDefault(require("axios"));
+const ethers_2 = require("ethers");
+const zod_1 = require("zod");
+const PolicyGuard_1 = require("./middleware/PolicyGuard");
+const WdkExecutor_1 = require("./middleware/WdkExecutor");
 const BridgeService_1 = require("./services/BridgeService");
+const ProfitSimulator_1 = require("./services/ProfitSimulator");
+const RiskService_1 = require("./services/RiskService");
 const SimulationService_1 = require("./services/SimulationService");
 const x402_client_1 = require("./x402-client");
-const PolicyGuard_1 = require("./middleware/PolicyGuard");
-const wdk_loader_1 = require("../lib/wdk-loader");
-const WdkExecutor_1 = require("./middleware/WdkExecutor");
-const ProfitSimulator_1 = require("./services/ProfitSimulator");
-const ai_1 = require("ai");
-const zod_1 = require("zod");
-const env_1 = require("../config/env");
-const ethers_2 = require("../contracts/clients/ethers");
-const axios_1 = __importDefault(require("axios"));
-const logger_1 = require("../utils/logger");
-const RobotFleetService_1 = require("../services/RobotFleetService");
 function validateWDKSecretSeed() {
     const seed = env_1.env.WDK_SECRET_SEED;
     if (!seed) {
@@ -41,24 +41,11 @@ validateWDKSecretSeed();
 let wdkPromise = null;
 async function getWdk() {
     if (!wdkPromise) {
-        wdkPromise = (async () => {
-            const [WDK, WalletEVM, WalletSolana, WalletTON] = await Promise.all([
-                (0, wdk_loader_1.getWDK)(),
-                (0, wdk_loader_1.getWalletEVM)(),
-                (0, wdk_loader_1.getWalletSolana)(),
-                (0, wdk_loader_1.getWalletTON)()
-            ]);
-            await Promise.all([
-                WDK.registerWallet('bnb', WalletEVM, { provider: env_1.env.BNB_RPC_URL }),
-                WDK.registerWallet('solana', WalletSolana, { rpcUrl: env_1.env.SOLANA_RPC_URL }),
-                WDK.registerWallet('ton', WalletTON, { tonClient: { url: env_1.env.TON_RPC_URL, secretKey: env_1.env.TON_API_KEY } })
-            ]);
-            return WDK;
-        })();
+        wdkPromise = (0, wdk_loader_1.getWdkMultiChain)();
     }
     return wdkPromise;
 }
-const { engine, vault, usdt, zkOracle, breaker, auction } = (0, ethers_2.getContracts)();
+const { engine, vault, usdt, zkOracle, breaker, auction } = (0, ethers_1.getContracts)();
 let bridgeServicePromise = null;
 let x402Promise = null;
 let wdkExecutorPromise = null;
@@ -89,7 +76,7 @@ async function getWdkExecutor() {
     }
     return wdkExecutorPromise;
 }
-const profitSimulator = (0, ProfitSimulator_1.createProfitSimulator)(env_1.env.BNB_RPC_URL);
+const profitSimulator = (0, ProfitSimulator_1.createProfitSimulator)(env_1.env.SEPOLIA_RPC_URL);
 const policyGuard = (0, PolicyGuard_1.getPolicyGuard)();
 // Helper to report agent state
 async function reportToDashboard(node, details = {}) {
@@ -138,8 +125,8 @@ exports.agentTools = {
                     const currentRaw = buffer.current ?? buffer[0] ?? 0n;
                     const targetRaw = buffer.target ?? buffer[1] ?? 0n;
                     const utilizationRaw = buffer.utilizationBps ?? buffer[2] ?? 0n;
-                    bufferTarget = Number(ethers_1.ethers.formatUnits(targetRaw, tokenDecimals));
-                    bufferCurrent = Number(ethers_1.ethers.formatUnits(currentRaw, tokenDecimals));
+                    bufferTarget = Number(ethers_2.ethers.formatUnits(targetRaw, tokenDecimals));
+                    bufferCurrent = Number(ethers_2.ethers.formatUnits(currentRaw, tokenDecimals));
                     bufferUtilizationBps = Number(utilizationRaw);
                 }
                 catch (e) {
@@ -147,7 +134,7 @@ exports.agentTools = {
                 }
                 const res = {
                     vault: await vault.getAddress(),
-                    totalAssets: ethers_1.ethers.formatUnits(assets, tokenDecimals),
+                    totalAssets: ethers_2.ethers.formatUnits(assets, tokenDecimals),
                     bufferUtilizationBps,
                     bufferCurrent,
                     bufferTarget,
@@ -163,14 +150,14 @@ exports.agentTools = {
         },
     }),
     get_all_chain_balances: (0, ai_1.tool)({
-        description: 'Fetch the native token (e.g., BNB, SOL, TON) and USDT balances across all registered multi-chain wallets.',
+        description: 'Fetch the native token (e.g., ETH, SOL, TON) and USDT balances across all registered multi-chain wallets.',
         parameters: zod_1.z.object({
             context: zod_1.z.string().describe('Reason/context for this action.')
         }),
         // @ts-ignore
         execute: async ({ context }) => {
             const results = {};
-            const networks = ['bnb', 'solana', 'ton'];
+            const networks = ['sepolia', 'solana', 'ton'];
             for (const network of networks) {
                 try {
                     const account = await (await getWdk()).getAccount(network);
@@ -178,8 +165,8 @@ exports.agentTools = {
                     let nativeBalance = "0";
                     try {
                         const nativeBigInt = await account.getBalance();
-                        const decimals = network === 'bnb' ? 18 : network === 'solana' ? 9 : 9;
-                        nativeBalance = ethers_1.ethers.formatUnits(nativeBigInt, decimals);
+                        const decimals = network === 'sepolia' ? 18 : network === 'solana' ? 9 : 9;
+                        nativeBalance = ethers_2.ethers.formatUnits(nativeBigInt, decimals);
                     }
                     catch (e) {
                         logger_1.logger.warn(e, `[MultiVM] Failed to get native balance for ${network}`);
@@ -189,7 +176,7 @@ exports.agentTools = {
                         let tokenAddress = env_1.env.WDK_USDT_ADDRESS;
                         if (account.getTokenBalance) {
                             const usdtBigInt = await account.getTokenBalance(tokenAddress);
-                            usdtBalance = ethers_1.ethers.formatUnits(usdtBigInt, 6);
+                            usdtBalance = ethers_2.ethers.formatUnits(usdtBigInt, 6);
                         }
                     }
                     catch (e) {
@@ -253,7 +240,7 @@ exports.agentTools = {
             const res = {
                 canExecute: canExec,
                 reason: canExec ? '' : (function () { try {
-                    return ethers_1.ethers.decodeBytes32String(reason);
+                    return ethers_2.ethers.decodeBytes32String(reason);
                 }
                 catch {
                     return 'UNKNOWN';
@@ -275,8 +262,8 @@ exports.agentTools = {
         }),
         // @ts-ignore
         execute: async ({ context }) => {
-            const bnbAccount = await (await getWdk()).getAccount('bnb');
-            const fromAddress = await bnbAccount.getAddress();
+            const sepoliaAccount = await (await getWdk()).getAccount('sepolia');
+            const fromAddress = await sepoliaAccount.getAddress();
             const riskService = new RiskService_1.RiskService(zkOracle, breaker, await getWdk());
             const profile = await riskService.getRiskProfile();
             const policyViolation = policyGuard.validateSwapTransaction({
@@ -301,7 +288,7 @@ exports.agentTools = {
                 };
             }
             // 1. Check Auction logic
-            if (await auction.getAddress() !== ethers_1.ethers.ZeroAddress) {
+            if (await auction.getAddress() !== ethers_2.ethers.ZeroAddress) {
                 try {
                     const status = await auction.roundStatus();
                     const phase = Number(status.currentPhase);
@@ -311,19 +298,19 @@ exports.agentTools = {
                         const myBid = currentBid > 0n ? currentBid + (currentBid * 500n / 10000n) : minBid;
                         const allowance = await usdt.allowance(fromAddress, await auction.getAddress());
                         if (allowance < myBid) {
-                            await (await getWdkExecutor()).sendTransaction('bnb', {
+                            await (await getWdkExecutor()).sendTransaction('sepolia', {
                                 to: env_1.env.WDK_USDT_ADDRESS,
-                                data: usdt.interface.encodeFunctionData("approve", [await auction.getAddress(), ethers_1.ethers.MaxUint256])
+                                data: usdt.interface.encodeFunctionData("approve", [await auction.getAddress(), ethers_2.ethers.MaxUint256])
                             }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
                         }
-                        const bidTx = await (await getWdkExecutor()).sendTransaction('bnb', {
+                        const bidTx = await (await getWdkExecutor()).sendTransaction('sepolia', {
                             to: await auction.getAddress(),
                             data: auction.interface.encodeFunctionData("bid", [myBid])
                         }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
                         return { actionTaken: 'AUCTION_BID_PLACED', txHash: bidTx.hash };
                     }
                     if (phase === 2 && status.winner.toLowerCase() === fromAddress.toLowerCase()) {
-                        const execTx = await (await getWdkExecutor()).sendTransaction('bnb', {
+                        const execTx = await (await getWdkExecutor()).sendTransaction('sepolia', {
                             to: await auction.getAddress(),
                             data: auction.interface.encodeFunctionData("winnerExecute", [])
                         }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
@@ -342,7 +329,7 @@ exports.agentTools = {
                 data: engine.interface.encodeFunctionData("executeCycle", []),
                 value: 0n
             };
-            const simulator = new SimulationService_1.SimulationService(env_1.env.BNB_RPC_URL);
+            const simulator = new SimulationService_1.SimulationService(env_1.env.SEPOLIA_RPC_URL);
             const simResult = await simulator.simulateTransaction(txRequest);
             const aiScore = await riskService.getAIRiskScore(simResult, profile);
             if (aiScore.score > 75 || !simResult.success) {
@@ -358,7 +345,7 @@ exports.agentTools = {
             });
             logger_1.logger.debug({ profitSim }, '[Rebalance] Profit simulation');
             try {
-                const tx = await (await getWdkExecutor()).sendTransaction('bnb', {
+                const tx = await (await getWdkExecutor()).sendTransaction('sepolia', {
                     to: txRequest.to,
                     data: txRequest.data,
                     value: txRequest.value
@@ -377,7 +364,7 @@ exports.agentTools = {
         },
     }),
     check_cross_chain_yields: (0, ai_1.tool)({
-        description: 'Scout yields across BNB, Solana, and TON and move capital if an opportunity exists.',
+        description: 'Scout yields across Sepolia, Solana, and TON and move capital if an opportunity exists.',
         parameters: zod_1.z.object({
             threshold: zod_1.z.number().default(2.0).describe('Minimum yield premium to trigger a bridge.')
         }),
@@ -386,7 +373,7 @@ exports.agentTools = {
             const riskService = new RiskService_1.RiskService(zkOracle, breaker, await getWdk());
             const profile = await riskService.getRiskProfile();
             const policyViolation = policyGuard.validateBridgeTransaction({
-                fromChain: 'bnb',
+                fromChain: 'sepolia',
                 toChain: 'solana',
                 amount: '100000000',
                 currentRiskLevel: profile.level,
@@ -396,13 +383,13 @@ exports.agentTools = {
                 logger_1.logger.warn({ reason: policyViolation.reason }, '[Bridge] Policy violation');
                 return { actionTaken: 'BLOCKED_BY_POLICY', reason: policyViolation.reason };
             }
-            const opportunity = await (await getBridgeService()).analyzeBridgeOpportunity('bnb', threshold);
+            const opportunity = await (await getBridgeService()).analyzeBridgeOpportunity('sepolia', threshold);
             if (opportunity.shouldBridge) {
                 const currentYield = 0;
                 const expectedYieldDifference = (opportunity.expectedYield || 2.0) - currentYield;
                 const profitSim = await profitSimulator.simulateBridge({
                     inputAmount: '100000000',
-                    fromChain: 'bnb',
+                    fromChain: 'sepolia',
                     toChain: opportunity.targetChain || 'solana',
                     expectedYieldDifference: expectedYieldDifference,
                     holdingPeriodDays: 30,
@@ -411,7 +398,7 @@ exports.agentTools = {
                     logger_1.logger.info({ margin: profitSim.profitMargin }, '[Bridge] Not viable');
                     return { actionTaken: 'SKIPPED_NOT_PROFITABLE', profitMargin: profitSim.profitMargin };
                 }
-                const bridgeResult = await (await getBridgeService()).executeBridge('bnb', opportunity.targetChain || '', 100);
+                const bridgeResult = await (await getBridgeService()).executeBridge('sepolia', opportunity.targetChain || '', 100);
                 if (bridgeResult.success) {
                     policyGuard.recordTransaction('100000000');
                     const res = { actionTaken: 'BRIDGED_CAPITAL', txHash: bridgeResult.hash, profitSimulation: profitSim };
@@ -435,7 +422,7 @@ exports.agentTools = {
             const policyViolation = policyGuard.validateSwapTransaction({
                 fromToken: env_1.env.WDK_USDT_ADDRESS,
                 toToken: providerAddress,
-                amount: ethers_1.ethers.parseUnits("0.1", 6).toString(),
+                amount: ethers_2.ethers.parseUnits("0.1", 6).toString(),
                 currentRiskLevel: profile.level,
                 portfolioValue: (await vault.totalAssets()).toString(),
                 estimatedSlippageBps: 0,
@@ -445,7 +432,7 @@ exports.agentTools = {
                 return { status: "failed", error: `Policy violation: ${policyViolation.reason}` };
             }
             try {
-                const paymentAmount = ethers_1.ethers.parseUnits("0.1", 6).toString();
+                const paymentAmount = ethers_2.ethers.parseUnits("0.1", 6).toString();
                 const portfolioValue = await vault.totalAssets();
                 const paymentSim = await profitSimulator.simulateSwap({
                     inputAmount: paymentAmount,
@@ -475,14 +462,14 @@ exports.agentTools = {
         }),
         // @ts-ignore
         execute: async ({ context }) => {
-            const bnbAccount = await (await getWdk()).getAccount('bnb');
-            const spendingAccount = await (await getWdk()).getAccount('bnb', 1);
+            const sepoliaAccount = await (await getWdk()).getAccount('sepolia');
+            const spendingAccount = await (await getWdk()).getAccount('sepolia', 1);
             const spendingAddress = await spendingAccount.getAddress();
             try {
-                const myAddress = await bnbAccount.getAddress();
+                const myAddress = await sepoliaAccount.getAddress();
                 const principal = await vault.userPrincipal(myAddress);
                 const maxWithdrawable = await vault.maxWithdraw(myAddress);
-                if (maxWithdrawable > principal && (maxWithdrawable - principal) > ethers_1.ethers.parseUnits("1", 6)) {
+                if (maxWithdrawable > principal && (maxWithdrawable - principal) > ethers_2.ethers.parseUnits("1", 6)) {
                     const yieldAmount = maxWithdrawable - principal;
                     const portfolioValue = await vault.totalAssets();
                     const yieldSim = await profitSimulator.simulateSwap({
@@ -496,7 +483,7 @@ exports.agentTools = {
                     try {
                         const riskService = new RiskService_1.RiskService(zkOracle, breaker, await getWdk());
                         const profile = await riskService.getRiskProfile();
-                        const tx = await (await getWdkExecutor()).sendTransaction('bnb', {
+                        const tx = await (await getWdkExecutor()).sendTransaction('sepolia', {
                             to: await vault.getAddress(),
                             data: vault.interface.encodeFunctionData("withdrawYield", [spendingAddress])
                         }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: yieldAmount.toString() });
@@ -504,7 +491,7 @@ exports.agentTools = {
                             actionTaken: 'YIELD_SWEPT',
                             txHash: tx.hash,
                             recipient: spendingAddress,
-                            yieldAmount: ethers_1.ethers.formatUnits(yieldAmount, 6),
+                            yieldAmount: ethers_2.ethers.formatUnits(yieldAmount, 6),
                             profitSimulation: yieldSim
                         };
                         await reportToDashboard('yieldSweep', res);
@@ -523,7 +510,7 @@ exports.agentTools = {
         },
     }),
     supply_to_aave: (0, ai_1.tool)({
-        description: 'Supply USDT to Aave V3 on BNB Chain to earn yield.',
+        description: 'Supply USDT to Aave V3 on Sepolia to earn yield.',
         parameters: zod_1.z.object({
             amount: zod_1.z.string().describe('Amount of USDT to supply (in decimal USDT, e.g., "100.5")')
         }),
@@ -533,11 +520,11 @@ exports.agentTools = {
                 return { status: "failed", error: "Aave adapter address not configured" };
             const riskService = new RiskService_1.RiskService(zkOracle, breaker, await getWdk());
             const profile = await riskService.getRiskProfile();
-            const usdtAmount = ethers_1.ethers.parseUnits(amount, 6);
+            const usdtAmount = ethers_2.ethers.parseUnits(amount, 6);
             try {
-                const tx = await (await getWdkExecutor()).sendTransaction('bnb', {
+                const tx = await (await getWdkExecutor()).sendTransaction('sepolia', {
                     to: env_1.env.WDK_AAVE_ADAPTER_ADDRESS,
-                    data: new ethers_1.Interface(["function onVaultDeposit(uint256 amount) external"]).encodeFunctionData("onVaultDeposit", [usdtAmount])
+                    data: new ethers_2.Interface(["function onVaultDeposit(uint256 amount) external"]).encodeFunctionData("onVaultDeposit", [usdtAmount])
                 }, {
                     riskLevel: profile.level,
                     portfolioValue: (await vault.totalAssets()).toString(),
@@ -551,7 +538,7 @@ exports.agentTools = {
         }
     }),
     withdraw_from_aave: (0, ai_1.tool)({
-        description: 'Withdraw USDT from Aave V3 on BNB Chain back to the vault.',
+        description: 'Withdraw USDT from Aave V3 on Sepolia back to the vault.',
         parameters: zod_1.z.object({
             amount: zod_1.z.string().describe('Amount of USDT to withdraw (in decimal USDT, e.g., "100.5")')
         }),
@@ -561,11 +548,11 @@ exports.agentTools = {
                 return { status: "failed", error: "Aave adapter address not configured" };
             const riskService = new RiskService_1.RiskService(zkOracle, breaker, await getWdk());
             const profile = await riskService.getRiskProfile();
-            const usdtAmount = ethers_1.ethers.parseUnits(amount, 6);
+            const usdtAmount = ethers_2.ethers.parseUnits(amount, 6);
             try {
-                const tx = await (await getWdkExecutor()).sendTransaction('bnb', {
+                const tx = await (await getWdkExecutor()).sendTransaction('sepolia', {
                     to: env_1.env.WDK_AAVE_ADAPTER_ADDRESS,
-                    data: new ethers_1.Interface(["function withdrawToVault(uint256 amount) external returns (uint256)"]).encodeFunctionData("withdrawToVault", [usdtAmount])
+                    data: new ethers_2.Interface(["function withdrawToVault(uint256 amount) external returns (uint256)"]).encodeFunctionData("withdrawToVault", [usdtAmount])
                 }, {
                     riskLevel: profile.level,
                     portfolioValue: (await vault.totalAssets()).toString(),
@@ -596,10 +583,10 @@ exports.agentTools = {
                     'function vault() view returns (address)',
                     'function asset() view returns (address)'
                 ];
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const lzAdapter = new ethers_1.ethers.Contract(env_1.env.WDK_LZ_ADAPTER_ADDRESS, LZ_ADAPTER_ABI, signer);
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
+                const lzAdapter = new ethers_2.ethers.Contract(env_1.env.WDK_LZ_ADAPTER_ADDRESS, LZ_ADAPTER_ABI, signer);
                 const refundAddress = await signer.getAddress();
-                const usdtAmount = ethers_1.ethers.parseUnits(amount, 6);
+                const usdtAmount = ethers_2.ethers.parseUnits(amount, 6);
                 const tx = await lzAdapter.send(dstEid, '0x', '0x', refundAddress, { value: usdtAmount });
                 await tx.wait();
                 await reportToDashboard('bridge_via_layerzero', { txHash: tx.hash, dstEid, amount });
@@ -611,52 +598,52 @@ exports.agentTools = {
             }
         }
     }),
-    // ==================== BNB TOOLS (7) ====================
-    bnb_create_wallet: (0, ai_1.tool)({
-        description: 'Create or retrieve a BNB blockchain wallet address',
+    // ==================== SEPOLIA TOOLS (7) ====================
+    sepolia_create_wallet: (0, ai_1.tool)({
+        description: 'Create or retrieve a Sepolia blockchain wallet address',
         parameters: zod_1.z.object({
             context: zod_1.z.string().describe('Reason for accessing the wallet.')
         }),
         // @ts-ignore
         execute: async ({ context }) => {
             try {
-                const account = await (await getWdk()).getAccount('bnb');
+                const account = await (await getWdk()).getAccount('sepolia');
                 const address = await account.getAddress();
-                await reportToDashboard('bnb_create_wallet', { address, network: 'bnb' });
-                return { success: true, address, network: 'bnb' };
+                await reportToDashboard('sepolia_create_wallet', { address, network: 'sepolia' });
+                return { success: true, address, network: 'sepolia' };
             }
             catch (e) {
-                logger_1.logger.error(e, '[Tools] Error in bnb_create_wallet');
+                logger_1.logger.error(e, '[Tools] Error in sepolia_create_wallet');
                 throw e;
             }
         }
     }),
-    bnb_get_balance: (0, ai_1.tool)({
-        description: 'Get native BNB and token balance for a BNB address',
+    sepolia_get_balance: (0, ai_1.tool)({
+        description: 'Get native ETH and token balance for a Sepolia address',
         parameters: zod_1.z.object({
-            address: zod_1.z.string().optional().describe('BNB address (optional, defaults to main wallet)'),
+            address: zod_1.z.string().optional().describe('Sepolia address (optional, defaults to main wallet)'),
             context: zod_1.z.string().describe('Reason for checking balance.')
         }),
         // @ts-ignore
         execute: async ({ address, context }) => {
             try {
-                const targetAddress = address || (await (await getWdk()).getAccount('bnb').then((a) => a.getAddress()));
-                const provider = new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL);
+                const targetAddress = address || (await (await getWdk()).getAccount('sepolia').then((a) => a.getAddress()));
+                const provider = new ethers_2.ethers.JsonRpcProvider(env_1.env.SEPOLIA_RPC_URL);
                 const balanceWei = await provider.getBalance(targetAddress);
-                const balanceBnb = ethers_1.ethers.formatEther(balanceWei);
-                await reportToDashboard('bnb_get_balance', { balance: balanceBnb, address: targetAddress });
+                const balanceBnb = ethers_2.ethers.formatEther(balanceWei);
+                await reportToDashboard('sepolia_get_balance', { balance: balanceBnb, address: targetAddress });
                 return { success: true, nativeBalance: balanceBnb, nativeBalanceWei: balanceWei.toString() };
             }
             catch (e) {
-                logger_1.logger.error(e, '[Tools] Error in bnb_get_balance');
+                logger_1.logger.error(e, '[Tools] Error in sepolia_get_balance');
                 throw e;
             }
         }
     }),
-    bnb_transfer: (0, ai_1.tool)({
-        description: 'Transfer native BNB or tokens on BNB blockchain',
+    sepolia_transfer: (0, ai_1.tool)({
+        description: 'Transfer native ETH or tokens on Sepolia blockchain',
         parameters: zod_1.z.object({
-            to: zod_1.z.string().describe('Recipient BNB address'),
+            to: zod_1.z.string().describe('Recipient Sepolia address'),
             amount: zod_1.z.string().describe('Amount to transfer'),
             context: zod_1.z.string().describe('Reason and authorization for this transfer.')
         }),
@@ -670,22 +657,22 @@ exports.agentTools = {
                     portfolioValue: '1000000'
                 });
                 if (check.violated) {
-                    await reportToDashboard('bnb_transfer', { error: check.reason });
+                    await reportToDashboard('sepolia_transfer', { error: check.reason });
                     return { error: check.reason };
                 }
-                const account = await (await getWdk()).getAccount('bnb');
+                const account = await (await getWdk()).getAccount('sepolia');
                 const result = await account.transfer({ to, amount });
-                await reportToDashboard('bnb_transfer', { txHash: result?.txHash || result?.hash, to, amount });
+                await reportToDashboard('sepolia_transfer', { txHash: result?.txHash || result?.hash, to, amount });
                 return { success: true, txHash: result?.txHash || result?.hash, to, amount };
             }
             catch (e) {
-                logger_1.logger.error(e, '[Tools] Error in bnb_transfer');
+                logger_1.logger.error(e, '[Tools] Error in sepolia_transfer');
                 throw e;
             }
         }
     }),
-    bnb_swap: (0, ai_1.tool)({
-        description: 'Swap tokens on BNB blockchain via PancakeSwap',
+    sepolia_swap: (0, ai_1.tool)({
+        description: 'Swap tokens on Sepolia blockchain via Uniswap',
         parameters: zod_1.z.object({
             tokenIn: zod_1.z.string().describe('Input token address'),
             tokenOut: zod_1.z.string().describe('Output token address'),
@@ -704,22 +691,22 @@ exports.agentTools = {
                     estimatedSlippageBps: 50
                 });
                 if (check.violated) {
-                    await reportToDashboard('bnb_swap', { error: check.reason });
+                    await reportToDashboard('sepolia_swap', { error: check.reason });
                     return { error: check.reason };
                 }
-                const account = await (await getWdk()).getAccount('bnb');
+                const account = await (await getWdk()).getAccount('sepolia');
                 const result = await account.swap({ tokenIn, tokenOut, amountIn });
-                await reportToDashboard('bnb_swap', { txHash: result?.txHash || result?.hash, tokenIn, tokenOut, amountIn });
+                await reportToDashboard('sepolia_swap', { txHash: result?.txHash || result?.hash, tokenIn, tokenOut, amountIn });
                 return { success: true, txHash: result?.txHash || result?.hash, tokenIn, tokenOut, amountIn };
             }
             catch (e) {
-                logger_1.logger.error(e, '[Tools] Error in bnb_swap');
+                logger_1.logger.error(e, '[Tools] Error in sepolia_swap');
                 throw e;
             }
         }
     }),
-    bnb_supply_aave: (0, ai_1.tool)({
-        description: 'Supply tokens to Aave on BNB blockchain',
+    sepolia_supply_aave: (0, ai_1.tool)({
+        description: 'Supply tokens to Aave on Sepolia',
         parameters: zod_1.z.object({
             asset: zod_1.z.string().describe('Token address to supply'),
             amount: zod_1.z.string().describe('Amount to supply'),
@@ -735,22 +722,22 @@ exports.agentTools = {
                     portfolioValue: '1000000'
                 });
                 if (check.violated) {
-                    await reportToDashboard('bnb_supply_aave', { error: check.reason });
+                    await reportToDashboard('sepolia_supply_aave', { error: check.reason });
                     return { error: check.reason };
                 }
-                const account = await (await getWdk()).getAccount('bnb');
+                const account = await (await getWdk()).getAccount('sepolia');
                 const result = await account.supplyAave({ asset, amount });
-                await reportToDashboard('bnb_supply_aave', { txHash: result?.txHash || result?.hash, asset, amount });
+                await reportToDashboard('sepolia_supply_aave', { txHash: result?.txHash || result?.hash, asset, amount });
                 return { success: true, txHash: result?.txHash || result?.hash, asset, amount };
             }
             catch (e) {
-                logger_1.logger.error(e, '[Tools] Error in bnb_supply_aave');
+                logger_1.logger.error(e, '[Tools] Error in sepolia_supply_aave');
                 throw e;
             }
         }
     }),
-    bnb_withdraw_aave: (0, ai_1.tool)({
-        description: 'Withdraw tokens from Aave on BNB blockchain',
+    sepolia_withdraw_aave: (0, ai_1.tool)({
+        description: 'Withdraw tokens from Aave on Sepolia',
         parameters: zod_1.z.object({
             asset: zod_1.z.string().describe('Token address to withdraw'),
             amount: zod_1.z.string().describe('Amount to withdraw'),
@@ -766,22 +753,22 @@ exports.agentTools = {
                     portfolioValue: '1000000'
                 });
                 if (check.violated) {
-                    await reportToDashboard('bnb_withdraw_aave', { error: check.reason });
+                    await reportToDashboard('sepolia_withdraw_aave', { error: check.reason });
                     return { error: check.reason };
                 }
-                const account = await (await getWdk()).getAccount('bnb');
+                const account = await (await getWdk()).getAccount('sepolia');
                 const result = await account.withdrawAave({ asset, amount });
-                await reportToDashboard('bnb_withdraw_aave', { txHash: result?.txHash || result?.hash, asset, amount });
+                await reportToDashboard('sepolia_withdraw_aave', { txHash: result?.txHash || result?.hash, asset, amount });
                 return { success: true, txHash: result?.txHash || result?.hash, asset, amount };
             }
             catch (e) {
-                logger_1.logger.error(e, '[Tools] Error in bnb_withdraw_aave');
+                logger_1.logger.error(e, '[Tools] Error in sepolia_withdraw_aave');
                 throw e;
             }
         }
     }),
-    bnb_bridge_layerzero: (0, ai_1.tool)({
-        description: 'Bridge BNB or tokens to another chain via LayerZero',
+    sepolia_bridge_layerzero: (0, ai_1.tool)({
+        description: 'Bridge ETH or tokens to another chain via LayerZero',
         parameters: zod_1.z.object({
             amount: zod_1.z.string().describe('Amount to bridge'),
             dstChain: zod_1.z.string().describe('Destination chain name'),
@@ -797,16 +784,16 @@ exports.agentTools = {
                     portfolioValue: '1000000'
                 });
                 if (check.violated) {
-                    await reportToDashboard('bnb_bridge_layerzero', { error: check.reason });
+                    await reportToDashboard('sepolia_bridge_layerzero', { error: check.reason });
                     return { error: check.reason };
                 }
-                const account = await (await getWdk()).getAccount('bnb');
+                const account = await (await getWdk()).getAccount('sepolia');
                 const result = await account.bridgeLayerZero({ amount, dstChain });
-                await reportToDashboard('bnb_bridge_layerzero', { txHash: result?.txHash || result?.hash, amount, dstChain });
+                await reportToDashboard('sepolia_bridge_layerzero', { txHash: result?.txHash || result?.hash, amount, dstChain });
                 return { success: true, txHash: result?.txHash || result?.hash, amount, dstChain };
             }
             catch (e) {
-                logger_1.logger.error(e, '[Tools] Error in bnb_bridge_layerzero');
+                logger_1.logger.error(e, '[Tools] Error in sepolia_bridge_layerzero');
                 throw e;
             }
         }
@@ -1002,10 +989,10 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ amount, recipient, context }) => {
             try {
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const usdtContract = new ethers_1.ethers.Contract(env_1.env.WDK_USDT_ADDRESS, ['function mint(address to, uint256 amount) external'], signer);
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
+                const usdtContract = new ethers_2.ethers.Contract(env_1.env.WDK_USDT_ADDRESS, ['function mint(address to, uint256 amount) external'], signer);
                 const finalRecipient = recipient || await signer.getAddress();
-                const mintAmount = ethers_1.ethers.parseUnits(amount || '1000', 6);
+                const mintAmount = ethers_2.ethers.parseUnits(amount || '1000', 6);
                 const tx = await usdtContract.mint(finalRecipient, mintAmount);
                 await tx.wait();
                 await reportToDashboard('wdk_mint_test_token', { txHash: tx.hash, amount, recipient: finalRecipient });
@@ -1036,10 +1023,10 @@ exports.agentTools = {
                     await reportToDashboard('wdk_vault_deposit', { error: check.reason });
                     return { error: check.reason };
                 }
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const vaultContract = new ethers_1.ethers.Contract(env_1.env.WDK_VAULT_ADDRESS, ['function deposit(uint256 assets, address receiver) external returns (uint256 shares)'], signer);
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
+                const vaultContract = new ethers_2.ethers.Contract(env_1.env.WDK_VAULT_ADDRESS, ['function deposit(uint256 assets, address receiver) external returns (uint256 shares)'], signer);
                 const signerAddress = await signer.getAddress();
-                const depositAmount = ethers_1.ethers.parseUnits(amount, 6);
+                const depositAmount = ethers_2.ethers.parseUnits(amount, 6);
                 const tx = await vaultContract.deposit(depositAmount, signerAddress);
                 await tx.wait();
                 await reportToDashboard('wdk_vault_deposit', { txHash: tx.hash, amount });
@@ -1070,10 +1057,10 @@ exports.agentTools = {
                     await reportToDashboard('wdk_vault_withdraw', { error: check.reason });
                     return { error: check.reason };
                 }
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const vaultContract = new ethers_1.ethers.Contract(env_1.env.WDK_VAULT_ADDRESS, ['function withdraw(uint256 assets, address receiver, address owner) external returns (uint256 shares)'], signer);
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
+                const vaultContract = new ethers_2.ethers.Contract(env_1.env.WDK_VAULT_ADDRESS, ['function withdraw(uint256 assets, address receiver, address owner) external returns (uint256 shares)'], signer);
                 const signerAddress = await signer.getAddress();
-                const withdrawAmount = ethers_1.ethers.parseUnits(amount, 6);
+                const withdrawAmount = ethers_2.ethers.parseUnits(amount, 6);
                 const tx = await vaultContract.withdraw(withdrawAmount, signerAddress, signerAddress);
                 await tx.wait();
                 await reportToDashboard('wdk_vault_withdraw', { txHash: tx.hash, amount });
@@ -1094,8 +1081,8 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ account, context }) => {
             try {
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const vaultContract = new ethers_1.ethers.Contract(env_1.env.WDK_VAULT_ADDRESS, ['function balanceOf(address account) view returns (uint256)'], new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
+                const vaultContract = new ethers_2.ethers.Contract(env_1.env.WDK_VAULT_ADDRESS, ['function balanceOf(address account) view returns (uint256)'], new ethers_2.ethers.JsonRpcProvider(env_1.env.SEPOLIA_RPC_URL));
                 const targetAccount = account || await signer.getAddress();
                 const balance = await vaultContract.balanceOf(targetAccount);
                 await reportToDashboard('wdk_vault_get_balance', { balance: balance.toString(), account: targetAccount });
@@ -1115,7 +1102,7 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ context }) => {
             try {
-                const vaultContract = new ethers_1.ethers.Contract(env_1.env.WDK_VAULT_ADDRESS, ['function bufferStatus() view returns (uint256 current, uint256 target, uint256 utilizationBps)'], new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const vaultContract = new ethers_2.ethers.Contract(env_1.env.WDK_VAULT_ADDRESS, ['function bufferStatus() view returns (uint256 current, uint256 target, uint256 utilizationBps)'], new ethers_2.ethers.JsonRpcProvider(env_1.env.SEPOLIA_RPC_URL));
                 const state = await vaultContract.bufferStatus();
                 await reportToDashboard('wdk_vault_get_state', { current: state[0].toString(), target: state[1].toString(), utilization: state[2].toString() });
                 return { success: true, currentBuffer: state[0].toString(), targetBuffer: state[1].toString(), utilizationBps: state[2].toString() };
@@ -1144,8 +1131,8 @@ exports.agentTools = {
                     await reportToDashboard('wdk_engine_execute_cycle', { error: check.reason });
                     return { error: check.reason };
                 }
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const engineContract = new ethers_1.ethers.Contract(env_1.env.WDK_ENGINE_ADDRESS, ['function executeCycle() external'], signer);
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
+                const engineContract = new ethers_2.ethers.Contract(env_1.env.WDK_ENGINE_ADDRESS, ['function executeCycle() external'], signer);
                 const tx = await engineContract.executeCycle();
                 await tx.wait();
                 await reportToDashboard('wdk_engine_execute_cycle', { txHash: tx.hash });
@@ -1165,7 +1152,7 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ context }) => {
             try {
-                const engineContract = new ethers_1.ethers.Contract(env_1.env.WDK_ENGINE_ADDRESS, ['function previewDecision() view returns (tuple(bool executable, bytes32 reason, uint8 nextState, uint256 price, uint256 previousPrice, uint256 volatilityBps, uint256 targetWDKBps, uint256 targetLpBps, uint256 targetLendingBps, uint256 bountyBps, bool breakerPaused, int256 meanYieldBps, uint256 yieldVolatilityBps, int256 sharpeRatio, uint256 auctionElapsedSeconds, uint256 bufferUtilizationBps, uint256 healthFactor))'], new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const engineContract = new ethers_2.ethers.Contract(env_1.env.WDK_ENGINE_ADDRESS, ['function previewDecision() view returns (tuple(bool executable, bytes32 reason, uint8 nextState, uint256 price, uint256 previousPrice, uint256 volatilityBps, uint256 targetWDKBps, uint256 targetLpBps, uint256 targetLendingBps, uint256 bountyBps, bool breakerPaused, int256 meanYieldBps, uint256 yieldVolatilityBps, int256 sharpeRatio, uint256 auctionElapsedSeconds, uint256 bufferUtilizationBps, uint256 healthFactor))'], new ethers_2.ethers.JsonRpcProvider(env_1.env.SEPOLIA_RPC_URL));
                 const state = await engineContract.previewDecision();
                 await reportToDashboard('wdk_engine_get_cycle_state', { nextState: state[2], price: state[3].toString() });
                 return { success: true, nextState: String(state[2]), price: String(state[3]), timestamp: Date.now().toString(), cycleNumber: '0' };
@@ -1184,7 +1171,7 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ context }) => {
             try {
-                const engineContract = new ethers_1.ethers.Contract(env_1.env.WDK_ENGINE_ADDRESS, ['function getHealthFactor() view returns (uint256)'], new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const engineContract = new ethers_2.ethers.Contract(env_1.env.WDK_ENGINE_ADDRESS, ['function getHealthFactor() view returns (uint256)'], new ethers_2.ethers.JsonRpcProvider(env_1.env.SEPOLIA_RPC_URL));
                 const healthFactor = await engineContract.getHealthFactor();
                 await reportToDashboard('wdk_engine_get_risk_metrics', { healthFactor: healthFactor.toString() });
                 return { success: true, healthFactor: healthFactor.toString() };
@@ -1214,9 +1201,9 @@ exports.agentTools = {
                     await reportToDashboard('wdk_aave_supply', { error: check.reason });
                     return { error: check.reason };
                 }
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const aaveAdapterContract = new ethers_1.ethers.Contract(env_1.env.WDK_AAVE_ADAPTER_ADDRESS, ['function onVaultDeposit(uint256 amount) external'], signer);
-                const supplyAmount = ethers_1.ethers.parseUnits(amount, 6);
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
+                const aaveAdapterContract = new ethers_2.ethers.Contract(env_1.env.WDK_AAVE_ADAPTER_ADDRESS, ['function onVaultDeposit(uint256 amount) external'], signer);
+                const supplyAmount = ethers_2.ethers.parseUnits(amount, 6);
                 const tx = await aaveAdapterContract.onVaultDeposit(supplyAmount);
                 await tx.wait();
                 await reportToDashboard('wdk_aave_supply', { txHash: tx.hash, amount });
@@ -1247,9 +1234,9 @@ exports.agentTools = {
                     await reportToDashboard('wdk_aave_withdraw', { error: check.reason });
                     return { error: check.reason };
                 }
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const aaveAdapterContract = new ethers_1.ethers.Contract(env_1.env.WDK_AAVE_ADAPTER_ADDRESS, ['function withdrawToVault(uint256 amount) external returns (uint256)'], signer);
-                const withdrawAmount = ethers_1.ethers.parseUnits(amount, 6);
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
+                const aaveAdapterContract = new ethers_2.ethers.Contract(env_1.env.WDK_AAVE_ADAPTER_ADDRESS, ['function withdrawToVault(uint256 amount) external returns (uint256)'], signer);
+                const withdrawAmount = ethers_2.ethers.parseUnits(amount, 6);
                 const tx = await aaveAdapterContract.withdrawToVault(withdrawAmount);
                 await tx.wait();
                 await reportToDashboard('wdk_aave_withdraw', { txHash: tx.hash, amount });
@@ -1283,9 +1270,9 @@ exports.agentTools = {
                     await reportToDashboard('x402_pay_subagent', { error: check.reason });
                     return { error: check.reason };
                 }
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
-                const usdtContract = new ethers_1.ethers.Contract(env_1.env.WDK_USDT_ADDRESS, ['function transfer(address to, uint256 amount) external returns (bool)'], signer);
-                const payAmount = ethers_1.ethers.parseUnits(amount, 6);
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
+                const usdtContract = new ethers_2.ethers.Contract(env_1.env.WDK_USDT_ADDRESS, ['function transfer(address to, uint256 amount) external returns (bool)'], signer);
+                const payAmount = ethers_2.ethers.parseUnits(amount, 6);
                 const tx = await usdtContract.transfer(provider_address, payAmount);
                 await tx.wait();
                 await reportToDashboard('x402_pay_subagent', { txHash: tx.hash, amount, serviceType: service_type });
@@ -1306,12 +1293,12 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ address, context }) => {
             try {
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
                 const targetAddress = address || await signer.getAddress();
-                const usdtContract = new ethers_1.ethers.Contract(env_1.env.WDK_USDT_ADDRESS, ['function balanceOf(address account) external view returns (uint256)', 'function decimals() external view returns (uint8)'], new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const usdtContract = new ethers_2.ethers.Contract(env_1.env.WDK_USDT_ADDRESS, ['function balanceOf(address account) external view returns (uint256)', 'function decimals() external view returns (uint8)'], new ethers_2.ethers.JsonRpcProvider(env_1.env.SEPOLIA_RPC_URL));
                 const balance = await usdtContract.balanceOf(targetAddress);
                 const decimals = await usdtContract.decimals();
-                const balanceFormatted = ethers_1.ethers.formatUnits(balance, decimals);
+                const balanceFormatted = ethers_2.ethers.formatUnits(balance, decimals);
                 await reportToDashboard('x402_get_balance', { balance: balance.toString(), balanceFormatted });
                 return { success: true, balance: balance.toString(), balanceFormatted };
             }
@@ -1375,9 +1362,9 @@ exports.agentTools = {
                 return { error: 'ERC4337_FACTORY_ADDRESS not configured. Set it in .env file.' };
             }
             try {
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
                 const signerAddress = await signer.getAddress();
-                const factoryContract = new ethers_1.ethers.Contract(env_1.env.ERC4337_FACTORY_ADDRESS, ['function createAccount(address owner) external returns (address)'], signer);
+                const factoryContract = new ethers_2.ethers.Contract(env_1.env.ERC4337_FACTORY_ADDRESS, ['function createAccount(address owner) external returns (address)'], signer);
                 const tx = await factoryContract.createAccount(signerAddress);
                 await tx.wait();
                 await reportToDashboard('erc4337_create_account', { txHash: tx.hash });
@@ -1400,10 +1387,10 @@ exports.agentTools = {
                 return { error: 'ERC4337_FACTORY_ADDRESS not configured. Set it in .env file.' };
             }
             try {
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
                 const ownerAddress = owner || await signer.getAddress();
                 const FACTORY_ABI = ['function getAccountAddress(address owner) external view returns (address)'];
-                const factoryContract = new ethers_1.ethers.Contract(env_1.env.ERC4337_FACTORY_ADDRESS, FACTORY_ABI, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const factoryContract = new ethers_2.ethers.Contract(env_1.env.ERC4337_FACTORY_ADDRESS, FACTORY_ABI, new ethers_2.ethers.JsonRpcProvider(env_1.env.SEPOLIA_RPC_URL));
                 const address = await factoryContract.getAccountAddress(ownerAddress);
                 await reportToDashboard('erc4337_get_account_address', { address });
                 return { success: true, address };
@@ -1423,7 +1410,7 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ account_address, context }) => {
             try {
-                const provider = new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL);
+                const provider = new ethers_2.ethers.JsonRpcProvider(env_1.env.SEPOLIA_RPC_URL);
                 const code = await provider.getCode(account_address);
                 const isDeployed = code !== '0x';
                 await reportToDashboard('erc4337_is_valid_account', { accountAddress: account_address, isDeployed });
@@ -1456,10 +1443,10 @@ exports.agentTools = {
                     await reportToDashboard('erc4337_execute', { error: check.reason });
                     return { error: check.reason };
                 }
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
                 const signerAddress = await signer.getAddress();
-                const accountContract = new ethers_1.ethers.Contract(signerAddress, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
-                const txValue = value ? ethers_1.ethers.parseEther(value) : 0n;
+                const accountContract = new ethers_2.ethers.Contract(signerAddress, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
+                const txValue = value ? ethers_2.ethers.parseEther(value) : 0n;
                 const tx = await accountContract.execute(to, txValue, data);
                 await tx.wait();
                 await reportToDashboard('erc4337_execute', { txHash: tx.hash, to, value });
@@ -1484,9 +1471,9 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ calls, context }) => {
             try {
-                const totalValue = calls.reduce((sum, c) => sum + (c.value ? ethers_1.ethers.parseEther(c.value) : 0n), 0n);
+                const totalValue = calls.reduce((sum, c) => sum + (c.value ? ethers_2.ethers.parseEther(c.value) : 0n), 0n);
                 const check = policyGuard.validateTransaction({
-                    toAddress: calls[0]?.to || ethers_1.ethers.ZeroAddress,
+                    toAddress: calls[0]?.to || ethers_2.ethers.ZeroAddress,
                     amount: totalValue.toString(),
                     currentRiskLevel: 'LOW',
                     portfolioValue: '1000000'
@@ -1495,11 +1482,11 @@ exports.agentTools = {
                     await reportToDashboard('erc4337_execute_batch', { error: check.reason });
                     return { error: check.reason };
                 }
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
                 const signerAddress = await signer.getAddress();
-                const accountContract = new ethers_1.ethers.Contract(signerAddress, ['function executeBatch(address[] dests, uint256[] values, bytes[] calldatas) external'], signer);
+                const accountContract = new ethers_2.ethers.Contract(signerAddress, ['function executeBatch(address[] dests, uint256[] values, bytes[] calldatas) external'], signer);
                 const dests = calls.map(c => c.to);
-                const values = calls.map(c => c.value ? ethers_1.ethers.parseEther(c.value) : 0n);
+                const values = calls.map(c => c.value ? ethers_2.ethers.parseEther(c.value) : 0n);
                 const calldatas = calls.map(c => c.data);
                 const tx = await accountContract.executeBatch(dests, values, calldatas);
                 await tx.wait();
@@ -1531,10 +1518,10 @@ exports.agentTools = {
                     await reportToDashboard('erc4337_add_deposit', { error: check.reason });
                     return { error: check.reason };
                 }
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
                 const signerAddress = await signer.getAddress();
-                const entryPointContract = new ethers_1.ethers.Contract(env_1.env.ERC4337_ENTRYPOINT_ADDRESS, ['function depositTo(address account) external payable'], signer);
-                const depositAmount = ethers_1.ethers.parseEther(amount);
+                const entryPointContract = new ethers_2.ethers.Contract(env_1.env.ERC4337_ENTRYPOINT_ADDRESS, ['function depositTo(address account) external payable'], signer);
+                const depositAmount = ethers_2.ethers.parseEther(amount);
                 const tx = await entryPointContract.depositTo(signerAddress, { value: depositAmount });
                 await tx.wait();
                 await reportToDashboard('erc4337_add_deposit', { txHash: tx.hash, amount });
@@ -1555,8 +1542,8 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ account_address, context }) => {
             try {
-                const provider = new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL);
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, provider);
+                const provider = new ethers_2.ethers.JsonRpcProvider(env_1.env.SEPOLIA_RPC_URL);
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
                 const signerAddress = await signer.getAddress();
                 const targetAddress = account_address || signerAddress;
                 const balance = await provider.getBalance(targetAddress);
@@ -1578,11 +1565,11 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ account_address, context }) => {
             try {
-                const provider = new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL);
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, provider);
+                const provider = new ethers_2.ethers.JsonRpcProvider(env_1.env.SEPOLIA_RPC_URL);
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
                 const signerAddress = await signer.getAddress();
                 const targetAddress = account_address || signerAddress;
-                const entryPointContract = new ethers_1.ethers.Contract(env_1.env.ERC4337_ENTRYPOINT_ADDRESS, ['function balanceOf(address account) external view returns (uint256)'], provider);
+                const entryPointContract = new ethers_2.ethers.Contract(env_1.env.ERC4337_ENTRYPOINT_ADDRESS, ['function balanceOf(address account) external view returns (uint256)'], provider);
                 const deposit = await entryPointContract.balanceOf(targetAddress);
                 await reportToDashboard('erc4337_get_deposit', { deposit: deposit.toString(), address: targetAddress });
                 return { success: true, deposit: deposit.toString(), address: targetAddress };
@@ -1604,7 +1591,7 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ token_address, amount, to, context }) => {
             try {
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
                 const recipient = to || await signer.getAddress();
                 const check = policyGuard.validateTransaction({
                     toAddress: recipient,
@@ -1618,9 +1605,9 @@ exports.agentTools = {
                 }
                 // Call transfer through account
                 const signerAddress = await signer.getAddress();
-                const erc20Interface = new ethers_1.ethers.Interface(['function transfer(address to, uint256 amount) external returns (bool)']);
-                const data = erc20Interface.encodeFunctionData('transfer', [recipient, ethers_1.ethers.parseUnits(amount, 6)]);
-                const accountContract = new ethers_1.ethers.Contract(signerAddress, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
+                const erc20Interface = new ethers_2.ethers.Interface(['function transfer(address to, uint256 amount) external returns (bool)']);
+                const data = erc20Interface.encodeFunctionData('transfer', [recipient, ethers_2.ethers.parseUnits(amount, 6)]);
+                const accountContract = new ethers_2.ethers.Contract(signerAddress, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
                 const tx = await accountContract.execute(token_address, 0, data);
                 await tx.wait();
                 await reportToDashboard('erc4337_withdraw_token', { txHash: tx.hash, token: token_address, amount, to: recipient });
@@ -1642,7 +1629,7 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ amount, to, context }) => {
             try {
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
                 const recipient = to || await signer.getAddress();
                 const check = policyGuard.validateTransaction({
                     toAddress: recipient,
@@ -1655,8 +1642,8 @@ exports.agentTools = {
                     return { error: check.reason };
                 }
                 const signerAddress = await signer.getAddress();
-                const withdrawAmount = ethers_1.ethers.parseEther(amount);
-                const accountContract = new ethers_1.ethers.Contract(signerAddress, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
+                const withdrawAmount = ethers_2.ethers.parseEther(amount);
+                const accountContract = new ethers_2.ethers.Contract(signerAddress, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
                 const tx = await accountContract.execute(recipient, withdrawAmount, '0x');
                 await tx.wait();
                 await reportToDashboard('erc4337_withdraw_native', { txHash: tx.hash, amount, to: recipient });
@@ -1678,12 +1665,12 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ token_address, paymaster_address, context }) => {
             try {
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL));
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
                 const signerAddress = await signer.getAddress();
                 // Approve paymaster to spend tokens
-                const erc20Interface = new ethers_1.ethers.Interface(['function approve(address spender, uint256 amount) external returns (bool)']);
-                const data = erc20Interface.encodeFunctionData('approve', [paymaster_address, ethers_1.ethers.MaxUint256]);
-                const accountContract = new ethers_1.ethers.Contract(signerAddress, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
+                const erc20Interface = new ethers_2.ethers.Interface(['function approve(address spender, uint256 amount) external returns (bool)']);
+                const data = erc20Interface.encodeFunctionData('approve', [paymaster_address, ethers_2.ethers.MaxUint256]);
+                const accountContract = new ethers_2.ethers.Contract(signerAddress, ['function execute(address dest, uint256 value, bytes calldata func) external'], signer);
                 const tx = await accountContract.execute(token_address, 0, data);
                 await tx.wait();
                 await reportToDashboard('erc4337_set_token_approval', { txHash: tx.hash, token: token_address, paymaster: paymaster_address });
@@ -1706,11 +1693,11 @@ exports.agentTools = {
         // @ts-ignore
         execute: async ({ token_address, paymaster_address, account_address, context }) => {
             try {
-                const provider = new ethers_1.ethers.JsonRpcProvider(env_1.env.BNB_RPC_URL);
-                const signer = ethers_1.ethers.Wallet.fromPhrase(env_1.env.WDK_SECRET_SEED, provider);
+                const provider = new ethers_2.ethers.JsonRpcProvider(env_1.env.SEPOLIA_RPC_URL);
+                const signer = await (0, wdk_loader_1.getWdkSigner)();
                 const signerAddress = await signer.getAddress();
                 const targetAddress = account_address || signerAddress;
-                const erc20Contract = new ethers_1.ethers.Contract(token_address, ['function allowance(address owner, address spender) external view returns (uint256)'], provider);
+                const erc20Contract = new ethers_2.ethers.Contract(token_address, ['function allowance(address owner, address spender) external view returns (uint256)'], provider);
                 const allowance = await erc20Contract.allowance(targetAddress, paymaster_address);
                 const isApproved = allowance > 0n;
                 await reportToDashboard('erc4337_is_token_approved', { token: token_address, paymaster: paymaster_address, isApproved, allowance: allowance.toString() });

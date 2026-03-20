@@ -16,11 +16,11 @@ if (fs.existsSync(legacyEnvPath)) {
   dotenv.config({ path: legacyEnvPath, override: false });
 }
 
-logger.info({ rpcUrl: process.env.BNB_RPC_URL }, '[Env] BNB_RPC_URL from process.env');
+logger.info({ rpcUrl: process.env.SEPOLIA_RPC_URL }, '[Env] SEPOLIA_RPC_URL from process.env');
 
 const envSchema = z.object({
   PORT: z.string().default('3001'),
-  BNB_RPC_URL: z.string().default('https://binance.llamarpc.com'),
+  SEPOLIA_RPC_URL: z.string().default('https://ethereum-sepolia.publicnode.com'),
   SOLANA_RPC_URL: z.string().default('https://api.mainnet-beta.solana.com'),
   TON_RPC_URL: z.string().default('https://toncenter.com/api/v2/jsonRPC'),
   TON_API_KEY: z.string().optional(),
@@ -41,6 +41,9 @@ const envSchema = z.object({
   WDK_SHARPE_TRACKER_ADDRESS: z.string().optional(),
   WDK_AAVE_ADAPTER_ADDRESS: z.string().optional(),
   WDK_LZ_ADAPTER_ADDRESS: z.string().optional(),
+  WDK_POLICY_GUARD_ADDRESS: z.string().optional(),
+  WDK_AGENT_NFA_ADDRESS: z.string().optional(),
+  AGENT_RISK_PARAMS_ADDRESS: z.string().optional(),
   GITHUB_WEBHOOK_SECRET: z.string().optional(),
   OPENROUTER_API_KEY: z.string().optional(),
   PRIVATE_KEY: z.string().optional(),
@@ -65,10 +68,16 @@ const envSchema = z.object({
   ERC4337_FACTORY_ADDRESS: z.string().optional(),
   ERC4337_PAYMASTER_ADDRESS: z.string().optional(),
   ERC4337_ENTRYPOINT_ADDRESS: z.string().default('0x5FF137D4a0ADCA4B1FB0b8274Ea4dE461a706c12'),
+  ERC4337_ACCOUNT_CREATED_TOPIC: z.string().optional(),
 
   MOCK_AAVE_POOL_ADDRESS: z.string().optional(),
   MOCK_BRIDGE_ADDRESS: z.string().optional(),
   MOCK_ATOKEN_ADDRESS: z.string().optional(),
+
+  AAVE_POOL_ADDRESS: z.string().optional(),
+  LZ_ENDPOINT_ADDRESS: z.string().optional(),
+  LZ_BRIDGE_OPTIONS: z.string().default('0x00030100110100000000000000000000000000030d40'),
+  DEFAULT_CHAIN_ID: z.string().default('11155111').transform(Number),
 });
 
 const parsed = envSchema.safeParse(process.env);

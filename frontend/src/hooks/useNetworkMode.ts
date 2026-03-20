@@ -3,7 +3,7 @@ import { NETWORK_MODE, DEFAULT_NETWORK_MODE } from "../lib/networkConfig.js";
 
 /**
  * Simplified network mode hook.
- * Since only BNB Testnet is supported, this mostly returns static values.
+ * OmniAgent supports Sepolia testnet and Ethereum mainnet.
  * Returns: { networkMode, isTestnet, toggleNetworkMode, setNetworkMode }
  */
 export function useNetworkMode() {

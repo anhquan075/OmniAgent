@@ -10,6 +10,8 @@ const openai_1 = require("@ai-sdk/openai");
 const ai_1 = require("ai");
 const ethers_1 = require("ethers");
 const zod_1 = require("zod");
+const NavShield_1 = require("../../services/NavShield");
+const CreditScoring_1 = require("../../services/CreditScoring");
 const TransactionSchema = zod_1.z.object({
     toAddress: zod_1.z.string().refine((val) => ethers_1.ethers.isAddress(val), {
         message: "Invalid Ethereum address",
@@ -57,11 +59,21 @@ class PolicyGuard {
     lastResetDate = new Date();
     // Per-user policies for multi-wallet support
     userPolicies = new Map();
+    // On-chain parameter integration
+    onChainRiskParams = null;
+    paramsCache = {
+        data: null,
+        timestamp: 0,
+        ttlMs: 300000
+    };
+    riskParamsContract = null;
+    paramSource = 'in-memory';
     constructor(policy) {
+        this.initOnChainConnection();
         this.policy = {
             maxRiskPercentage: 5,
             dailyMaxTransactions: 10,
-            dailyMaxVolume: '9007199254740991000000', // Very high limit (BigInt safe limit) for testing
+            dailyMaxVolume: '9007199254740991000000',
             whitelistedAddresses: new Set([
                 constants_1.ZERO_ADDRESS,
             ]),
@@ -69,6 +81,74 @@ class PolicyGuard {
             emergencyBreaker: false,
             ...policy,
         };
+        this.loadOnChainParams();
+    }
+    async initOnChainConnection() {
+        const contractAddress = env_1.env.AGENT_RISK_PARAMS_ADDRESS;
+        const rpcUrl = env_1.env.SEPOLIA_RPC_URL;
+        if (!contractAddress || !rpcUrl) {
+            return;
+        }
+        try {
+            const provider = new ethers_1.ethers.JsonRpcProvider(rpcUrl);
+            const abi = [
+                'function getAllParameters() view returns (uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)',
+                'function getWhitelistedProtocols() view returns (address[])',
+                'function getWhitelistedTokens() view returns (address[])',
+                'function isProtocolWhitelisted(address) view returns (bool)'
+            ];
+            this.riskParamsContract = new ethers_1.ethers.Contract(contractAddress, abi, provider);
+            logger_1.logger.info({ contractAddress }, '[PolicyGuard] On-chain risk params connected');
+        }
+        catch (error) {
+            logger_1.logger.warn({ error }, '[PolicyGuard] Failed to connect to on-chain risk params');
+        }
+    }
+    async loadOnChainParams() {
+        if (!this.riskParamsContract)
+            return;
+        const now = Date.now();
+        if (this.paramsCache.data && (now - this.paramsCache.timestamp) < this.paramsCache.ttlMs) {
+            return;
+        }
+        try {
+            const [params, protocols, tokens] = await Promise.all([
+                this.riskParamsContract.getAllParameters(),
+                this.riskParamsContract.getWhitelistedProtocols(),
+                this.riskParamsContract.getWhitelistedTokens()
+            ]);
+            this.onChainRiskParams = {
+                maxRiskBps: Number(params[0]),
+                dailyMaxTx: Number(params[1]),
+                dailyMaxVolume: params[2].toString(),
+                maxSlippageBps: Number(params[3]),
+                minHealthFactor: params[4].toString(),
+                emergencyHealthFactor: params[5].toString(),
+                maxConsecutiveFailures: Number(params[6]),
+                circuitBreakerCooldownSeconds: Number(params[7]),
+                oracleMaxAgeSeconds: Number(params[8]),
+                hfVelocityThresholdBps: Number(params[9]),
+                whitelistedProtocols: protocols,
+                whitelistedTokens: tokens
+            };
+            this.paramsCache = { data: this.onChainRiskParams, timestamp: now, ttlMs: 300000 };
+            this.policy.maxRiskPercentage = this.onChainRiskParams.maxRiskBps / 100;
+            this.policy.dailyMaxTransactions = this.onChainRiskParams.dailyMaxTx;
+            this.policy.dailyMaxVolume = this.onChainRiskParams.dailyMaxVolume;
+            this.policy.maxSlippageBps = this.onChainRiskParams.maxSlippageBps;
+            for (const p of this.onChainRiskParams.whitelistedProtocols) {
+                this.policy.whitelistedAddresses.add(p.toLowerCase());
+            }
+            this.paramSource = 'on-chain';
+            logger_1.logger.info({ maxRisk: this.policy.maxRiskPercentage, dailyMaxTx: this.policy.dailyMaxTransactions }, '[PolicyGuard] Loaded risk params from on-chain');
+        }
+        catch (error) {
+            logger_1.logger.warn({ error }, '[PolicyGuard] Failed to load on-chain params, using in-memory defaults');
+            this.paramSource = 'in-memory';
+        }
+    }
+    getParamSource() {
+        return this.paramSource;
     }
     /**
      * Check if emergency breaker is active
@@ -156,13 +236,12 @@ class PolicyGuard {
                 severity: 'CRITICAL',
             };
         }
-        const AAVE_POOL = '0x6807dc923806fE8Fd134338EABCA509979a7e0cB';
-        const LZ_ENDPOINT = '0x3c2269811836af69497E5F486A85D7316753cf62';
-        const AAVE_ADAPTER = process.env.WDK_AAVE_ADAPTER_ADDRESS || '';
-        const LZ_ADAPTER = process.env.WDK_LZ_ADAPTER_ADDRESS || '';
-        // Auto-whitelist core infrastructure
-        if (params.toAddress.toLowerCase() === AAVE_POOL.toLowerCase() ||
-            params.toAddress.toLowerCase() === LZ_ENDPOINT.toLowerCase() ||
+        const AAVE_POOL = env_1.env.AAVE_POOL_ADDRESS || '';
+        const LZ_ENDPOINT = env_1.env.LZ_ENDPOINT_ADDRESS || '';
+        const AAVE_ADAPTER = env_1.env.WDK_AAVE_ADAPTER_ADDRESS || '';
+        const LZ_ADAPTER = env_1.env.WDK_LZ_ADAPTER_ADDRESS || '';
+        if ((AAVE_POOL && params.toAddress.toLowerCase() === AAVE_POOL.toLowerCase()) ||
+            (LZ_ENDPOINT && params.toAddress.toLowerCase() === LZ_ENDPOINT.toLowerCase()) ||
             (AAVE_ADAPTER && params.toAddress.toLowerCase() === AAVE_ADAPTER.toLowerCase()) ||
             (LZ_ADAPTER && params.toAddress.toLowerCase() === LZ_ADAPTER.toLowerCase())) {
             logger_1.logger.info({ address: params.toAddress }, '[PolicyGuard] Allowing core infrastructure transaction');
@@ -195,23 +274,36 @@ class PolicyGuard {
             };
         }
         // Check daily volume limit
-        const maxVolume = BigInt(this.policy.dailyMaxVolume);
-        if (this.dailyVolume + amountBigInt > maxVolume) {
+        // NOTE: dailyMaxVolume is in USDT units (6 decimals), but amount may be in ETH (18 decimals) or USDT (6 decimals)
+        // We need to normalize for comparison. If amount > 10^15, assume it's ETH (wei) and scale up dailyMaxVolume
+        const USDT_DECIMALS = 6n;
+        const ETH_DECIMALS = 18n;
+        const DECIMAL_DIFF = ETH_DECIMALS - USDT_DECIMALS; // 12
+        let maxVolume = BigInt(this.policy.dailyMaxVolume);
+        let dailyVolume = this.dailyVolume;
+        const amount = amountBigInt;
+        // If amount looks like ETH (18 decimals), normalize maxVolume and dailyVolume to same scale
+        if (amount > 1000000000000000n) { // > 0.001 ETH in wei
+            // Convert dailyMaxVolume from USDT (6 decimals) to wei (18 decimals)
+            maxVolume = maxVolume * (10n ** DECIMAL_DIFF);
+            dailyVolume = dailyVolume * (10n ** DECIMAL_DIFF);
+        }
+        if (dailyVolume + amount > maxVolume) {
             return {
                 violated: true,
-                reason: `Daily volume limit would be exceeded. Current: ${this.dailyVolume}, Max: ${maxVolume}`,
+                reason: `Daily volume limit would be exceeded. Current: ${this.dailyVolume}, Max: ${this.policy.dailyMaxVolume}`,
                 severity: 'HIGH',
             };
         }
         // Check max risk percentage (trade amount vs portfolio)
         const portfolioValue = BigInt(params.portfolioValue);
         if (portfolioValue > 0n) {
-            const tradePercentage = (amountBigInt * 100n) / portfolioValue;
-            const maxRiskBps = BigInt(this.policy.maxRiskPercentage * 100); // Convert to basis points
-            if (tradePercentage > maxRiskBps / 100n) {
+            const tradePercentage = Number((amountBigInt * 100n) / portfolioValue); // e.g., 5 = 5%
+            const maxRiskPercent = this.policy.maxRiskPercentage; // Already in percent (e.g., 5 = 5%)
+            if (tradePercentage > maxRiskPercent) {
                 return {
                     violated: true,
-                    reason: `Trade size ${tradePercentage}% exceeds max risk ${this.policy.maxRiskPercentage}% of portfolio`,
+                    reason: `Trade size ${tradePercentage}% exceeds max risk ${maxRiskPercent}% of portfolio`,
                     severity: 'MEDIUM',
                 };
             }
@@ -247,13 +339,18 @@ class PolicyGuard {
                 severity: 'HIGH',
             };
         }
-        // Check daily volume limit
+        const DECIMAL_DIFF = 12n;
+        let maxVolume = BigInt(this.policy.dailyMaxVolume);
+        let dailyVolume = this.dailyVolume;
         const amountBigInt = BigInt(params.amount);
-        const maxVolume = BigInt(this.policy.dailyMaxVolume);
-        if (this.dailyVolume + amountBigInt > maxVolume) {
+        if (amountBigInt > 1000000000000000n) {
+            maxVolume = maxVolume * (10n ** DECIMAL_DIFF);
+            dailyVolume = dailyVolume * (10n ** DECIMAL_DIFF);
+        }
+        if (dailyVolume + amountBigInt > maxVolume) {
             return {
                 violated: true,
-                reason: `Daily volume limit would be exceeded. Current: ${this.dailyVolume}, Max: ${maxVolume}`,
+                reason: `Daily volume limit would be exceeded. Current: ${this.dailyVolume}, Max: ${this.policy.dailyMaxVolume}`,
                 severity: 'HIGH',
             };
         }
@@ -268,16 +365,117 @@ class PolicyGuard {
         }
         // Check max risk percentage (trade amount vs portfolio)
         const portfolioValue = BigInt(params.portfolioValue);
-        const tradePercentage = (amountBigInt * 100n) / portfolioValue;
-        const maxRiskBps = BigInt(this.policy.maxRiskPercentage * 100); // Convert to basis points
-        if (tradePercentage > maxRiskBps / 100n) {
-            return {
-                violated: true,
-                reason: `Trade size ${tradePercentage}% exceeds max risk ${this.policy.maxRiskPercentage}% of portfolio`,
-                severity: 'MEDIUM',
-            };
+        if (portfolioValue > 0n) {
+            const tradePercentage = Number((amountBigInt * 100n) / portfolioValue);
+            const maxRiskPercent = this.policy.maxRiskPercentage;
+            if (tradePercentage > maxRiskPercent) {
+                return {
+                    violated: true,
+                    reason: `Trade size ${tradePercentage}% exceeds max risk ${maxRiskPercent}% of portfolio`,
+                    severity: 'MEDIUM',
+                };
+            }
         }
         return { violated: false, reason: 'PASS', severity: 'LOW' };
+    }
+    /**
+     * Check NAV impact for a swap before execution.
+     *
+     * This is an ASYNC check that simulates the trade's impact on vault NAV.
+     * Call this AFTER validateSwapTransaction passes but BEFORE broadcasting.
+     *
+     * @returns PolicyViolation with violated=true if NAV would drop > threshold
+     */
+    async checkNavImpactForSwap(params) {
+        try {
+            const navResult = await (0, NavShield_1.checkNavImpact)({
+                vaultAddress: params.vaultAddress,
+                inputAmount: params.inputAmount,
+                expectedOutputAmount: params.expectedOutputAmount,
+                inputTokenPriceUsdt: params.inputTokenPriceUsdt,
+                outputTokenPriceUsdt: params.outputTokenPriceUsdt,
+                maxDropPct: params.maxDropPct || 10,
+            });
+            if (!navResult.verified) {
+                // Fail-closed: if we can't verify NAV, block the trade
+                logger_1.logger.warn({ reason: navResult.reason }, '[PolicyGuard] NAV shield UNVERIFIED — blocking trade');
+                return {
+                    violated: true,
+                    reason: `NAV verification failed: ${navResult.reason}`,
+                    severity: 'CRITICAL',
+                };
+            }
+            if (!navResult.allowed) {
+                logger_1.logger.warn({
+                    dropPct: navResult.dropPct,
+                    reason: navResult.reason,
+                }, '[PolicyGuard] NAV shield BLOCKED trade');
+                return {
+                    violated: true,
+                    reason: `NAV shield blocked: ${navResult.reason}`,
+                    severity: 'HIGH',
+                };
+            }
+            logger_1.logger.info({
+                dropPct: navResult.dropPct,
+                preNav: navResult.preNavPerShare,
+                postNav: navResult.postNavPerShare,
+            }, '[PolicyGuard] NAV shield OK');
+            return { violated: false, reason: `NAV check passed (drop: ${navResult.dropPct}%)`, severity: 'LOW' };
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            logger_1.logger.error({ error: message }, '[PolicyGuard] NAV check failed — blocking trade');
+            // Fail-closed: errors mean we can't verify, so block
+            return {
+                violated: true,
+                reason: `NAV check error: ${message}`,
+                severity: 'CRITICAL',
+            };
+        }
+    }
+    /**
+     * Check credit score requirements for an agent before transaction.
+     *
+     * Returns violated=true if agent doesn't meet credit requirements.
+     * Uses dynamic limits based on agent's transaction history.
+     */
+    checkCreditRequirements(params) {
+        const creditCheck = (0, CreditScoring_1.checkCreditRequirements)({
+            agentId: params.agentId,
+            requestedAmountUsdt: params.amountUsdt,
+        });
+        if (!creditCheck.allowed) {
+            logger_1.logger.warn({
+                agentId: params.agentId,
+                score: creditCheck.score,
+                riskLevel: creditCheck.riskLevel,
+            }, '[PolicyGuard] Credit check FAILED');
+            return {
+                violated: true,
+                reason: creditCheck.reason || 'Credit requirements not met',
+                severity: creditCheck.riskLevel === 'HIGH' ? 'CRITICAL' : 'HIGH',
+            };
+        }
+        logger_1.logger.info({
+            agentId: params.agentId,
+            score: creditCheck.score,
+            riskLevel: creditCheck.riskLevel,
+        }, '[PolicyGuard] Credit check passed');
+        return { violated: false, reason: `Credit check passed (score: ${creditCheck.score})`, severity: 'LOW' };
+    }
+    /**
+     * Record transaction outcome for credit scoring.
+     * Call this AFTER transaction completes (success or failure).
+     */
+    recordTransactionForCredit(params) {
+        (0, CreditScoring_1.recordTransaction)(params);
+    }
+    /**
+     * Get credit score for an agent.
+     */
+    getCreditScore(agentId) {
+        return (0, CreditScoring_1.getCreditScore)(agentId);
     }
     /**
      * Validate bridge transaction
@@ -305,12 +503,18 @@ class PolicyGuard {
                 severity: 'HIGH',
             };
         }
+        const DECIMAL_DIFF = 12n;
+        let maxVolume = BigInt(this.policy.dailyMaxVolume);
+        let dailyVolume = this.dailyVolume;
         const amountBigInt = BigInt(params.amount);
-        const maxVolume = BigInt(this.policy.dailyMaxVolume);
-        if (this.dailyVolume + amountBigInt > maxVolume) {
+        if (amountBigInt > 1000000000000000n) {
+            maxVolume = maxVolume * (10n ** DECIMAL_DIFF);
+            dailyVolume = dailyVolume * (10n ** DECIMAL_DIFF);
+        }
+        if (dailyVolume + amountBigInt > maxVolume) {
             return {
                 violated: true,
-                reason: `Daily volume limit would be exceeded`,
+                reason: `Daily volume limit would be exceeded. Current: ${this.dailyVolume}, Max: ${this.policy.dailyMaxVolume}`,
                 severity: 'HIGH',
             };
         }

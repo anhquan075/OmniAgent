@@ -3,14 +3,34 @@ import { getContracts } from '@/contracts/clients/ethers';
 import { ethers } from 'ethers';
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
+import { getAdaptiveScheduler } from '@/agent/services/AdaptiveScheduler';
+import { getNLCommandParser } from '@/agent/services/NLCommandParser';
+import { getStatePersistence } from '@/agent/services/StatePersistence';
+import { getPaymentGate } from '@/agent/services/PaymentGate';
 
-// In-memory store for live agent data (shared across requests)
 const agentLiveData = {
   lastReasoning: '',
   lastThought: '',
   x402Revenue: '0.00',
   recentActions: [] as Array<{ title: string; description: string; time: string; hash?: string }>,
-  maxActions: 20
+  maxActions: 20,
+  anomalyStats: {
+    totalChecked: 0,
+    anomaliesDetected: 0,
+    lastZScore: null as number | null,
+    lastIQRScore: null as number | null,
+    coldStartMode: true
+  },
+  governanceStats: {
+    autoApproved: 0,
+    flaggedForReview: 0,
+    rejected: 0,
+    lastOutcome: null as string | null
+  },
+  paymentStats: {
+    tier: 'anonymous',
+    totalPayments: 0
+  }
 };
 
 export function updateAgentReasoning(reasoning: string) {
@@ -76,6 +96,23 @@ stats.get('/', async (c) => {
     const USDT_DECIMALS = 6;
 
     // Format results
+    const scheduler = getAdaptiveScheduler();
+    const parser = getNLCommandParser();
+    const persistence = getStatePersistence();
+    const paymentGate = getPaymentGate();
+
+    // Helper to convert BigInt to string for JSON serialization
+    const bigIntToString = (val: unknown): unknown => {
+      if (typeof val === 'bigint') return val.toString();
+      if (Array.isArray(val)) return val.map(bigIntToString);
+      if (val && typeof val === 'object') {
+        return Object.fromEntries(
+          Object.entries(val).map(([k, v]) => [k, bigIntToString(v)])
+        );
+      }
+      return val;
+    };
+
     const response = {
       vault: {
         totalAssets: ethers.formatUnits(totalAssets || 0n, USDT_DECIMALS),
@@ -103,7 +140,30 @@ stats.get('/', async (c) => {
       lastThought: agentLiveData.lastThought,
       x402Revenue: agentLiveData.x402Revenue,
       recentActions: agentLiveData.recentActions,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      anomalyDetection: {
+        ...agentLiveData.anomalyStats,
+        volatilityStats: scheduler.getVolatilityStats(),
+        schedulerConfig: bigIntToString(scheduler.getConfig())
+      },
+      governance: {
+        ...agentLiveData.governanceStats,
+        pendingApprovals: 0
+      },
+      payment: {
+        ...agentLiveData.paymentStats,
+        tierInfo: {
+          anonymous: { name: 'Anonymous', price: '0', limits: { reads: 'unlimited', writes: 0 } },
+          authenticated: { name: 'Authenticated', price: '1 USDT', limits: { reads: 'unlimited', writes: '100/day' } },
+          operator: { name: 'Operator', price: '0', limits: { reads: 'unlimited', writes: 'unlimited' } }
+        }
+      },
+      adaptive: {
+        state: persistence.get(),
+        stateSummary: persistence.getStateSummary(),
+        nlParserReady: true,
+        nlParserMethods: ['supply', 'withdraw', 'swap', 'status', 'portfolio']
+      }
     };
 
     return c.json(response);

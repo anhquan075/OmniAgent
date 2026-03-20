@@ -39,8 +39,8 @@ export function BalanceCard({
       {/* Header */}
       <div className="px-5 py-3 bg-white/[0.03] border-b border-white/5 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <Wallet className="w-3.5 h-3.5 text-bnb-gold" />
-          <h3 className="text-[10px] font-heading font-bold text-bnb-gold uppercase tracking-[0.2em]">WDK Portfolio</h3>
+          <Wallet className="w-3.5 h-3.5 text-yellow-500" />
+          <h3 className="text-[10px] font-heading font-bold text-yellow-500 uppercase tracking-[0.2em]">WDK Portfolio</h3>
         </div>
         <div className="flex items-center gap-1">
           <span className={clsx("w-1.5 h-1.5 rounded-full", status === 'Healthy' ? "bg-green-500" : "bg-yellow-500")} />
@@ -89,7 +89,7 @@ export function BalanceCard({
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider flex items-center gap-1.5">
-                <PieChart className="w-3 h-3 text-bnb-gold" />
+                <PieChart className="w-3 h-3 text-yellow-500" />
                 Strategy Exposure
               </span>
               <span className="text-[11px] font-bold text-white">{strategyPercent}%</span>
@@ -99,7 +99,7 @@ export function BalanceCard({
                 initial={{ width: 0 }}
                 animate={{ width: `${strategyPercent}%` }}
                 transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
-                className="h-full bg-bnb-gold rounded-full"
+                className="h-full bg-yellow-500 rounded-full"
               />
             </div>
           </div>

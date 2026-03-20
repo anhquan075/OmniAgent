@@ -108,7 +108,7 @@ export function RichMessage({ role, content, parts, toolInvocations, timestamp, 
                     </div>
                     <div className="p-3 rounded-xl bg-black/20 border border-white/5 text-center">
                       <span className="text-[8px] font-heading text-neutral-gray uppercase block mb-1">Sharpe</span>
-                      <span className="text-lg font-heading font-bold text-bnb-gold">
+                      <span className="text-lg font-heading font-bold text-yellow-500">
                         {result?.sharpe || 0}
                       </span>
                     </div>

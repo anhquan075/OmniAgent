@@ -27,7 +27,7 @@ interface IAToken is IERC20 {
     function UNDERLYING_ASSET_ADDRESS() external view returns (address);
 }
 
-/// @title AaveLendingAdapter — Yield-bearing adapter for Aave V3 on BNB Chain
+/// @title AaveLendingAdapter — Yield-bearing adapter for Aave V3 on Ethereum
 /// @notice 3rd yield rail: institution-grade lending via Aave V3.
 /// @custom:security-contact security@wdkpilot.xyz
 contract AaveLendingAdapter is Ownable2Step, IManagedAdapter {

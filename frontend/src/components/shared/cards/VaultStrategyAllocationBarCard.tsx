@@ -25,26 +25,26 @@ export function VaultStrategyAllocationBarCard({
   rpcUrl,
   vUSDTAddress,
 }) {
-  const [venusApy, setVenusApy] = useState("...");
+  const [aaveApy, setAaveApy] = useState("...");
 
   useEffect(() => {
     let mounted = true;
-    async function fetchVenusApy() {
+    async function fetchAaveApy() {
       try {
         const ethersLib = await import("ethers");
         // Use a highly reliable public RPC that supports CORS
         const provider = new ethersLib.JsonRpcProvider(
-          rpcUrl || "https://binance.llamarpc.com"
+          rpcUrl || "https://ethereum-sepolia.publicnode.com"
         );
-        // vUSDT Contract on BSC
-        const vUSDT = new ethersLib.Contract(
-          vUSDTAddress || "0xfD5840Cd36d94D7229439859C0112a4185BC0255",
+        // aUSDT Contract on Sepolia
+        const aUSDT = new ethersLib.Contract(
+          vUSDTAddress || "0xa9B209611603CE09bEbCFF63a1A3d44D0C4A6f48",
           ["function supplyRatePerBlock() view returns (uint256)"],
           provider
         );
 
         // Set a timeout so we don't hang forever on free RPCs
-        const ratePromise = vUSDT.supplyRatePerBlock();
+        const ratePromise = aUSDT.supplyRatePerBlock();
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error("RPC Timeout")), 3000)
         );
@@ -52,19 +52,19 @@ export function VaultStrategyAllocationBarCard({
         const ratePerBlock = await Promise.race([ratePromise, timeoutPromise]);
 
         // APY = (ratePerBlock / 1e18) * blocksPerYear * 100
-        // BSC block time is ~3 seconds -> ~10512000 blocks/year
-        const blocksPerYear = 10512000;
+        // Ethereum block time is ~12 seconds -> ~2628000 blocks/year
+        const blocksPerYear = 2628000;
         const rate = Number(ethersLib.formatUnits(ratePerBlock, 18));
         const apy = rate * blocksPerYear * 100;
 
         if (mounted && apy > 0 && apy < 100) {
-          setVenusApy(apy.toFixed(2));
+          setAaveApy(apy.toFixed(2));
         }
       } catch (e) {
-        setVenusApy("4.2");
+        setAaveApy("5.1");
       }
     }
-    fetchVenusApy();
+    fetchAaveApy();
     return () => {
       mounted = false;
     };
@@ -117,9 +117,9 @@ export function VaultStrategyAllocationBarCard({
         <span className="allocationLegendItem allocationLegendItem--lp">
           StableSwap LP {lpPct}%
         </span>
-        <span className="allocationLegendItem allocationLegendItem--secondary">
-          Buffer (vUSDT) {bufferPct}%
-        </span>
+          <span className="allocationLegendItem allocationLegendItem--secondary">
+            Buffer (aUSDT) {bufferPct}%
+          </span>
       </div>
 
       <table className="oracleTable">
@@ -150,7 +150,7 @@ export function VaultStrategyAllocationBarCard({
             ).toFixed(4)} CAKE`}</td>
           </tr>
           <tr>
-            <td>Buffer (vUSDT)</td>
+            <td>Buffer (aUSDT)</td>
             <td>{fmtWdks(bufferRaw)}</td>
             <td>{fmtWdks(secondaryRaw)}</td>
             <td>{fmtWdks(bufferCurrentRaw)}</td>
@@ -265,7 +265,7 @@ export function VaultStrategyAllocationBarCard({
         >
           <span style={{ color: "var(--text-muted)" }}>Buffer Engine</span>
           <span style={{ color: "#F8B128", fontWeight: 600 }}>
-            Venus Protocol (vUSDT) ✦ {venusApy}% APY
+            Aave Protocol (aUSDT) ✦ {aaveApy}% APY
           </span>
         </div>
       </div>

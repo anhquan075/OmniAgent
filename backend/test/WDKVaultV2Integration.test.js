@@ -26,7 +26,7 @@ describe("OmniAgentVault V2 Integration", function () {
     );
 
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
-    const oracle = await MockPriceOracle.deploy(100000000n, deployer.address);
+    const oracle = await MockPriceOracle.deploy(100000000n);
 
     const MockAsyncWDKMinter = await ethers.getContractFactory("MockAsyncWDKMinter");
     const wdkMinter = await MockAsyncWDKMinter.deploy(usdt.target, 3600);

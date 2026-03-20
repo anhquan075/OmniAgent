@@ -5,7 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IStableSwapPool} from "../interfaces/IStableSwapPool.sol";
 
-/// @title MockStableSwapPool — test double for PCS StableSwap
+/// @title MockStableSwapPool — test double for StableSwap
 contract MockStableSwapPool is IStableSwapPool, ERC20 {
     uint256[2] public balances;
     uint256 public virtualPrice;

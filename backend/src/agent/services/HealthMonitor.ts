@@ -26,7 +26,7 @@ export class AaveHealthMonitor {
   private readonly EMERGENCY_THRESHOLD = 1.1;
 
   constructor() {
-    this.provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
+    this.provider = new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
     this.aaveAdapterAddress = env.WDK_AAVE_ADAPTER_ADDRESS || '';
   }
 

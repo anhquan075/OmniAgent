@@ -15,19 +15,19 @@ let agentHistory: any[] = [];
 // Tool quality validation: map operations to expected tool categories
 const TOOL_CATEGORIES: Record<string, string[]> = {
   'get_vault_status': ['get_vault_status', 'wdk_vault_get_state', 'wdk_vault_get_balance'],
-  'get_balances': ['get_all_chain_balances', 'bnb_get_balance', 'sol_get_balance', 'ton_get_balance'],
+  'get_balances': ['get_all_chain_balances', 'sepolia_get_balance', 'sol_get_balance', 'ton_get_balance'],
   'analyze_risk': ['analyze_risk', 'wdk_engine_get_risk_metrics'],
   'rebalance': ['execute_rebalance', 'wdk_engine_execute_cycle'],
-  'bridge': ['check_cross_chain_yields', 'bridge_via_layerzero', 'bnb_bridge_layerzero'],
-  'supply': ['supply_to_aave', 'bnb_supply_aave'],
-  'withdraw': ['withdraw_from_aave', 'bnb_withdraw_aave'],
-  'swap': ['bnb_swap', 'sol_swap'],
-  'transfer': ['bnb_transfer', 'sol_transfer', 'ton_transfer'],
+  'bridge': ['check_cross_chain_yields', 'bridge_via_layerzero', 'sepolia_bridge_layerzero'],
+  'supply': ['supply_to_aave', 'sepolia_supply_aave'],
+  'withdraw': ['withdraw_from_aave', 'sepolia_withdraw_aave'],
+  'swap': ['sepolia_swap', 'sol_swap'],
+  'transfer': ['sepolia_transfer', 'sol_transfer', 'ton_transfer'],
   'deposit': ['wdk_vault_deposit'],
   'withdraw_vault': ['wdk_vault_withdraw'],
   'yield_sweep': ['yield_sweep'],
   'mint_token': ['wdk_mint_test_token'],
-  'create_wallet': ['bnb_create_wallet', 'sol_create_wallet', 'ton_create_wallet'],
+  'create_wallet': ['sepolia_create_wallet', 'sol_create_wallet', 'ton_create_wallet'],
 };
 
 // Quality check schema

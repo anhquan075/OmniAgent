@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { EyeIcon, EyeOffIcon, RefreshCcwIcon, ExternalLink } from 'lucide-react';
 
 const TOKEN_ADDRESS = import.meta.env.VITE_TESTNET_TOKEN_ADDRESS as `0x${string}`;
-const BLOCK_EXPLORER = 'https://testnet.bscscan.com';
+const BLOCK_EXPLORER = 'https:// Sepolia explorer';
 
 interface WDKBalanceProps {
   amount: number;

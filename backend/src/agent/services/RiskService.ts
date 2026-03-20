@@ -106,13 +106,13 @@ Return JSON: {"score": 0-100, "explanation": "..."}`,
   }
 
   async triggerEmergencyPause(reason: string) {
-    const bnbAccount = await this.wdk.getAccount('bnb');
+    const sepoliaAccount = await this.wdk.getAccount('sepolia');
     logger.warn({ reason }, '[RiskService] EMERGENCY PAUSE TRIGGERED');
     
     // Pause selector: 0x8456d592
     const data = '0x8456d592'; 
     
-    const tx = await bnbAccount.sendTransaction({
+    const tx = await sepoliaAccount.sendTransaction({
       to: await this.breaker.getAddress(),
       value: 0n,
       data: data

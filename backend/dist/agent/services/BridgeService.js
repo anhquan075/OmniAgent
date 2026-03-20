@@ -8,12 +8,12 @@ const logger_1 = require("../../utils/logger");
  */
 class BridgeService {
     wdk;
-    constructor(wdk, bnbRpc, solanaRpc, tonRpc) {
+    constructor(wdk, sepoliaRpc, solanaRpc, tonRpc) {
         this.wdk = wdk;
     }
     async fetchCrossChainYields() {
         return {
-            bnb: 4.85,
+            sepolia: 4.85,
             solana: 9.12,
             ton: 7.24
         };
@@ -42,7 +42,7 @@ class BridgeService {
             const toAccount = await this.wdk.getAccount(toChain);
             const recipientAddress = await toAccount.getAddress();
             // Check balance before bridging
-            const token = tokenAddress || (fromChain === 'bnb' ? env_1.env.WDK_USDT_ADDRESS : '');
+            const token = tokenAddress || (fromChain === 'sepolia' ? env_1.env.WDK_USDT_ADDRESS : '');
             const result = await fromAccount.transfer({
                 token: token,
                 recipient: recipientAddress,

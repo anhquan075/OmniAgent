@@ -290,7 +290,7 @@ chat.post('/', async (c) => {
               } else if (toolName === 'check_strategy' || toolName === 'check_cross_chain_yields') {
                 status = 'Yield Scout';
                 progress = 75;
-                thought = 'Evaluating yield spreads across Solana, TON, and BSC rails...';
+                thought = 'Evaluating yield spreads across Solana, TON, and Ethereum/Sepolia rails...';
               } else if (toolName === 'execute_rebalance') {
                 status = 'Settlement';
                 progress = 95;

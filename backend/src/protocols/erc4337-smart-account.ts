@@ -42,7 +42,7 @@ export class ERC4337SmartAccount {
     factoryAddress: string = '',
     paymasterAddress: string = ''
   ) {
-    this.provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
+    this.provider = new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
     this.factoryAddress = factoryAddress;
     this.paymasterAddress = paymasterAddress;
   }
@@ -76,7 +76,7 @@ export class ERC4337SmartAccount {
     const receipt = await tx.wait();
     
     const accountCreatedEvent = receipt.logs.find((log: any) => 
-      log.topics[0] === '0x5ac3c6e8b0e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9'
+      log.topics[0] === (env.ERC4337_ACCOUNT_CREATED_TOPIC || '0x5ac3c6e8b0e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9')
     );
     
     return await factory.getAccountAddress(ownerAddress);

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-/// @title IStableSwapPool — read/swap/LP interface for PCS StableSwap (Vyper)
+/// @title IStableSwapPool — read/swap/LP interface for StableSwap (Vyper)
 interface IStableSwapPool {
     function get_balances() external view returns (uint256[2] memory);
     function get_virtual_price() external view returns (uint256);

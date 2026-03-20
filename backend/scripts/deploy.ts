@@ -1,0 +1,666 @@
+import { ethers } from "hardhat";
+import { loadEnv, updateEnv, getDeployer, logNetwork, addr } from "./deploy-helpers";
+
+async function hasContract(addr: string): Promise<boolean> {
+  try {
+    const code = await ethers.provider.getCode(addr);
+    return code !== "0x";
+  } catch {
+    return false;
+  }
+}
+
+async function deployMockTokens() {
+  const env = loadEnv();
+  const addresses: Record<string, string> = {};
+  const MockERC20 = await ethers.getContractFactory("MockERC20");
+
+  const networkUsdt = env.SEPOLIA_USDT_ADDRESS || env.POLYGON_USDT_ADDRESS ||
+    env.ARBITRUM_USDT_ADDRESS || env.PLASMA_USDT_ADDRESS || env.ETHEREUM_USDT_ADDRESS;
+  const usdtCandidate = networkUsdt || env.WDK_USDT_ADDRESS;
+  if (usdtCandidate && (await hasContract(usdtCandidate))) {
+    console.log(`Using existing USDT: ${usdtCandidate}`);
+    addresses.WDK_USDT_ADDRESS = usdtCandidate;
+  } else {
+    const usdt = await (await MockERC20.deploy("Tether USD", "USDT")).waitForDeployment();
+    await (await usdt.setDecimals(6)).wait();
+    addresses.WDK_USDT_ADDRESS = await addr(usdt);
+    console.log(`USDT (6 dec): ${addresses.WDK_USDT_ADDRESS}`);
+    updateEnv(addresses);
+  }
+
+  const networkXaut = env.SEPOLIA_XAUT_ADDRESS || env.POLYGON_XAUT_ADDRESS ||
+    env.ARBITRUM_XAUT_ADDRESS || env.PLASMA_XAUT_ADDRESS || env.ETHEREUM_XAUT_ADDRESS;
+  const xautCandidate = networkXaut || env.WDK_XAUT_ADDRESS;
+  if (xautCandidate && (await hasContract(xautCandidate))) {
+    console.log(`Using existing XAUT: ${xautCandidate}`);
+    addresses.WDK_XAUT_ADDRESS = xautCandidate;
+  } else {
+    const xaut = await (await MockERC20.deploy("Tether Gold", "XAUT")).waitForDeployment();
+    await (await xaut.setDecimals(4)).wait();
+    addresses.WDK_XAUT_ADDRESS = await addr(xaut);
+    console.log(`XAUT (4 dec): ${addresses.WDK_XAUT_ADDRESS}`);
+    updateEnv(addresses);
+  }
+
+  return addresses;
+}
+
+async function deployMockOracles(usdtAddr: string, xautAddr: string) {
+  const deployer = await getDeployer();
+
+  const MockChainlink = await ethers.getContractFactory("MockChainlinkAggregator");
+  const usdtChainlink = await (await MockChainlink.deploy(8, ethers.parseUnits("1", 8))).waitForDeployment();
+  const xautChainlink = await (await MockChainlink.deploy(8, ethers.parseUnits("2000", 8))).waitForDeployment();
+
+  const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
+  const usdtOracle = await (await MockPriceOracle.deploy(ethers.parseUnits("1", 8))).waitForDeployment();
+  const xautOracle = await (await MockPriceOracle.deploy(ethers.parseUnits("2000", 8))).waitForDeployment();
+
+  const addresses = {
+    WDK_USDT_ORACLE_ADDRESS: await addr(usdtOracle),
+    WDK_XAUT_ORACLE_ADDRESS: await addr(xautOracle),
+  };
+  console.log(`USDT Oracle: ${addresses.WDK_USDT_ORACLE_ADDRESS}`);
+  console.log(`XAUT Oracle: ${addresses.WDK_XAUT_ORACLE_ADDRESS}`);
+  updateEnv(addresses);
+  return { ...addresses, _usdtChainlink: await addr(usdtChainlink), _xautChainlink: await addr(xautChainlink) };
+}
+
+async function deployCoreContracts(
+  usdtAddr: string,
+  xautAddr: string,
+  usdtOracleAddr: string,
+  usdtChainlinkAddr: string
+) {
+  const env = loadEnv();
+  const deployer = await getDeployer();
+
+  let policyAddr: string;
+  const policyExists = env.RISK_POLICY_ADDRESS ? await hasContract(env.RISK_POLICY_ADDRESS) : false;
+  if (policyExists) {
+    policyAddr = env.RISK_POLICY_ADDRESS;
+    console.log(`RiskPolicy (resume): ${policyAddr}`);
+  } else {
+    const RiskPolicy = await ethers.getContractFactory("RiskPolicy");
+    const tx_policy = await RiskPolicy.deploy(
+      300, 150, 500,
+      ethers.parseUnits("0.97", 8), 100, 100,
+      1000, 5000, 9500,
+      5, 3600, 500,
+      20, 1500,
+      1000, 1000, 500,
+      3000,
+      ethers.parseUnits("1.5", 18),
+      { gasLimit: 8_000_000 }
+    );
+    const policy = await tx_policy.waitForDeployment();
+    policyAddr = await addr(policy);
+    console.log(`RiskPolicy: ${policyAddr}`);
+    updateEnv({ RISK_POLICY_ADDRESS: policyAddr });
+  }
+
+  let sharpeTrackerAddr: string;
+  const sharpeExists = env.SHARPE_TRACKER_ADDRESS ? await hasContract(env.SHARPE_TRACKER_ADDRESS) : false;
+  if (sharpeExists) {
+    sharpeTrackerAddr = env.SHARPE_TRACKER_ADDRESS;
+    console.log(`SharpeTracker (resume): ${sharpeTrackerAddr}`);
+  } else {
+    const SharpeTracker = await ethers.getContractFactory("SharpeTracker");
+    const sharpeTracker = await (await SharpeTracker.deploy(20)).waitForDeployment();
+    sharpeTrackerAddr = await addr(sharpeTracker);
+    console.log(`SharpeTracker: ${sharpeTrackerAddr}`);
+    updateEnv({ SHARPE_TRACKER_ADDRESS: sharpeTrackerAddr });
+  }
+
+  let poolAddr: string;
+  const poolExists = env.STABLESWAP_POOL_ADDRESS ? await hasContract(env.STABLESWAP_POOL_ADDRESS) : false;
+  if (poolExists) {
+    poolAddr = env.STABLESWAP_POOL_ADDRESS;
+    console.log(`MockStableSwap Pool (resume): ${poolAddr}`);
+  } else {
+    const MockStableSwap = await ethers.getContractFactory("MockStableSwapPoolWithLPSupport");
+    try {
+      const pool = await MockStableSwap.deploy(
+        usdtAddr, xautAddr,
+        ethers.parseUnits("1000000", 18),
+        ethers.parseUnits("1000000", 18),
+        ethers.parseUnits("1", 18), 0,
+        { gasLimit: 10_000_000 }
+      );
+      await pool.waitForDeployment();
+      poolAddr = await pool.getAddress();
+    } catch (e: any) {
+      throw new Error(`MockStableSwap deploy failed. Ensure USDT (${usdtAddr}) and XAUT (${xautAddr}) are valid ERC20 contracts with >0 decimals. Error: ${e.message}`);
+    }
+    console.log(`MockStableSwap Pool: ${poolAddr}`);
+    updateEnv({ STABLESWAP_POOL_ADDRESS: poolAddr });
+  }
+
+  let breakerAddr: string;
+  const breakerExists = env.WDK_BREAKER_ADDRESS ? await hasContract(env.WDK_BREAKER_ADDRESS) : false;
+  if (breakerExists) {
+    breakerAddr = env.WDK_BREAKER_ADDRESS;
+    console.log(`CircuitBreaker (resume): ${breakerAddr}`);
+  } else {
+    const CircuitBreaker = await ethers.getContractFactory("CircuitBreaker");
+    try {
+      const breaker = await CircuitBreaker.deploy(
+        usdtChainlinkAddr, poolAddr, 50, 100, 50, 3600, 999999999,
+        { gasLimit: 5_000_000 }
+      );
+      await breaker.waitForDeployment();
+      breakerAddr = await breaker.getAddress();
+    } catch (e: any) {
+      throw new Error(`CircuitBreaker deploy failed. Pool: ${poolAddr}, Chainlink: ${usdtChainlinkAddr}. Error: ${e.message}`);
+    }
+    console.log(`CircuitBreaker: ${breakerAddr}`);
+    updateEnv({ WDK_BREAKER_ADDRESS: breakerAddr });
+  }
+
+  return { policyAddr, sharpeTrackerAddr, poolAddr, breakerAddr };
+}
+
+async function deployVaultAndEngine(
+  usdtAddr: string,
+  policyAddr: string,
+  usdtOracleAddr: string,
+  breakerAddr: string,
+  sharpeTrackerAddr: string
+) {
+  const env = loadEnv();
+  const deployer = await getDeployer();
+
+  let vaultAddr: string;
+  const vaultExists = env.WDK_VAULT_ADDRESS ? await hasContract(env.WDK_VAULT_ADDRESS) : false;
+  if (vaultExists) {
+    vaultAddr = env.WDK_VAULT_ADDRESS;
+    console.log(`OmniAgentVault (resume): ${vaultAddr}`);
+  } else {
+    const OmniAgentVault = await ethers.getContractFactory("OmniAgentVault");
+    const vault = await (await OmniAgentVault.deploy(
+      usdtAddr, "OmniAgent WDK Vault", "OWDK", deployer.address, 500
+    )).waitForDeployment();
+    vaultAddr = await addr(vault);
+    console.log(`OmniAgentVault: ${vaultAddr}`);
+    updateEnv({ WDK_VAULT_ADDRESS: vaultAddr });
+  }
+
+  let engineAddr: string;
+  const engineExists = env.WDK_ENGINE_ADDRESS ? await hasContract(env.WDK_ENGINE_ADDRESS) : false;
+  if (engineExists) {
+    engineAddr = env.WDK_ENGINE_ADDRESS;
+    console.log(`StrategyEngine (resume): ${engineAddr}`);
+  } else {
+    const StrategyEngine = await ethers.getContractFactory("StrategyEngine");
+    const engine = await (await StrategyEngine.deploy(
+      vaultAddr, policyAddr, usdtOracleAddr, breakerAddr, sharpeTrackerAddr,
+      ethers.parseUnits("1", 8)
+    )).waitForDeployment();
+    engineAddr = await addr(engine);
+    console.log(`StrategyEngine: ${engineAddr}`);
+    updateEnv({ WDK_ENGINE_ADDRESS: engineAddr });
+  }
+
+  return { vaultAddr, engineAddr };
+}
+
+async function deployAdapters(usdtAddr: string, xautAddr: string, xautOracleAddr: string, usdtOracleAddr: string) {
+  const env = loadEnv();
+  const deployer = await getDeployer();
+
+  let xautAdapterAddr: string;
+  const xautAdapterExists = env.WDK_XAUT_ADAPTER_ADDRESS ? await hasContract(env.WDK_XAUT_ADAPTER_ADDRESS) : false;
+  if (xautAdapterExists) {
+    xautAdapterAddr = env.WDK_XAUT_ADAPTER_ADDRESS;
+    console.log(`XAUT Adapter (resume): ${xautAdapterAddr}`);
+  } else {
+    const XAUTYieldAdapter = await ethers.getContractFactory("XAUTYieldAdapter");
+    const xautAdapter = await (await XAUTYieldAdapter.deploy(
+      usdtAddr, xautAddr, xautOracleAddr, usdtOracleAddr, deployer.address
+    )).waitForDeployment();
+    xautAdapterAddr = await addr(xautAdapter);
+    console.log(`XAUT Adapter: ${xautAdapterAddr}`);
+    updateEnv({ WDK_XAUT_ADAPTER_ADDRESS: xautAdapterAddr });
+  }
+
+  let secondaryAdapterAddr: string;
+  const secAdapterExists = env.WDK_SECONDARY_ADAPTER_ADDRESS ? await hasContract(env.WDK_SECONDARY_ADAPTER_ADDRESS) : false;
+  if (secAdapterExists) {
+    secondaryAdapterAddr = env.WDK_SECONDARY_ADAPTER_ADDRESS;
+    console.log(`Secondary Adapter (resume): ${secondaryAdapterAddr}`);
+  } else {
+    const ManagedAdapter = await ethers.getContractFactory("ManagedAdapter");
+    const secondaryAdapter = await (await ManagedAdapter.deploy(usdtAddr, deployer.address)).waitForDeployment();
+    secondaryAdapterAddr = await addr(secondaryAdapter);
+    console.log(`Secondary Adapter: ${secondaryAdapterAddr}`);
+    updateEnv({ WDK_SECONDARY_ADAPTER_ADDRESS: secondaryAdapterAddr });
+  }
+
+  let lpAdapterAddr: string;
+  const lpAdapterExists = env.WDK_LP_ADAPTER_ADDRESS ? await hasContract(env.WDK_LP_ADAPTER_ADDRESS) : false;
+  if (lpAdapterExists) {
+    lpAdapterAddr = env.WDK_LP_ADAPTER_ADDRESS;
+    console.log(`LP Adapter (resume): ${lpAdapterAddr}`);
+  } else {
+    const ManagedAdapter = await ethers.getContractFactory("ManagedAdapter");
+    const lpAdapter = await (await ManagedAdapter.deploy(usdtAddr, deployer.address)).waitForDeployment();
+    lpAdapterAddr = await addr(lpAdapter);
+    console.log(`LP Adapter: ${lpAdapterAddr}`);
+    updateEnv({ WDK_LP_ADAPTER_ADDRESS: lpAdapterAddr });
+  }
+
+  let lendingAdapterAddr: string;
+  const lendingAdapterExists = env.WDK_LENDING_ADAPTER_ADDRESS ? await hasContract(env.WDK_LENDING_ADAPTER_ADDRESS) : false;
+  if (lendingAdapterExists) {
+    lendingAdapterAddr = env.WDK_LENDING_ADAPTER_ADDRESS;
+    console.log(`Lending Adapter (resume): ${lendingAdapterAddr}`);
+  } else {
+    const MockAavePool = await ethers.getContractFactory("MockAavePool");
+    const aavePool = await (await MockAavePool.deploy(usdtAddr, usdtAddr)).waitForDeployment();
+    const AaveLendingAdapter = await ethers.getContractFactory("AaveLendingAdapter");
+    const lendingAdapter = await (await AaveLendingAdapter.deploy(
+      usdtAddr, usdtAddr, await addr(aavePool), deployer.address
+    )).waitForDeployment();
+    lendingAdapterAddr = await addr(lendingAdapter);
+    console.log(`Lending Adapter: ${lendingAdapterAddr}`);
+    updateEnv({ WDK_LENDING_ADAPTER_ADDRESS: lendingAdapterAddr });
+  }
+
+  return { xautAdapterAddr, secondaryAdapterAddr, lpAdapterAddr, lendingAdapterAddr };
+}
+
+async function wireContracts(
+  vaultAddr: string,
+  engineAddr: string,
+  xautAdapterAddr: string,
+  secondaryAdapterAddr: string,
+  lpAdapterAddr: string,
+  lendingAdapterAddr: string,
+  sharpeTrackerAddr: string
+) {
+  const sharpeTracker = await ethers.getContractAt("SharpeTracker", sharpeTrackerAddr);
+  await (await sharpeTracker.setEngine(engineAddr)).wait();
+
+  const vault = await ethers.getContractAt("OmniAgentVault", vaultAddr);
+  await (await vault.setEngine(engineAddr)).wait();
+  await (await vault.setAdapters(xautAdapterAddr, secondaryAdapterAddr, lpAdapterAddr, lendingAdapterAddr)).wait();
+
+  const xautAdapter = await ethers.getContractAt("XAUTYieldAdapter", xautAdapterAddr);
+  await (await xautAdapter.setVault(vaultAddr)).wait();
+
+  const secondaryAdapter = await ethers.getContractAt("ManagedAdapter", secondaryAdapterAddr);
+  await (await secondaryAdapter.setVault(vaultAddr)).wait();
+
+  const lpAdapter = await ethers.getContractAt("ManagedAdapter", lpAdapterAddr);
+  await (await lpAdapter.setVault(vaultAddr)).wait();
+
+  const lendingAdapter = await ethers.getContractAt("AaveLendingAdapter", lendingAdapterAddr);
+  await (await lendingAdapter.setVault(vaultAddr)).wait();
+  console.log("Wiring complete.");
+
+  await (await xautAdapter.lockConfiguration()).wait();
+  await (await secondaryAdapter.lockConfiguration()).wait();
+  await (await lpAdapter.lockConfiguration()).wait();
+  await (await lendingAdapter.lockConfiguration()).wait();
+  await (await vault.lockConfiguration()).wait();
+  console.log("Configurations locked.");
+
+  const currentEngine = await vault.engine();
+  if (currentEngine === ethers.ZeroAddress) throw new Error("Failed to set Vault Engine!");
+  console.log(`Vault Engine verified: ${currentEngine}`);
+}
+
+async function seedVault(usdtAddr: string, vaultAddr: string, userCount = 10) {
+  const deployer = await getDeployer();
+  const usdt = await ethers.getContractAt("MockERC20", usdtAddr);
+  const vault = await ethers.getContractAt("OmniAgentVault", vaultAddr);
+  const seedAmount = ethers.parseUnits("10000", 6);
+
+  console.log(`Seeding ${userCount} users with ${ethers.formatUnits(seedAmount, 6)} USDT each...`);
+
+  for (let i = 0; i < userCount; i++) {
+    const wallet = ethers.Wallet.createRandom().connect(ethers.provider);
+    await (await deployer.sendTransaction({ to: wallet.address, value: ethers.parseEther("0.1") })).wait();
+    await (await usdt.mint(wallet.address, seedAmount)).wait();
+    await (await usdt.connect(wallet).approve(vaultAddr, seedAmount)).wait();
+    await (await vault.connect(wallet).deposit(seedAmount, wallet.address)).wait();
+    console.log(`  Seeded User ${i + 1}: ${wallet.address}`);
+  }
+}
+
+async function cmdFull() {
+  console.log("=== Full Stack Deployment ===\n");
+  const deployer = await getDeployer();
+  console.log(`Deployer: ${deployer.address}`);
+  await logNetwork();
+
+  console.log("\n--- Phase 1: Tokens ---");
+  const tokens = await deployMockTokens();
+
+  console.log("\n--- Phase 2: Oracles ---");
+  const oracles = await deployMockOracles(tokens.WDK_USDT_ADDRESS, tokens.WDK_XAUT_ADDRESS);
+
+  console.log("\n--- Phase 3: Core ---");
+  const core = await deployCoreContracts(
+    tokens.WDK_USDT_ADDRESS, tokens.WDK_XAUT_ADDRESS,
+    oracles.WDK_USDT_ORACLE_ADDRESS, oracles._usdtChainlink
+  );
+
+  console.log("\n--- Phase 4: Vault & Engine ---");
+  const { vaultAddr, engineAddr } = await deployVaultAndEngine(
+    tokens.WDK_USDT_ADDRESS, core.policyAddr,
+    oracles.WDK_USDT_ORACLE_ADDRESS, core.breakerAddr, core.sharpeTrackerAddr
+  );
+
+  console.log("\n--- Phase 5: Adapters ---");
+  const adapters = await deployAdapters(
+    tokens.WDK_USDT_ADDRESS, tokens.WDK_XAUT_ADDRESS,
+    oracles.WDK_XAUT_ORACLE_ADDRESS, oracles.WDK_USDT_ORACLE_ADDRESS
+  );
+
+  console.log("\n--- Phase 6: Wiring ---");
+  await wireContracts(
+    vaultAddr, engineAddr,
+    adapters.xautAdapterAddr, adapters.secondaryAdapterAddr,
+    adapters.lpAdapterAddr, adapters.lendingAdapterAddr,
+    core.sharpeTrackerAddr
+  );
+
+  console.log("\n--- Phase 7: Seeding ---");
+  await seedVault(tokens.WDK_USDT_ADDRESS, vaultAddr);
+
+  await (await ethers.getContractAt("MockERC20", tokens.WDK_XAUT_ADDRESS))
+    .mint(adapters.xautAdapterAddr, ethers.parseUnits("10", 4));
+  console.log("Seeded XAUT Adapter with 10.0 oz Gold");
+
+  updateEnv({
+    WDK_VAULT_ADDRESS: vaultAddr,
+    WDK_ENGINE_ADDRESS: engineAddr,
+    WDK_USDT_ADDRESS: tokens.WDK_USDT_ADDRESS,
+    WDK_XAUT_ADDRESS: tokens.WDK_XAUT_ADDRESS,
+    WDK_ZK_ORACLE_ADDRESS: oracles.WDK_USDT_ORACLE_ADDRESS,
+    WDK_USDT_ORACLE_ADDRESS: oracles.WDK_USDT_ORACLE_ADDRESS,
+    WDK_XAUT_ORACLE_ADDRESS: oracles.WDK_XAUT_ORACLE_ADDRESS,
+    WDK_BREAKER_ADDRESS: core.breakerAddr,
+    WDK_XAUT_ADAPTER_ADDRESS: adapters.xautAdapterAddr,
+    WDK_SECONDARY_ADAPTER_ADDRESS: adapters.secondaryAdapterAddr,
+    WDK_LP_ADAPTER_ADDRESS: adapters.lpAdapterAddr,
+    WDK_LENDING_ADAPTER_ADDRESS: adapters.lendingAdapterAddr,
+  });
+
+  console.log("\n=== DEPLOYMENT COMPLETE ===");
+  console.log("All addresses written to .env");
+}
+
+async function cmdZkOracle() {
+  const deployer = await getDeployer();
+  console.log(`Deployer: ${deployer.address}`);
+  await logNetwork();
+
+  const ZKRiskOracle = await ethers.getContractFactory("ZKRiskOracle");
+  const oracle = await ZKRiskOracle.deploy(deployer.address);
+  await oracle.waitForDeployment();
+  const oracleAddr = await addr(oracle);
+
+  console.log(`ZKRiskOracle: ${oracleAddr}`);
+  console.log(`Verifier: ${deployer.address}`);
+
+  updateEnv({ WDK_ZK_ORACLE_ADDRESS: oracleAddr });
+  console.log("Updated .env");
+}
+
+async function cmdErc4337() {
+  const deployer = await getDeployer();
+  console.log(`Deployer: ${deployer.address}`);
+  await logNetwork();
+
+  const ENTRY_POINT = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+
+  const SimpleAccountFactory = await ethers.getContractFactory("SimpleAccountFactory");
+  const factory = await (await SimpleAccountFactory.deploy(ENTRY_POINT)).waitForDeployment();
+  const factoryAddr = await addr(factory);
+
+  console.log(`SimpleAccountFactory: ${factoryAddr}`);
+  console.log(`EntryPoint: ${ENTRY_POINT}`);
+
+  updateEnv({ ERC4337_FACTORY_ADDRESS: factoryAddr });
+  console.log("Updated .env");
+}
+
+async function cmdMockAave() {
+  const deployer = await getDeployer();
+  console.log(`Deployer: ${deployer.address}`);
+  await logNetwork();
+  const env = loadEnv();
+
+  const usdtAddr = env.WDK_USDT_ADDRESS;
+  if (!usdtAddr) throw new Error("WDK_USDT_ADDRESS not set in .env. Deploy tokens first.");
+
+  const MockERC20 = await ethers.getContractFactory("MockERC20");
+  const aToken = await (await MockERC20.deploy("Aave USDT", "aUSDT")).waitForDeployment();
+  await (await aToken.setDecimals(6)).wait();
+  const aTokenAddr = await addr(aToken);
+  console.log(`aToken (aUSDT): ${aTokenAddr}`);
+
+  const MockAavePool = await ethers.getContractFactory("MockAavePool");
+  const aavePool = await (await MockAavePool.deploy(usdtAddr, aTokenAddr)).waitForDeployment();
+  const aavePoolAddr = await addr(aavePool);
+  console.log(`MockAavePool: ${aavePoolAddr}`);
+
+  const MockBridge = await ethers.getContractFactory("MockBridge");
+  const bridge = await (await MockBridge.deploy()).waitForDeployment();
+  const bridgeAddr = await addr(bridge);
+  console.log(`MockBridge: ${bridgeAddr}`);
+
+  updateEnv({
+    MOCK_AAVE_POOL_ADDRESS: aavePoolAddr,
+    MOCK_BRIDGE_ADDRESS: bridgeAddr,
+    MOCK_ATOKEN_ADDRESS: aTokenAddr,
+  });
+  console.log("Updated .env");
+}
+
+async function cmdPolicyGuard() {
+  const deployer = await getDeployer();
+  console.log(`Deployer: ${deployer.address}`);
+  await logNetwork();
+  const env = loadEnv();
+
+  const PolicyGuard = await ethers.getContractFactory("PolicyGuard");
+  const policyGuard = await PolicyGuard.deploy(
+    deployer.address,
+    ethers.parseUnits("1000", 18),
+    ethers.parseUnits("10000", 18),
+    500,
+    60
+  );
+  await policyGuard.waitForDeployment();
+  const policyGuardAddr = await addr(policyGuard);
+  console.log(`PolicyGuard: ${policyGuardAddr}`);
+
+  const AgentNFA = await ethers.getContractFactory("AgentNFA");
+  const agentNFA = await AgentNFA.deploy();
+  await agentNFA.waitForDeployment();
+  const agentNFAAddr = await addr(agentNFA);
+  console.log(`AgentNFA: ${agentNFAAddr}`);
+
+  await (await agentNFA.mint(deployer.address, deployer.address, policyGuardAddr)).wait();
+  console.log("Agent #0 minted for deployer");
+
+  if (env.WDK_VAULT_ADDRESS) {
+    await policyGuard.whitelistReceiver(env.WDK_VAULT_ADDRESS);
+    console.log(`Whitelisted Vault: ${env.WDK_VAULT_ADDRESS}`);
+  }
+  if (env.WDK_ENGINE_ADDRESS) {
+    await policyGuard.whitelistReceiver(env.WDK_ENGINE_ADDRESS);
+    console.log(`Whitelisted Engine: ${env.WDK_ENGINE_ADDRESS}`);
+  }
+
+  updateEnv({
+    WDK_POLICY_GUARD_ADDRESS: policyGuardAddr,
+    WDK_AGENT_NFA_ADDRESS: agentNFAAddr,
+  });
+  console.log("Updated .env");
+}
+
+async function cmdAdapters() {
+  const deployer = await getDeployer();
+  console.log(`Deployer: ${deployer.address}`);
+  await logNetwork();
+  const env = loadEnv();
+
+  const usdtAddr = env.WDK_USDT_ADDRESS;
+  const vaultAddr = env.WDK_VAULT_ADDRESS;
+  if (!usdtAddr) throw new Error("WDK_USDT_ADDRESS not set in .env");
+  if (!vaultAddr) throw new Error("WDK_VAULT_ADDRESS not set in .env");
+
+  const MockAavePool = await ethers.getContractFactory("MockAavePool");
+  const aavePool = await (await MockAavePool.deploy(usdtAddr, usdtAddr)).waitForDeployment();
+  const aavePoolAddr = await addr(aavePool);
+  console.log(`MockAavePool: ${aavePoolAddr}`);
+
+  const AaveLendingAdapter = await ethers.getContractFactory("AaveLendingAdapter");
+  const aaveAdapter = await (await AaveLendingAdapter.deploy(
+    usdtAddr, usdtAddr, aavePoolAddr, deployer.address
+  )).waitForDeployment();
+  const aaveAdapterAddr = await addr(aaveAdapter);
+  console.log(`AaveLendingAdapter: ${aaveAdapterAddr}`);
+
+  const LayerZeroBridgeReceiver = await ethers.getContractFactory("LayerZeroBridgeReceiver");
+  const lzAdapter = await (await LayerZeroBridgeReceiver.deploy(
+    usdtAddr, ethers.ZeroAddress, deployer.address
+  )).waitForDeployment();
+  const lzAdapterAddr = await addr(lzAdapter);
+  console.log(`LayerZeroBridgeReceiver: ${lzAdapterAddr}`);
+
+  await (await (await ethers.getContractAt("AaveLendingAdapter", aaveAdapterAddr)).setVault(vaultAddr)).wait();
+  await (await (await ethers.getContractAt("LayerZeroBridgeReceiver", lzAdapterAddr)).setVault(vaultAddr)).wait();
+  console.log("Adapters wired to vault");
+
+  updateEnv({
+    WDK_AAVE_ADAPTER_ADDRESS: aaveAdapterAddr,
+    WDK_LZ_ADAPTER_ADDRESS: lzAdapterAddr,
+  });
+  console.log("Updated .env");
+}
+
+async function cmdSeed() {
+  const env = loadEnv();
+  const usdtAddr = env.WDK_USDT_ADDRESS;
+  const vaultAddr = env.WDK_VAULT_ADDRESS;
+  if (!usdtAddr || !vaultAddr) throw new Error("WDK_USDT_ADDRESS and WDK_VAULT_ADDRESS must be set in .env");
+
+  const deployer = await getDeployer();
+  console.log(`Deployer: ${deployer.address}`);
+  await logNetwork();
+
+  const usdt = await ethers.getContractAt("MockERC20", usdtAddr);
+  const vault = await ethers.getContractAt("OmniAgentVault", vaultAddr);
+
+  const currentAssets = await vault.totalAssets();
+  console.log(`Current vault assets: ${ethers.formatUnits(currentAssets, 6)} USDT`);
+
+  const mintAmount = ethers.parseUnits("100000", 6);
+  await (await usdt.mint(deployer.address, mintAmount)).wait();
+  console.log(`Minted ${ethers.formatUnits(mintAmount, 6)} USDT`);
+
+  await (await usdt.approve(vaultAddr, mintAmount)).wait();
+  await (await vault.deposit(mintAmount, deployer.address)).wait();
+  console.log(`Deposited ${ethers.formatUnits(mintAmount, 6)} USDT into vault`);
+
+  const finalAssets = await vault.totalAssets();
+  console.log(`Final vault assets: ${ethers.formatUnits(finalAssets, 6)} USDT`);
+  console.log("Vault seeded successfully");
+}
+
+async function cmdInit() {
+  const deployer = await getDeployer();
+  console.log(`Deployer: ${deployer.address}`);
+  await logNetwork();
+  const env = loadEnv();
+
+  const vaultAddr = env.WDK_VAULT_ADDRESS;
+  const engineAddr = env.WDK_ENGINE_ADDRESS;
+  if (!vaultAddr || !engineAddr) throw new Error("WDK_VAULT_ADDRESS and WDK_ENGINE_ADDRESS must be set");
+
+  if (env.WDK_AAVE_ADAPTER_ADDRESS) {
+    const aave = await ethers.getContractAt("AaveLendingAdapter", env.WDK_AAVE_ADAPTER_ADDRESS);
+    await (await aave.setVault(vaultAddr)).wait();
+    console.log(`Aave adapter vault set: ${vaultAddr}`);
+  }
+
+  if (env.WDK_LZ_ADAPTER_ADDRESS) {
+    const lz = await ethers.getContractAt("LayerZeroBridgeReceiver", env.WDK_LZ_ADAPTER_ADDRESS);
+    await (await lz.setVault(vaultAddr)).wait();
+    console.log(`LZ adapter vault set: ${vaultAddr}`);
+  }
+
+  const vault = await ethers.getContractAt("OmniAgentVault", vaultAddr);
+  await (await vault.setEngine(engineAddr)).wait();
+  console.log(`Vault engine set: ${engineAddr}`);
+
+  console.log("Initialization complete");
+}
+
+async function cmdWhitelist() {
+  const env = loadEnv();
+  const guardAddr = env.WDK_POLICY_GUARD_ADDRESS;
+  if (!guardAddr) throw new Error("WDK_POLICY_GUARD_ADDRESS not set in .env");
+
+  const guard = await ethers.getContractAt("PolicyGuard", guardAddr);
+
+  if (env.WDK_VAULT_ADDRESS) {
+    await guard.whitelistReceiver(env.WDK_VAULT_ADDRESS);
+    console.log(`Whitelisted Vault: ${env.WDK_VAULT_ADDRESS}`);
+  }
+  if (env.WDK_ENGINE_ADDRESS) {
+    await guard.whitelistReceiver(env.WDK_ENGINE_ADDRESS);
+    console.log(`Whitelisted Engine: ${env.WDK_ENGINE_ADDRESS}`);
+  }
+  console.log("Whitelisting complete");
+}
+
+const COMMANDS: Record<string, () => Promise<void>> = {
+  full: cmdFull,
+  "zk-oracle": cmdZkOracle,
+  erc4337: cmdErc4337,
+  "mock-aave": cmdMockAave,
+  "policy-guard": cmdPolicyGuard,
+  adapters: cmdAdapters,
+  seed: cmdSeed,
+  init: cmdInit,
+  whitelist: cmdWhitelist,
+};
+
+function printHelp() {
+  console.log("Usage: DEPLOY_CMD=<cmd> npx hardhat run scripts/deploy.ts --network <net>\n");
+  console.log("Commands:");
+  console.log("  full           Deploy entire stack (tokens + oracles + core + vault + adapters + seed)");
+  console.log("  zk-oracle      Deploy ZKRiskOracle");
+  console.log("  erc4337        Deploy SimpleAccountFactory");
+  console.log("  mock-aave      Deploy MockAavePool + MockBridge + aToken");
+  console.log("  policy-guard   Deploy PolicyGuard + AgentNFA + whitelist");
+  console.log("  adapters       Deploy fresh Aave + LZ adapters and wire to vault");
+  console.log("  seed           Seed vault with 100k USDT from deployer");
+  console.log("  init           Wire existing adapters to vault/engine");
+  console.log("  whitelist      Whitelist vault/engine in existing PolicyGuard");
+}
+
+async function main() {
+  const command = process.env.DEPLOY_CMD;
+
+  if (!command || !COMMANDS[command]) {
+    printHelp();
+    process.exit(command ? 1 : 0);
+  }
+
+  await COMMANDS[command]();
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

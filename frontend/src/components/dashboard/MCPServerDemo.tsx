@@ -76,16 +76,16 @@ const toolCategories: {
   tools: MCPTool[];
 }[] = [
   {
-    id: "bnb",
-    name: "BNB Chain",
+    id: "sepolia",
+    name: "Ethereum / Sepolia",
     icon: ZapIcon,
-    color: "#F3BA2F",
+    color: "#627EEA",
     tools: [
       {
-        name: "bnb_createWallet",
+        name: "sepolia_createWallet",
         description: "Create wallet",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "wallet",
         params: [
           {
@@ -96,10 +96,10 @@ const toolCategories: {
         ],
       },
       {
-        name: "bnb_getBalance",
+        name: "sepolia_getBalance",
         description: "Get balance",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "wallet",
         params: [
           {
@@ -115,10 +115,10 @@ const toolCategories: {
         ],
       },
       {
-        name: "bnb_transfer",
-        description: "Transfer BNB/USDT",
+        name: "sepolia_transfer",
+        description: "Transfer ETH/USDT",
         riskLevel: "medium",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "transfer",
         params: [
           { name: "to", placeholder: "Recipient address", required: true },
@@ -131,10 +131,10 @@ const toolCategories: {
         ],
       },
       {
-        name: "bnb_swap",
+        name: "sepolia_swap",
         description: "Swap tokens",
         riskLevel: "medium",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "defi",
         params: [
           { name: "amountIn", placeholder: "Amount in", required: true },
@@ -143,10 +143,10 @@ const toolCategories: {
         ],
       },
       {
-        name: "bnb_supplyAave",
+        name: "sepolia_supplyAave",
         description: "Supply to Aave",
         riskLevel: "medium",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "lending",
         params: [
           {
@@ -157,20 +157,20 @@ const toolCategories: {
         ],
       },
       {
-        name: "bnb_withdrawAave",
+        name: "sepolia_withdrawAave",
         description: "Withdraw from Aave",
         riskLevel: "medium",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "lending",
         params: [
           { name: "amount", placeholder: "Amount (e.g., 500)", required: true },
         ],
       },
       {
-        name: "bnb_bridgeLayerZero",
+        name: "sepolia_bridgeLayerZero",
         description: "Bridge via LayerZero",
         riskLevel: "high",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "bridge",
         params: [
           { name: "amount", placeholder: "Amount", required: true },
@@ -334,14 +334,14 @@ const toolCategories: {
         name: "x402_list_services",
         description: "List hireable sub-agents",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "x402",
       },
       {
         name: "x402_pay_subagent",
         description: "Pay sub-agent for task",
         riskLevel: "medium",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "x402",
         params: [
           {
@@ -361,7 +361,7 @@ const toolCategories: {
         name: "x402_get_balance",
         description: "Get USDT balance for payments",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "x402",
         params: [
           {
@@ -375,7 +375,7 @@ const toolCategories: {
         name: "x402_fleet_status",
         description: "Robot fleet status",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "x402",
       },
     ],
@@ -390,7 +390,7 @@ const toolCategories: {
         name: "wdk_mint_test_token",
         description: "Mint test USDT (1000 default)",
         riskLevel: "medium",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "defi",
         params: [
           {
@@ -409,7 +409,7 @@ const toolCategories: {
         name: "wdk_vault_deposit",
         description: "Deposit USDT to vault",
         riskLevel: "medium",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "defi",
         params: [
           {
@@ -423,7 +423,7 @@ const toolCategories: {
         name: "wdk_vault_withdraw",
         description: "Withdraw USDT from vault",
         riskLevel: "medium",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "defi",
         params: [
           { name: "amount", placeholder: "Amount (e.g., 500)", required: true },
@@ -433,7 +433,7 @@ const toolCategories: {
         name: "wdk_vault_getBalance",
         description: "Get vault balance",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "defi",
         params: [
           {
@@ -447,7 +447,7 @@ const toolCategories: {
         name: "wdk_vault_getState",
         description: "Get vault state",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "defi",
       },
     ],
@@ -462,21 +462,21 @@ const toolCategories: {
         name: "wdk_engine_executeCycle",
         description: "Execute yield cycle",
         riskLevel: "high",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "defi",
       },
       {
         name: "wdk_engine_getCycleState",
         description: "Get cycle state",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "defi",
       },
       {
         name: "wdk_engine_getRiskMetrics",
         description: "Get risk metrics",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "defi",
       },
     ],
@@ -491,7 +491,7 @@ const toolCategories: {
         name: "wdk_aave_supply",
         description: "Supply USDT to Aave",
         riskLevel: "medium",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "lending",
         params: [
           {
@@ -505,7 +505,7 @@ const toolCategories: {
         name: "wdk_aave_withdraw",
         description: "Withdraw from Aave",
         riskLevel: "medium",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "lending",
         params: [
           { name: "amount", placeholder: "Amount (e.g., 500)", required: true },
@@ -515,7 +515,7 @@ const toolCategories: {
         name: "wdk_aave_getPosition",
         description: "Get Aave position",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "lending",
         params: [{ name: "user", placeholder: "User address", required: true }],
       },
@@ -531,7 +531,7 @@ const toolCategories: {
         name: "erc4337_createAccount",
         description: "Create smart account",
         riskLevel: "medium",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "account-abstraction",
         params: [
           { name: "owner", placeholder: "Owner EOA address", required: true },
@@ -541,7 +541,7 @@ const toolCategories: {
         name: "erc4337_getAccountAddress",
         description: "Predict account address",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "account-abstraction",
         params: [
           { name: "owner", placeholder: "Owner EOA address", required: true },
@@ -551,7 +551,7 @@ const toolCategories: {
         name: "erc4337_isValidAccount",
         description: "Check valid account",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "account-abstraction",
         params: [
           { name: "account", placeholder: "Account address", required: true },
@@ -561,7 +561,7 @@ const toolCategories: {
         name: "erc4337_execute",
         description: "Execute transaction",
         riskLevel: "high",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "account-abstraction",
         params: [
           { name: "account", placeholder: "Smart account", required: true },
@@ -574,7 +574,7 @@ const toolCategories: {
         name: "erc4337_getBalance",
         description: "Get account balance",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "account-abstraction",
         params: [
           { name: "account", placeholder: "Account address", required: true },
@@ -584,7 +584,7 @@ const toolCategories: {
         name: "erc4337_addDeposit",
         description: "Add gas deposit",
         riskLevel: "medium",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "account-abstraction",
         params: [
           { name: "account", placeholder: "Smart account", required: true },
@@ -595,7 +595,7 @@ const toolCategories: {
         name: "erc4337_withdrawNative",
         description: "Withdraw native tokens",
         riskLevel: "high",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "account-abstraction",
         params: [
           { name: "account", placeholder: "Smart account", required: true },
@@ -607,7 +607,7 @@ const toolCategories: {
         name: "erc4337_setTokenApproval",
         description: "Set paymaster token",
         riskLevel: "high",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "account-abstraction",
         params: [
           { name: "token", placeholder: "Token address", required: true },
@@ -619,7 +619,7 @@ const toolCategories: {
         name: "erc4337_executeBatch",
         description: "Execute batch transactions",
         riskLevel: "high",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "account-abstraction",
         params: [
           { name: "account", placeholder: "Smart account", required: true },
@@ -644,7 +644,7 @@ const toolCategories: {
         name: "erc4337_withdrawToken",
         description: "Withdraw tokens",
         riskLevel: "high",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "account-abstraction",
         params: [
           { name: "account", placeholder: "Smart account", required: true },
@@ -657,7 +657,7 @@ const toolCategories: {
         name: "erc4337_isTokenApproved",
         description: "Check token approval",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "account-abstraction",
         params: [
           { name: "token", placeholder: "Token address", required: true },
@@ -667,7 +667,7 @@ const toolCategories: {
         name: "erc4337_getDeposit",
         description: "Get account deposit",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "account-abstraction",
         params: [
           { name: "account", placeholder: "Account address", required: true },
@@ -685,7 +685,7 @@ const toolCategories: {
         name: "wdk_bridge_bridge",
         description: "Bridge USDT via LayerZero",
         riskLevel: "high",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "bridge",
         params: [
           { name: "amount", placeholder: "Amount", required: true },
@@ -705,7 +705,7 @@ const toolCategories: {
         name: "wdk_bridge_getStatus",
         description: "Get bridge quote",
         riskLevel: "low",
-        blockchain: "bnb",
+        blockchain: "sepolia",
         category: "bridge",
         params: [
           { name: "amount", placeholder: "Amount", required: true },

@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { RobotEvent } from '../../hooks/useRobotFleetEvents';
+import { NETWORK_CONFIGS, NETWORK_MODE } from '../../lib/networkConfig';
 
 interface ActivityFeedProps {
   events: RobotEvent[];
@@ -8,6 +9,7 @@ interface ActivityFeedProps {
 const ActivityFeed: React.FC<ActivityFeedProps> = ({ events }) => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const chronologicalEvents = [...events].reverse();
+  const networkConfig = NETWORK_CONFIGS[NETWORK_MODE.TESTNET];
 
   return (
     <div className="flex flex-col h-full">
@@ -35,13 +37,12 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ events }) => {
                   <span className="leading-relaxed flex flex-wrap items-center gap-x-1">
                     {IconComponent && <IconComponent className="w-3 h-3 text-tether-teal inline-block" />}
                     <span className="font-medium text-tether-teal">Robot {eventData.robotId}</span>
-                    <span className="text-neutral-gray">earned</span>
-                    <span className="font-bold text-neon-green">{eventData.earnings} BNB</span>
+                    <span className="font-bold text-neon-green">{eventData.earnings} {networkConfig.nativeCurrency.symbol}</span>
                     <span className="text-neutral-gray">from</span>
                     <span className="text-white/80">{eventData.taskName}</span>
                     {eventData.txHash && (
                       <a 
-                        href={`https://testnet.bscscan.com/tx/${eventData.txHash}`} 
+                        href={`${networkConfig.blockExplorer}/tx/${eventData.txHash}`} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="text-tether-teal/60 hover:text-tether-teal underline decoration-dotted underline-offset-2 ml-1 transition-colors"

@@ -128,7 +128,8 @@ contract LayerZeroBridgeReceiver is Ownable2Step, IManagedAdapter {
         _lzEndpoint.send{value: msg.value}(dstEid, payload, options, refundAddress);
     }
 
-    function quote(uint32, uint256 amount, bytes calldata) external pure returns (uint256 nativeFee) {
-        return amount / 1000;
+    function quote(uint32 dstEid, uint256 amount, bytes calldata options) external view returns (uint256 nativeFee) {
+        bytes memory payload = abi.encode(address(this), amount);
+        (nativeFee, ) = _lzEndpoint.quote(dstEid, payload, options, false);
     }
 }

@@ -39,7 +39,7 @@ function shortHash(hash) {
   return `${hash.slice(0, 10)}…${hash.slice(-6)}`;
 }
 
-function ContractAddressBadge({ label, address, icon: Icon, bscScanAddr }) {
+function ContractAddressBadge({ label, address, icon: Icon, explorerAddr }) {
   const isSet = address && address !== ZERO_ADDR;
   return (
     <span
@@ -56,7 +56,7 @@ function ContractAddressBadge({ label, address, icon: Icon, bscScanAddr }) {
       <span className="contractBadgeLabel">{label}</span>
       {isSet ? (
         <a
-          href={`${bscScanAddr}${address}`}
+          href={`${explorerAddr}${address}`}
           target="_blank"
           rel="noopener noreferrer"
           className="contractBadgeAddr"
@@ -88,8 +88,8 @@ export default function OmniAgentVaultV2Client() {
     pegArbExecutorAddress,
     executionAuctionAddress,
   } = networkConfig.contracts;
-  const bscScanAddr = `${networkConfig.blockExplorer}/address/`;
-  const bscScanTx = `${networkConfig.blockExplorer}/tx/`;
+  const explorerAddr = `${networkConfig.blockExplorer}/address/`;
+  const explorerTx = `${networkConfig.blockExplorer}/tx/`;
 
   const [depositAmount, setDepositAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -142,9 +142,9 @@ export default function OmniAgentVaultV2Client() {
   );
 
   // Auto-sync UI network mode when wallet switches chains.
-  // Chain 97 → testnet
+  // Chain 11155111 → testnet
   useEffect(() => {
-    if (wallet.networkChainId === 97n)
+    if (wallet.networkChainId === 11155111n)
       setNetworkMode(NETWORK_MODE.TESTNET);
   }, [wallet.networkChainId, setNetworkMode]);
 
@@ -317,7 +317,7 @@ export default function OmniAgentVaultV2Client() {
     }
   }, [wallet.provider, publicProvider, wallet.signer, refreshArgs, vaultState]);
 
-  // Unsupported = connected to a chain that is not BNB testnet.
+  // Unsupported = connected to a chain that is not Sepolia.
   const networkSupported =
     wallet.networkChainId === null ||
     wallet.networkChainId === 97n;
@@ -417,7 +417,7 @@ export default function OmniAgentVaultV2Client() {
             </span>
             {screenTxPush.hash ? (
               <a
-                href={`${bscScanTx}${screenTxPush.hash}`}
+                href={`${explorerTx}${screenTxPush.hash}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -445,7 +445,7 @@ export default function OmniAgentVaultV2Client() {
             }}
           />
           Unsupported network ({wallet.networkLabel}). Switch your wallet to{" "}
-          <strong>BNB Testnet (97)</strong>.
+          <strong>Ethereum Sepolia</strong>.
         </div>
       )}
 
@@ -471,12 +471,12 @@ export default function OmniAgentVaultV2Client() {
           <ContractAddressBadge
             label="Vault"
             address={vaultAddress}
-            bscScanAddr={bscScanAddr}
+            explorerAddr={explorerAddr}
           />
           <ContractAddressBadge
             label="Engine"
             address={engineAddress}
-            bscScanAddr={bscScanAddr}
+            explorerAddr={explorerAddr}
           />
         </div>
         <div className="contractGroup contractGroup--advanced">
@@ -484,25 +484,25 @@ export default function OmniAgentVaultV2Client() {
             label="CircuitBreaker"
             address={circuitBreakerAddress}
             icon={Shield}
-            bscScanAddr={bscScanAddr}
+            explorerAddr={explorerAddr}
           />
           <ContractAddressBadge
             label="SharpeTracker"
             address={sharpeTrackerAddress}
             icon={TrendingUp}
-            bscScanAddr={bscScanAddr}
+            explorerAddr={explorerAddr}
           />
           <ContractAddressBadge
             label="PegArb"
             address={pegArbExecutorAddress}
             icon={Zap}
-            bscScanAddr={bscScanAddr}
+            explorerAddr={explorerAddr}
           />
           <ContractAddressBadge
             label="Execution Auction"
             address={executionAuctionAddress}
             icon={Zap}
-            bscScanAddr={bscScanAddr}
+            explorerAddr={explorerAddr}
           />
         </div>
       </div>

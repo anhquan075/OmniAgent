@@ -165,7 +165,7 @@ export function useVaultV2WriteActions({ refresh }) {
 
         setStatus("Depositing...");
         const tx = await vault.deposit(amount, signerAddress, {
-          gasLimit: 1200000, // Sane limit for deposit + Venus park + harvest
+          gasLimit: 1200000, // Sane limit for deposit + idle park + harvest
         });
         await tx.wait();
         appendTx("Deposit", tx.hash, "success", "Deposit mined");
@@ -219,7 +219,7 @@ export function useVaultV2WriteActions({ refresh }) {
 
         setStatus("Withdrawing...");
         const tx = await vault.withdraw(amount, userAddr, userAddr, {
-          gasLimit: 1200000, // Sane limit for potential Venus redemption + stack
+          gasLimit: 1200000, // Sane limit for potential idle redemption + stack
         });
         await tx.wait();
         appendTx("Withdraw", tx.hash, "success", "Withdraw mined");

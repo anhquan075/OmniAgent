@@ -1,6 +1,8 @@
 import { McpTool, McpExecutionContext, MCP_ERRORS } from '../types/mcp-protocol';
 import { ethers } from 'ethers';
 import { env } from '../../config/env';
+import { getWdkSigner } from '@/lib/wdk-loader';
+import { createPendingTransactionId, storePendingTransaction, encodeTransactionData, createUnsignedTransaction } from '@/lib/user-wallet-signer';
 
 const FACTORY_ABI = [
   'function createAccount(address owner) external returns (address account)',
@@ -27,14 +29,22 @@ const PAYMASTER_ABI = [
 ];
 
 function getProvider() {
-  return new ethers.JsonRpcProvider(env.BNB_RPC_URL);
+  return new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
 }
 
-function getSigner() {
-  const provider = getProvider();
-  return env.PRIVATE_KEY
-    ? new ethers.Wallet(env.PRIVATE_KEY, provider)
-    : ethers.Wallet.fromPhrase(env.WDK_SECRET_SEED, provider);
+async function getSigner() {
+  if (env.PRIVATE_KEY) {
+    return new ethers.Wallet(env.PRIVATE_KEY, getProvider());
+  }
+  return getWdkSigner();
+}
+
+async function getWdkWalletAddress(): Promise<string> {
+  const WalletAccountEvm = (await import('@tetherto/wdk-wallet-evm')).WalletAccountEvm;
+  const account = new WalletAccountEvm(env.WDK_SECRET_SEED, "0'/0/0", {
+    provider: env.SEPOLIA_RPC_URL
+  });
+  return account.getAddress();
 }
 
 function getFactoryContract(signer?: ethers.Signer) {
@@ -72,7 +82,7 @@ export const erc4337Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'medium',
     category: 'account-abstraction'
   },
@@ -93,7 +103,7 @@ export const erc4337Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'low',
     category: 'account-abstraction'
   },
@@ -114,7 +124,7 @@ export const erc4337Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'low',
     category: 'account-abstraction'
   },
@@ -138,7 +148,7 @@ export const erc4337Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'high',
     category: 'account-abstraction'
   },
@@ -162,7 +172,7 @@ export const erc4337Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'high',
     category: 'account-abstraction'
   },
@@ -185,7 +195,7 @@ export const erc4337Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'medium',
     category: 'account-abstraction'
   },
@@ -206,7 +216,7 @@ export const erc4337Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'low',
     category: 'account-abstraction'
   },
@@ -227,7 +237,7 @@ export const erc4337Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'low',
     category: 'account-abstraction'
   },
@@ -251,7 +261,7 @@ export const erc4337Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'high',
     category: 'account-abstraction'
   },
@@ -274,7 +284,7 @@ export const erc4337Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'high',
     category: 'account-abstraction'
   },
@@ -297,7 +307,7 @@ export const erc4337Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'high',
     category: 'account-abstraction'
   },
@@ -318,7 +328,7 @@ export const erc4337Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'low',
     category: 'account-abstraction'
   }
@@ -328,7 +338,7 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
   try {
     switch (name) {
       case 'erc4337_createAccount': {
-        const signer = getSigner();
+        const signer = await getSigner();
         const owner = (params.owner as string) || await signer.getAddress();
 
         const factory = getFactoryContract(signer);
@@ -340,7 +350,7 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
       }
 
       case 'erc4337_getAccountAddress': {
-        const signer = getSigner();
+        const signer = await getSigner();
         const owner = (params.owner as string) || await signer.getAddress();
 
         const factory = getFactoryContract();
@@ -369,8 +379,36 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
         const value = params.value ? BigInt(params.value as string) : 0n;
         const data = (params.data as string) || '0x';
 
+        if (context.walletMode === 'user' && context.userWallet) {
+          const walletAddress = await getWdkWalletAddress();
+          const provider = getProvider();
+          const nonce = await provider.getTransactionCount(walletAddress);
+          
+          const iface = new ethers.Interface(['function execute(address dest, uint256 value, bytes calldata data) external']);
+          const callData = iface.encodeFunctionData('execute', [dest, value, data]);
+          
+          const unsignedTx = createUnsignedTransaction(account, callData, 0n);
+          unsignedTx.nonce = nonce;
+          
+          const pendingTxId = createPendingTransactionId();
+          storePendingTransaction(pendingTxId, unsignedTx, 'erc4337_execute', `Execute on account ${account}`);
+          
+          const { txData, hash } = encodeTransactionData(unsignedTx);
+          
+          return {
+            success: true,
+            data: {
+              requiresSignature: true,
+              pendingTxId,
+              txData,
+              signingHash: hash,
+              description: `Execute on ERC4337 account ${account}`
+            }
+          };
+        }
+
         const accountContract = getAccountContract(account);
-        const signer = getSigner();
+        const signer = await getSigner();
         const connectedContract = accountContract.connect(signer) as typeof accountContract;
         
         const tx = await connectedContract.execute(dest, value, data as string);
@@ -385,8 +423,36 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
         const values = (params.values as string[])?.map(v => BigInt(v)) || [];
         const datas = (params.datas as string[])?.map(d => d || '0x') || [];
 
+        if (context.walletMode === 'user' && context.userWallet) {
+          const walletAddress = await getWdkWalletAddress();
+          const provider = getProvider();
+          const nonce = await provider.getTransactionCount(walletAddress);
+          
+          const iface = new ethers.Interface(['function executeBatch(address[] calldata dests, uint256[] calldata values, bytes[] calldata datas) external']);
+          const callData = iface.encodeFunctionData('executeBatch', [dests, values, datas]);
+          
+          const unsignedTx = createUnsignedTransaction(account, callData, 0n);
+          unsignedTx.nonce = nonce;
+          
+          const pendingTxId = createPendingTransactionId();
+          storePendingTransaction(pendingTxId, unsignedTx, 'erc4337_executeBatch', `Batch execute on account ${account}`);
+          
+          const { txData, hash } = encodeTransactionData(unsignedTx);
+          
+          return {
+            success: true,
+            data: {
+              requiresSignature: true,
+              pendingTxId,
+              txData,
+              signingHash: hash,
+              description: `Batch execute on ERC4337 account ${account}`
+            }
+          };
+        }
+
         const accountContract = getAccountContract(account);
-        const signer = getSigner();
+        const signer = await getSigner();
         const connectedContract = accountContract.connect(signer) as typeof accountContract;
 
         const tx = await connectedContract.executeBatch(dests, values, datas);
@@ -400,7 +466,7 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
         const amount = params.amount ? BigInt(params.amount as string) : 0n;
 
         const accountContract = getAccountContract(account);
-        const signer = getSigner();
+        const signer = await getSigner();
         const connectedContract = accountContract.connect(signer) as typeof accountContract & { addDeposit: ( overrides?: { value: bigint }) => Promise<ethers.TransactionResponse> };
 
         const tx = await connectedContract.addDeposit({ value: amount });
@@ -431,8 +497,36 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
         const to = (params.to as string) || ethers.ZeroAddress;
         const amount = params.amount ? BigInt(params.amount as string) : 0n;
 
+        if (context.walletMode === 'user' && context.userWallet) {
+          const walletAddress = await getWdkWalletAddress();
+          const provider = getProvider();
+          const nonce = await provider.getTransactionCount(walletAddress);
+          
+          const iface = new ethers.Interface(['function withdrawToken(address token, address to, uint256 amount) external']);
+          const callData = iface.encodeFunctionData('withdrawToken', [token, to, amount]);
+          
+          const unsignedTx = createUnsignedTransaction(account, callData, 0n);
+          unsignedTx.nonce = nonce;
+          
+          const pendingTxId = createPendingTransactionId();
+          storePendingTransaction(pendingTxId, unsignedTx, 'erc4337_withdrawToken', `Withdraw ${amount} tokens from account`);
+          
+          const { txData, hash } = encodeTransactionData(unsignedTx);
+          
+          return {
+            success: true,
+            data: {
+              requiresSignature: true,
+              pendingTxId,
+              txData,
+              signingHash: hash,
+              description: `Withdraw tokens from ERC4337 account`
+            }
+          };
+        }
+
         const accountContract = getAccountContract(account);
-        const signer = getSigner();
+        const signer = await getSigner();
         const connectedContract = accountContract.connect(signer) as typeof accountContract & { withdrawToken: ( token: string, to: string, amount: bigint ) => Promise<ethers.TransactionResponse> };
 
         const tx = await connectedContract.withdrawToken(token, to, amount);
@@ -446,8 +540,36 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
         const to = (params.to as string) || ethers.ZeroAddress;
         const amount = params.amount ? BigInt(params.amount as string) : 0n;
 
+        if (context.walletMode === 'user' && context.userWallet) {
+          const walletAddress = await getWdkWalletAddress();
+          const provider = getProvider();
+          const nonce = await provider.getTransactionCount(walletAddress);
+          
+          const iface = new ethers.Interface(['function withdrawNative(address payable to, uint256 amount) external']);
+          const callData = iface.encodeFunctionData('withdrawNative', [to, amount]);
+          
+          const unsignedTx = createUnsignedTransaction(account, callData, 0n);
+          unsignedTx.nonce = nonce;
+          
+          const pendingTxId = createPendingTransactionId();
+          storePendingTransaction(pendingTxId, unsignedTx, 'erc4337_withdrawNative', `Withdraw ${amount} ETH from account`);
+          
+          const { txData, hash } = encodeTransactionData(unsignedTx);
+          
+          return {
+            success: true,
+            data: {
+              requiresSignature: true,
+              pendingTxId,
+              txData,
+              signingHash: hash,
+              description: `Withdraw ETH from ERC4337 account`
+            }
+          };
+        }
+
         const accountContract = getAccountContract(account);
-        const signer = getSigner();
+        const signer = await getSigner();
         const connectedContract = accountContract.connect(signer) as typeof accountContract & { withdrawNative: ( to: ethers.AddressLike, amount: bigint ) => Promise<ethers.TransactionResponse> };
 
         const tx = await connectedContract.withdrawNative(to, amount);
@@ -462,7 +584,7 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
         const rate = params.rate ? BigInt(params.rate as string) : 0n;
 
         const paymaster = getPaymasterContract();
-        const signer = getSigner();
+        const signer = await getSigner();
         const connectedPaymaster = paymaster.connect(signer) as typeof paymaster & { setTokenApproval: ( token: string, approved: boolean, rate: bigint ) => Promise<ethers.TransactionResponse> };
 
         const tx = await connectedPaymaster.setTokenApproval(token, approved, rate);

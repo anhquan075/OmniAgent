@@ -153,7 +153,7 @@ export function GuestSplash() {
 
               {/* Secondary Info */}
               <p className="text-xs text-neutral-gray text-center">
-                <span className="hidden sm:inline">Powered by Tether WDK • BNB Chain • Solana • TON</span>
+                <span className="hidden sm:inline">Powered by Tether WDK • Ethereum Sepolia • Solana • TON</span>
                 <span className="sm:hidden">Tether WDK • Multi-chain</span>
               </p>
             </motion.div>

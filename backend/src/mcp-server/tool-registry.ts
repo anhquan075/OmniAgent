@@ -1,23 +1,42 @@
 import { McpTool, ToolHandler, McpExecutionContext, McpToolResult, MCP_ERRORS } from './types/mcp-protocol';
 
+/**
+ * Dangerous tools that must be blocked from LLM access.
+ * These tools bypass on-chain PolicyGuard and can drain funds.
+ * Pattern borrowed from shll-safe-agent's WDK_BLOCKED_TOOLS.
+ */
+export const DANGEROUS_TOOLS = new Set([
+  // Direct write tools that bypass safety checks
+  'sign',                    // Arbitrary message signing
+  'rawTransaction',          // Raw unsigned transaction
+  'broadcastTransaction',    // Broadcast without validation
+]);
+
+/**
+ * Tools that require explicit risk acknowledgment.
+ * LLM can see these but execution will prompt for confirmation.
+ */
+export const HIGH_RISK_TOOLS = new Set([
+  'sol_transfer',
+  'sol_swap',
+  'ton_transfer',
+  'wdk_vault_withdraw',
+  'wdk_engine_execute',
+  'x402_payForService',
+  'aa_sendUserOperation',
+]);
+
 export class ToolRegistry {
   private tools: Map<string, { tool: McpTool; handler: ToolHandler }> = new Map();
+  private blockedTools: Set<string> = new Set(DANGEROUS_TOOLS);
   private version: string = '1.0.0';
 
   registerTool(tool: McpTool, handler: ToolHandler): void {
-    this.tools.set(tool.name, { tool, handler });
-    
-    if (tool.name.includes('_')) {
-      const camelName = tool.name.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-      if (camelName !== tool.name && !this.tools.has(camelName)) {
-        this.tools.set(camelName, { tool, handler });
-      }
-    } else if (/[a-z][A-Z]/.test(tool.name)) {
-      const snakeName = tool.name.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
-      if (snakeName !== tool.name && !this.tools.has(snakeName)) {
-        this.tools.set(snakeName, { tool, handler });
-      }
+    if (this.blockedTools.has(tool.name)) {
+      console.log(`  BLOCKED: ${tool.name} — excluded from LLM access (safety)`);
+      return;
     }
+    this.tools.set(tool.name, { tool, handler });
   }
 
   getTool(name: string): { tool: McpTool; handler: ToolHandler } | undefined {
@@ -42,6 +61,38 @@ export class ToolRegistry {
 
   getAllTools(): McpTool[] {
     return Array.from(this.tools.values()).map(t => t.tool);
+  }
+
+  /**
+   * List only safe tools (excludes high-risk tools that require confirmation).
+   * Use this for autonomous/agent mode where human confirmation isn't available.
+   */
+  getSafeTools(): McpTool[] {
+    return Array.from(this.tools.values())
+      .map(t => t.tool)
+      .filter(t => !HIGH_RISK_TOOLS.has(t.name));
+  }
+
+  /**
+   * Check if a tool is blocked
+   */
+  isBlocked(toolName: string): boolean {
+    return this.blockedTools.has(toolName);
+  }
+
+  /**
+   * Check if a tool is high-risk
+   */
+  isHighRisk(toolName: string): boolean {
+    return HIGH_RISK_TOOLS.has(toolName);
+  }
+
+  /**
+   * Block a tool dynamically
+   */
+  blockTool(toolName: string): void {
+    this.blockedTools.add(toolName);
+    this.tools.delete(toolName);
   }
 
   private normalizeToolName(name: string): string {

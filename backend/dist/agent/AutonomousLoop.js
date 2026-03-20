@@ -24,7 +24,7 @@ const openai = (0, openai_1.createOpenAI)({
 });
 const SYSTEM_PROMPT = `You are the OmniAgent AFOS Strategist, an autonomous AI agent managing a DeFi vault.
 Directive: Yield optimization for USDT and XAUT via Tether WDK & OmniAgent.
-You are a Multi-VM Native Agent. You monitor and manage assets across EVM (BNB), Solana, and TON blockchains simultaneously.
+You are a Multi-VM Native Agent. You monitor and manage assets across EVM (Ethereum/Sepolia), Solana, and TON blockchains simultaneously.
 
 WORKFLOW:
 1. START by calling analyze_risk to get the latest proven risk metrics.
@@ -33,7 +33,7 @@ WORKFLOW:
    - If risk is HIGH: Call handle_emergency immediately.
    - If MEDIUM or LOW: Proceed to check_strategy or check_cross_chain_yields or hire_fleet_robot to find yield opportunities or gain insights.
 4. OPTIMIZE: If opportunities exist, execute rebalances, bridging (bridge_via_layerzero), or institutional lending (supply_to_aave / withdraw_from_aave) across supported chains.
-   - For Aave V3 on BNB: Use supply_to_aave when USDT supply APY is attractive and health factor > 1.5. Use withdraw_from_aave to reclaim liquidity if needed for rebalancing or emergency.
+   - For Aave V3 on Sepolia: Use supply_to_aave when USDT supply APY is attractive and health factor > 1.5. Use withdraw_from_aave to reclaim liquidity if needed for rebalancing or emergency.
    - For Cross-chain: Use bridge_via_layerzero to move idle USDT to chains with higher yield potential.
 5. SWEEP: Use yield_sweep if there's profit.
 6. FINISH: Provide a technical summary of all findings and actions.
@@ -84,7 +84,7 @@ async function runAutonomousCycle() {
     let robotEarningsDetected = false;
     if (parseFloat(cycleEarnings) > 0) {
         logger_1.logger.info({ cycleEarnings }, '[AutonomousLoop] Fleet earnings since last cycle');
-        currentSystemPrompt += `\n\n[FLEET UPDATE]: Since your last cycle, the autonomous robot fleet has earned ${cycleEarnings} BNB. Consider this new capital in your strategy.`;
+        currentSystemPrompt += `\n\n[FLEET UPDATE]: Since your last cycle, the autonomous robot fleet has earned ${cycleEarnings} ETH (Sepolia). Consider this new capital in your strategy.`;
         robotEarningsDetected = true;
     }
     // Listen for robot fleet earnings (real-time during cycle)

@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
-import { bscTestnet, bsc } from 'wagmi/chains';
+import { sepolia, mainnet } from 'wagmi/chains';
 import '@rainbow-me/rainbowkit/styles.css';
 import "./globals.css";
 import App from "./App";
@@ -12,7 +12,7 @@ import { TooltipProvider } from "./components/ui/Tooltip";
 
 const queryClient = new QueryClient();
 
-// Get initial chain from environment or default to BSC Testnet
+// Get initial chain from environment or default to Sepolia
 const initialChain = getInitialChain();
 
 // Tether WDK brand theme for RainbowKit wallet modal

@@ -1,25 +1,14 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
-const BNB_TESTNET_RPC_URL = process.env.BNB_TESTNET_RPC_URL || "";
-const BNB_MAINNET_RPC_URL = process.env.BNB_MAINNET_RPC_URL || "";
-const RAW_PRIVATE_KEY = (process.env.PRIVATE_KEY || "").trim();
-const PRIVATE_KEY = RAW_PRIVATE_KEY
-  ? RAW_PRIVATE_KEY.startsWith("0x")
-    ? RAW_PRIVATE_KEY
-    : `0x${RAW_PRIVATE_KEY}`
-  : "";
+const PRIVATE_KEY = (() => {
+  const raw = (process.env.PRIVATE_KEY || "").trim();
+  if (!raw) return "";
+  return raw.startsWith("0x") ? raw : `0x${raw}`;
+})();
 
-// Gas price constants (in wei).
-// Uses parseFloat so fractional gwei (e.g. GAS_PRICE_GWEI=0.1) is supported.
-// BSC mainnet minimum is 1 gwei; default 3 gwei is conservative for busy blocks.
-// Override via GAS_PRICE_GWEI env var — accepts decimals (e.g. "0.1" → 100_000_000 wei).
-const GAS_PRICE_MAINNET = Math.round(
-  parseFloat(process.env.GAS_PRICE_GWEI || "3") * 1_000_000_000
-);
-const GAS_PRICE_TESTNET = Math.round(
-  parseFloat(process.env.GAS_PRICE_GWEI || "3") * 1_000_000_000
-);
+const toGwei = (v) =>
+  Math.round(parseFloat(v || "3") * 1_000_000_000);
 
 
 module.exports = {
@@ -27,48 +16,74 @@ module.exports = {
     version: "0.8.24",
     settings: {
       viaIR: true,
-      evmVersion: "cancun", 
+      evmVersion: "cancun",
       optimizer: {
         enabled: true,
-        // runs=50: smaller bytecode than 200 → cheaper deployment.
-        // Trade-off: ~5-10% higher execution gas per call vs runs=200.
-        // Acceptable for a vault deployed rarely but called frequently enough
-        // that execution gas still matters — 50 is the practical sweet spot.
         runs: 50,
       },
     },
   },
   networks: {
-    // Fork mode is opt-in via ENABLE_MAINNET_FORK=true to avoid slowing down
-    // the unit test suite. Usage:
-    //   ENABLE_MAINNET_FORK=true npx hardhat run scripts/fork-test-mainnet.js --network hardhat
+    // Fork mode: ENABLE_MAINNET_FORK=true npx hardhat run scripts/fork-test.js --network hardhat
     hardhat: {
       forking: {
-        url: "https://binance.llamarpc.com",
-        enabled: false, // We will enable it dynamically in the scripts via hardhat_reset
+        url: process.env.ETHEREUM_RPC_URL || "https://rpc.ankr.com/eth",
+        enabled: !!process.env.ENABLE_MAINNET_FORK,
       },
-      chainId: 56,
+      chainId: 31337, // localhost
       hardfork: "cancun",
       allowUnlimitedContractSize: true,
       initialBaseFeePerGas: 0,
     },
-    bnbTestnet: {
-      url: BNB_TESTNET_RPC_URL,
+    localhost: {
+      url: "http://127.0.0.1:8545",
       accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
-      chainId: 97,
-      gasPrice: GAS_PRICE_TESTNET,
+      chainId: 31337,
     },
-    bnb: {
-      url: BNB_MAINNET_RPC_URL,
+    // ── WDK-Supported Testnets ───────────────────────────────────────
+    // Ethereum testnet (Sepolia)
+    sepolia: {
+      url: process.env.SEPOLIA_RPC_URL || "https://sepolia.drpc.org",
       accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
-      chainId: 56,
-      gasPrice: GAS_PRICE_MAINNET,
-    }
+      chainId: 11155111,
+      gasPrice: toGwei(process.env.GAS_PRICE_GWEI),
+    },
+    // Polygon Amoy testnet
+    polygon: {
+      url: process.env.POLYGON_RPC_URL || "https://rpc-amoy.polygon.technology",
+      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+      chainId: 80002,
+      gasPrice: toGwei(process.env.GAS_PRICE_GWEI),
+    },
+    // Arbitrum Sepolia testnet
+    arbitrum: {
+      url: process.env.ARBITRUM_RPC_URL || "https://sepolia-rollup.arbitrum.io/rpc",
+      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+      chainId: 421614,
+      gasPrice: toGwei(process.env.GAS_PRICE_GWEI),
+    },
+    // Gnosis Chiado testnet (Plasma ecosystem)
+    plasma: {
+      url: process.env.PLASMA_RPC_URL || "https://rpc.chiadochain.net",
+      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+      chainId: 10200,
+      gasPrice: toGwei(process.env.GAS_PRICE_GWEI),
+    },
+    // Ethereum mainnet (for production)
+    ethereum: {
+      url: process.env.ETHEREUM_RPC_URL || "https://rpc.ankr.com/eth",
+      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+      chainId: 1,
+      gasPrice: toGwei(process.env.GAS_PRICE_GWEI),
+    },
   },
   etherscan: {
     apiKey: {
-      bsc: process.env.BSCAN_API_KEY || "",
-      bscTestnet: process.env.BSCAN_API_KEY || "",
-    }
+      ethereum: process.env.ETHERSCAN_API_KEY || "",
+      polygon: process.env.POLYGONSCAN_API_KEY || "",
+      arbitrum: process.env.ARBISCAN_API_KEY || "",
+      gnosis: process.env.GNOSISSCAN_API_KEY || "",
+      sepolia: process.env.ETHERSCAN_API_KEY || "",
+    },
   },
 };

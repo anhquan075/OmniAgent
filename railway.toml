@@ -10,3 +10,6 @@ context = "."
 startCommand = "node dist/index.js"
 restartPolicyType = "always"
 restartPolicyMaxRetries = 10
+volumes = [
+  { mount = "/app/cache", name = "nav-baseline" }
+]

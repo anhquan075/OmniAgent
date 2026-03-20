@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title MockMasterChef
-/// @notice Test double for PancakeSwap MasterChef V3 staking contract
+/// @notice Test double for MasterChef staking contract
 contract MockMasterChef {
     IERC20 public immutable cake;
     
@@ -47,7 +47,7 @@ contract MockMasterChef {
     }
     
     /// @notice Deposit LP tokens and harvest rewards
-    /// @dev This follows PancakeSwap MasterChef pattern: deposit(0) harvests without depositing
+    /// @dev This follows MasterChef pattern: deposit(0) harvests without depositing
     function deposit(uint256 pid, uint256 amount) external {
         PoolInfo memory pool = poolInfo[pid];
         require(pool.active, "Pool not active");

@@ -141,7 +141,7 @@ contract WDKEarnAdapterWithSwap is Ownable2Step, IWDKEarnAdapter {
     function onVaultDeposit(uint256 amount) external onlyVault {
         SafeERC20.safeTransferFrom(_inputAsset, msg.sender, address(this), amount);
         
-        // 1. Swap USDT → WDKS on PancakeSwap
+        // 1. Swap USDT → WDKS via swap router
         uint256 wdksReceived = _swapUsdtToUsdf(amount);
         
         // 2. Deposit WDKS into WDKDEX Earn

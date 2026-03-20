@@ -135,7 +135,7 @@ const FleetStatus: React.FC = () => {
           <span className="text-[9px] text-neutral-gray uppercase tracking-wider mb-0.5">Session Earnings</span>
           <div className="flex items-center gap-1.5 text-tether-teal font-heading font-bold text-xl leading-none">
             <ZapIcon className="w-3.5 h-3.5 fill-current" />
-            <span className="animate-in fade-in slide-in-from-top-1 duration-500">{fleetTotal} BNB</span>
+            <span className="animate-in fade-in slide-in-from-top-1 duration-500">{fleetTotal} ETH</span>
           </div>
         </div>
       </div>

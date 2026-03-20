@@ -23,7 +23,7 @@ const Phase = {
 async function deployFixture() {
   const [deployer, alice, bob, carol, vaultOwner] = await ethers.getSigners();
 
-  // Deploy mock USDT (18 decimals, matching BNB Chain USDT)
+  // Deploy mock USDT (18 decimals, matching mainnet USDT)
   const MockERC20 = await ethers.getContractFactory("MockERC20");
   const usdt = await MockERC20.deploy("USDT", "USDT");
 

@@ -1,6 +1,7 @@
 import { McpTool, McpExecutionContext, MCP_ERRORS } from '../types/mcp-protocol';
 import { ethers } from 'ethers';
 import { env } from '../../config/env';
+import { getWdkSigner } from '@/lib/wdk-loader';
 
 const USDT_ABI = [
   'function transfer(address to, uint256 amount) external returns (bool)',
@@ -9,14 +10,14 @@ const USDT_ABI = [
 ];
 
 function getProvider() {
-  return new ethers.JsonRpcProvider(env.BNB_RPC_URL);
+  return new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
 }
 
-function getSigner() {
-  const provider = getProvider();
-  return env.PRIVATE_KEY 
-    ? new ethers.Wallet(env.PRIVATE_KEY, provider) 
-    : ethers.Wallet.fromPhrase(env.WDK_SECRET_SEED || '', provider);
+async function getSigner() {
+  if (env.PRIVATE_KEY) {
+    return new ethers.Wallet(env.PRIVATE_KEY, getProvider());
+  }
+  return getWdkSigner();
 }
 
 function getUsdtContract(signer?: ethers.Signer) {
@@ -46,7 +47,7 @@ export const x402Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'medium',
     category: 'x402'
   },
@@ -68,7 +69,7 @@ export const x402Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'low',
     category: 'x402'
   },
@@ -87,7 +88,7 @@ export const x402Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'low',
     category: 'x402'
   },
@@ -108,7 +109,7 @@ export const x402Tools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'low',
     category: 'x402'
   }
@@ -134,7 +135,7 @@ export async function handleX402Tool(name: string, params: Record<string, unknow
           return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'providerAddress, amount, and serviceType are required' } };
         }
         
-        const signer = getSigner();
+        const signer = await getSigner();
         const usdt = getUsdtContract(signer);
         const usdtAmount = ethers.parseUnits(amount, 6);
         
@@ -157,7 +158,8 @@ export async function handleX402Tool(name: string, params: Record<string, unknow
       }
       
       case 'x402_get_balance': {
-        const address = params.address as string || await getSigner().getAddress();
+        const rawAddress = (params.address as string) || context.userWallet || await (await getSigner()).getAddress();
+        const address = ethers.getAddress(rawAddress);
         const usdt = getUsdtContract();
         const balance = await usdt.balanceOf(address);
         const decimals = await usdt.decimals();

@@ -38,7 +38,7 @@ describe("OmniAgentVault V2 — Three-Rail LP Integration", function () {
     );
 
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
-    const oracle = await MockPriceOracle.deploy(100000000n, deployer.address);
+    const oracle = await MockPriceOracle.deploy(100000000n);
 
     const MockAsyncWDKMinter = await ethers.getContractFactory(
       "MockAsyncWDKMinter"
@@ -137,7 +137,7 @@ describe("OmniAgentVault V2 — Three-Rail LP Integration", function () {
       usdt.target,
       stableSwapPool.target, // lpToken = pool itself (ERC20)
       cake.target,
-      deployer.address, // wbnb (mock placeholder for gas-gated harvest)
+      deployer.address, // nativeToken (mock placeholder for gas-gated harvest)
       stableSwapPool.target, // pool
       masterChef.target,
       router.target,
@@ -316,7 +316,7 @@ describe("OmniAgentVault V2 — Three-Rail LP Integration", function () {
       const MockPriceOracle = await ethers.getContractFactory(
         "MockPriceOracle"
       );
-      const oracle = await MockPriceOracle.deploy(100000000n, deployer.address);
+      const oracle = await MockPriceOracle.deploy(100000000n);
 
       const MockChainlinkAggregator = await ethers.getContractFactory(
         "MockChainlinkAggregator"

@@ -22,20 +22,19 @@ test.describe('MCP Tools API Tests', () => {
     const toolNames = json.result.tools.map((t: any) => t.name);
     console.log('Available tools:', toolNames);
     
-    // Check for key tool categories
     expect(toolNames.some((n: string) => n.includes('vault'))).toBeTruthy();
     expect(toolNames.some((n: string) => n.includes('balance'))).toBeTruthy();
-    expect(toolNames.some((n: string) => n.includes('risk'))).toBeTruthy();
+    expect(toolNames.some((n: string) => n.includes('engine'))).toBeTruthy();
   });
 
-  test('wdk_getVaultStatus returns JSON with vault data', async ({ request }) => {
+  test('wdk_vault_getState returns JSON with vault data', async ({ request }) => {
     const response = await request.post(`${API_URL}/api/mcp`, {
       data: {
         jsonrpc: '2.0',
         id: 2,
         method: 'tools/call',
         params: {
-          name: 'wdk_getVaultStatus',
+          name: 'wdk_vault_getState',
           arguments: { context: 'Testing vault status' }
         }
       }
@@ -49,18 +48,17 @@ test.describe('MCP Tools API Tests', () => {
     const content = JSON.parse(json.result.content[0].text);
     console.log('Vault Status:', content);
     
-    // Should have vault data
-    expect(content.totalAssets !== undefined || content.error === undefined).toBeTruthy();
+    expect(content.currentBuffer !== undefined).toBeTruthy();
   });
 
-  test('wdk_getBalance returns JSON with balance data', async ({ request }) => {
+  test('sepolia_getBalance returns JSON with balance data', async ({ request }) => {
     const response = await request.post(`${API_URL}/api/mcp`, {
       data: {
         jsonrpc: '2.0',
         id: 3,
         method: 'tools/call',
         params: {
-          name: 'wdk_getBalance',
+          name: 'sepolia_getBalance',
           arguments: { context: 'Testing balance check' }
         }
       }
@@ -75,14 +73,14 @@ test.describe('MCP Tools API Tests', () => {
     expect(content).toBeDefined();
   });
 
-  test('robot_fleet_status returns JSON with fleet data', async ({ request }) => {
+  test('x402_fleet_status returns JSON with fleet data', async ({ request }) => {
     const response = await request.post(`${API_URL}/api/mcp`, {
       data: {
         jsonrpc: '2.0',
         id: 4,
         method: 'tools/call',
         params: {
-          name: 'robot_fleet_status',
+          name: 'x402_fleet_status',
           arguments: { context: 'Testing fleet status' }
         }
       }
@@ -104,7 +102,7 @@ test.describe('MCP Tools API Tests', () => {
         jsonrpc: '2.0',
         id: 10,
         method: 'tools/call',
-        params: { name: 'wdk_getVaultStatus', arguments: { context: 'Test 1' } }
+        params: { name: 'wdk_vault_getState', arguments: { context: 'Test 1' } }
       }
     });
     expect(response1.ok()).toBeTruthy();
@@ -117,7 +115,7 @@ test.describe('MCP Tools API Tests', () => {
         jsonrpc: '2.0',
         id: 11,
         method: 'tools/call',
-        params: { name: 'wdk_getBalance', arguments: { context: 'Test 2' } }
+        params: { name: 'sepolia_getBalance', arguments: { context: 'Test 2' } }
       }
     });
     expect(response2.ok()).toBeTruthy();
@@ -130,7 +128,7 @@ test.describe('MCP Tools API Tests', () => {
         jsonrpc: '2.0',
         id: 12,
         method: 'tools/call',
-        params: { name: 'robot_fleet_status', arguments: { context: 'Test 3' } }
+        params: { name: 'x402_fleet_status', arguments: { context: 'Test 3' } }
       }
     });
     expect(response3.ok()).toBeTruthy();

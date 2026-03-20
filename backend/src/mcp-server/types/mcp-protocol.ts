@@ -15,9 +15,9 @@ export interface McpTool {
   inputSchema: McpInputSchema;
   outputSchema: McpOutputSchema;
   version: string;
-  blockchain: 'bnb' | 'solana' | 'ton';
+  blockchain: 'sepolia' | 'solana' | 'ton' | 'ethereum' | 'polygon_amoy' | 'arbitrum_sepolia' | 'gnosis_chiado';
   riskLevel: 'low' | 'medium' | 'high';
-  category: 'wallet' | 'defi' | 'bridge' | 'lending' | 'utility' | 'account-abstraction' | 'x402';
+  category: 'wallet' | 'defi' | 'bridge' | 'lending' | 'utility' | 'account-abstraction' | 'x402' | 'swap' | 'agent';
 }
 
 /**
@@ -83,6 +83,7 @@ export const MCP_ERRORS = {
   // Custom codes
   POLICY_VIOLATION: 403,
   PAYMENT_REQUIRED: 402,
+  NAV_SHIELD_BLOCKED: 422,
   TOOL_NOT_FOUND: 404,
   TOOL_EXECUTION_FAILED: 500,
 } as const;
@@ -98,7 +99,7 @@ export type ToolHandler = (params: Record<string, unknown>, context: McpExecutio
 export interface McpExecutionContext {
   requestId: string;
   timestamp: number;
-  walletNetwork?: 'bnb' | 'solana' | 'ton';
+  walletNetwork?: 'sepolia' | 'solana' | 'ton' | 'polygon_amoy' | 'arbitrum_sepolia' | 'gnosis_chiado';
   policyGuardEnabled: boolean;
   userWallet?: string;
   walletMode?: 'user' | 'agent';

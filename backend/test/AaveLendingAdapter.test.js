@@ -62,9 +62,15 @@ describe("AaveLendingAdapter", function () {
   });
 
   it("should report health factor", async function () {
-    const { adapter } = await deployFixture();
+    const { vault, asset, adapter } = await deployFixture();
+    // Supply assets first so mock returns health factor > 0
+    const amount = ethers.parseUnits("1000", 6);
+    await asset.mint(vault.address, amount);
+    await asset.connect(vault).approve(await adapter.getAddress(), amount);
+    await adapter.connect(vault).onVaultDeposit(amount);
+    
     const hf = await adapter.getHealthFactor();
-    expect(hf).to.equal(ethers.parseUnits("2", 18)); // Mock default
+    expect(hf).to.equal(ethers.parseUnits("2", 18)); // Mock returns 2e18 when deposits > 0
   });
 
   it("should restrict calls to vault only", async function () {

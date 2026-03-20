@@ -112,10 +112,6 @@ contract StrategyEngine {
         _executeCycleInternal(msg.sender, true, FlashRebalanceData(flashPool, fromAdapter, toAdapter, flashAmount));
     }
 
-    function pancakeV3FlashCallback(uint256 fee0, uint256 fee1, bytes calldata data) external {
-        _handleFlashCallback(fee0, fee1, data);
-    }
-
     function uniswapV3FlashCallback(uint256 fee0, uint256 fee1, bytes calldata data) external {
         _handleFlashCallback(fee0, fee1, data);
     }
@@ -275,7 +271,9 @@ contract StrategyEngine {
         uint256 amount0; uint256 amount1;
         if (token0 == assetToken) { amount0 = flashData.amount; } else if (token1 == assetToken) { amount1 = flashData.amount; } else { revert StrategyEngine__InvalidFlashAsset(); }
         emit FlashRebalanceRequested(flashData.flashPool, flashData.fromAdapter, flashData.toAdapter, flashData.amount);
-        pool.flash(address(vault), amount0, amount1, callbackData);
+        // FIX: Use address(this) as recipient so callback is sent to StrategyEngine
+        // (Uniswap V3 flash calls back to the recipient address)
+        pool.flash(address(this), amount0, amount1, callbackData);
         if (activeFlashContextHash != bytes32(0)) revert StrategyEngine__InvalidFlashData();
     }
 

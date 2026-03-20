@@ -3,8 +3,8 @@ pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-/// @title MockPancakeRouter
-/// @notice Test double for PancakeSwap Router with configurable swap reserves
+/// @title MockSwapRouter
+/// @notice Test double for AMM Router with configurable swap reserves
 contract MockPancakeRouter {
     // tokenIn => tokenOut => reserve mapping
     mapping(address => mapping(address => uint256)) public reserves;

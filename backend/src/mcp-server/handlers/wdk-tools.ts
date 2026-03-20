@@ -1,21 +1,16 @@
 import { McpTool, McpExecutionContext, MCP_ERRORS } from '../types/mcp-protocol';
 import { ethers } from 'ethers';
+import { provider } from '@/contracts/clients/ethers';
 import { env } from '@/config/env';
-import { getWDK, getWalletEVM, getWalletAccountEvm } from '@/lib/wdk-loader';
+import { getWDK, getWalletEVM, getWalletAccountEvm, getWdkSigner, getWdkMultiChain } from '@/lib/wdk-loader';
+import { createPendingTransactionId, storePendingTransaction, encodeTransactionData, createUnsignedTransaction } from '@/lib/user-wallet-signer';
 
 let wdkPromise: Promise<any> | null = null;
 let walletAccountPromise: Promise<any> | null = null;
 
 async function initWDK() {
   if (!wdkPromise) {
-    wdkPromise = (async () => {
-      const [WDK, WalletEVM] = await Promise.all([
-        getWDK(),
-        getWalletEVM()
-      ]);
-      await WDK.registerWallet('bnb', WalletEVM, { provider: env.BNB_RPC_URL } as any);
-      return WDK;
-    })();
+    wdkPromise = getWdkMultiChain();
   }
   return wdkPromise;
 }
@@ -25,11 +20,53 @@ async function getWalletAccount() {
     walletAccountPromise = (async () => {
       const WalletAccountEvm = await getWalletAccountEvm();
       return new WalletAccountEvm(env.WDK_SECRET_SEED, "0'/0/0", {
-        provider: env.BNB_RPC_URL
+        provider: env.SEPOLIA_RPC_URL
       });
     })();
   }
   return walletAccountPromise;
+}
+
+async function getSignerOrCreatePendingTx(
+  context: McpExecutionContext,
+  options: {
+    to: string;
+    data: string;
+    value?: bigint;
+    toolName: string;
+    description: string;
+  }
+): Promise<{ signer?: ethers.Signer; pendingTx?: { id: string; txData: string; hash: string; description: string } }> {
+  if (context.walletMode === 'user' && context.userWallet) {
+    const walletAccount = await getWalletAccount();
+    const walletAddress = await walletAccount.getAddress();
+    
+    const provider = new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
+    const nonce = await provider.getTransactionCount(walletAddress);
+    
+    const unsignedTx = createUnsignedTransaction(
+      options.to,
+      options.data,
+      options.value || 0n
+    );
+    unsignedTx.nonce = nonce;
+    
+    const pendingTxId = createPendingTransactionId();
+    storePendingTransaction(pendingTxId, unsignedTx, options.toolName, options.description);
+    
+    const { txData, hash } = encodeTransactionData(unsignedTx);
+    
+    return {
+      pendingTx: {
+        id: pendingTxId,
+        txData,
+        hash,
+        description: options.description
+      }
+    };
+  }
+  
+  return { signer: await getWdkSigner() };
 }
 
 const MOCK_AAVE_POOL_ADDRESS = env.MOCK_AAVE_POOL_ADDRESS;
@@ -37,7 +74,6 @@ const MOCK_BRIDGE_ADDRESS = env.MOCK_BRIDGE_ADDRESS;
 
 async function getAavePosition(userAddress: string) {
   if (!MOCK_AAVE_POOL_ADDRESS) throw new Error('MOCK_AAVE_POOL_ADDRESS not configured');
-  const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
   const poolAbi = [
     'function getAccountData(address user) external view returns (uint256 totalCollateralBase, uint256 totalDebtBase, uint256 healthFactor)'
   ];
@@ -52,7 +88,6 @@ async function getAavePosition(userAddress: string) {
 
 async function getBridgeQuote(amount: string, destinationChainId: string) {
   if (!MOCK_BRIDGE_ADDRESS) throw new Error('MOCK_BRIDGE_ADDRESS not configured');
-  const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
   const bridgeAbi = [
     'function quote() external view returns (uint256 nativeFee, uint256 bridgeFeeBps)'
   ];
@@ -85,7 +120,7 @@ export const wdkTools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'medium',
     category: 'defi'
   },
@@ -107,7 +142,7 @@ export const wdkTools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'medium',
     category: 'defi'
   },
@@ -130,7 +165,7 @@ export const wdkTools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'medium',
     category: 'defi'
   },
@@ -151,7 +186,7 @@ export const wdkTools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'low',
     category: 'defi'
   },
@@ -171,7 +206,7 @@ export const wdkTools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'low',
     category: 'defi'
   },
@@ -191,7 +226,7 @@ export const wdkTools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'high',
     category: 'utility'
   },
@@ -212,7 +247,7 @@ export const wdkTools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'low',
     category: 'utility'
   },
@@ -230,7 +265,7 @@ export const wdkTools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'low',
     category: 'utility'
   },
@@ -253,7 +288,7 @@ export const wdkTools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'low',
     category: 'lending'
   },
@@ -276,7 +311,7 @@ export const wdkTools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'low',
     category: 'bridge'
   },
@@ -298,7 +333,7 @@ export const wdkTools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'medium',
     category: 'lending'
   },
@@ -320,7 +355,7 @@ export const wdkTools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'medium',
     category: 'lending'
   },
@@ -345,7 +380,7 @@ export const wdkTools: McpTool[] = [
       }
     },
     version: '1.0.0',
-    blockchain: 'bnb',
+    blockchain: 'sepolia',
     riskLevel: 'high',
     category: 'bridge'
   }
@@ -362,17 +397,39 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         const walletAccount = await getWalletAccount();
         const address = await walletAccount.getAddress();
         
-        // Use ethers for minting (test token only)
-        const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
-        const signer = ethers.Wallet.fromPhrase(env.WDK_SECRET_SEED, provider);
-        
-        const usdt = new ethers.Contract(usdtAddress, [
-          'function mint(address to, uint256 amount) external',
-          'function decimals() external view returns (uint8)'
-        ], signer);
-        
         const recipient = params.recipient as string || address;
         const usdtAmount = ethers.parseUnits(amount, 6);
+        
+        const iface = new ethers.Interface([
+          'function mint(address to, uint256 amount)'
+        ]);
+        const data = iface.encodeFunctionData('mint', [recipient, usdtAmount]);
+        
+        const result = await getSignerOrCreatePendingTx(context, {
+          to: usdtAddress,
+          data,
+          value: 0n,
+          toolName: 'wdk_mint_test_token',
+          description: `Mint ${amount} USDT to ${recipient}`
+        });
+        
+        if (result.pendingTx) {
+          return {
+            success: true,
+            data: {
+              requiresSignature: true,
+              pendingTxId: result.pendingTx.id,
+              txData: result.pendingTx.txData,
+              signingHash: result.pendingTx.hash,
+              description: result.pendingTx.description
+            }
+          };
+        }
+        
+        const signer = result.signer!;
+        const usdt = new ethers.Contract(usdtAddress, [
+          'function mint(address to, uint256 amount) external'
+        ], signer);
         const tx = await usdt.mint(recipient, usdtAmount);
         await tx.wait();
         
@@ -385,9 +442,6 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         const walletAccount = await getWalletAccount();
         const address = await walletAccount.getAddress();
         
-        const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
-        const signer = ethers.Wallet.fromPhrase(env.WDK_SECRET_SEED, provider);
-        
         const vaultAddress = env.WDK_VAULT_ADDRESS;
         if (!vaultAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Vault address not configured' } };
         
@@ -395,6 +449,44 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         if (!usdtAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'USDT address not configured' } };
         
         const usdtAmount = ethers.parseUnits(amount, 6);
+        
+        const depositIface = new ethers.Interface([
+          'function deposit(uint256 assets, address receiver) external returns (uint256 shares)'
+        ]);
+        const depositData = depositIface.encodeFunctionData('deposit', [usdtAmount, address]);
+        
+        if (context.walletMode === 'user' && context.userWallet) {
+          const provider = new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
+          const nonce = await provider.getTransactionCount(address);
+          
+          const approveIface = new ethers.Interface([
+            'function approve(address spender, uint256 amount)'
+          ]);
+          const approveData = approveIface.encodeFunctionData('approve', [vaultAddress, ethers.MaxUint256]);
+          
+          const approveTx = createUnsignedTransaction(usdtAddress, approveData, 0n);
+          approveTx.nonce = nonce;
+          
+          const depositTx = createUnsignedTransaction(vaultAddress, depositData, 0n);
+          depositTx.nonce = nonce + 1;
+          
+          const approveId = createPendingTransactionId();
+          storePendingTransaction(approveId, approveTx, 'wdk_vault_deposit', `Approve vault (${amount} USDT)`);
+          
+          const depositId = createPendingTransactionId();
+          storePendingTransaction(depositId, depositTx, 'wdk_vault_deposit', `Deposit ${amount} USDT to vault`);
+          
+          return {
+            success: true,
+            data: {
+              requiresSignature: true,
+              pendingTxIds: [approveId, depositId],
+              description: `Deposit ${amount} USDT to vault`
+            }
+          };
+        }
+        
+        const signer = await getWdkSigner();
         
         const usdtAbi = [
           'function approve(address spender, uint256 amount) returns (bool)',
@@ -425,18 +517,43 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         const walletAccount = await getWalletAccount();
         const address = await walletAccount.getAddress();
         
-        const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
-        const signer = ethers.Wallet.fromPhrase(env.WDK_SECRET_SEED, provider);
-        
         const vaultAddress = env.WDK_VAULT_ADDRESS;
         if (!vaultAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Vault address not configured' } };
         
-        const vaultAbi = [
-          'function withdraw(uint256 assets, address receiver, address owner) external returns (uint256 shares)'
-        ];
-        
         const usdtAmount = ethers.parseUnits(amount, 6);
         const receiver = (params.receiver as string) || address;
+        
+        const iface = new ethers.Interface([
+          'function withdraw(uint256 assets, address receiver, address owner) external returns (uint256)'
+        ]);
+        const data = iface.encodeFunctionData('withdraw', [usdtAmount, receiver, address]);
+        
+        const result = await getSignerOrCreatePendingTx(context, {
+          to: vaultAddress,
+          data,
+          value: 0n,
+          toolName: 'wdk_vault_withdraw',
+          description: `Withdraw ${amount} USDT from vault`
+        });
+        
+        if (result.pendingTx) {
+          return {
+            success: true,
+            data: {
+              requiresSignature: true,
+              pendingTxId: result.pendingTx.id,
+              txData: result.pendingTx.txData,
+              signingHash: result.pendingTx.hash,
+              description: result.pendingTx.description
+            }
+          };
+        }
+        
+        const signer = result.signer!;
+        const vaultAbi = [
+          'function withdraw(uint256 assets, address receiver, address owner) external returns (uint256)'
+        ];
+        
         const vault = new ethers.Contract(vaultAddress, vaultAbi, signer);
         const tx = await vault.withdraw(usdtAmount, receiver, address);
         await tx.wait();
@@ -446,9 +563,9 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       
       case 'wdk_vault_getBalance': {
         const walletAccount = await getWalletAccount();
-        const address = (params.account as string) || await walletAccount.getAddress();
+        const rawAddress = (params.account as string) || context.userWallet || await walletAccount.getAddress();
+        const address = ethers.getAddress(rawAddress);
         
-        const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
         const vaultAddress = env.WDK_VAULT_ADDRESS;
         if (!vaultAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Vault address not configured' } };
         
@@ -460,7 +577,6 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       }
       
       case 'wdk_vault_getState': {
-        const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
         const vaultAddress = env.WDK_VAULT_ADDRESS;
         if (!vaultAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Vault address not configured' } };
         
@@ -476,11 +592,34 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       }
       
       case 'wdk_engine_executeCycle': {
-        const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
-        const signer = ethers.Wallet.fromPhrase(env.WDK_SECRET_SEED, provider);
         const engineAddress = env.WDK_ENGINE_ADDRESS;
         if (!engineAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Engine address not configured' } };
         
+        const iface = new ethers.Interface(['function executeCycle() external']);
+        const data = iface.encodeFunctionData('executeCycle');
+        
+        const result = await getSignerOrCreatePendingTx(context, {
+          to: engineAddress,
+          data,
+          value: 0n,
+          toolName: 'wdk_engine_executeCycle',
+          description: 'Execute strategy cycle'
+        });
+        
+        if (result.pendingTx) {
+          return {
+            success: true,
+            data: {
+              requiresSignature: true,
+              pendingTxId: result.pendingTx.id,
+              txData: result.pendingTx.txData,
+              signingHash: result.pendingTx.hash,
+              description: result.pendingTx.description
+            }
+          };
+        }
+        
+        const signer = result.signer!;
         const engineAbi = ['function executeCycle() external'];
         const engine = new ethers.Contract(engineAddress, engineAbi, signer);
         const tx = await engine.executeCycle();
@@ -490,7 +629,6 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       }
       
       case 'wdk_engine_getCycleState': {
-        const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
         const engineAddress = env.WDK_ENGINE_ADDRESS;
         if (!engineAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Engine address not configured' } };
         
@@ -507,7 +645,6 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       }
       
       case 'wdk_engine_getRiskMetrics': {
-        const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
         const engineAddress = env.WDK_ENGINE_ADDRESS;
         if (!engineAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Engine address not configured' } };
         
@@ -522,7 +659,8 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       
       case 'wdk_aave_getPosition': {
         const walletAccount = await getWalletAccount();
-        const userAddress = (params.user as string) || await walletAccount.getAddress();
+        const rawUser = (params.user as string) || context.userWallet || await walletAccount.getAddress();
+        const userAddress = ethers.getAddress(rawUser);
         const data = await getAavePosition(userAddress);
         
         return { success: true, data: {
@@ -550,8 +688,47 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         if (!amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Amount is required' } };
         if (!MOCK_AAVE_POOL_ADDRESS) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'MOCK_AAVE_POOL_ADDRESS not configured' } };
         
-        const signer = ethers.Wallet.fromPhrase(env.WDK_SECRET_SEED, new ethers.JsonRpcProvider(env.BNB_RPC_URL));
         const usdtAmount = ethers.parseUnits(amount, 6);
+        
+        if (context.walletMode === 'user' && context.userWallet) {
+          const walletAccount = await getWalletAccount();
+          const userAddress = await walletAccount.getAddress();
+          const provider = new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
+          const nonce = await provider.getTransactionCount(userAddress);
+          
+          const approveIface = new ethers.Interface([
+            'function approve(address spender, uint256 amount)'
+          ]);
+          const approveData = approveIface.encodeFunctionData('approve', [MOCK_AAVE_POOL_ADDRESS, ethers.MaxUint256]);
+          
+          const supplyIface = new ethers.Interface([
+            'function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode)'
+          ]);
+          const supplyData = supplyIface.encodeFunctionData('supply', [env.WDK_USDT_ADDRESS!, usdtAmount, userAddress, 0]);
+          
+          const approveTx = createUnsignedTransaction(env.WDK_USDT_ADDRESS!, approveData, 0n);
+          approveTx.nonce = nonce;
+          
+          const supplyTx = createUnsignedTransaction(MOCK_AAVE_POOL_ADDRESS, supplyData, 0n);
+          supplyTx.nonce = nonce + 1;
+          
+          const approveId = createPendingTransactionId();
+          storePendingTransaction(approveId, approveTx, 'wdk_aave_supply', `Approve Aave (${amount} USDT)`);
+          
+          const supplyId = createPendingTransactionId();
+          storePendingTransaction(supplyId, supplyTx, 'wdk_aave_supply', `Supply ${amount} USDT to Aave`);
+          
+          return {
+            success: true,
+            data: {
+              requiresSignature: true,
+              pendingTxIds: [approveId, supplyId],
+              description: `Supply ${amount} USDT to Aave`
+            }
+          };
+        }
+        
+        const signer = await getWdkSigner();
         const userAddress = await signer.getAddress();
         
         const usdtAbi = [
@@ -582,13 +759,41 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         if (!amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Amount is required' } };
         if (!MOCK_AAVE_POOL_ADDRESS) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'MOCK_AAVE_POOL_ADDRESS not configured' } };
         
-        const signer = ethers.Wallet.fromPhrase(env.WDK_SECRET_SEED, new ethers.JsonRpcProvider(env.BNB_RPC_URL));
+        const walletAccount = await getWalletAccount();
+        const userAddress = await walletAccount.getAddress();
+        const usdtAmount = ethers.parseUnits(amount, 6);
+        
+        const iface = new ethers.Interface([
+          'function withdraw(address asset, uint256 amount, address to) external returns (uint256)'
+        ]);
+        const data = iface.encodeFunctionData('withdraw', [env.WDK_USDT_ADDRESS!, usdtAmount, userAddress]);
+        
+        const result = await getSignerOrCreatePendingTx(context, {
+          to: MOCK_AAVE_POOL_ADDRESS,
+          data,
+          value: 0n,
+          toolName: 'wdk_aave_withdraw',
+          description: `Withdraw ${amount} USDT from Aave`
+        });
+        
+        if (result.pendingTx) {
+          return {
+            success: true,
+            data: {
+              requiresSignature: true,
+              pendingTxId: result.pendingTx.id,
+              txData: result.pendingTx.txData,
+              signingHash: result.pendingTx.hash,
+              description: result.pendingTx.description
+            }
+          };
+        }
+        
+        const signer = result.signer!;
         const poolAbi = [
           'function withdraw(address asset, uint256 amount, address to) external returns (uint256)'
         ];
         const pool = new ethers.Contract(MOCK_AAVE_POOL_ADDRESS, poolAbi, signer);
-        const usdtAmount = ethers.parseUnits(amount, 6);
-        const userAddress = await signer.getAddress();
         
         const tx = await pool.withdraw(env.WDK_USDT_ADDRESS!, usdtAmount, userAddress);
         await tx.wait();
@@ -602,9 +807,48 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         if (!destinationChainId) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Destination chain ID is required' } };
         if (!MOCK_BRIDGE_ADDRESS) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'MOCK_BRIDGE_ADDRESS not configured' } };
         
-        const signer = ethers.Wallet.fromPhrase(env.WDK_SECRET_SEED, new ethers.JsonRpcProvider(env.BNB_RPC_URL));
+        const walletAccount = await getWalletAccount();
+        const userAddress = await walletAccount.getAddress();
         const usdtAmount = ethers.parseUnits(amount, 6);
-        const recipientAddress = (params.recipientAddress as string) || await signer.getAddress();
+        const recipientAddress = (params.recipientAddress as string) || userAddress;
+        
+        if (context.walletMode === 'user' && context.userWallet) {
+          const provider = new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
+          const nonce = await provider.getTransactionCount(userAddress);
+          
+          const approveIface = new ethers.Interface([
+            'function approve(address spender, uint256 amount)'
+          ]);
+          const approveData = approveIface.encodeFunctionData('approve', [MOCK_BRIDGE_ADDRESS, ethers.MaxUint256]);
+          
+          const bridgeIface = new ethers.Interface([
+            'function bridge(address token, uint256 amount, uint256 destinationChainId, address recipient)'
+          ]);
+          const bridgeData = bridgeIface.encodeFunctionData('bridge', [env.WDK_USDT_ADDRESS!, usdtAmount, 1, recipientAddress]);
+          
+          const approveTx = createUnsignedTransaction(env.WDK_USDT_ADDRESS!, approveData, 0n);
+          approveTx.nonce = nonce;
+          
+          const bridgeTx = createUnsignedTransaction(MOCK_BRIDGE_ADDRESS, bridgeData, 0n);
+          bridgeTx.nonce = nonce + 1;
+          
+          const approveId = createPendingTransactionId();
+          storePendingTransaction(approveId, approveTx, 'wdk_bridge_usdt0', `Approve bridge (${amount} USDT)`);
+          
+          const bridgeId = createPendingTransactionId();
+          storePendingTransaction(bridgeId, bridgeTx, 'wdk_bridge_usdt0', `Bridge ${amount} USDT to chain ${destinationChainId}`);
+          
+          return {
+            success: true,
+            data: {
+              requiresSignature: true,
+              pendingTxIds: [approveId, bridgeId],
+              description: `Bridge ${amount} USDT to chain ${destinationChainId}`
+            }
+          };
+        }
+        
+        const signer = await getWdkSigner();
         
         const usdtAbi = [
           'function approve(address spender, uint256 amount) external returns (bool)',

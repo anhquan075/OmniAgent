@@ -10,7 +10,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IManagedAdapter} from "./interfaces/IManagedAdapter.sol";
-import {IVenusVToken} from "./interfaces/IVenusVToken.sol";
+import {IIdleToken} from "./interfaces/IIdleToken.sol";
 import {TransientReentrancyGuard} from "./TransientReentrancyGuard.sol";
 
 /**
@@ -32,8 +32,8 @@ contract OmniAgentVault is ERC4626, Ownable, TransientReentrancyGuard {
     IManagedAdapter public secondaryAdapter;
     IManagedAdapter public lpAdapter;
     IManagedAdapter public lendingAdapter;
-    IVenusVToken public venusVToken;
-    uint256 public venusExchangeRateScale;
+    IIdleToken public idleToken;
+    uint256 public idleExchangeRateScale;
     bool public configurationLocked;
     address public pegArbExecutor;
     
@@ -49,7 +49,7 @@ contract OmniAgentVault is ERC4626, Ownable, TransientReentrancyGuard {
     event WDKWithdrawFailed(uint256 amount);
     event EngineSet(address indexed engine);
     event PegArbExecutorSet(address indexed pegArbExecutor);
-    event VenusIdleBufferSet(address indexed venusVToken, uint256 exchangeRateScale);
+    event IdleBufferSet(address indexed idleToken, uint256 exchangeRateScale);
     event AdaptersSet(address indexed wdk, address indexed secondary, address indexed lp, address lending);
     event ConfigurationLocked();
     event YieldWithdrawn(address indexed user, address indexed receiver, uint256 amount);
@@ -68,9 +68,9 @@ contract OmniAgentVault is ERC4626, Ownable, TransientReentrancyGuard {
     error OmniAgentVault__InvalidFlashAdapter();
     error OmniAgentVault__InsufficientLiquidity();
     error OmniAgentVault__PegArbNotApproved();
-    error OmniAgentVault__VenusDecimalsInvalid();
-    error OmniAgentVault__VenusMintFailed(uint256 code);
-    error OmniAgentVault__VenusRedeemFailed(uint256 code);
+    error OmniAgentVault__IdleDecimalsInvalid();
+    error OmniAgentVault__IdleMintFailed(uint256 code);
+    error OmniAgentVault__IdleRedeemFailed(uint256 code);
     error OmniAgentVault__AdapterReportingFailure(address adapter);
     error OmniAgentVault__AssetMismatch(address adapter);
 
@@ -185,10 +185,10 @@ contract OmniAgentVault is ERC4626, Ownable, TransientReentrancyGuard {
     }
 
     function _venusUnderlyingBalance() internal view returns (uint256) {
-        if (address(venusVToken) == address(0) || venusExchangeRateScale == 0) return 0;
-        uint256 vTokenBalance = venusVToken.balanceOf(address(this));
+        if (address(idleToken) == address(0) || idleExchangeRateScale == 0) return 0;
+        uint256 vTokenBalance = idleToken.balanceOf(address(this));
         if (vTokenBalance == 0) return 0;
-        return (vTokenBalance * venusVToken.exchangeRateStored()) / venusExchangeRateScale;
+        return (vTokenBalance * idleToken.exchangeRateStored()) / idleExchangeRateScale;
     }
 
     function rebalance(
@@ -367,17 +367,17 @@ contract OmniAgentVault is ERC4626, Ownable, TransientReentrancyGuard {
                adapter == address(lendingAdapter);
     }
 
-    /// @dev 5-tier liquidity waterfall: idle -> Venus -> lending -> LP -> secondary -> WDK
+    /// @dev 5-tier liquidity waterfall: idle -> idleToken -> lending -> LP -> secondary -> WDK
     function _ensureLiquid(uint256 needed) internal {
         uint256 idle = IERC20(asset()).balanceOf(address(this));
         if (idle >= needed) return;
 
-        // Tier 1: Pull from Venus
-        if (address(venusVToken) != address(0)) {
+        // Tier 1: Pull from idle token
+        if (address(idleToken) != address(0)) {
             uint256 venusIdle = _venusUnderlyingBalance();
             if (venusIdle > 0) {
                 uint256 still = needed - idle;
-                _redeemFromVenus(Math.min(still, venusIdle));
+                _redeemFromIdle(Math.min(still, venusIdle));
                 idle = IERC20(asset()).balanceOf(address(this));
                 if (idle >= needed) return;
             }
@@ -430,14 +430,14 @@ contract OmniAgentVault is ERC4626, Ownable, TransientReentrancyGuard {
         if (IERC20(asset()).balanceOf(address(this)) < needed) revert OmniAgentVault__InsufficientLiquidity();
     }
 
-    function _redeemFromVenus(uint256 amount) internal {
-        uint256 result = venusVToken.redeemUnderlying(amount);
-        if (result != 0) revert OmniAgentVault__VenusRedeemFailed(result);
+    function _redeemFromIdle(uint256 amount) internal {
+        uint256 result = idleToken.redeemUnderlying(amount);
+        if (result != 0) revert OmniAgentVault__IdleRedeemFailed(result);
     }
 
-    function _mintToVenus(uint256 amount) internal {
-        uint256 result = venusVToken.mint(amount);
-        if (result != 0) revert OmniAgentVault__VenusMintFailed(result);
+    function _mintToIdle(uint256 amount) internal {
+        uint256 result = idleToken.mint(amount);
+        if (result != 0) revert OmniAgentVault__IdleMintFailed(result);
     }
 
     function _decimalsOffset() internal view override returns (uint8) {

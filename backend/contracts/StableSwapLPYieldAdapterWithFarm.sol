@@ -12,9 +12,9 @@ import {IMasterChef} from "./interfaces/IMasterChef.sol";
 import {IPancakeRouter} from "./interfaces/IPancakeRouter.sol";
 
 /// @title StableSwapLPYieldAdapterWithFarm
-/// @notice 3rd yield rail: deposits USDT into PCS StableSwap pool, stakes LP in MasterChef, harvests CAKE rewards.
-/// @dev Coin index 0 = WDKS, 1 = USDT in the PCS pool.
-///      Implements full "robot route": LP deposit → MasterChef staking → CAKE harvest → swap → redeploy.
+/// @notice 3rd yield rail: deposits USDT into StableSwap pool, stakes LP in MasterChef, harvests rewards.
+/// @dev Coin index 0 = WDKS, 1 = USDT in the StableSwap pool.
+///      Implements full "robot route": LP deposit → MasterChef staking → reward harvest → swap → redeploy.
 ///
 ///      SECURITY NOTE: harvestRewards() is permissionless — anyone may trigger it.
 ///      All harvested USDT is forwarded to vault, never to the caller.
@@ -36,7 +36,7 @@ contract StableSwapLPYieldAdapterWithFarm is Ownable2Step, ReentrancyGuard, IMan
     IERC20 public immutable usdt;
     IERC20 public immutable lpToken;
     IERC20 public immutable cake;
-    address public immutable wbnb;
+    address public immutable weth;
     IStableSwapPool public immutable pool;
     IMasterChef public immutable masterChef;
     IPancakeRouter public immutable router;
@@ -71,7 +71,7 @@ contract StableSwapLPYieldAdapterWithFarm is Ownable2Step, ReentrancyGuard, IMan
         address usdt_,
         address lpToken_,
         address cake_,
-        address wbnb_,
+        address weth_,
         address pool_,
         address masterChef_,
         address router_,
@@ -81,7 +81,7 @@ contract StableSwapLPYieldAdapterWithFarm is Ownable2Step, ReentrancyGuard, IMan
         if (usdt_ == address(0)) revert StableSwapLP__ZeroAddress();
         if (lpToken_ == address(0)) revert StableSwapLP__ZeroAddress();
         if (cake_ == address(0)) revert StableSwapLP__ZeroAddress();
-        if (wbnb_ == address(0)) revert StableSwapLP__ZeroAddress();
+        if (weth_ == address(0)) revert StableSwapLP__ZeroAddress();
         if (pool_ == address(0)) revert StableSwapLP__ZeroAddress();
         if (masterChef_ == address(0)) revert StableSwapLP__ZeroAddress();
         if (router_ == address(0)) revert StableSwapLP__ZeroAddress();
@@ -89,7 +89,7 @@ contract StableSwapLPYieldAdapterWithFarm is Ownable2Step, ReentrancyGuard, IMan
         usdt = IERC20(usdt_);
         lpToken = IERC20(lpToken_);
         cake = IERC20(cake_);
-        wbnb = wbnb_;
+        weth = weth_;
         pool = IStableSwapPool(pool_);
         masterChef = IMasterChef(masterChef_);
         router = IPancakeRouter(router_);
@@ -224,12 +224,12 @@ contract StableSwapLPYieldAdapterWithFarm is Ownable2Step, ReentrancyGuard, IMan
 
         // 2b. Gas-gated profitability check
         if (harvestGasEstimate > 0 && harvestGasMultiplier > 0 && tx.gasprice > 0) {
-            uint256 gasCostBnb = harvestGasEstimate * tx.gasprice;
-            // Convert gas cost (BNB) → USDT via router
+            uint256 gasCostNative = harvestGasEstimate * tx.gasprice;
+            // Convert gas cost (WETH) → USDT via router
             address[] memory gasPath = new address[](2);
-            gasPath[0] = wbnb;
+            gasPath[0] = weth;
             gasPath[1] = address(usdt);
-            try router.getAmountsOut(gasCostBnb, gasPath) returns (uint256[] memory gasAmounts) {
+            try router.getAmountsOut(gasCostNative, gasPath) returns (uint256[] memory gasAmounts) {
                 uint256 gasCostUsdt = gasAmounts[1] * harvestGasMultiplier;
                 // Preview CAKE → USDT value
                 address[] memory cakePath = new address[](2);
@@ -245,7 +245,7 @@ contract StableSwapLPYieldAdapterWithFarm is Ownable2Step, ReentrancyGuard, IMan
             }
         }
 
-        // 3. Swap CAKE → USDT via PancakeSwap router
+        // 3. Swap reward token → USDT via router
         address[] memory path = new address[](2);
         path[0] = address(cake);
         path[1] = address(usdt);

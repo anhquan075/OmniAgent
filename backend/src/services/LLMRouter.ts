@@ -18,7 +18,7 @@ const ROUTING_RULES = {
     'vault', 'strategy', 'rebalance', 'usdt', 'xaut', 'gold', 'crypto', 'defi',
     'yield', 'risk', 'depeg', 'peg', 'asset', 'allocation', 'emergency',
     'circuit', 'breaker', 'sharpe', 'bridge', 'cross-chain', 'solana',
-    'bnb', 'ethereum', 'price', 'oracle', 'tether', 'stablecoin',
+    'sepolia', 'ethereum', 'price', 'oracle', 'tether', 'stablecoin',
     'liquidity', 'apy', 'apr', 'transaction', 'wallet', 'deposit',
     'withdraw', 'swap', 'exchange', 'token', 'nft', 'smart contract'
   ],

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-/// @title IPancakeRouter — PancakeSwap V2/V3 Router interface for token swaps
+/// @title IPancakeRouter — Uniswap V3 Router interface for token swaps
 /// @notice Minimal interface for swapping USDT → WDKS and CAKE → USDT
 interface IPancakeRouter {
     /// @notice Swap exact tokens for tokens with deadline protection

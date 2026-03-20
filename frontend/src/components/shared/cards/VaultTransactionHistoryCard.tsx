@@ -1,4 +1,4 @@
-const BSCSCAN = "https://bscscan.com/tx/";
+const BSCSCAN = "https://sepolia.etherscan.io/tx/";
 
 function shortHash(hash) {
   if (!hash) return null;
@@ -11,7 +11,7 @@ function fmtTime(iso) {
 }
 
 export function VaultTransactionHistoryCard({ txHistory, onClear, blockExplorer }) {
-  const explorerTxBase = blockExplorer ? `${blockExplorer}/tx/` : "https://bscscan.com/tx/";
+  const explorerTxBase = blockExplorer ? `${blockExplorer}/tx/` : "https://sepolia.etherscan.io/tx/";
   const showClear = txHistory?.length > 0 && typeof onClear === "function";
 
   if (!txHistory?.length) {

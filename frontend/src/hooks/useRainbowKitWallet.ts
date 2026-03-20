@@ -33,10 +33,10 @@ export function useRainbowKitWallet() {
 
   const networkLabel = !networkChainId
     ? "Unknown"
-    : networkChainId === 56n
-    ? "BNB Mainnet"
-    : networkChainId === 97n
-    ? "BNB Testnet"
+    : networkChainId === 1n
+    ? "Ethereum Mainnet"
+    : networkChainId === 11155111n
+    ? "Sepolia"
     : `Chain ${networkChainId}`;
 
   return {

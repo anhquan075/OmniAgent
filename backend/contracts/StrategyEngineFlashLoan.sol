@@ -36,7 +36,7 @@ contract StrategyEngineFlashLoan is IUniswapV3FlashCallback, ReentrancyGuard, Ow
     using SafeERC20 for IERC20;
 
     address public immutable asset; // USDT
-    address public immutable pcsV3Pool; // USDT/BNB or similar high-liquidity pool
+    address public immutable uniswapV3Pool; // USDT/WETH or similar high-liquidity pool
     
     // Config
     bool public isToken0; // Is USDT token0 or token1 in the pool?
@@ -47,10 +47,10 @@ contract StrategyEngineFlashLoan is IUniswapV3FlashCallback, ReentrancyGuard, Ow
 
     event AtomicRebalance(address indexed fromAdapter, address indexed toAdapter, uint256 amount);
 
-    constructor(address _asset, address _pcsV3Pool, bool _isToken0) Ownable(msg.sender) {
-        if (_asset == address(0) || _pcsV3Pool == address(0)) revert StrategyEngineFlashLoan__ZeroAddress();
+    constructor(address _asset, address _uniswapV3Pool, bool _isToken0) Ownable(msg.sender) {
+        if (_asset == address(0) || _uniswapV3Pool == address(0)) revert StrategyEngineFlashLoan__ZeroAddress();
         asset = _asset;
-        pcsV3Pool = _pcsV3Pool;
+        uniswapV3Pool = _uniswapV3Pool;
         isToken0 = _isToken0;
     }
 
@@ -79,18 +79,18 @@ contract StrategyEngineFlashLoan is IUniswapV3FlashCallback, ReentrancyGuard, Ow
         uint256 amount1 = isToken0 ? 0 : amount;
 
         // Triggers the flash loan, which calls uniswapV3FlashCallback
-        IUniswapV3Pool(pcsV3Pool).flash(address(this), amount0, amount1, data);
+        IUniswapV3Pool(uniswapV3Pool).flash(address(this), amount0, amount1, data);
 
         emit AtomicRebalance(fromAdapter, toAdapter, amount);
     }
 
-    /// @notice Callback executed by the PancakeSwap V3 pool during the flash loan
+    /// @notice Callback executed by the Uniswap V3 pool during the flash loan
     function uniswapV3FlashCallback(
         uint256 fee0,
         uint256 fee1,
         bytes calldata data
     ) external override {
-        if (msg.sender != pcsV3Pool) revert StrategyEngineFlashLoan__Unauthorized();
+        if (msg.sender != uniswapV3Pool) revert StrategyEngineFlashLoan__Unauthorized();
 
         FlashData memory flashData = abi.decode(data, (FlashData));
         uint256 fee = isToken0 ? fee0 : fee1;
@@ -108,6 +108,6 @@ contract StrategyEngineFlashLoan is IUniswapV3FlashCallback, ReentrancyGuard, Ow
         if (withdrawn < totalRepayment) revert StrategyEngineFlashLoan__InsufficientWithdrawal();
 
         // 3. Repay the flash loan
-        IERC20(asset).safeTransfer(pcsV3Pool, totalRepayment);
+        IERC20(asset).safeTransfer(uniswapV3Pool, totalRepayment);
     }
 }

@@ -76,8 +76,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
 
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
     const oracle = await MockPriceOracle.deploy(
-      ethers.parseUnits("1", 8),
-      deployer.address
+      ethers.parseUnits("1", 8)
     );
     await oracle.waitForDeployment();
 
@@ -231,8 +230,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
 
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
     const oracle = await MockPriceOracle.deploy(
-      ethers.parseUnits("1", 8),
-      deployer.address
+      ethers.parseUnits("1", 8)
     );
     await oracle.waitForDeployment();
 

@@ -18,8 +18,8 @@ export function GlowCard({ children, className }: GlowCardProps) {
       }}
       transition={{ duration: 0.3, ease: "easeOut" }}
       className={cn(
-        "bg-bg-card border border-bnb-gold/20 rounded-2xl p-6",
-        "transition-colors duration-300 hover:border-bnb-gold/40",
+        "bg-bg-card border border-yellow-500/20 rounded-2xl p-6",
+        "transition-colors duration-300 hover:border-yellow-500/40",
         "transform-gpu will-change-[transform,box-shadow]",
         className
       )}

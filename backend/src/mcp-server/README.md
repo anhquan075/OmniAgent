@@ -16,7 +16,7 @@ curl -X POST http://localhost:3001/api/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
-## Available Tools (32 total)
+## Available Tools (29 total)
 
 ### X402 (4 tools)
 | Tool | Description | Risk |
@@ -52,15 +52,16 @@ curl -X POST http://localhost:3001/api/mcp \
 | `aa_getUserOpReceipt` | Get op receipt | Low |
 | `aa_getSupportedEntryPoints` | Get entry points | Low |
 
-### BNB Chain (7 tools)
+### Sepolia (7 tools)
 | Tool | Description | Risk |
 |------|-------------|------|
-| `bnb_createWallet` | Create/retrieve BNB wallet | Low |
-| `bnb_getBalance` | Get BNB/USDT balance | Low |
-| `bnb_transfer` | Transfer BNB/USDT | Medium |
-| `bnb_swap` | Swap tokens via PancakeSwap | Medium |
-| `bnb_lend` | Lend via Venus | Medium |
-| `bnb_bridge` | Bridge via LayerZero | High |
+| `sepolia_create_wallet` | Create/retrieve Sepolia wallet | Low |
+| `sepolia_get_balance` | Get ETH/USDT balance | Low |
+| `sepolia_transfer` | Transfer ETH/USDT | Medium |
+| `sepolia_swap` | Swap tokens via Uniswap | Medium |
+| `sepolia_supply_aave` | Supply via Aave | Medium |
+| `sepolia_withdraw_aave` | Withdraw from Aave | Medium |
+| `sepolia_bridge_layerzero` | Bridge via LayerZero | High |
 
 ### Solana (4 tools)
 | Tool | Description | Risk |
@@ -87,9 +88,9 @@ All transaction tools integrate with PolicyGuard:
 ## Environment
 
 ```bash
-# .env.wdk
+# .env
 WDK_SECRET_SEED=your_seed
-BNB_RPC_URL=https://bsc-testnet-dataseed.bnbchain.org
+SEPOLIA_RPC_URL=https://ethereum-sepolia.publicnode.com
 SOLANA_RPC_URL=https://api.testnet.solana.com
 TON_RPC_URL=https://testnet.toncenter.com
 ```

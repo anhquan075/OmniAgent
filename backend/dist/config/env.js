@@ -49,10 +49,10 @@ if (fs.existsSync(legacyEnvPath)) {
     logger_1.logger.warn('[Env] Using .env.wdk (deprecated). Please migrate to .env');
     dotenv.config({ path: legacyEnvPath, override: false });
 }
-logger_1.logger.info({ rpcUrl: process.env.BNB_RPC_URL }, '[Env] BNB_RPC_URL from process.env');
+logger_1.logger.info({ rpcUrl: process.env.SEPOLIA_RPC_URL }, '[Env] SEPOLIA_RPC_URL from process.env');
 const envSchema = zod_1.z.object({
     PORT: zod_1.z.string().default('3001'),
-    BNB_RPC_URL: zod_1.z.string().default('https://binance.llamarpc.com'),
+    SEPOLIA_RPC_URL: zod_1.z.string().default('https://ethereum-sepolia.publicnode.com'),
     SOLANA_RPC_URL: zod_1.z.string().default('https://api.mainnet-beta.solana.com'),
     TON_RPC_URL: zod_1.z.string().default('https://toncenter.com/api/v2/jsonRPC'),
     TON_API_KEY: zod_1.z.string().optional(),
@@ -71,6 +71,9 @@ const envSchema = zod_1.z.object({
     WDK_SHARPE_TRACKER_ADDRESS: zod_1.z.string().optional(),
     WDK_AAVE_ADAPTER_ADDRESS: zod_1.z.string().optional(),
     WDK_LZ_ADAPTER_ADDRESS: zod_1.z.string().optional(),
+    WDK_POLICY_GUARD_ADDRESS: zod_1.z.string().optional(),
+    WDK_AGENT_NFA_ADDRESS: zod_1.z.string().optional(),
+    AGENT_RISK_PARAMS_ADDRESS: zod_1.z.string().optional(),
     GITHUB_WEBHOOK_SECRET: zod_1.z.string().optional(),
     OPENROUTER_API_KEY: zod_1.z.string().optional(),
     PRIVATE_KEY: zod_1.z.string().optional(),
@@ -91,9 +94,14 @@ const envSchema = zod_1.z.object({
     ERC4337_FACTORY_ADDRESS: zod_1.z.string().optional(),
     ERC4337_PAYMASTER_ADDRESS: zod_1.z.string().optional(),
     ERC4337_ENTRYPOINT_ADDRESS: zod_1.z.string().default('0x5FF137D4a0ADCA4B1FB0b8274Ea4dE461a706c12'),
+    ERC4337_ACCOUNT_CREATED_TOPIC: zod_1.z.string().optional(),
     MOCK_AAVE_POOL_ADDRESS: zod_1.z.string().optional(),
     MOCK_BRIDGE_ADDRESS: zod_1.z.string().optional(),
     MOCK_ATOKEN_ADDRESS: zod_1.z.string().optional(),
+    AAVE_POOL_ADDRESS: zod_1.z.string().optional(),
+    LZ_ENDPOINT_ADDRESS: zod_1.z.string().optional(),
+    LZ_BRIDGE_OPTIONS: zod_1.z.string().default('0x00030100110100000000000000000000000000030d40'),
+    DEFAULT_CHAIN_ID: zod_1.z.string().default('11155111').transform(Number),
 });
 const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-/// @title IMasterChef — PancakeSwap MasterChef V2/V3 interface for LP staking
-/// @notice Interface for staking LP tokens and harvesting CAKE rewards
+/// @title IMasterChef — MasterChef interface for LP staking
+/// @notice Interface for staking LP tokens and harvesting rewards
 interface IMasterChef {
     /// @notice Deposit LP tokens into the farm pool
     /// @param pid Pool ID

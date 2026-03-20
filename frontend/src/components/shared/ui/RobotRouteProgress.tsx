@@ -3,11 +3,11 @@ import { CheckCircle2, CircleDashed, Loader2, Route } from 'lucide-react';
 
 const STEPS = [
   "Depositing USDT to Vault",
-  "Engine swapping USDT → WDKS via PancakeSwap",
+  "Engine swapping USDT → WDKS via DEX",
   "Depositing WDKS → WDKDEX Earn (asWDKS)",
   "Adding liquidity to WDKS/USDT pool",
-  "Staking LP tokens in MasterChef",
-  "Auto-harvesting CAKE & redeploying yield"
+  "Staking LP tokens in Farm",
+  "Auto-harvesting rewards & redeploying yield"
 ];
 
 export function RobotRouteProgress({ isExecuting, onComplete }) {
@@ -20,7 +20,7 @@ export function RobotRouteProgress({ isExecuting, onComplete }) {
     }
 
     // Simulate the rapid atomic execution steps while waiting for the block to mine
-    // BNB block time is ~3 seconds, so we cycle through the 6 steps very quickly
+    // ETH block time is ~12 seconds, so we cycle through the 6 steps very quickly
     let currentStep = 0;
     const interval = setInterval(() => {
       if (currentStep < STEPS.length) {

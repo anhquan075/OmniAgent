@@ -73,7 +73,7 @@ export function getFleetStatus() {
 function loadConfig(): FleetConfig {
   const config = { ...robotFleetConfig } as FleetConfig;
 
-  config.rpcUrl = process.env.BNB_RPC_URL || config.rpcUrl || 'https://bsc-testnet.public.blastapi.io';
+  config.rpcUrl = process.env.SEPOLIA_RPC_URL || config.rpcUrl || 'https://ethereum-sepolia.publicnode.com';
   config.privateKey = process.env.PRIVATE_KEY || process.env.ROBOT_FLEET_PRIVATE_KEY || process.env.WDK_SECRET_SEED || config.privateKey;
 
   return config;

@@ -1,22 +1,23 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { bsc, bscTestnet } from 'wagmi/chains';
+import { sepolia } from 'wagmi/chains';
 import { createStorage, cookieStorage } from 'wagmi';
 
 /**
  * Get the initial chain based on VITE_DEFAULT_NETWORK environment variable
- * @returns {Object} The chain object (bscTestnet or bsc)
+ * @returns {Object} The chain object (sepolia or mainnet)
  */
 export function getInitialChain() {
   const network = import.meta.env.VITE_DEFAULT_NETWORK || 'testnet';
   
   switch (network.toLowerCase()) {
     case 'mainnet':
-    case 'bsc':
-      return bsc;
+    case 'ethereum':
+    case 'eth':
+      return mainnet;
     case 'testnet':
-    case 'bsc-testnet':
+    case 'sepolia':
     default:
-      return bscTestnet;
+      return sepolia;
   }
 }
 
@@ -25,14 +26,7 @@ export function getInitialChain() {
  * @returns {Array} Array of supported chain objects
  */
 function getSupportedChains() {
-  const network = import.meta.env.VITE_DEFAULT_NETWORK || 'testnet';
-  
-  // Support both testnet and mainnet
-  if (network.toLowerCase() === 'mainnet' || network.toLowerCase() === 'bsc') {
-    return [bsc, bscTestnet];
-  }
-  
-  return [bscTestnet, bsc];
+  return [sepolia];
 }
 
 export const wagmiConfig = getDefaultConfig({

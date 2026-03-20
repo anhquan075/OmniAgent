@@ -1,6 +1,7 @@
-import { ethers, Contract } from 'ethers';
+import { ethers, Contract, Signer } from 'ethers';
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
+import { getWdkSigner } from '@/lib/wdk-loader';
 
 // Load ABIs
 import {
@@ -12,8 +13,22 @@ import {
   GroupSyndicateAbi
 } from '../abis';
 
-logger.info({ rpcUrl: env.BNB_RPC_URL }, '[Ethers] Initializing provider');
-const provider = new ethers.JsonRpcProvider(env.BNB_RPC_URL);
+logger.info({ rpcUrl: env.SEPOLIA_RPC_URL }, '[Ethers] Initializing provider');
+export const provider = new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
+
+let signerPromise: Promise<Signer> | null = null;
+
+export async function getSigner(): Promise<Signer> {
+  if (!signerPromise) {
+    signerPromise = (async () => {
+      if (env.PRIVATE_KEY) {
+        return new ethers.Wallet(env.PRIVATE_KEY, provider);
+      }
+      return getWdkSigner(env.SEPOLIA_RPC_URL);
+    })();
+  }
+  return signerPromise;
+}
 
 export const getContracts = () => {
   const engineAbi = StrategyEngineAbi;

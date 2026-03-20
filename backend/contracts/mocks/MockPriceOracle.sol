@@ -1,31 +1,41 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IPriceOracle} from "../interfaces/IPriceOracle.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
+/**
+ * @title MockPriceOracle
+ * @notice Mock oracle for testing TWAP functionality
+ */
 contract MockPriceOracle is IPriceOracle, Ownable {
     uint256 private _price;
-    bool public locked;
+    bool private _locked;
 
-    constructor(uint256 initialPrice, address initialOwner) Ownable(initialOwner) {
-        require(initialPrice > 0, "initial price is zero");
+    constructor(uint256 initialPrice) Ownable(msg.sender) {
         _price = initialPrice;
+        _locked = false;
     }
 
-    function setPrice(uint256 price_) external onlyOwner {
-        require(price_ > 0, "price is zero");
-        require(!locked, "oracle locked");
-        _price = price_;
-    }
-
-    function lock() external onlyOwner {
-        require(!locked, "oracle locked");
-        locked = true;
-        renounceOwnership();
-    }
-
-    function getPrice() external view returns (uint256) {
+    function getPrice() external view override returns (uint256) {
         return _price;
+    }
+
+    function locked() external view override returns (bool) {
+        return _locked;
+    }
+
+    function setPrice(uint256 newPrice) external {
+        if (_locked) revert("Locked");
+        _price = newPrice;
+    }
+
+    function setLocked(bool isLocked) external {
+        _locked = isLocked;
+    }
+
+    function lock() external {
+        _locked = true;
+        renounceOwnership();
     }
 }

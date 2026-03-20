@@ -15,44 +15,40 @@ interface TransactionResult {
   receipt?: any;
 }
 
-/**
- * Idempotent payment handler for robot fleet
- * Handles "already known" errors gracefully by:
- * 1. Detecting when transaction already exists in mempool
- * 2. Waiting for existing transaction to complete
- * 3. Managing nonces to prevent duplicates
- * 4. Implementing exponential backoff retry
- */
 export class RobotFleetPaymentHandler {
   private pendingTxs: Map<string, PendingTx> = new Map();
   private nonceCache: Map<string, number> = new Map();
   private readonly ALREADY_KNOWN_PATTERN = /already\s+known|nonce\s+too\s+low/i;
-  private readonly TIMEOUT_MS = 120000; // 2 minutes
+  private readonly TIMEOUT_MS = 120000;
   private readonly MAX_RETRIES = 3;
   private readonly BASE_BACKOFF_MS = 1000;
   private readonly GAS_BUFFER_PERCENT = 50n;
   private readonly FALLBACK_GAS_LIMIT = 100000n;
+  private _addressPromise: Promise<string> | null = null;
 
   constructor(
-    private wallet: ethers.Wallet,
+    private wallet: ethers.Signer,
     private provider: ethers.JsonRpcProvider
   ) {}
 
-  /**
-   * Send payment idempotently
-   * Returns existing tx if "already known" error occurs
-   */
+  private async getAddress(): Promise<string> {
+    if (!this._addressPromise) {
+      this._addressPromise = this.wallet.getAddress();
+    }
+    return this._addressPromise;
+  }
+
   async sendPayment(
     amount: string,
     toAddress: string,
     options?: { gasLimit?: bigint; maxRetries?: number }
   ): Promise<TransactionResult> {
     const maxRetries = options?.maxRetries ?? this.MAX_RETRIES;
+    const address = await this.getAddress();
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        // Check if sufficient balance
-        const balance = await this.provider.getBalance(this.wallet.address);
+        const balance = await this.provider.getBalance(address);
         const amountWei = ethers.parseEther(amount);
 
         if (balance < amountWei) {
@@ -61,7 +57,6 @@ export class RobotFleetPaymentHandler {
           );
         }
 
-        // Get current nonce
         const nonce = await this.getNonce();
 
         let gasLimit: bigint;
@@ -70,7 +65,7 @@ export class RobotFleetPaymentHandler {
         } else {
           try {
             const estimated = await this.provider.estimateGas({
-              from: this.wallet.address,
+              from: address,
               to: toAddress,
               value: amountWei
             });
@@ -94,7 +89,6 @@ export class RobotFleetPaymentHandler {
           nonce
         });
 
-        // Cache the pending transaction
         this.pendingTxs.set(tx.hash, {
           hash: tx.hash,
           nonce,
@@ -113,20 +107,16 @@ export class RobotFleetPaymentHandler {
         const errorMsg = error.message || String(error);
         const errorCode = error.code || '';
 
-        // Handle TRANSACTION_REPLACED error (repriced/accelerated transaction)
-        // When ethers.js detects a transaction was replaced with a higher gas price, 
-        // it provides the replacement transaction hash and receipt
         if (errorCode === 'TRANSACTION_REPLACED' && error.replacement?.hash) {
           logger.info(
-            { 
-              originalHash: error.hash, 
+            {
+              originalHash: error.hash,
               replacementHash: error.replacement.hash,
-              reason: error.reason 
+              reason: error.reason
             },
             '[PaymentHandler] Transaction was replaced/repriced, using replacement'
           );
-          
-          // The replacement transaction has been confirmed on-chain, return it gracefully
+
           return {
             hash: error.replacement.hash,
             status: 'receipt_found',
@@ -134,8 +124,6 @@ export class RobotFleetPaymentHandler {
           };
         }
 
-        // Handle "already known" error (ethers uses NONCE_EXPIRED code for -32000 RPC errors)
-        // Error structure in ethers v6: { code: 'UNKNOWN_ERROR', error: { code: -32000, message: 'already known' } }
         const rpcError = error.error || error.info?.error;
         const isNonceError =
           this.ALREADY_KNOWN_PATTERN.test(errorMsg) ||
@@ -149,15 +137,13 @@ export class RobotFleetPaymentHandler {
             '[PaymentHandler] Transaction already in mempool'
           );
 
-          // Try to find the existing transaction
           const existing = await this.findExistingTransaction(
             toAddress,
             amount
           );
-          
+
           let txHash = existing?.hash;
-          
-          // If not found in pendingTxs, try various methods to extract hash
+
           if (!txHash) {
             if (error.hash) {
               txHash = error.hash;
@@ -211,8 +197,7 @@ export class RobotFleetPaymentHandler {
               }
             }
           }
-          
-          // If we still don't have a hash, we can't proceed
+
           if (!txHash) {
             const errorKeys = Object.keys(error).join(', ');
             logger.error(
@@ -223,13 +208,12 @@ export class RobotFleetPaymentHandler {
               `[PaymentHandler] Transaction already in mempool but could not identify hash`
             );
           }
-          
+
           logger.info(
             { hash: txHash },
             '[PaymentHandler] Found existing transaction in mempool'
           );
-          
-          // Wait for the existing transaction to complete
+
           try {
             const receipt = await this.provider.waitForTransaction(
               txHash,
@@ -252,20 +236,17 @@ export class RobotFleetPaymentHandler {
               { hash: txHash, error: waitError.message },
               '[PaymentHandler] Could not wait for existing transaction receipt'
             );
-            // Return hash even if receipt not available yet
             return {
               hash: txHash,
               status: 'already_known'
             };
           }
-          
-          // Should not reach here
+
           throw new Error(
             `[PaymentHandler] Unexpected state after handling "already known" error`
           );
         }
 
-        // Non-recoverable error or max retries exceeded (for non-nonce errors)
         if (attempt === maxRetries - 1) {
           logger.error(
             { error: errorMsg, attempts: attempt + 1 },
@@ -274,7 +255,6 @@ export class RobotFleetPaymentHandler {
           throw error;
         }
 
-        // Retry other transient errors
         if (this.isTransientError(error)) {
           const backoffMs = this.BASE_BACKOFF_MS * Math.pow(2, attempt);
           logger.warn(
@@ -282,7 +262,7 @@ export class RobotFleetPaymentHandler {
             '[PaymentHandler] Transient error, retrying'
           );
           await this.sleep(backoffMs);
-          this.nonceCache.delete(this.wallet.address);
+          this.nonceCache.delete(address);
           continue;
         }
 
@@ -295,25 +275,19 @@ export class RobotFleetPaymentHandler {
     );
   }
 
-  /**
-   * Try to find existing transaction in mempool
-   */
   private async findExistingTransaction(
     toAddress: string,
     amount: string
   ): Promise<{ hash: string } | null> {
-    // Check pending transactions we've tracked
     for (const [hash, tx] of this.pendingTxs) {
       if (
         tx.to.toLowerCase() === toAddress.toLowerCase() &&
         tx.amount === amount
       ) {
-        // Verify it's still pending (not mined yet)
         const receipt = await this.provider.getTransactionReceipt(hash);
         if (!receipt) {
           return { hash };
         } else if (receipt.blockNumber) {
-          // Transaction mined, return receipt info
           logger.info(
             { hash, blockNumber: receipt.blockNumber },
             '[PaymentHandler] Found mined transaction'
@@ -326,11 +300,8 @@ export class RobotFleetPaymentHandler {
     return null;
   }
 
-  /**
-   * Get nonce with caching and invalidation on error
-   */
   private async getNonce(): Promise<number> {
-    const key = this.wallet.address;
+    const key = await this.getAddress();
     const cached = this.nonceCache.get(key);
 
     if (cached !== undefined) {
@@ -344,9 +315,6 @@ export class RobotFleetPaymentHandler {
     return nonce;
   }
 
-  /**
-   * Check if error is transient (retryable)
-   */
   private isTransientError(error: any): boolean {
     const msg = (error.message || String(error)).toLowerCase();
     return (
@@ -363,11 +331,7 @@ export class RobotFleetPaymentHandler {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  /**
-   * Clean up old pending transactions
-   */
   cleanupOldTransactions(ageMs: number = 600000): void {
-    // 10 minutes default
     const now = Date.now();
     for (const [hash, tx] of this.pendingTxs) {
       if (now - tx.timestamp > ageMs) {
@@ -380,21 +344,15 @@ export class RobotFleetPaymentHandler {
     }
   }
 
-  /**
-   * Get pending transactions count
-   */
   getPendingCount(): number {
     return this.pendingTxs.size;
   }
 }
 
-/**
- * Singleton instance
- */
 let instance: RobotFleetPaymentHandler | null = null;
 
 export function initPaymentHandler(
-  wallet: ethers.Wallet,
+  wallet: ethers.Signer,
   provider: ethers.JsonRpcProvider
 ): RobotFleetPaymentHandler {
   instance = new RobotFleetPaymentHandler(wallet, provider);

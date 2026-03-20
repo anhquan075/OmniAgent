@@ -25,9 +25,15 @@ OmniAgent is an autonomous, non-custodial yield routing stack. It introduces a n
 | **Technical Correctness** | PolicyGuard middleware with hard limits enforced at code level |
 | **Agent Autonomy** | Adaptive loop that dynamically schedules based on ZK-Risk level |
 | **Economic Soundness** | X402 robot economy - AI pays AI using USDT |
-| **Real-World Applicability** | True Multi-VM (BNB + Solana + TON) |
+| **Real-World Applicability** | True Multi-VM (Sepolia + Solana + TON) |
 | **Visible Reasoning** | AI thinking shown in real-time via native model reasoning |
 | **Dynamic Suggestions** | Contextual follow-up prompts generated from full conversation |
+| **Safety-First** | Circuit breaker, oracle freshness, HF velocity monitoring |
+| **Multi-Protocol Yield** | Aave lending, USDT0 bridge, Velora swap via WDK modules |
+| **Statistical Anomaly Detection** | Z-score + IQR outlier detection (auditability) |
+| **On-Chain Policy Enforcement** | B-scheme blocks raw WDK writes |
+| **4-Layer Governance Pipeline** | Hard Rules → Anomaly → AI → Human review |
+| **Adaptive Scheduling** | Volatility-based polling (30s → 1h) |
 
 ---
 
@@ -46,7 +52,7 @@ graph TB
         D[API Server] --> E[MCP Handler]
         E --> F[Tool Registry]
         
-        F --> G[BNB Tools]
+        F --> G[Sepolia Tools]
         F --> H[Solana Tools]
         F --> I[TON Tools]
         F --> J[WDK Vault Tools]
@@ -59,7 +65,7 @@ graph TB
         K --> L
         
         L --> M[WDK Executor]
-        M --> N[BNB Chain]
+        M --> N[Sepolia]
         M --> O[Solana]
         M --> P[TON]
     end
@@ -80,7 +86,7 @@ sequenceDiagram
     PG-->>AI: LOW risk
     
     AI->>WDK: Get multi-chain balances
-    WDK-->>AI: BNB $500 SOL $200 TON $100
+    WDK-->>AI: ETH $500 SOL $200 TON $100
     
     alt Needs external data
         AI->>X402: Pay 0.1 USDT
@@ -104,22 +110,110 @@ flowchart LR
     D --> G[Log]
 ```
 
+### 4-Layer Governance Pipeline
+
+The autonomous agent implements a 4-layer governance pipeline for transaction approval:
+
+```mermaid
+flowchart TD
+    A[Transaction Request] --> B[Layer 1: Hard Rules]
+    B -->|PASS| C[Layer 2: Statistical Anomaly]
+    B -->|FAIL| R[REJECT]
+    C -->|PASS| D[Layer 3: AI Interpretation]
+    C -->|ANOMALY| F[FLAG FOR REVIEW]
+    D -->|PASS| E[Layer 4: Human Review]
+    D -->|FAIL| R
+    E -->|APPROVE| G[Execute]
+    E -->|REJECT| R
+    F --> G
+    G --> H[Transaction Log]
+```
+
+| Layer | Check | Action on Fail |
+|-------|-------|----------------|
+| **Hard Rules** | Whitelist, daily limits, NAV shield | REJECT |
+| **Anomaly Detection** | Z-score + IQR statistical outlier | FLAG or REJECT |
+| **AI Interpretation** | LLM reasoning on transaction intent | FLAG or REJECT |
+| **Human Review** | Manual approval queue | APPROVE/REJECT |
+
+### Statistical Anomaly Detection
+
+OmniAgent uses statistical methods to detect unusual transaction patterns:
+
+| Method | Description | Threshold |
+|--------|-------------|-----------|
+| **Z-Score** | Measures deviation from historical mean | >3.0 = anomaly |
+| **IQR** | Interquartile range outlier detection | <Q1-1.5×IQR or >Q3+1.5×IQR |
+| **Cold-Start** | Fallback when insufficient history | Auto-approve |
+
+### Adaptive Scheduling
+
+The agent dynamically adjusts its polling interval based on market conditions:
+
+| Volatility | Health Factor | Poll Interval |
+|------------|---------------|---------------|
+| High (>5%) | <1.5 | 30 seconds |
+| Medium (2-5%) | 1.5-2.0 | 5 minutes |
+| Low (<2%) | >2.0 | 1 hour |
+
+### Autonomous Agent & Safety
+
+The autonomous agent manages yield routing with multi-layered safety:
+
+| Safety Feature | Threshold | Action |
+|----------------|-----------|--------|
+| **Circuit Breaker** | 3 consecutive failures | Auto-trip, 60s cooldown |
+| **Oracle Freshness** | 300s max age | Reject stale price data |
+| **Health Factor Velocity** | >0.1/min change | Emergency stop |
+| **Emergency HF** | <1.5 (1.2 critical) | Forced withdrawal |
+
+**Autonomous Decision Loop:**
+1. Fetch Aave account data & market conditions
+2. Validate oracle freshness (reject stale data)
+3. Check circuit breaker status
+4. Calculate HF velocity (rate of change)
+5. Decide: supply USDT, supply XAUT, withdraw, or hold
+6. Execute with safety checks
+7. Log decision with full reasoning
+
+```typescript
+// Key safety constants
+MAX_CONSECUTIVE_FAILURES = 3
+MIN_HEALTH_FACTOR = 1.5
+EMERGENCY_HEALTH_FACTOR = 1.2
+ORACLE_MAX_AGE_SECONDS = 300
+HEALTH_FACTOR_VELOCITY_THRESHOLD = 0.1/min
+```
+
 ---
 
-## MCP Tools (30+ Total)
+## MCP Tools (40+ Total)
 
 | Category | Tools | Description |
 |----------|-------|-------------|
 | **X402** | 5 | Pay sub-agents, fleet status, list services |
 | **WDK Vault** | 6 | Deposit, withdraw, balance, state |
 | **WDK Engine** | 3 | Execute cycle, risk metrics |
-| **Aave (Mock)** | 1 | Get position (testnet mock) |
-| **Bridge (Mock)** | 1 | Get quote (testnet mock) |
-| **BNB** | 7 | Wallet, transfer, swap, bridge, Aave |
+| **WDK Protocol** | 9 | Aave lending, USDT0 bridge, Velora swap, autonomous cycle |
+| **Sepolia** | 7 | Wallet, transfer, swap, bridge, Aave |
 | **Solana** | 4 | Wallet, transfer, swap |
 | **TON** | 3 | Wallet, transfer |
 | **ERC4337** | 12+ | Smart account management |
 | **Robot Fleet** | 4 | Status, start, events, robots |
+
+### WDK Protocol Tools (9 tools)
+
+| Tool | Description | Risk |
+|------|-------------|------|
+| `wdk_lending_supply` | Supply tokens to Aave lending pool | Medium |
+| `wdk_lending_withdraw` | Withdraw from Aave | Medium |
+| `wdk_lending_borrow` | Borrow from Aave | High |
+| `wdk_lending_repay` | Repay Aave debt | Medium |
+| `wdk_lending_getPosition` | Get Aave position & health factor | Low |
+| `wdk_bridge_usdt0` | Bridge USDT across chains | Medium |
+| `wdk_swap_tokens` | Swap tokens via Velora | Medium |
+| `wdk_autonomous_cycle` | Run autonomous yield decision cycle | High |
+| `wdk_autonomous_status` | Get agent state & last decision | Low |
 
 ---
 
@@ -161,8 +255,8 @@ WDK_SECRET_SEED=""
 # Required: OpenRouter API key for LLM calls
 OPENROUTER_API_KEY=""
 
-# Required: BNB Chain RPC URL
-BNB_RPC_URL="https://bsc-testnet-dataseed.bnbchain.org"
+# Required: Sepolia RPC URL
+SEPOLIA_RPC_URL="https://ethereum-sepolia.publicnode.com"
 ```
 
 ### Optional Variables
@@ -216,7 +310,7 @@ MOCK_BRIDGE_ADDRESS=0x8c3E36830eD27759C0f65A665D067Fe77041aa0C
 |----------|----------|---------|-------------|
 | `WDK_SECRET_SEED` | Yes | - | BIP-39 mnemonic seed phrase |
 | `OPENROUTER_API_KEY` | Yes | - | OpenRouter API key for LLM |
-| `BNB_RPC_URL` | Yes | https://bsc-testnet-dataseed.bnbchain.org | BNB Chain RPC |
+| `SEPOLIA_RPC_URL` | Yes | https://ethereum-sepolia.publicnode.com | Sepolia RPC |
 | `PORT` | No | 3001 | Server port |
 | `PRIVATE_KEY` | No | Derived from WDK_SECRET_SEED | For deployments |
 | `SOLANA_RPC_URL` | No | https://api.mainnet-beta.solana.com | Solana RPC |
@@ -231,6 +325,13 @@ MOCK_BRIDGE_ADDRESS=0x8c3E36830eD27759C0f65A665D067Fe77041aa0C
 | `ALLOW_AGENT_RUN` | No | true | Enable autonomous loop |
 | `AGENT_REPORT_WEBHOOK_URL` | No | - | Webhook for agent status |
 | `AGENT_REPORT_INTERVAL_MS` | No | 60000 | Status report interval |
+| `SEPOLIA_RPC_URL` | No | https://sepolia.infura.io | Sepolia RPC for WDK protocols |
+| `WDK_USDT_ADDRESS` | No | - | USDT token address (Sepolia) |
+| `WDK_XAUT_ADDRESS` | No | - | XAUT token address (Sepolia) |
+| `WDK_ZK_ORACLE_ADDRESS` | No | - | ZK Risk Oracle address |
+| `WDK_USDT_ORACLE_ADDRESS` | No | - | USDT price oracle address |
+| `WDK_XAUT_ORACLE_ADDRESS` | No | - | XAUT price oracle address |
+| `WDK_BREAKER_ADDRESS` | No | - | Circuit breaker contract |
 
 ---
 
@@ -256,8 +357,8 @@ VITE_API_URL=http://localhost:3001
 ### Optional Variables
 
 ```bash
-# BNB Testnet RPC (default provided)
-VITE_BSC_TESTNET_RPC_URL=https://bsc-testnet-rpc.publicnode.com
+# Sepolia RPC (default provided)
+VITE_SEPOLIA_RPC_URL=https://ethereum-sepolia.publicnode.com
 
 # Testnet Contract Addresses (optional - defaults provided)
 VITE_TESTNET_VAULT_ADDRESS=
@@ -280,7 +381,7 @@ VITE_WALLETCONNECT_PROJECT_ID=
 | `VITE_DEFAULT_NETWORK` | Yes | testnet | Network mode |
 | `VITE_API_URL` | Yes | http://localhost:3001 | Backend API URL |
 | `VITE_WALLETCONNECT_PROJECT_ID` | No | - | WalletConnect project ID |
-| `VITE_BSC_TESTNET_RPC_URL` | No | https://bsc-testnet-rpc.publicnode.com | BNB Testnet RPC |
+| `VITE_SEPOLIA_RPC_URL` | No | https://ethereum-sepolia.publicnode.com | Sepolia RPC |
 | `VITE_TESTNET_VAULT_ADDRESS` | No | - | Vault contract (testnet) |
 | `VITE_TESTNET_ENGINE_ADDRESS` | No | - | Engine contract (testnet) |
 | `VITE_TESTNET_TOKEN_ADDRESS` | No | - | USDT contract (testnet) |
@@ -341,7 +442,7 @@ POST /api/mcp
 {
   "jsonrpc": "2.0",
   "method": "tools/call",
-  "params": { "name": "bnb_getBalance", "arguments": {} }
+  "params": { "name": "sepolia_get_balance", "arguments": {} }
 }
 
 // Chat - Streaming AI with tool execution + suggestions
@@ -381,9 +482,11 @@ app.route('/api/mcp', mcpRoute);               // MCP HTTP endpoint
 - `backend/src/api/routes/stats.ts` - Vault/risk system stats
 - `backend/src/api/routes/dashboard.ts` - SSE dashboard events
 - `backend/src/api/routes/robot-fleet.ts` - Robot fleet SSE + REST
-- `backend/src/services/RobotFleetService.ts` - In-process fleet manager
+- `backend/src/services/AutonomousAgent.ts` - Decision loop with safety mechanisms
+- `backend/src/services/WdkProtocolService.ts` - Aave/Bridge/Swap protocol wrappers
+- `backend/src/services/WdkSignerAdapter.ts` - WDK → ethers.js signer adapter
 - `backend/src/mcp-server/tool-registry.ts` - Tool registration system
-- `backend/src/mcp-server/handlers/` - Tool implementations (BNB, Solana, TON, WDK, X402, ERC4337)
+- `backend/src/mcp-server/handlers/` - Tool implementations (Sepolia, Solana, TON, WDK, X402, ERC4337)
 
 ---
 
@@ -401,7 +504,7 @@ app.route('/api/mcp', mcpRoute);               // MCP HTTP endpoint
 # Check balance
 curl -X POST http://localhost:3001/api/mcp \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"bnb_getBalance","arguments":{}}}'
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"sepolia_get_balance","arguments":{}}}'
 
 # List tools
 curl -X POST http://localhost:3001/api/mcp \
@@ -423,7 +526,14 @@ OmniAgent/
 │   │   │   ├── stats.ts          # Vault/risk system stats
 │   │   │   └── dashboard.ts      # SSE dashboard events
 │   │   ├── agent/                # Autonomous loop + PolicyGuard
-│   │   ├── mcp-server/handlers/ # Tool implementations
+│   │   ├── services/
+│   │   │   ├── AutonomousAgent.ts    # Decision loop + safety
+│   │   │   ├── WdkProtocolService.ts  # Aave/Bridge/Swap modules
+│   │   │   └── WdkSignerAdapter.ts   # WDK → ethers.js bridge
+│   │   ├── mcp-server/handlers/
+│   │   │   ├── wdk-vault-tools.ts     # Vault deposit/withdraw
+│   │   │   ├── wdk-engine-tools.ts    # Engine execution
+│   │   │   └── wdk-protocol-tools.ts  # Aave/Bridge/Swap/Autonomous
 │   │   └── config/               # Env config, security, robot fleet
 │   ├── hardhat.config.js
 │   └── .env.example
@@ -542,10 +652,10 @@ curl -X POST http://localhost:3001/api/chat \
 
 ### Prerequisites
 
-**1. Get Testnet BNB Tokens**
-- Visit [BNB Testnet Faucet](https://testnet.bnbchain.org/faucet-smart)
-- Request testnet BNB for deployment (~0.5 BNB recommended)
-- Verify balance on [BSCScan Testnet](https://testnet.bscscan.com)
+**1. Get Testnet ETH**
+- Visit [Sepolia Faucet](https://sepoliafaucet.com)
+- Request testnet ETH for deployment (~1 ETH recommended)
+- Verify balance on [Etherscan Sepolia](https://sepolia.etherscan.com)
 
 **2. Configure Environment**
 
@@ -555,7 +665,7 @@ Edit `backend/.env` and add:
 PRIVATE_KEY="your-wallet-private-key-here"
 
 # Network RPC
-BNB_RPC_URL="https://bsc-testnet-dataseed.bnbchain.org"
+SEPOLIA_RPC_URL="https://ethereum-sepolia.publicnode.com"
 ```
 
 **Security Note:** Never commit your private key or share it. Use a dedicated testnet wallet.
@@ -585,7 +695,7 @@ Compiled 45 Solidity files successfully
 #### Step 3: Deploy Core Contracts
 
 ```bash
-npx hardhat run scripts/DeployStackWithSeed.ts --network bnbTestnet
+npx hardhat run scripts/DeployStackWithSeed.ts --network sepolia
 ```
 
 This deploys (in order):
@@ -622,7 +732,7 @@ WDK Engine: 0x...
 The main deployment script has a bug and doesn't deploy the ZK Risk Oracle. Deploy it separately:
 
 ```bash
-npx hardhat run scripts/deploy-zk-oracle.ts --network bnbTestnet
+npx hardhat run scripts/deploy-zk-oracle.ts --network sepolia
 ```
 
 **Expected Output:**
@@ -660,7 +770,7 @@ WDK_LENDING_ADAPTER_ADDRESS=0x4774285a7Cd9711Ae396e1EDD0Bcf6d093bEa1bb
 WDK_BREAKER_ADDRESS=0x03408d440E2d9cd31D744469f111AaaBb121A844
 
 # Network
-BNB_RPC_URL=https://bsc-testnet-dataseed.bnbchain.org
+SEPOLIA_RPC_URL=https://ethereum-sepolia.publicnode.com
 ```
 
 #### Step 6: Seed Vault with Initial Funds
@@ -668,7 +778,7 @@ BNB_RPC_URL=https://bsc-testnet-dataseed.bnbchain.org
 The deployment may leave the vault empty. Fund it manually:
 
 ```bash
-npx hardhat run scripts/seed-vault.ts --network bnbTestnet
+npx hardhat run scripts/seed-vault.ts --network sepolia
 ```
 
 **Expected Output:**
@@ -712,27 +822,27 @@ curl http://localhost:3001/api/stats
 
 ---
 
-### BNB Testnet Deployment (Reference Addresses)
+### Sepolia Testnet Deployment (Reference Addresses)
 
 **Latest Verified Deployment:**
 
 | Contract | Address | Explorer |
 |----------|---------|----------|
-| **WDK Vault** | `0xcB411a907e47047da98B38C99A683c6FAF2AA87A` | [View on BSCScan](https://testnet.bscscan.com/address/0xcB411a907e47047da98B38C99A683c6FAF2AA87A) |
-| **WDK Engine** | `0x0b33c994825c88484387E73D1F75967CeE79Cf25` | [View on BSCScan](https://testnet.bscscan.com/address/0x0b33c994825c88484387E73D1F75967CeE79Cf25) |
-| **USDT Token** | `0xdea54eC5150Aa35ef2686b02EdD20b050430Ad7D` | [View on BSCScan](https://testnet.bscscan.com/address/0xdea54eC5150Aa35ef2686b02EdD20b050430Ad7D) |
-| **XAUT Token** | `0x3CfeB85C9E4063c622255FD216055bF3058eb32e` | [View on BSCScan](https://testnet.bscscan.com/address/0x3CfeB85C9E4063c622255FD216055bF3058eb32e) |
-| **ZK Risk Oracle** | `0x6270359cBb1EB483f9630712e9D101845D39d524` | [View on BSCScan](https://testnet.bscscan.com/address/0x6270359cBb1EB483f9630712e9D101845D39d524) |
-| **USDT Oracle** | `0xC3D519Ed04E55BFe67732513109bBBF6c959471D` | [View on BSCScan](https://testnet.bscscan.com/address/0xC3D519Ed04E55BFe67732513109bBBF6c959471D) |
-| **XAUT Oracle** | `0x9Da68499a9B4acB7641f3CBBd2f4F51062D6b57B` | [View on BSCScan](https://testnet.bscscan.com/address/0x9Da68499a9B4acB7641f3CBBd2f4F51062D6b57B) |
-| **Circuit Breaker** | `0x03408d440E2d9cd31D744469f111AaaBb121A844` | [View on BSCScan](https://testnet.bscscan.com/address/0x03408d440E2d9cd31D744469f111AaaBb121A844) |
-| **XAUT Adapter** | `0x06C390c4a68A9289Ba3366d6f023907970421120` | [View on BSCScan](https://testnet.bscscan.com/address/0x06C390c4a68A9289Ba3366d6f023907970421120) |
-| **Secondary Adapter** | `0x759ae06e462Ac0000D0A34578dF0A15fC390cDd6` | [View on BSCScan](https://testnet.bscscan.com/address/0x759ae06e462Ac0000D0A34578dF0A15fC390cDd6) |
-| **LP Adapter** | `0xc3704bdbBe7E3c51180Bc219629E36a21795f7e0` | [View on BSCScan](https://testnet.bscscan.com/address/0xc3704bdbBe7E3c51180Bc219629E36a21795f7e0) |
-| **Lending Adapter** | `0x4774285a7Cd9711Ae396e1EDD0Bcf6d093bEa1bb` | [View on BSCScan](https://testnet.bscscan.com/address/0x4774285a7Cd9711Ae396e1EDD0Bcf6d093bEa1bb) |
+| **WDK Vault** | `0xcB411a907e47047da98B38C99A683c6FAF2AA87A` | [View on Etherscan](https://sepolia.etherscan.com/address/0xcB411a907e47047da98B38C99A683c6FAF2AA87A) |
+| **WDK Engine** | `0x0b33c994825c88484387E73D1F75967CeE79Cf25` | [View on Etherscan](https://sepolia.etherscan.com/address/0x0b33c994825c88484387E73D1F75967CeE79Cf25) |
+| **USDT Token** | `0xdea54eC5150Aa35ef2686b02EdD20b050430Ad7D` | [View on Etherscan](https://sepolia.etherscan.com/address/0xdea54eC5150Aa35ef2686b02EdD20b050430Ad7D) |
+| **XAUT Token** | `0x3CfeB85C9E4063c622255FD216055bF3058eb32e` | [View on Etherscan](https://sepolia.etherscan.com/address/0x3CfeB85C9E4063c622255FD216055bF3058eb32e) |
+| **ZK Risk Oracle** | `0x6270359cBb1EB483f9630712e9D101845D39d524` | [View on Etherscan](https://sepolia.etherscan.com/address/0x6270359cBb1EB483f9630712e9D101845D39d524) |
+| **USDT Oracle** | `0xC3D519Ed04E55BFe67732513109bBBF6c959471D` | [View on Etherscan](https://sepolia.etherscan.com/address/0xC3D519Ed04E55BFe67732513109bBBF6c959471D) |
+| **XAUT Oracle** | `0x9Da68499a9B4acB7641f3CBBd2f4F51062D6b57B` | [View on Etherscan](https://sepolia.etherscan.com/address/0x9Da68499a9B4acB7641f3CBBd2f4F51062D6b57B) |
+| **Circuit Breaker** | `0x03408d440E2d9cd31D744469f111AaaBb121A844` | [View on Etherscan](https://sepolia.etherscan.com/address/0x03408d440E2d9cd31D744469f111AaaBb121A844) |
+| **XAUT Adapter** | `0x06C390c4a68A9289Ba3366d6f023907970421120` | [View on Etherscan](https://sepolia.etherscan.com/address/0x06C390c4a68A9289Ba3366d6f023907970421120) |
+| **Secondary Adapter** | `0x759ae06e462Ac0000D0A34578dF0a15fC390cDd6` | [View on Etherscan](https://sepolia.etherscan.com/address/0x759ae06e462Ac0000D0A34578dF0a15fC390cDd6) |
+| **LP Adapter** | `0xc3704bdbBe7E3c51180Bc219629E36a21795f7e0` | [View on Etherscan](https://sepolia.etherscan.com/address/0xc3704bdbBe7E3c51180Bc219629E36a21795f7e0) |
+| **Lending Adapter** | `0x4774285a7Cd9711Ae396e1EDD0Bcf6d093bEa1bb` | [View on Etherscan](https://sepolia.etherscan.com/address/0x4774285a7Cd9711Ae396e1EDD0Bcf6d093bEa1bb) |
 
 **Deployment Date:** January 24, 2025  
-**Network:** BNB Testnet (Chain ID: 97)  
+**Network:** Sepolia Testnet (Chain ID: 11155111)  
 **Total Vault Assets:** 150,000 USDT
 
 ---
@@ -743,16 +853,16 @@ For testing Aave and Bridge tools without mainnet, deploy mock contracts:
 
 ```bash
 cd backend
-npx hardhat run scripts/DeployMockAaveAndBridge.ts --network bnbTestnet
+npx hardhat run scripts/DeployMockAaveAndBridge.ts --network sepolia
 ```
 
 **Deployed Mock Contracts:**
 
 | Contract | Address | Explorer |
 |----------|---------|----------|
-| **MockAavePool** | `0xa9B209611603CE09bEbCFF63a1A3d44D0C4A6f48` | [View on BSCScan](https://testnet.bscscan.com/address/0xa9B209611603CE09bEbCFF63a1A3d44D0C4A6f48) |
-| **MockBridge** | `0x8c3E36830eD27759C0f65A665D067Fe77041aa0C` | [View on BSCScan](https://testnet.bscscan.com/address/0x8c3E36830eD27759C0f65A665D067Fe77041aa0C) |
-| **aUSDT (aToken)** | `0xddfAe15c7f1DB6d1e10a3d8bAEA62a2948648ebD` | [View on BSCScan](https://testnet.bscscan.com/address/0xddfAe15c7f1DB6d1e10a3d8bAEA62a2948648ebD) |
+| **MockAavePool** | `0xa9B209611603CE09bEbCFF63a1A3d44D0C4A6f48` | [View on Etherscan](https://sepolia.etherscan.com/address/0xa9B209611603CE09bEbCFF63a1A3d44D0C4A6f48) |
+| **MockBridge** | `0x8c3E36830eD27759C0f65A665D067Fe77041aa0C` | [View on Etherscan](https://sepolia.etherscan.com/address/0x8c3E36830eD27759C0f65A665D067Fe77041aa0C) |
+| **aUSDT (aToken)** | `0xddfAe15c7f1DB6d1e10a3d8bAEA62a2948648ebD` | [View on Etherscan](https://sepolia.etherscan.com/address/0xddfAe15c7f1DB6d1e10a3d8bAEA62a2948648ebD) |
 
 Add to `.env`:
 ```bash
@@ -797,6 +907,66 @@ npx hardhat run scripts/seed-vault.ts --network localhost
 
 ---
 
+---
+
+## WDK Protocol Modules
+
+OmniAgent integrates three WDK protocol modules for DeFi yield routing:
+
+### Protocol Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│         AutonomousAgent (Decision Loop)       │
+├─────────────┬─────────────┬─────────────────┤
+│ WdkSigner  │ WdkProtocol │  Safety Guard   │
+│ Adapter    │ Service     │  (Circuit, HF)  │
+├─────────────┴─────────────┴─────────────────┤
+│       WDK Protocol Modules (Dynamic Load)    │
+├─────────────┬─────────────┬─────────────────┤
+│   Aave      │  USDT0      │    Velora       │
+│  Lending    │  Bridge     │     Swap        │
+└─────────────┴─────────────┴─────────────────┘
+```
+
+### Supported Chains
+
+| Chain | Bridge Support | Swap Support |
+|-------|---------------|--------------|
+| Ethereum | ✅ | ✅ |
+| Arbitrum | ✅ | ✅ |
+| Optimism | ✅ | ✅ |
+| Polygon | ✅ | ✅ |
+| Berachain | ✅ | ✅ |
+| Plasma | ✅ | ✅ |
+| Avalanche | ✅ | ✅ |
+| Celo | ✅ | ✅ |
+| Mantle | ✅ | ✅ |
+| Sei | ✅ | ✅ |
+| Stable | ✅ | ✅ |
+
+### Token Support
+
+**Mainnet:**
+| Token | Address | Use Case |
+|-------|---------|----------|
+| USDT | `0xdAC17F958D2ee523a2206206994597C13D831ec7` | Primary stablecoin |
+| XAUT | `0x68749665FF8D2d112Fa859AA293F07A622782F38` | Gold-backed asset |
+| WETH | `0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2` | ETH wrapper |
+
+### Safety Thresholds
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `ORACLE_MAX_AGE_SECONDS` | 300 | Max oracle data age |
+| `MIN_HEALTH_FACTOR` | 1.5 | Minimum safe HF |
+| `EMERGENCY_HEALTH_FACTOR` | 1.2 | Force withdrawal trigger |
+| `HEALTH_FACTOR_VELOCITY_THRESHOLD` | 0.1/min | HF change alert |
+| `MAX_CONSECUTIVE_FAILURES` | 3 | Circuit breaker trip |
+| `CIRCUIT_BREAKER_COOLDOWN` | 60s | Cooldown after trip |
+
+---
+
 ## Troubleshooting
 
 ### Empty Vault After Deployment
@@ -811,7 +981,7 @@ npx hardhat run scripts/seed-vault.ts --network localhost
 
 ```bash
 cd backend
-npx hardhat run scripts/seed-vault.ts --network bnbTestnet
+npx hardhat run scripts/seed-vault.ts --network sepolia
 ```
 
 This script will:
@@ -829,7 +999,7 @@ This script will:
 
 ```bash
 cd backend
-npx hardhat run scripts/deploy-zk-oracle.ts --network bnbTestnet
+npx hardhat run scripts/deploy-zk-oracle.ts --network sepolia
 ```
 
 The script auto-updates `.env` with the correct oracle address.

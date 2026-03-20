@@ -7,13 +7,13 @@ import { logger } from '@/utils/logger';
 export class BridgeService {
   private wdk: any;
 
-  constructor(wdk: any, bnbRpc?: string, solanaRpc?: string, tonRpc?: string) {
+  constructor(wdk: any, sepoliaRpc?: string, solanaRpc?: string, tonRpc?: string) {
     this.wdk = wdk;
   }
 
   async fetchCrossChainYields() {
     return {
-      bnb: 4.85,
+      sepolia: 4.85,
       solana: 9.12, 
       ton: 7.24
     };
@@ -50,7 +50,7 @@ export class BridgeService {
       const recipientAddress = await toAccount.getAddress();
 
       // Check balance before bridging
-      const token = tokenAddress || (fromChain === 'bnb' ? env.WDK_USDT_ADDRESS : '');
+      const token = tokenAddress || (fromChain === 'sepolia' ? env.WDK_USDT_ADDRESS : '');
       
       const result = await (fromAccount as any).transfer({
         token: token,

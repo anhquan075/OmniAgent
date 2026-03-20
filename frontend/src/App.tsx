@@ -415,7 +415,7 @@ export default function App() {
           <div className="flex items-center gap-2 md:gap-4">
             <div className="h-8 border-l border-white/10 mx-1 md:mx-2 hidden lg:block"></div>
 
-            {/* Mint Button - positioned left of BNB Chain badge */}
+            {/* Mint Button - positioned left of Ethereum badge */}
             <div className="flex items-center gap-1">
               <button
                 onClick={handleMint}
@@ -438,7 +438,7 @@ export default function App() {
                 {minting ? "Minting..." : "Mint 10k"}
               </button>
               <a
-                href="https://testnet.bscscan.com/token/0xdea54eC5150Aa35ef2686b02EdD20b050430Ad7D"
+                href="https://sepolia.etherscan.io/address/0xdea54eC5150Aa35ef2686b02EdD20b050430Ad7D"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1"
@@ -450,23 +450,26 @@ export default function App() {
             </div>
 
             <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 mr-2 shadow-glow-sm">
-              <div className="w-5 h-5 rounded-full bg-[#F3BA2F]/10 flex items-center justify-center border border-[#F3BA2F]/20">
+              <div className="w-5 h-5 rounded-full bg-[#627EEA]/10 flex items-center justify-center border border-[#627EEA]/20">
                 <img
-                  src="/coins/bnb.png"
-                  alt="BNB Chain"
+                  src="/coins/ethereum.png"
+                  alt="Ethereum"
                   className="w-3.5 h-3.5 object-contain"
+                  onError={(e) => {
+                    e.currentTarget.src = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png";
+                  }}
                 />
               </div>
               <div className="flex flex-col leading-none">
-                <span className="text-[9px] font-bold text-[#F3BA2F] uppercase">
-                  BNB Chain
+                <span className="text-[9px] font-bold text-[#627EEA] uppercase">
+                  Ethereum
                 </span>
                 <span className="text-[7px] text-neutral-gray uppercase tracking-wider">
                   {import.meta.env.VITE_DEFAULT_NETWORK?.includes("mainnet") ||
-                  (import.meta.env.VITE_DEFAULT_NETWORK?.includes("bsc") &&
-                    !import.meta.env.VITE_DEFAULT_NETWORK?.includes("testnet"))
+                  (import.meta.env.VITE_DEFAULT_NETWORK?.includes("ethereum") &&
+                    !import.meta.env.VITE_DEFAULT_NETWORK?.includes("sepolia"))
                     ? "Mainnet"
-                    : "Testnet"}
+                    : "Sepolia"}
                 </span>
               </div>
             </div>
@@ -486,11 +489,11 @@ export default function App() {
                 {notification.message}
               </motion.div>
             )}
-            <div className="scale-75 md:scale-100 origin-right">
+            <div className="flex items-center gap-2">
               <ConnectButton
-                chainStatus="none"
+                chainStatus="full"
                 showBalance={false}
-                accountStatus="address"
+                accountStatus="avatar"
               />
             </div>
             <button
