@@ -1,6 +1,28 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ZapIcon, ActivityIcon, ShieldCheckIcon, WalletIcon, BarChart3Icon, GlobeIcon, PlusCircle, TrendingUp } from 'lucide-react';
+import { 
+  ZapIcon, ActivityIcon, ShieldCheckIcon, WalletIcon, BarChart3Icon, GlobeIcon, PlusCircle, 
+  TrendingUp, BotIcon, LayersIcon, CoinsIcon, LockIcon
+} from 'lucide-react';
+
+const ERC4337_ICON = (props: React.ComponentProps<"svg">) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <rect x="3" y="11" width="18" height="10" rx="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    <circle cx="12" cy="16" r="1" />
+  </svg>
+);
 
 export interface Command {
   id: string;
@@ -8,17 +30,28 @@ export interface Command {
   description: string;
   icon: any;
   prompt: string;
+  category?: string;
 }
 
 export const DEFI_COMMANDS: Command[] = [
-  { id: 'status', label: 'status', description: 'Get full vault and rail status', icon: BarChart3Icon, prompt: '/status' },
-  { id: 'rebalance', label: 'rebalance', description: 'Trigger an autonomous rebalance cycle', icon: ZapIcon, prompt: '/rebalance' },
-  { id: 'risk', label: 'risk', description: 'Analyze current risk parameters', icon: ShieldCheckIcon, prompt: '/risk' },
-  { id: 'yield', label: 'yield', description: 'View current yield opportunities', icon: TrendingUp, prompt: '/yield' },
-  { id: 'deposit', label: 'deposit', description: 'Initiate a secure deposit', icon: PlusCircle, prompt: '/deposit' },
-  { id: 'withdraw', label: 'withdraw', description: 'Initiate a secure withdrawal', icon: WalletIcon, prompt: '/withdraw' },
-  { id: 'harvest', label: 'harvest', description: 'Harvest all accrued yield', icon: ActivityIcon, prompt: '/harvest' },
-  { id: 'bridge', label: 'bridge', description: 'Move assets across settlement rails', icon: GlobeIcon, prompt: '/bridge' },
+  { id: 'status', label: 'status', description: 'Get full vault and rail status', icon: BarChart3Icon, prompt: '/status', category: 'vault' },
+  { id: 'rebalance', label: 'rebalance', description: 'Trigger an autonomous rebalance cycle', icon: ZapIcon, prompt: '/rebalance', category: 'engine' },
+  { id: 'risk', label: 'risk', description: 'Analyze current risk parameters', icon: ShieldCheckIcon, prompt: '/risk', category: 'engine' },
+  { id: 'yield', label: 'yield', description: 'View current yield opportunities', icon: TrendingUp, prompt: '/yield', category: 'aave' },
+  { id: 'deposit', label: 'deposit', description: 'Initiate a secure deposit', icon: PlusCircle, prompt: '/deposit', category: 'vault' },
+  { id: 'withdraw', label: 'withdraw', description: 'Initiate a secure withdrawal', icon: WalletIcon, prompt: '/withdraw', category: 'vault' },
+  { id: 'harvest', label: 'harvest', description: 'Harvest all accrued yield', icon: ActivityIcon, prompt: '/harvest', category: 'aave' },
+  { id: 'bridge', label: 'bridge', description: 'Move assets across settlement rails', icon: GlobeIcon, prompt: '/bridge', category: 'bridge' },
+  { id: 'balance', label: 'balance', description: 'Check wallet balance on Sepolia', icon: WalletIcon, prompt: 'Check my wallet balance', category: 'sepolia' },
+  { id: 'swap', label: 'swap', description: 'Swap tokens on Sepolia', icon: ZapIcon, prompt: 'Swap 10 USDT for ETH', category: 'sepolia' },
+  { id: 'robots', label: 'robots', description: 'List available sub-agents', icon: BotIcon, prompt: 'List all available sub-agents', category: 'x402' },
+  { id: 'vault-state', label: 'vault state', description: 'Get current vault state', icon: LayersIcon, prompt: 'What is the current vault state?', category: 'vault' },
+  { id: 'cycle-state', label: 'cycle state', description: 'Get engine cycle state', icon: ZapIcon, prompt: 'What is the cycle state?', category: 'engine' },
+  { id: 'aave-position', label: 'aave position', description: 'Check Aave lending position', icon: CoinsIcon, prompt: 'Check my Aave position', category: 'aave' },
+  { id: 'smart-account', label: 'smartAccount', description: 'Get ERC-4337 smart account address', icon: ERC4337_ICON as any, prompt: 'What is my smart account address?', category: 'erc4337' },
+  { id: 'prices', label: 'prices', description: 'Get price matrix for trading pairs', icon: TrendingUp, prompt: 'Get current prices for USDT/USDC', category: 'market' },
+  { id: 'arb', label: 'arb', description: 'Find best arbitrage opportunity', icon: BarChart3Icon, prompt: 'Find the best arbitrage opportunity', category: 'market' },
+  { id: 'bridge-quote', label: 'bridgeQuote', description: 'Get cross-chain bridge quote', icon: GlobeIcon, prompt: 'Get a bridge quote to Arbitrum', category: 'bridge' },
 ];
 
 interface CommandPaletteProps {

@@ -2,6 +2,7 @@ import { McpTool, McpExecutionContext, MCP_ERRORS } from '../types/mcp-protocol'
 import { ethers } from 'ethers';
 import { env } from '../../config/env';
 import { getWdkSigner } from '@/lib/wdk-loader';
+import { payForX402Resource } from '@/lib/x402-client';
 
 const USDT_ABI = [
   'function transfer(address to, uint256 amount) external returns (bool)',
@@ -28,15 +29,15 @@ function getUsdtContract(signer?: ethers.Signer) {
 export const x402Tools: McpTool[] = [
   {
     name: 'x402_pay_subagent',
-    description: 'Pay a sub-agent (robot) for specialized task execution using x402 protocol',
+    description: 'Pay a sub-agent for specialized task execution using x402 protocol with EIP-3009 authorization. Amount is in USDT units (6 decimals). Triggers HTTP 402 payment flow and returns transaction proof.',
     inputSchema: {
       type: 'object',
       properties: {
-        providerAddress: { type: 'string', description: 'Sub-agent wallet address to pay' },
-        amount: { type: 'string', description: 'Amount of USDT to pay (e.g., "0.1")' },
-        serviceType: { type: 'string', description: 'Type of service: risk_analysis, arbitrage_scan, yield_optimization, data_fetch' }
+        serviceUrl: { type: 'string', description: 'Service URL endpoint. Example: "https://api.example.com/api/risk-analysis"' },
+        amount: { type: 'string', description: 'Amount in USDT. Example: "0.1" for 0.1 USDT, "0.5" for 0.5 USDT' },
+        serviceType: { type: 'string', description: 'Type of service. Options: "risk_analysis", "arbitrage_scan", "yield_optimization", "data_fetch", "smart_contract_review"' }
       },
-      required: ['providerAddress', 'amount', 'serviceType']
+      required: ['serviceUrl', 'amount', 'serviceType']
     },
     outputSchema: {
       type: 'object',
@@ -53,11 +54,11 @@ export const x402Tools: McpTool[] = [
   },
   {
     name: 'x402_get_balance',
-    description: 'Get USDT balance for x402 payments',
+    description: 'Get USDT balance available for x402 payments. Returns both raw balance (wei units) and formatted balance (human-readable). If no address is provided, uses the WDK agent wallet address.',
     inputSchema: {
       type: 'object',
       properties: {
-        address: { type: 'string', description: 'Wallet address to check (optional)' }
+        address: { type: 'string', description: 'Wallet address to check. Example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045". Leave empty to check agent wallet.' }
       },
       required: []
     },
@@ -75,7 +76,7 @@ export const x402Tools: McpTool[] = [
   },
   {
     name: 'x402_list_services',
-    description: 'List available sub-agent services that can be hired via x402 payments',
+    description: 'List available sub-agent services that can be hired via x402 payments. Returns service catalog with IDs, names, descriptions, pricing in USDT, and API endpoints. Use the service IDs with x402_pay_subagent to hire these agents.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -94,7 +95,7 @@ export const x402Tools: McpTool[] = [
   },
   {
     name: 'x402_fleet_status',
-    description: 'Get the robot fleet status and earnings',
+    description: 'Get the robot fleet status and earnings. Returns fleet operational state, number of active robots, total USDT earned from providing services to other agents, and recent task history. Useful for monitoring the agent economy participation.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -116,47 +117,75 @@ export const x402Tools: McpTool[] = [
 ];
 
 const SUB_AGENT_SERVICES = [
-  { id: 'risk_analysis', name: 'Risk Analysis Agent', description: 'Advanced risk assessment and scenario modeling', priceUsdt: '0.1' },
-  { id: 'arbitrage_scan', name: 'Arbitrage Scanner', description: 'Cross-exchange arbitrage opportunity detection', priceUsdt: '0.2' },
-  { id: 'yield_optimization', name: 'Yield Optimizer', description: 'Find best yield farming opportunities', priceUsdt: '0.15' },
-  { id: 'data_fetch', name: 'Data Fetcher', description: 'On-chain and off-chain data retrieval', priceUsdt: '0.05' },
-  { id: 'smart_contract_review', name: 'Contract Auditor', description: 'Security review of smart contracts', priceUsdt: '0.5' }
+  { id: 'risk_analysis', name: 'Risk Analysis Agent', description: 'Advanced risk assessment and scenario modeling', priceUsdt: '0.1', endpoint: '/api/risk-analysis' },
+  { id: 'arbitrage_scan', name: 'Arbitrage Scanner', description: 'Cross-exchange arbitrage opportunity detection', priceUsdt: '0.2', endpoint: '/api/arbitrage' },
+  { id: 'yield_optimization', name: 'Yield Optimizer', description: 'Find best yield farming opportunities', priceUsdt: '0.15', endpoint: '/api/yield' },
+  { id: 'data_fetch', name: 'Data Fetcher', description: 'On-chain and off-chain data retrieval', priceUsdt: '0.05', endpoint: '/api/data' },
+  { id: 'smart_contract_review', name: 'Contract Auditor', description: 'Security review of smart contracts', priceUsdt: '0.5', endpoint: '/api/audit' }
 ];
 
 export async function handleX402Tool(name: string, params: Record<string, unknown>, context: McpExecutionContext) {
   try {
     switch (name) {
       case 'x402_pay_subagent': {
-        const providerAddress = params.providerAddress as string;
+        const serviceUrl = params.serviceUrl as string;
         const amount = params.amount as string;
         const serviceType = params.serviceType as string;
-        
-        if (!providerAddress || !amount || !serviceType) {
-          return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'providerAddress, amount, and serviceType are required' } };
+
+        if (!serviceUrl || !amount || !serviceType) {
+          return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'serviceUrl, amount, and serviceType are required' } };
         }
-        
-        const signer = await getSigner();
-        const usdt = getUsdtContract(signer);
-        const usdtAmount = ethers.parseUnits(amount, 6);
-        
-        const tx = await usdt.transfer(providerAddress, usdtAmount);
-        await tx.wait();
-        
-        return { 
-          success: true, 
-          data: { 
-            txHash: tx.hash, 
+
+        const service = SUB_AGENT_SERVICES.find(s => s.id === serviceType);
+        if (!service) {
+          return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: `Unknown service type: ${serviceType}` } };
+        }
+
+        const response = await payForX402Resource(serviceUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ serviceType, amount })
+        });
+
+        if (response.status === 402) {
+          const paymentRequired = await response.json();
+          return {
+            success: false,
+            error: {
+              code: MCP_ERRORS.TOOL_EXECUTION_FAILED,
+              message: 'Payment required',
+              paymentDetails: paymentRequired
+            }
+          };
+        }
+
+        if (!response.ok) {
+          return {
+            success: false,
+            error: {
+              code: MCP_ERRORS.TOOL_EXECUTION_FAILED,
+              message: `Service request failed: ${response.statusText}`
+            }
+          };
+        }
+
+        const result = await response.json();
+        return {
+          success: true,
+          data: {
+            txHash: result.txHash || result.transactionHash,
             amount,
             serviceType,
-            paymentProof: tx.hash,
+            paymentProof: result.proof || result.txHash,
             _meta: {
               executedBy: context.walletMode || 'agent',
-              protocol: 'x402'
+              protocol: 'x402',
+              facilitator: env.X402_FACILITATOR_URL
             }
-          } 
+          }
         };
       }
-      
+
       case 'x402_get_balance': {
         const rawAddress = (params.address as string) || context.userWallet || await (await getSigner()).getAddress();
         const address = ethers.getAddress(rawAddress);
@@ -164,37 +193,39 @@ export async function handleX402Tool(name: string, params: Record<string, unknow
         const balance = await usdt.balanceOf(address);
         const decimals = await usdt.decimals();
         const balanceFormatted = ethers.formatUnits(balance, decimals);
-        
-        return { 
-          success: true, 
-          data: { 
+
+        return {
+          success: true,
+          data: {
             balance: balance.toString(),
             balanceFormatted,
             _meta: {
               token: 'USDT',
               decimals
             }
-          } 
+          }
         };
       }
-      
+
       case 'x402_list_services': {
-        return { 
-          success: true, 
-          data: { 
+        return {
+          success: true,
+          data: {
             services: SUB_AGENT_SERVICES,
             _meta: {
               protocol: 'x402',
-              description: 'Pay these agents using x402_pay_subagent'
+              facilitator: env.X402_FACILITATOR_URL,
+              network: env.X402_NETWORK,
+              description: 'Use x402_pay_subagent with serviceUrl to pay for these services'
             }
-          } 
+          }
         };
       }
-      
+
       case 'x402_fleet_status': {
-        return { 
-          success: true, 
-          data: { 
+        return {
+          success: true,
+          data: {
             enabled: true,
             robotCount: 3,
             totalEarned: '0.0000',
@@ -202,10 +233,10 @@ export async function handleX402Tool(name: string, params: Record<string, unknow
             _meta: {
               mode: context.walletMode || 'agent'
             }
-          } 
+          }
         };
       }
-      
+
       default:
         return { success: false, error: { code: MCP_ERRORS.TOOL_NOT_FOUND, message: `Tool ${name} not found` } };
     }

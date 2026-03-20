@@ -7,6 +7,7 @@ import { ethers } from 'ethers';
 import { z } from 'zod';
 import { checkNavImpact, type NavShieldResult } from '@/services/NavShield';
 import { getCreditScore, checkCreditRequirements, recordTransaction } from '@/services/CreditScoring';
+import { calculateProfit, type ProfitCalcParams, type ProfitAnalysis } from '@/services/market-scanner/ProfitCalculator';
 const TransactionSchema = z.object({
   toAddress: z.string().refine((val) => ethers.isAddress(val), {
     message: "Invalid Ethereum address",
@@ -530,6 +531,91 @@ export class PolicyGuard {
         severity: 'CRITICAL',
       };
     }
+  }
+
+  validateArbitrageOpportunity(params: {
+    spreadBps: number;
+    volumeUsd: number;
+    gasEstimate: number;
+    gasPriceGwei: number;
+    ethPriceUsd: number;
+    buyExchange: string;
+    sellExchange: string;
+    minProfitUsd?: number;
+    minSpreadBps?: number;
+  }): { violated: boolean; reason: string; severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'; analysis: ProfitAnalysis } {
+    const minProfitUsd = params.minProfitUsd ?? 5; // Default $5 minimum profit
+    const minSpreadBps = params.minSpreadBps ?? 15; // Default 15 bps minimum spread
+
+    const feeMap: Record<string, number> = {
+      binance: 10,
+      bybit: 10,
+      okx: 8,
+      uniswap: 30,
+      curve: 4,
+      pancakeswap: 25,
+    };
+
+    const calcParams: ProfitCalcParams = {
+      spreadBps: params.spreadBps,
+      volumeUsd: params.volumeUsd,
+      gasEstimate: params.gasEstimate,
+      gasPriceGwei: params.gasPriceGwei,
+      ethPriceUsd: params.ethPriceUsd,
+      buyFeeBps: feeMap[params.buyExchange] ?? 10,
+      sellFeeBps: feeMap[params.sellExchange] ?? 10,
+    };
+
+    const analysis = calculateProfit(calcParams);
+
+    if (params.spreadBps < minSpreadBps) {
+      return {
+        violated: true,
+        reason: `Spread ${params.spreadBps} bps below minimum ${minSpreadBps} bps`,
+        severity: 'MEDIUM',
+        analysis,
+      };
+    }
+
+    if (!analysis.isProfitable) {
+      return {
+        violated: true,
+        reason: `Opportunity not profitable after fees. Net: $${analysis.netProfitUsd.toFixed(2)}`,
+        severity: 'HIGH',
+        analysis,
+      };
+    }
+
+    if (analysis.netProfitUsd < minProfitUsd) {
+      return {
+        violated: true,
+        reason: `Net profit $${analysis.netProfitUsd.toFixed(2)} below minimum $${minProfitUsd}`,
+        severity: 'MEDIUM',
+        analysis,
+      };
+    }
+
+    if (analysis.recommendation !== 'EXECUTE') {
+      return {
+        violated: true,
+        reason: `Recommendation: ${analysis.recommendation}. Net profit: $${analysis.netProfitUsd.toFixed(2)}`,
+        severity: 'MEDIUM',
+        analysis,
+      };
+    }
+
+    logger.info({
+      spreadBps: params.spreadBps,
+      netProfitUsd: analysis.netProfitUsd,
+      recommendation: analysis.recommendation,
+    }, '[PolicyGuard] Arbitrage opportunity validated');
+
+    return {
+      violated: false,
+      reason: `Profitable arbitrage: $${analysis.netProfitUsd.toFixed(2)} net profit`,
+      severity: 'LOW',
+      analysis,
+    };
   }
 
   /**

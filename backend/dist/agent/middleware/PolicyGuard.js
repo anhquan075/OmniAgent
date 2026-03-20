@@ -3,15 +3,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PolicyGuard = void 0;
 exports.getPolicyGuard = getPolicyGuard;
 exports.setPolicyGuard = setPolicyGuard;
-const env_1 = require("../../config/env");
-const constants_1 = require("../../lib/constants");
-const logger_1 = require("../../utils/logger");
+const env_1 = require("@/config/env");
+const constants_1 = require("@/lib/constants");
+const logger_1 = require("@/utils/logger");
 const openai_1 = require("@ai-sdk/openai");
 const ai_1 = require("ai");
 const ethers_1 = require("ethers");
 const zod_1 = require("zod");
-const NavShield_1 = require("../../services/NavShield");
-const CreditScoring_1 = require("../../services/CreditScoring");
+const NavShield_1 = require("@/services/NavShield");
+const CreditScoring_1 = require("@/services/CreditScoring");
+const ProfitCalculator_1 = require("@/services/market-scanner/ProfitCalculator");
 const TransactionSchema = zod_1.z.object({
     toAddress: zod_1.z.string().refine((val) => ethers_1.ethers.isAddress(val), {
         message: "Invalid Ethereum address",
@@ -433,6 +434,71 @@ class PolicyGuard {
                 severity: 'CRITICAL',
             };
         }
+    }
+    validateArbitrageOpportunity(params) {
+        const minProfitUsd = params.minProfitUsd ?? 5; // Default $5 minimum profit
+        const minSpreadBps = params.minSpreadBps ?? 15; // Default 15 bps minimum spread
+        const feeMap = {
+            binance: 10,
+            bybit: 10,
+            okx: 8,
+            uniswap: 30,
+            curve: 4,
+            pancakeswap: 25,
+        };
+        const calcParams = {
+            spreadBps: params.spreadBps,
+            volumeUsd: params.volumeUsd,
+            gasEstimate: params.gasEstimate,
+            gasPriceGwei: params.gasPriceGwei,
+            ethPriceUsd: params.ethPriceUsd,
+            buyFeeBps: feeMap[params.buyExchange] ?? 10,
+            sellFeeBps: feeMap[params.sellExchange] ?? 10,
+        };
+        const analysis = (0, ProfitCalculator_1.calculateProfit)(calcParams);
+        if (params.spreadBps < minSpreadBps) {
+            return {
+                violated: true,
+                reason: `Spread ${params.spreadBps} bps below minimum ${minSpreadBps} bps`,
+                severity: 'MEDIUM',
+                analysis,
+            };
+        }
+        if (!analysis.isProfitable) {
+            return {
+                violated: true,
+                reason: `Opportunity not profitable after fees. Net: $${analysis.netProfitUsd.toFixed(2)}`,
+                severity: 'HIGH',
+                analysis,
+            };
+        }
+        if (analysis.netProfitUsd < minProfitUsd) {
+            return {
+                violated: true,
+                reason: `Net profit $${analysis.netProfitUsd.toFixed(2)} below minimum $${minProfitUsd}`,
+                severity: 'MEDIUM',
+                analysis,
+            };
+        }
+        if (analysis.recommendation !== 'EXECUTE') {
+            return {
+                violated: true,
+                reason: `Recommendation: ${analysis.recommendation}. Net profit: $${analysis.netProfitUsd.toFixed(2)}`,
+                severity: 'MEDIUM',
+                analysis,
+            };
+        }
+        logger_1.logger.info({
+            spreadBps: params.spreadBps,
+            netProfitUsd: analysis.netProfitUsd,
+            recommendation: analysis.recommendation,
+        }, '[PolicyGuard] Arbitrage opportunity validated');
+        return {
+            violated: false,
+            reason: `Profitable arbitrage: $${analysis.netProfitUsd.toFixed(2)} net profit`,
+            severity: 'LOW',
+            analysis,
+        };
     }
     /**
      * Check credit score requirements for an agent before transaction.

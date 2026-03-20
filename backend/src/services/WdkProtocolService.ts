@@ -56,7 +56,11 @@ async function loadSwapModule() {
   return VeloraProtocolEvm;
 }
 
-export async function getAaveProtocol() {
+export async function getAaveProtocol(erc4337Account?: any) {
+  if (erc4337Account) {
+    const Protocol = await loadAaveModule();
+    return new Protocol(erc4337Account);
+  }
   if (!aaveInstance) {
     const [Protocol, account] = await Promise.all([
       loadAaveModule(),
@@ -82,7 +86,13 @@ export async function getBridgeProtocol() {
   return bridgeInstance;
 }
 
-export async function getSwapProtocol() {
+export async function getSwapProtocol(erc4337Account?: any) {
+  if (erc4337Account) {
+    const Protocol = await loadSwapModule();
+    return new Protocol(erc4337Account, {
+      swapMaxFee: 200000000000000n
+    });
+  }
   if (!swapInstance) {
     const [Protocol, account] = await Promise.all([
       loadSwapModule(),
@@ -98,13 +108,13 @@ export async function getSwapProtocol() {
 
 export const TOKEN_ADDRESSES: Record<string, Record<string, string>> = {
   mainnet: {
-    USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-    XAUT: '0x68749665FF8D2d112Fa859AA293F07A622782F38',
-    WETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
+    USDT: env.MAINNET_USDT,
+    XAUT: env.MAINNET_XAUT,
+    WETH: env.MAINNET_WETH
   },
   sepolia: {
     USDT: env.WDK_USDT_ADDRESS || '',
-    XAUT: '',
+    XAUT: env.WDK_XAUT_ADDRESS || '',
     WETH: ''
   }
 };
@@ -114,36 +124,36 @@ export const SUPPORTED_CHAINS = [
   'plasma', 'avalanche', 'celo', 'mantle', 'sei', 'stable'
 ];
 
-export async function supplyToAave(token: string, amount: bigint) {
-  const aave = await getAaveProtocol();
+export async function supplyToAave(token: string, amount: bigint, erc4337Account?: any) {
+  const aave = await getAaveProtocol(erc4337Account);
   const result = await aave.supply({ token, amount });
   logger.info({ txHash: result.hash, token, amount: amount.toString() }, '[WdkProtocolService] Aave supply');
   return result;
 }
 
-export async function withdrawFromAave(token: string, amount: bigint) {
-  const aave = await getAaveProtocol();
+export async function withdrawFromAave(token: string, amount: bigint, erc4337Account?: any) {
+  const aave = await getAaveProtocol(erc4337Account);
   const result = await aave.withdraw({ token, amount });
   logger.info({ txHash: result.hash, token, amount: amount.toString() }, '[WdkProtocolService] Aave withdraw');
   return result;
 }
 
-export async function borrowFromAave(token: string, amount: bigint) {
-  const aave = await getAaveProtocol();
+export async function borrowFromAave(token: string, amount: bigint, erc4337Account?: any) {
+  const aave = await getAaveProtocol(erc4337Account);
   const result = await aave.borrow({ token, amount });
   logger.info({ txHash: result.hash, token, amount: amount.toString() }, '[WdkProtocolService] Aave borrow');
   return result;
 }
 
-export async function repayToAave(token: string, amount: bigint) {
-  const aave = await getAaveProtocol();
+export async function repayToAave(token: string, amount: bigint, erc4337Account?: any) {
+  const aave = await getAaveProtocol(erc4337Account);
   const result = await aave.repay({ token, amount });
   logger.info({ txHash: result.hash, token, amount: amount.toString() }, '[WdkProtocolService] Aave repay');
   return result;
 }
 
-export async function getAaveAccountData() {
-  const aave = await getAaveProtocol();
+export async function getAaveAccountData(erc4337Account?: any) {
+  const aave = await getAaveProtocol(erc4337Account);
   const data = await aave.getAccountData();
   touchOracle();
   return data;
@@ -161,14 +171,19 @@ export async function quoteBridgeUsdt0(targetChain: string, recipient: string, t
   return bridge.quoteBridge({ targetChain, recipient, token, amount });
 }
 
-export async function swapTokens(tokenIn: string, tokenOut: string, tokenInAmount: bigint) {
-  const swap = await getSwapProtocol();
-  const result = await swap.swap({ tokenIn, tokenOut, tokenInAmount });
+export async function swapTokens(tokenIn: string, tokenOut: string, tokenInAmount: bigint, options?: { paymasterToken?: string; swapMaxFee?: bigint; erc4337Account?: any }) {
+  const swap = await getSwapProtocol(options?.erc4337Account);
+  const result = await swap.swap({ tokenIn, tokenOut, tokenInAmount }, {
+    paymasterToken: options?.paymasterToken,
+    swapMaxFee: options?.swapMaxFee
+  });
   logger.info({ txHash: result.hash, tokenIn, tokenOut, amount: tokenInAmount.toString() }, '[WdkProtocolService] Velora swap');
   return result;
 }
 
-export async function quoteSwapTokens(tokenIn: string, tokenOut: string, tokenInAmount: bigint) {
-  const swap = await getSwapProtocol();
-  return swap.quoteSwap({ tokenIn, tokenOut, tokenInAmount });
+export async function quoteSwapTokens(tokenIn: string, tokenOut: string, tokenInAmount: bigint, options?: { paymasterToken?: string; erc4337Account?: any }) {
+  const swap = await getSwapProtocol(options?.erc4337Account);
+  return swap.quoteSwap({ tokenIn, tokenOut, tokenInAmount }, {
+    paymasterToken: options?.paymasterToken
+  });
 }

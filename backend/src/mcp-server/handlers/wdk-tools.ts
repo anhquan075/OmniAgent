@@ -73,21 +73,28 @@ const MOCK_AAVE_POOL_ADDRESS = env.MOCK_AAVE_POOL_ADDRESS;
 const MOCK_BRIDGE_ADDRESS = env.MOCK_BRIDGE_ADDRESS;
 
 async function getAavePosition(userAddress: string) {
-  if (!MOCK_AAVE_POOL_ADDRESS) throw new Error('MOCK_AAVE_POOL_ADDRESS not configured');
+  if (!MOCK_AAVE_POOL_ADDRESS) throw new Error('MOCK_AAVE_POOL_ADDRESS not configured. Please set MOCK_AAVE_POOL_ADDRESS in .env file.');
   const poolAbi = [
     'function getAccountData(address user) external view returns (uint256 totalCollateralBase, uint256 totalDebtBase, uint256 healthFactor)'
   ];
   const pool = new ethers.Contract(MOCK_AAVE_POOL_ADDRESS, poolAbi, provider);
-  const data = await pool.getAccountData(userAddress);
-  return {
-    totalCollateralBase: data.totalCollateralBase.toString(),
-    totalDebtBase: data.totalDebtBase.toString(),
-    healthFactor: data.healthFactor.toString()
-  };
+  try {
+    const data = await pool.getAccountData(userAddress);
+    if (!data || data.totalCollateralBase === undefined) {
+      return { totalCollateralBase: '0', totalDebtBase: '0', healthFactor: '0' };
+    }
+    return {
+      totalCollateralBase: data.totalCollateralBase.toString(),
+      totalDebtBase: data.totalDebtBase.toString(),
+      healthFactor: data.healthFactor.toString()
+    };
+  } catch {
+    return { totalCollateralBase: '0', totalDebtBase: '0', healthFactor: '0' };
+  }
 }
 
 async function getBridgeQuote(amount: string, destinationChainId: string) {
-  if (!MOCK_BRIDGE_ADDRESS) throw new Error('MOCK_BRIDGE_ADDRESS not configured');
+  if (!MOCK_BRIDGE_ADDRESS) throw new Error('MOCK_BRIDGE_ADDRESS not configured. Please set MOCK_BRIDGE_ADDRESS in .env file.');
   const bridgeAbi = [
     'function quote() external view returns (uint256 nativeFee, uint256 bridgeFeeBps)'
   ];
@@ -102,12 +109,21 @@ async function getBridgeQuote(amount: string, destinationChainId: string) {
 export const wdkTools: McpTool[] = [
   {
     name: 'wdk_mint_test_token',
-    description: 'Mint test USDT tokens for testing (local hardhat only)',
+    description: 'Mint test USDT tokens for testing (local hardhat only). Useful for seeding wallets with test funds.',
     inputSchema: {
       type: 'object',
       properties: {
-        amount: { type: 'string', description: 'Amount of USDT to mint (e.g., 1000)', default: '1000' },
-        recipient: { type: 'string', description: 'Address to receive minted tokens (optional, defaults to agent wallet)' }
+        amount: { 
+           type: 'string', 
+           description: 'Amount of USDT to mint in token units (6 decimals). Example: "1000" for 1000 USDT or "100.5" for 100.5 USDT',
+           default: '1000',
+           examples: ["1000", "100.5", "5000"]
+         },
+        recipient: { 
+           type: 'string', 
+           description: 'Ethereum address to receive minted tokens (optional, defaults to agent wallet). Example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"',
+           examples: ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"]
+         }
       },
       required: []
     },
@@ -126,11 +142,16 @@ export const wdkTools: McpTool[] = [
   },
   {
     name: 'wdk_vault_deposit',
-    description: 'Deposit USDT into the WDK Vault (simplified - using contract for now)',
+    description: 'Deposit USDT into the WDK Vault to receive vault shares. Automatically approves USDT spending if needed.',
     inputSchema: {
       type: 'object',
       properties: {
-        amount: { type: 'string', description: 'Amount of USDT to deposit', default: '100' }
+        amount: { 
+           type: 'string', 
+           description: 'Amount of USDT to deposit in token units (6 decimals). Example: "100" for 100 USDT or "0.001" for 0.001 USDT',
+           default: '100',
+           examples: ["100", "0.001", "1000.5"]
+         }
       },
       required: []
     },
@@ -148,12 +169,21 @@ export const wdkTools: McpTool[] = [
   },
   {
     name: 'wdk_vault_withdraw',
-    description: 'Withdraw USDT from the WDK Vault (simplified - using contract for now)',
+    description: 'Withdraw USDT from the WDK Vault by burning vault shares. Requires sufficient vault balance.',
     inputSchema: {
       type: 'object',
       properties: {
-        amount: { type: 'string', description: 'Amount of USDT to withdraw', default: '10' },
-        receiver: { type: 'string', description: 'Receiver address (optional)' }
+        amount: { 
+           type: 'string', 
+           description: 'Amount of USDT to withdraw in token units (6 decimals). Example: "10" for 10 USDT or "0.5" for 0.5 USDT',
+           default: '10',
+           examples: ["10", "0.5", "100.25"]
+         },
+        receiver: { 
+           type: 'string', 
+           description: 'Ethereum address to receive withdrawn USDT (optional, defaults to agent wallet). Example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"',
+           examples: ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"]
+         }
       },
       required: []
     },
@@ -171,11 +201,15 @@ export const wdkTools: McpTool[] = [
   },
   {
     name: 'wdk_vault_getBalance',
-    description: 'Get the total balance in the WDK Vault',
+    description: 'Get the vault share balance for a specific account. Returns the number of vault shares owned.',
     inputSchema: {
       type: 'object',
       properties: {
-        account: { type: 'string', description: 'Account address to check balance for (optional, defaults to agent address)' }
+        account: { 
+           type: 'string', 
+           description: 'Ethereum address to check vault share balance for (optional, defaults to agent address). Example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"',
+           examples: ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"]
+         }
       },
       required: []
     },
@@ -192,10 +226,11 @@ export const wdkTools: McpTool[] = [
   },
   {
     name: 'wdk_vault_getState',
-    description: 'Get the current state of the WDK Vault (buffer status)',
+    description: 'Get the current state of the WDK Vault including buffer status, utilization metrics, and operational parameters.',
     inputSchema: {
       type: 'object',
-      properties: {}
+      properties: {},
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -213,10 +248,11 @@ export const wdkTools: McpTool[] = [
   
   {
     name: 'wdk_engine_executeCycle',
-    description: 'Execute a cycle in the WDK Engine',
+    description: 'Execute a yield optimization cycle in the WDK Engine. Triggers rebalancing, risk assessment, and strategy execution. High risk operation.',
     inputSchema: {
       type: 'object',
-      properties: {}
+      properties: {},
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -232,10 +268,11 @@ export const wdkTools: McpTool[] = [
   },
   {
     name: 'wdk_engine_getCycleState',
-    description: 'Get the current cycle state and decision preview',
+    description: 'Get the current cycle state and decision preview from the WDK Engine. Shows next state, price data, and cycle number.',
     inputSchema: {
       type: 'object',
-      properties: {}
+      properties: {},
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -253,10 +290,11 @@ export const wdkTools: McpTool[] = [
   },
   {
     name: 'wdk_engine_getRiskMetrics',
-    description: 'Get risk metrics (health factor) from the engine',
+    description: 'Get risk metrics including health factor from the WDK Engine. Health factor below 1.0 indicates liquidation risk.',
     inputSchema: {
       type: 'object',
-      properties: {}
+      properties: {},
+      required: []
     },
     outputSchema: {
       type: 'object',
@@ -271,11 +309,15 @@ export const wdkTools: McpTool[] = [
   },
   {
     name: 'wdk_aave_getPosition',
-    description: 'Get current Aave position info from mock pool on testnet',
+    description: 'Get current Aave lending position including supplied collateral, borrowed debt, and health factor. Health factor below 1.0 indicates liquidation risk.',
     inputSchema: {
       type: 'object',
       properties: {
-        user: { type: 'string', description: 'User address to check position for (optional, defaults to agent address)' }
+        user: { 
+           type: 'string', 
+           description: 'Ethereum address to check Aave position for (optional, defaults to agent address). Example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"',
+           examples: ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"]
+         }
       },
       required: []
     },
@@ -294,12 +336,21 @@ export const wdkTools: McpTool[] = [
   },
   {
     name: 'wdk_bridge_usdt0_status',
-    description: 'Get bridge quote/status from mock bridge on testnet',
+    description: 'Get bridge quote including native fees and bridge fees for cross-chain USDT transfer. Returns estimated costs without executing the bridge.',
     inputSchema: {
       type: 'object',
       properties: {
-        amount: { type: 'string', description: 'Amount to bridge', default: '100' },
-        destinationChainId: { type: 'string', description: 'Destination chain ID' }
+        amount: { 
+           type: 'string', 
+           description: 'Amount of USDT to bridge in token units (6 decimals). Example: "100" for 100 USDT or "0.001" for 0.001 USDT',
+           default: '100',
+           examples: ["100", "0.001", "1000.5"]
+         },
+        destinationChainId: { 
+           type: 'string', 
+           description: 'Destination chain ID for the bridge. Example: "1" for Ethereum, "42161" for Arbitrum, "137" for Polygon',
+           examples: ["1", "42161", "137"]
+         }
       },
       required: ['destinationChainId']
     },
@@ -317,11 +368,15 @@ export const wdkTools: McpTool[] = [
   },
   {
     name: 'wdk_aave_supply',
-    description: 'Supply USDT to mock Aave pool on testnet',
+    description: 'Supply USDT to Aave lending pool as collateral. Automatically approves USDT spending if needed. Increases your supplied balance and allows borrowing.',
     inputSchema: {
       type: 'object',
       properties: {
-        amount: { type: 'string', description: 'Amount of USDT to supply' }
+        amount: { 
+           type: 'string', 
+           description: 'Amount of USDT to supply in token units (6 decimals). Example: "100" for 100 USDT or "0.001" for 0.001 USDT',
+           examples: ["100", "0.001", "1000.5"]
+         }
       },
       required: ['amount']
     },
@@ -339,11 +394,15 @@ export const wdkTools: McpTool[] = [
   },
   {
     name: 'wdk_aave_withdraw',
-    description: 'Withdraw USDT from mock Aave pool on testnet',
+    description: 'Withdraw USDT from Aave lending pool. Reduces your supplied collateral. Ensure sufficient collateral remains if you have borrowed funds.',
     inputSchema: {
       type: 'object',
       properties: {
-        amount: { type: 'string', description: 'Amount of USDT to withdraw' }
+        amount: { 
+           type: 'string', 
+           description: 'Amount of USDT to withdraw in token units (6 decimals). Example: "10" for 10 USDT or "0.5" for 0.5 USDT',
+           examples: ["10", "0.5", "100.25"]
+         }
       },
       required: ['amount']
     },
@@ -361,15 +420,28 @@ export const wdkTools: McpTool[] = [
   },
   {
     name: 'wdk_bridge_usdt0',
-    description: 'Bridge USDT via mock bridge on testnet',
+    description: 'Bridge USDT to another blockchain. Automatically approves USDT spending if needed. High risk operation requiring native gas fees.',
     inputSchema: {
       type: 'object',
       properties: {
-        amount: { type: 'string', description: 'Amount of USDT to bridge', default: '100' },
-        destinationChainId: { type: 'string', description: 'Destination chain ID (e.g., "ethereum", "arbitrum")' },
-        recipientAddress: { type: 'string', description: 'Recipient address on destination chain (optional)' }
+        targetChain: { 
+           type: 'string', 
+           description: 'Target blockchain network. Example: "ethereum", "arbitrum", "polygon", "optimism"',
+           examples: ["ethereum", "arbitrum", "polygon"]
+         },
+        recipient: { 
+           type: 'string', 
+           description: 'Ethereum address to receive bridged USDT on destination chain. Example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"',
+           examples: ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"]
+         },
+        amount: { 
+           type: 'string', 
+           description: 'Amount of USDT to bridge in token units (6 decimals). Example: "100" for 100 USDT or "0.001" for 0.001 USDT',
+           default: '100',
+           examples: ["100", "0.001", "1000.5"]
+         }
       },
-      required: ['destinationChainId']
+      required: ['targetChain', 'recipient', 'amount']
     },
     outputSchema: {
       type: 'object',
@@ -392,7 +464,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       case 'wdk_mint_test_token': {
         const amount = (params.amount as string) || '1000';
         const usdtAddress = env.WDK_USDT_ADDRESS;
-        if (!usdtAddress) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'USDT address not configured' } };
+        if (!usdtAddress) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'USDT address not configured. Please set WDK_USDT_ADDRESS in .env file.' } };
 
         const walletAccount = await getWalletAccount();
         const address = await walletAccount.getAddress();
@@ -443,10 +515,10 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         const address = await walletAccount.getAddress();
         
         const vaultAddress = env.WDK_VAULT_ADDRESS;
-        if (!vaultAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Vault address not configured' } };
+        if (!vaultAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Vault address not configured. Please set WDK_VAULT_ADDRESS in .env file. Run deployment script to deploy contracts.' } };
         
         const usdtAddress = env.WDK_USDT_ADDRESS;
-        if (!usdtAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'USDT address not configured' } };
+        if (!usdtAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'USDT address not configured. Please set WDK_USDT_ADDRESS in .env file.' } };
         
         const usdtAmount = ethers.parseUnits(amount, 6);
         
@@ -518,7 +590,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         const address = await walletAccount.getAddress();
         
         const vaultAddress = env.WDK_VAULT_ADDRESS;
-        if (!vaultAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Vault address not configured' } };
+        if (!vaultAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Vault address not configured. Please set WDK_VAULT_ADDRESS in .env file. Run deployment script to deploy contracts.' } };
         
         const usdtAmount = ethers.parseUnits(amount, 6);
         const receiver = (params.receiver as string) || address;
@@ -567,7 +639,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         const address = ethers.getAddress(rawAddress);
         
         const vaultAddress = env.WDK_VAULT_ADDRESS;
-        if (!vaultAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Vault address not configured' } };
+        if (!vaultAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Vault address not configured. Please set WDK_VAULT_ADDRESS in .env file. Run deployment script to deploy contracts.' } };
         
         const vaultAbi = ['function balanceOf(address account) view returns (uint256)'];
         const vault = new ethers.Contract(vaultAddress, vaultAbi, provider);
@@ -578,7 +650,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       
       case 'wdk_vault_getState': {
         const vaultAddress = env.WDK_VAULT_ADDRESS;
-        if (!vaultAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Vault address not configured' } };
+        if (!vaultAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Vault address not configured. Please set WDK_VAULT_ADDRESS in .env file. Run deployment script to deploy contracts.' } };
         
         const vaultAbi = ['function bufferStatus() view returns (uint256 current, uint256 target, uint256 utilizationBps)'];
         const vault = new ethers.Contract(vaultAddress, vaultAbi, provider);
@@ -630,7 +702,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       
       case 'wdk_engine_getCycleState': {
         const engineAddress = env.WDK_ENGINE_ADDRESS;
-        if (!engineAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Engine address not configured' } };
+        if (!engineAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Engine address not configured. Please set WDK_ENGINE_ADDRESS in .env file. Run deployment script to deploy contracts.' } };
         
         const engineAbi = ['function previewDecision() view returns (tuple(bool executable, bytes32 reason, uint8 nextState, uint256 price, uint256 previousPrice, uint256 volatilityBps, uint256 targetWDKBps, uint256 targetLpBps, uint256 targetLendingBps, uint256 bountyBps, bool breakerPaused, int256 meanYieldBps, uint256 yieldVolatilityBps, int256 sharpeRatio, uint256 auctionElapsedSeconds, uint256 bufferUtilizationBps, uint256 healthFactor))'];
         const engine = new ethers.Contract(engineAddress, engineAbi, provider);
@@ -646,7 +718,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       
       case 'wdk_engine_getRiskMetrics': {
         const engineAddress = env.WDK_ENGINE_ADDRESS;
-        if (!engineAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Engine address not configured' } };
+        if (!engineAddress) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Engine address not configured. Please set WDK_ENGINE_ADDRESS in .env file. Run deployment script to deploy contracts.' } };
         
         const engineAbi = ['function getHealthFactor() view returns (uint256)'];
         const engine = new ethers.Contract(engineAddress, engineAbi, provider);
@@ -673,7 +745,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       case 'wdk_bridge_usdt0_status': {
         const amount = (params.amount as string) || '100';
         const destinationChainId = params.destinationChainId as string;
-        if (!destinationChainId) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Destination chain ID is required' } };
+        if (!destinationChainId) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'destinationChainId is required. Example: "1" for Ethereum, "42161" for Arbitrum, "137" for Polygon' } };
         
         const quote = await getBridgeQuote(amount, destinationChainId);
         
@@ -685,8 +757,8 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       
       case 'wdk_aave_supply': {
         const amount = params.amount as string;
-        if (!amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Amount is required' } };
-        if (!MOCK_AAVE_POOL_ADDRESS) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'MOCK_AAVE_POOL_ADDRESS not configured' } };
+        if (!amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'amount is required. Example: "100" for 100 USDT or "0.001" for 0.001 USDT' } };
+        if (!MOCK_AAVE_POOL_ADDRESS) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'MOCK_AAVE_POOL_ADDRESS not configured. Please set MOCK_AAVE_POOL_ADDRESS in .env file.' } };
         
         const usdtAmount = ethers.parseUnits(amount, 6);
         
@@ -756,8 +828,8 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       
       case 'wdk_aave_withdraw': {
         const amount = params.amount as string;
-        if (!amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Amount is required' } };
-        if (!MOCK_AAVE_POOL_ADDRESS) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'MOCK_AAVE_POOL_ADDRESS not configured' } };
+        if (!amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'amount is required. Example: "10" for 10 USDT or "0.5" for 0.5 USDT' } };
+        if (!MOCK_AAVE_POOL_ADDRESS) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'MOCK_AAVE_POOL_ADDRESS not configured. Please set MOCK_AAVE_POOL_ADDRESS in .env file.' } };
         
         const walletAccount = await getWalletAccount();
         const userAddress = await walletAccount.getAddress();
@@ -802,15 +874,28 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
       }
       
       case 'wdk_bridge_usdt0': {
+        const targetChain = params.targetChain as string;
+        const recipient = params.recipient as string;
         const amount = (params.amount as string) || '100';
-        const destinationChainId = params.destinationChainId as string;
-        if (!destinationChainId) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Destination chain ID is required' } };
-        if (!MOCK_BRIDGE_ADDRESS) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'MOCK_BRIDGE_ADDRESS not configured' } };
+        
+        if (!targetChain) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'targetChain is required. Example: "ethereum", "arbitrum", "polygon"' } };
+        if (!recipient) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'recipient is required. Example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"' } };
+        if (!amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'amount is required. Example: "100" for 100 USDT or "0.001" for 0.001 USDT' } };
+        if (!MOCK_BRIDGE_ADDRESS) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'MOCK_BRIDGE_ADDRESS not configured. Please set MOCK_BRIDGE_ADDRESS in .env file.' } };
         
         const walletAccount = await getWalletAccount();
         const userAddress = await walletAccount.getAddress();
         const usdtAmount = ethers.parseUnits(amount, 6);
-        const recipientAddress = (params.recipientAddress as string) || userAddress;
+        const recipientAddress = recipient;
+        
+        // Map targetChain to chain ID (simplified mapping for demo)
+        const chainIdMap: Record<string, number> = {
+          'ethereum': 1,
+          'arbitrum': 42161,
+          'polygon': 137,
+          'optimism': 10
+        };
+        const destinationChainId = chainIdMap[targetChain.toLowerCase()] || 1;
         
         if (context.walletMode === 'user' && context.userWallet) {
           const provider = new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
@@ -824,7 +909,7 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
           const bridgeIface = new ethers.Interface([
             'function bridge(address token, uint256 amount, uint256 destinationChainId, address recipient)'
           ]);
-          const bridgeData = bridgeIface.encodeFunctionData('bridge', [env.WDK_USDT_ADDRESS!, usdtAmount, 1, recipientAddress]);
+          const bridgeData = bridgeIface.encodeFunctionData('bridge', [env.WDK_USDT_ADDRESS!, usdtAmount, destinationChainId, recipientAddress]);
           
           const approveTx = createUnsignedTransaction(env.WDK_USDT_ADDRESS!, approveData, 0n);
           approveTx.nonce = nonce;
@@ -836,14 +921,14 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
           storePendingTransaction(approveId, approveTx, 'wdk_bridge_usdt0', `Approve bridge (${amount} USDT)`);
           
           const bridgeId = createPendingTransactionId();
-          storePendingTransaction(bridgeId, bridgeTx, 'wdk_bridge_usdt0', `Bridge ${amount} USDT to chain ${destinationChainId}`);
+          storePendingTransaction(bridgeId, bridgeTx, 'wdk_bridge_usdt0', `Bridge ${amount} USDT to ${targetChain}`);
           
           return {
             success: true,
             data: {
               requiresSignature: true,
               pendingTxIds: [approveId, bridgeId],
-              description: `Bridge ${amount} USDT to chain ${destinationChainId}`
+              description: `Bridge ${amount} USDT to ${targetChain}`
             }
           };
         }
@@ -867,10 +952,10 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         ];
         const bridge = new ethers.Contract(MOCK_BRIDGE_ADDRESS, bridgeAbi, signer);
         
-        const tx = await bridge.bridge(env.WDK_USDT_ADDRESS!, usdtAmount, 1, recipientAddress);
+        const tx = await bridge.bridge(env.WDK_USDT_ADDRESS!, usdtAmount, destinationChainId, recipientAddress);
         await tx.wait();
         
-        return { success: true, data: { txHash: tx.hash, destinationChainId, estimatedReceive: amount } };
+        return { success: true, data: { txHash: tx.hash, targetChain, estimatedReceive: amount } };
       }
       
       default:

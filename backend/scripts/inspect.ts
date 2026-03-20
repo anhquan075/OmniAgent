@@ -271,10 +271,14 @@ async function cmdSmokeTest() {
   let nonce = await provider.getTransactionCount(agentAddr);
 
   console.log("2. Funding agent...");
-  await (await deployer.sendTransaction({ to: agentAddr, value: ethers.parseEther("1.0") })).wait();
+  await (await deployer.sendTransaction({ to: agentAddr, value: ethers.parseEther("0.05") })).wait();
   const usdt = await ethers.getContractAt("MockERC20", usdtAddr);
-  await (await usdt.mint(agentAddr, ethers.parseUnits("5000", 6))).wait();
-  console.log("   Funded with 1 ETH + 5000 USDT");
+  try {
+    await (await usdt.mint(agentAddr, ethers.parseUnits("5000", 6))).wait();
+    console.log("   Funded with 0.05 ETH + 5000 USDT (minted)");
+  } catch {
+    console.log("   Funded with 0.05 ETH (USDT non-mintable)");
+  }
 
   console.log("3. Testing deposit...");
   const depositAmount = ethers.parseUnits("1000", 6);

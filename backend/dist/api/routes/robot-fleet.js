@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const hono_1 = require("hono");
 const streaming_1 = require("hono/streaming");
 const RobotFleetService_1 = require("../../services/RobotFleetService");
-const logger_1 = require("../../utils/logger");
+const logger_1 = require("@/utils/logger");
 const robotFleet = new hono_1.Hono();
 const fleetEmitter = RobotFleetService_1.robotFleetService.getEmitter();
 robotFleet.get('/events', async (c) => {

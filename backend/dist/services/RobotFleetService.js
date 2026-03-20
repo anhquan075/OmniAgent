@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.robotFleetService = void 0;
-const logger_1 = require("../utils/logger");
+const logger_1 = require("@/utils/logger");
 const events_1 = require("events");
 class RobotFleetService {
     static instance;
@@ -15,9 +15,9 @@ class RobotFleetService {
     async init() {
         try {
             const paths = [
-                '../scripts/robot-simulator',
-                '../../scripts/robot-simulator',
-                '../../../scripts/robot-simulator'
+                '../scripts/robot-simulator.ts',
+                '../../scripts/robot-simulator.ts',
+                '../../../scripts/robot-simulator.ts'
             ];
             for (const p of paths) {
                 try {

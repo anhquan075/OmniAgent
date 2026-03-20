@@ -43,9 +43,9 @@ class RobotFleetService {
   private async init() {
     try {
       const paths = [
-        '../scripts/robot-simulator',
-        '../../scripts/robot-simulator',
-        '../../../scripts/robot-simulator'
+        '../scripts/robot-simulator.ts',
+        '../../scripts/robot-simulator.ts',
+        '../../../scripts/robot-simulator.ts'
       ];
 
       for (const p of paths) {

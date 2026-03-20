@@ -15,7 +15,7 @@ export interface McpTool {
   inputSchema: McpInputSchema;
   outputSchema: McpOutputSchema;
   version: string;
-  blockchain: 'sepolia' | 'solana' | 'ton' | 'ethereum' | 'polygon_amoy' | 'arbitrum_sepolia' | 'gnosis_chiado';
+  blockchain: 'sepolia' | 'ethereum' | 'polygon_amoy' | 'arbitrum_sepolia' | 'gnosis_chiado';
   riskLevel: 'low' | 'medium' | 'high';
   category: 'wallet' | 'defi' | 'bridge' | 'lending' | 'utility' | 'account-abstraction' | 'x402' | 'swap' | 'agent';
 }
@@ -42,6 +42,7 @@ export interface McpSchemaProperty {
   maximum?: number;
   pattern?: string;
   items?: McpSchemaProperty;  // For array type
+  examples?: string[];
 }
 
 /**
@@ -99,7 +100,7 @@ export type ToolHandler = (params: Record<string, unknown>, context: McpExecutio
 export interface McpExecutionContext {
   requestId: string;
   timestamp: number;
-  walletNetwork?: 'sepolia' | 'solana' | 'ton' | 'polygon_amoy' | 'arbitrum_sepolia' | 'gnosis_chiado';
+  walletNetwork?: 'sepolia' | 'polygon_amoy' | 'arbitrum_sepolia' | 'gnosis_chiado';
   policyGuardEnabled: boolean;
   userWallet?: string;
   walletMode?: 'user' | 'agent';

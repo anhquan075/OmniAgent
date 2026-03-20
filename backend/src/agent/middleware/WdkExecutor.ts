@@ -9,8 +9,6 @@ function chainToId(chain: string): number {
   switch (chain) {
     case 'sepolia': return 11155111;
     case 'ethereum': return 1;
-    case 'solana': return 900001;
-    case 'ton': return 900002;
     default: return 11155111;
   }
 }

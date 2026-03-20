@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.strategicGuardrail = void 0;
-const logger_1 = require("../../utils/logger");
+const logger_1 = require("@/utils/logger");
 const openai_1 = require("@ai-sdk/openai");
 const ai_1 = require("ai");
 // Lightweight model for cost-efficient guardrails

@@ -5,14 +5,14 @@ exports.updateX402Revenue = updateX402Revenue;
 exports.addRecentAction = addRecentAction;
 exports.getAgentLiveData = getAgentLiveData;
 const hono_1 = require("hono");
-const ethers_1 = require("../../contracts/clients/ethers");
+const ethers_1 = require("@/contracts/clients/ethers");
 const ethers_2 = require("ethers");
-const env_1 = require("../../config/env");
-const logger_1 = require("../../utils/logger");
-const AdaptiveScheduler_1 = require("../../agent/services/AdaptiveScheduler");
-const NLCommandParser_1 = require("../../agent/services/NLCommandParser");
-const StatePersistence_1 = require("../../agent/services/StatePersistence");
-const PaymentGate_1 = require("../../agent/services/PaymentGate");
+const env_1 = require("@/config/env");
+const logger_1 = require("@/utils/logger");
+const AdaptiveScheduler_1 = require("@/agent/services/AdaptiveScheduler");
+const NLCommandParser_1 = require("@/agent/services/NLCommandParser");
+const StatePersistence_1 = require("@/agent/services/StatePersistence");
+const PaymentGate_1 = require("@/agent/services/PaymentGate");
 const agentLiveData = {
     lastReasoning: '',
     lastThought: '',

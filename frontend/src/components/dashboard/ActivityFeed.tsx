@@ -37,7 +37,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ events }) => {
                   <span className="leading-relaxed flex flex-wrap items-center gap-x-1">
                     {IconComponent && <IconComponent className="w-3 h-3 text-tether-teal inline-block" />}
                     <span className="font-medium text-tether-teal">Robot {eventData.robotId}</span>
-                    <span className="font-bold text-neon-green">{eventData.earnings} {networkConfig.nativeCurrency.symbol}</span>
+                    <span className="font-bold text-neon-green">{eventData.earnings} USDT</span>
                     <span className="text-neutral-gray">from</span>
                     <span className="text-white/80">{eventData.taskName}</span>
                     {eventData.txHash && (

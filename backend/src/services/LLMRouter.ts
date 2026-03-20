@@ -17,7 +17,7 @@ const ROUTING_RULES = {
   crypto_defi: [
     'vault', 'strategy', 'rebalance', 'usdt', 'xaut', 'gold', 'crypto', 'defi',
     'yield', 'risk', 'depeg', 'peg', 'asset', 'allocation', 'emergency',
-    'circuit', 'breaker', 'sharpe', 'bridge', 'cross-chain', 'solana',
+    'circuit', 'breaker', 'sharpe', 'bridge', 'cross-chain',
     'sepolia', 'ethereum', 'price', 'oracle', 'tether', 'stablecoin',
     'liquidity', 'apy', 'apr', 'transaction', 'wallet', 'deposit',
     'withdraw', 'swap', 'exchange', 'token', 'nft', 'smart contract'

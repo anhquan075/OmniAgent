@@ -2,6 +2,8 @@ export interface RobotConfig {
   id: string;
   type: string;
   icon: string;
+  capabilities?: string[];
+  x402Endpoints?: string[];
 }
 
 export interface FleetConfig {
@@ -11,6 +13,8 @@ export interface FleetConfig {
   taskInterval: { min: number; max: number };
   earningsRange: { min: string; max: string };
   agentWalletAddress: string;
+  useWdkAgents: boolean;
+  x402Enabled: boolean;
 }
 
 const DEFAULT_ROBOTS: RobotConfig[] = [
@@ -34,17 +38,21 @@ function parseRobots(): RobotConfig[] {
   return DEFAULT_ROBOTS;
 }
 
-export const robotFleetConfig: FleetConfig = {
-  enabled: process.env.ROBOT_FLEET_ENABLED === 'true',
-  fleetSize: parseInt(process.env.ROBOT_FLEET_SIZE || '8', 10),
-  robots: parseRobots(),
-  taskInterval: {
-    min: parseInt(process.env.ROBOT_FLEET_TASK_INTERVAL_MIN || '5000', 10),
-    max: parseInt(process.env.ROBOT_FLEET_TASK_INTERVAL_MAX || '15000', 10),
-  },
-  earningsRange: {
-    min: process.env.ROBOT_FLEET_EARNINGS_MIN || '0.0001',
-    max: process.env.ROBOT_FLEET_EARNINGS_MAX || '0.0025',
-  },
-  agentWalletAddress: process.env.ROBOT_FLEET_AGENT_WALLET || '',
-};
+export function getRobotFleetConfig(): FleetConfig {
+  return {
+    enabled: process.env.ROBOT_FLEET_ENABLED === 'true',
+    fleetSize: parseInt(process.env.ROBOT_FLEET_SIZE || '8', 10),
+    robots: parseRobots(),
+    taskInterval: {
+      min: parseInt(process.env.ROBOT_FLEET_TASK_INTERVAL_MIN || '5000', 10),
+      max: parseInt(process.env.ROBOT_FLEET_TASK_INTERVAL_MAX || '15000', 10),
+    },
+    earningsRange: {
+      min: process.env.ROBOT_FLEET_EARNINGS_MIN || '0.1',
+      max: process.env.ROBOT_FLEET_EARNINGS_MAX || '0.5',
+    },
+    agentWalletAddress: process.env.ROBOT_FLEET_AGENT_WALLET || '',
+    useWdkAgents: process.env.ROBOT_FLEET_USE_WDK_AGENTS === 'true',
+    x402Enabled: process.env.ROBOT_FLEET_X402_ENABLED !== 'false',
+  };
+}

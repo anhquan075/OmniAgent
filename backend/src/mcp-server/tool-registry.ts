@@ -17,9 +17,6 @@ export const DANGEROUS_TOOLS = new Set([
  * LLM can see these but execution will prompt for confirmation.
  */
 export const HIGH_RISK_TOOLS = new Set([
-  'sol_transfer',
-  'sol_swap',
-  'ton_transfer',
   'wdk_vault_withdraw',
   'wdk_engine_execute',
   'x402_payForService',

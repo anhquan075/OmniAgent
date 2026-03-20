@@ -1,15 +1,17 @@
 import { ethers } from 'ethers';
 import * as dotenv from 'dotenv';
 import { EventEmitter } from 'events';
-import { robotFleetConfig, FleetConfig as FleetConfigType } from '../config/robot-fleet';
 import { logger } from '../utils/logger';
 import {
   RobotFleetPaymentHandler,
   initPaymentHandler,
   getPaymentHandler
 } from '../services/robot-fleet/payment-handler';
+import { RobotAgent } from '../services/robot-fleet/robot-agent';
 
 dotenv.config({ path: '.env', override: true });
+
+import { getRobotFleetConfig, FleetConfig as FleetConfigType } from '../config/robot-fleet';
 
 interface FleetConfig extends FleetConfigType {
   rpcUrl?: string;
@@ -23,6 +25,8 @@ interface Robot {
   status: 'Working' | 'Idle';
   totalEarned: string;
   taskCount: number;
+  agent?: RobotAgent;
+  address?: string;
 }
 
 export interface FleetEvent {
@@ -55,15 +59,25 @@ export function getRobots(): Robot[] {
 }
 
 export function getFleetStatus() {
-  const robotList = Array.from(robots.values());
+  const robotList = Array.from(robots.values()).map(r => ({
+    id: r.id,
+    type: r.type,
+    icon: r.icon,
+    status: r.status,
+    totalEarned: r.totalEarned,
+    taskCount: r.taskCount,
+    address: r.address,
+    derivationPath: r.agent?.derivationPath
+  }));
+
   const fleetTotalEarned = robotList.reduce((sum, r) => {
-    return sum + parseFloat(r.totalEarned);
+    return sum + parseFloat(r.totalEarned || '0');
   }, 0);
 
   return {
     enabled: fleetConfig?.enabled || false,
     robots: robotList,
-    fleetTotalEarned: fleetTotalEarned.toFixed(4),
+    fleetTotalEarned: fleetTotalEarned.toFixed(2),
     recentEvents: getRecentEvents().slice(-10),
     latestTxHash: getRecentEvents()[0]?.txHash || null,
     latestTxValue: getRecentEvents()[0]?.earnings || null
@@ -71,7 +85,8 @@ export function getFleetStatus() {
 }
 
 function loadConfig(): FleetConfig {
-  const config = { ...robotFleetConfig } as FleetConfig;
+  fleetConfig = getRobotFleetConfig();
+  const config = { ...fleetConfig } as FleetConfig;
 
   config.rpcUrl = process.env.SEPOLIA_RPC_URL || config.rpcUrl || 'https://ethereum-sepolia.publicnode.com';
   config.privateKey = process.env.PRIVATE_KEY || process.env.ROBOT_FLEET_PRIVATE_KEY || process.env.WDK_SECRET_SEED || config.privateKey;
@@ -127,7 +142,8 @@ function spawnFleet(): void {
   
   if (!fleetConfig.robots) return;
 
-  for (const robotConfig of fleetConfig.robots) {
+  for (let i = 0; i < fleetConfig.robots.length; i++) {
+    const robotConfig = fleetConfig.robots[i];
     const robot: Robot = {
       id: robotConfig.id,
       type: robotConfig.type,
@@ -141,6 +157,98 @@ function spawnFleet(): void {
   }
 }
 
+async function initializeRobotAgents(): Promise<void> {
+  let index = 0;
+  for (const robot of robots.values()) {
+    try {
+      const agent = new RobotAgent({
+        id: robot.id,
+        type: robot.type,
+        seedPhrase: fleetConfig.privateKey || process.env.WDK_SECRET_SEED || '',
+        derivationPath: `0'/${index}/0`,
+        rpcUrl: fleetConfig.rpcUrl || process.env.SEPOLIA_RPC_URL || ''
+      });
+      
+      await agent.initialize();
+      robot.agent = agent;
+      robot.address = await agent.getAddress();
+      
+      logger.info({ 
+        robotId: robot.id, 
+        address: robot.address 
+      }, '[RobotFleet] Robot agent initialized with WDK wallet');
+    } catch (error) {
+      logger.error({ error, robotId: robot.id }, '[RobotFleet] Failed to initialize robot agent');
+    }
+    index++;
+  }
+}
+
+async function fundRobotsWithUsdt(): Promise<void> {
+  if (!wallet || !provider) {
+    logger.warn('[RobotFleet] No wallet, skipping robot funding');
+    return;
+  }
+  
+  const usdtAddress = process.env.WDK_USDT_ADDRESS;
+  if (!usdtAddress) {
+    logger.warn('[RobotFleet] USDT address not configured, skipping funding');
+    return;
+  }
+  
+  const USDT_ABI = [
+    'function transfer(address to, uint256 amount) returns (bool)',
+    'function balanceOf(address account) view returns (uint256)'
+  ];
+  
+  const usdt = new ethers.Contract(usdtAddress, USDT_ABI, wallet);
+  const fundAmount = ethers.parseUnits('0.5', 6);
+  
+  for (const robot of robots.values()) {
+    if (!robot.address) continue;
+    
+    try {
+      const balance = await usdt.balanceOf(robot.address);
+      if (balance < fundAmount) {
+        logger.info({ robotId: robot.id, currentBalance: ethers.formatUnits(balance, 6) }, '[RobotFleet] Funding robot with USDT');
+        const tx = await usdt.transfer(robot.address, fundAmount);
+        await tx.wait();
+        logger.info({ robotId: robot.id, txHash: tx.hash }, '[RobotFleet] Robot funded');
+      }
+    } catch (error) {
+      logger.error({ error, robotId: robot.id }, '[RobotFleet] Failed to fund robot');
+    }
+  }
+}
+
+async function fundRobotsWithEth(): Promise<void> {
+  if (!wallet || !provider) {
+    logger.warn('[RobotFleet] No wallet, skipping ETH funding');
+    return;
+  }
+  
+  const ethAmount = ethers.parseEther('0.005');
+  
+  for (const robot of robots.values()) {
+    if (!robot.address) continue;
+    
+    try {
+      const balance = await provider.getBalance(robot.address);
+      if (balance < ethAmount) {
+        logger.info({ robotId: robot.id, currentBalance: ethers.formatEther(balance) }, '[RobotFleet] Funding robot with ETH');
+        const tx = await wallet.sendTransaction({
+          to: robot.address,
+          value: ethAmount
+        });
+        await tx.wait();
+        logger.info({ robotId: robot.id, txHash: tx.hash }, '[RobotFleet] Robot funded with ETH');
+      }
+    } catch (error) {
+      logger.error({ error, robotId: robot.id }, '[RobotFleet] Failed to fund robot with ETH');
+    }
+  }
+}
+
 function randomInRange(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -149,35 +257,37 @@ function generateEarnings(): string {
   const min = parseFloat(fleetConfig.earningsRange.min);
   const max = parseFloat(fleetConfig.earningsRange.max);
   const earnings = min + Math.random() * (max - min);
-  return earnings.toFixed(4);
+  return earnings.toFixed(2);
 }
 
-async function sendPayment(amount: string, toAddress: string): Promise<string | null> {
-  if (!paymentHandler) {
-    logger.warn('[RobotFleet] Payment handler not initialized, skipping payment');
+async function sendUsdtPayment(amount: string, toAddress: string): Promise<string | null> {
+  if (!wallet || !provider) {
+    logger.warn('[RobotFleet] Wallet not initialized, skipping payment');
     return null;
   }
 
   try {
-    logger.info({ amount, to: toAddress }, '[RobotFleet] Sending payment via handler');
-    
-    const result = await paymentHandler.sendPayment(amount, toAddress);
-    
-    logger.info(
-      { hash: result.hash, status: result.status },
-      '[RobotFleet] Payment submitted'
-    );
-
-    if (result.status === 'already_known') {
-      logger.info(
-        { hash: result.hash },
-        '[RobotFleet] Transaction already in mempool, using existing tx'
-      );
+    const usdtAddress = process.env.WDK_USDT_ADDRESS;
+    if (!usdtAddress) {
+      logger.error('[RobotFleet] USDT address not configured');
+      return null;
     }
 
-    return result.hash;
+    const USDT_ABI = [
+      'function transfer(address to, uint256 amount) returns (bool)'
+    ];
+
+    const usdt = new ethers.Contract(usdtAddress, USDT_ABI, wallet);
+    const usdtAmount = ethers.parseUnits(amount, 6);
+    
+    logger.info({ amount, to: toAddress }, '[RobotFleet] Sending USDT payment');
+    const tx = await usdt.transfer(toAddress, usdtAmount);
+    const receipt = await tx.wait();
+    
+    logger.info({ hash: receipt.hash }, '[RobotFleet] USDT payment confirmed');
+    return receipt.hash;
   } catch (error: any) {
-    logger.error(error, '[RobotFleet] Payment failed');
+    logger.error(error, '[RobotFleet] USDT payment failed');
     return null;
   }
 }
@@ -208,7 +318,7 @@ async function completeTask(robotId: string): Promise<void> {
   const finishTask = (hash: string) => {
     txHash = hash;
     const currentEarnings = parseFloat(robot.totalEarned);
-    robot.totalEarned = (currentEarnings + parseFloat(earnings)).toFixed(4);
+    robot.totalEarned = (currentEarnings + parseFloat(earnings)).toFixed(2);
 
     const event: FleetEvent = {
       robotId: robot.id,
@@ -228,8 +338,22 @@ async function completeTask(robotId: string): Promise<void> {
     }, 2000);
   };
 
+  if (robot.agent) {
+    const result = await robot.agent.executeTask({
+      taskName,
+      earnings,
+      robotId: robot.id,
+      robotType: robot.type,
+      targetAddress
+    });
+    
+    if (result.success) {
+      logger.info({ robotId: robot.id, result }, '[RobotFleet] Robot agent task executed');
+    }
+  }
+
   if (targetAddress && targetAddress !== '0x0000000000000000000000000000000000000000') {
-    const hash = await sendPayment(earnings, targetAddress);
+    const hash = await sendUsdtPayment(earnings, targetAddress);
     if (hash) {
       finishTask(hash);
     } else {
@@ -278,12 +402,18 @@ export async function startSimulator(): Promise<void> {
 
   spawnFleet();
 
+  await initializeRobotAgents();
+
+  await fundRobotsWithUsdt();
+
+  await fundRobotsWithEth();
+
   for (const robot of robots.values()) {
     logger.debug({ robotId: robot.id }, '[RobotFleet] Starting tasks');
     startRobotTasks(robot.id);
   }
 
-  logger.info('[RobotFleet] Robot Fleet Simulator running');
+  logger.info('[RobotFleet] Robot Fleet Simulator running with WDK agents');
 }
 
 async function main(): Promise<void> {

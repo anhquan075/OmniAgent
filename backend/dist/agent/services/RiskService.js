@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RiskService = void 0;
-const env_1 = require("../../config/env");
-const logger_1 = require("../../utils/logger");
+const env_1 = require("@/config/env");
+const logger_1 = require("@/utils/logger");
 const openai_1 = require("@ai-sdk/openai");
 const ai_1 = require("ai");
 class RiskService {

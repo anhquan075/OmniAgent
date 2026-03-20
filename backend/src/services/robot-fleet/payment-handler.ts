@@ -1,5 +1,7 @@
 import { ethers } from 'ethers';
 import { logger } from '@/utils/logger';
+import { x402Client, wrapFetchWithPayment } from '@x402/fetch';
+import { registerExactEvmScheme } from '@x402/evm/exact/client';
 
 interface PendingTx {
   hash: string;
@@ -25,11 +27,38 @@ export class RobotFleetPaymentHandler {
   private readonly GAS_BUFFER_PERCENT = 50n;
   private readonly FALLBACK_GAS_LIMIT = 100000n;
   private _addressPromise: Promise<string> | null = null;
+  private x402Fetch: typeof fetch | null = null;
 
   constructor(
     private wallet: ethers.Signer,
     private provider: ethers.JsonRpcProvider
   ) {}
+
+  private async initX402(): Promise<typeof fetch> {
+    if (this.x402Fetch) return this.x402Fetch;
+
+    try {
+      const { default: WalletManagerEvm } = await import('@tetherto/wdk-wallet-evm');
+      const { env } = await import('@/config/env');
+      
+      const walletManager = new WalletManagerEvm(
+        { phrase: env.WDK_SECRET_SEED, language: 'english' },
+        { provider: env.SEPOLIA_RPC_URL }
+      );
+      const account = await walletManager.getAccount();
+
+      const client = new x402Client();
+      registerExactEvmScheme(client, { signer: account });
+      this.x402Fetch = wrapFetchWithPayment(fetch, client);
+      
+      logger.info('[PaymentHandler] x402 client initialized');
+    } catch (error) {
+      logger.error({ error }, '[PaymentHandler] Failed to initialize x402 client');
+      throw error;
+    }
+
+    return this.x402Fetch;
+  }
 
   private async getAddress(): Promise<string> {
     if (!this._addressPromise) {
@@ -329,6 +358,47 @@ export class RobotFleetPaymentHandler {
 
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async sendX402Payment(
+    url: string,
+    options?: RequestInit
+  ): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    try {
+      const fetchWithPayment = await this.initX402();
+      const response = await fetchWithPayment(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        ...options
+      });
+
+      if (response.status === 402) {
+        const paymentDetails = await response.json();
+        logger.warn({ paymentDetails }, '[PaymentHandler] Payment required for x402 resource');
+        return {
+          success: false,
+          error: 'Payment required',
+          txHash: paymentDetails.transactionHash
+        };
+      }
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${response.statusText}`
+        };
+      }
+
+      const result = await response.json();
+      return {
+        success: true,
+        txHash: result.transactionHash || result.txHash
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ error: message }, '[PaymentHandler] x402 payment failed');
+      return { success: false, error: message };
+    }
   }
 
   cleanupOldTransactions(ageMs: number = 600000): void {

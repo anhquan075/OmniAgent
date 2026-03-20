@@ -1,21 +1,45 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BridgeService = void 0;
-const env_1 = require("../../config/env");
-const logger_1 = require("../../utils/logger");
-/**
- * BridgeService handles autonomous cross-chain movements using WDK.
- */
+const env_1 = require("@/config/env");
+const logger_1 = require("@/utils/logger");
+const WdkProtocolService_1 = require("@/services/WdkProtocolService");
+const CHAIN_ID_MAP = {
+    '1': 'ethereum',
+    '42161': 'arbitrum',
+    '10': 'optimism',
+    '137': 'polygon',
+    '80094': 'berachain',
+    '57073': 'ink',
+    '9745': 'plasma',
+    '1030': 'conflux',
+    '21000000': 'corn',
+    '43114': 'avalanche',
+    '42220': 'celo',
+    '14': 'flare',
+    '999': 'hyperevm',
+    '5000': 'mantle',
+    '4326': 'megaeth',
+    '143': 'monad',
+    '2818': 'morph',
+    '30': 'rootstock',
+    '1329': 'sei',
+    '988': 'stable',
+    '130': 'unichain',
+    '196': 'xlayer',
+    '30168': 'solana',
+    '30343': 'ton',
+    '30420': 'tron',
+    '11155111': 'sepolia'
+};
 class BridgeService {
     wdk;
-    constructor(wdk, sepoliaRpc, solanaRpc, tonRpc) {
+    constructor(wdk, sepoliaRpc) {
         this.wdk = wdk;
     }
     async fetchCrossChainYields() {
         return {
-            sepolia: 4.85,
-            solana: 9.12,
-            ton: 7.24
+            sepolia: 4.85
         };
     }
     async analyzeBridgeOpportunity(currentChain, threshold = 2.0) {
@@ -35,29 +59,65 @@ class BridgeService {
         }
         return { shouldBridge: false };
     }
-    async executeBridge(fromChain, toChain, amount, tokenAddress) {
-        logger_1.logger.info({ amount, fromChain, toChain }, '[BridgeService] WDK OMNICHAIN TRANSFER');
+    async getBridgeQuote(sourceChain, targetChain, amountUsdt, recipient) {
+        const sourceChainName = CHAIN_ID_MAP[sourceChain] || sourceChain;
+        const targetChainName = CHAIN_ID_MAP[targetChain] || targetChain;
+        const token = env_1.env.WDK_USDT_ADDRESS;
+        if (!token) {
+            return { success: false, error: 'WDK_USDT_ADDRESS not configured' };
+        }
         try {
-            const fromAccount = await this.wdk.getAccount(fromChain);
-            const toAccount = await this.wdk.getAccount(toChain);
-            const recipientAddress = await toAccount.getAddress();
-            // Check balance before bridging
-            const token = tokenAddress || (fromChain === 'sepolia' ? env_1.env.WDK_USDT_ADDRESS : '');
-            const result = await fromAccount.transfer({
-                token: token,
-                recipient: recipientAddress,
-                amount: amount.toString(),
-                targetChain: toChain
-            });
-            return { success: true, hash: result.hash, toChain };
+            const quote = await (0, WdkProtocolService_1.quoteBridgeUsdt0)(targetChainName, recipient, token, amountUsdt);
+            return {
+                success: true,
+                fee: quote.fee.toString(),
+                bridgeFee: quote.bridgeFee.toString(),
+                targetChain: targetChainName
+            };
         }
         catch (error) {
-            logger_1.logger.error(error, '[BridgeService] WDK Transfer Failed');
+            logger_1.logger.error({ error: error.message, targetChain }, '[BridgeService] Quote failed');
             return { success: false, error: error.message };
         }
     }
-    async bridgeUsdt(sourceChain, targetChain, amount) {
-        return this.executeBridge(sourceChain, targetChain, Number(amount) / 1e18);
+    async executeBridge(sourceChain, targetChain, amountUsdt, recipient) {
+        const sourceChainName = CHAIN_ID_MAP[sourceChain] || sourceChain;
+        const targetChainName = CHAIN_ID_MAP[targetChain] || targetChain;
+        const tokenAddress = env_1.env.WDK_USDT_ADDRESS || '';
+        if (!tokenAddress) {
+            return { success: false, error: 'WDK_USDT_ADDRESS not configured' };
+        }
+        let recipientAddress = recipient ?? '';
+        if (!recipientAddress) {
+            const toAccount = await this.wdk.getAccount(targetChainName);
+            recipientAddress = await toAccount.getAddress();
+        }
+        logger_1.logger.info({ amount: amountUsdt.toString(), sourceChain: sourceChainName, targetChain: targetChainName }, '[BridgeService] WDK bridge execution');
+        try {
+            const result = await (0, WdkProtocolService_1.bridgeUsdt0)(targetChainName, recipientAddress, tokenAddress, amountUsdt);
+            return {
+                success: true,
+                hash: result.hash,
+                approveHash: result.approveHash,
+                bridgeFee: result.bridgeFee.toString(),
+                totalFee: result.fee.toString(),
+                targetChain: targetChainName
+            };
+        }
+        catch (error) {
+            logger_1.logger.error({ error: error.message, targetChain }, '[BridgeService] Bridge failed');
+            return { success: false, error: error.message };
+        }
+    }
+    async bridgeUsdt(sourceChain, targetChain, amountUsdt, recipient) {
+        return this.executeBridge(sourceChain, targetChain, amountUsdt, recipient);
+    }
+    isValidChain(chain) {
+        const chainName = CHAIN_ID_MAP[chain] || chain;
+        return WdkProtocolService_1.SUPPORTED_CHAINS.includes(chainName) || ['solana', 'ton', 'tron'].includes(chainName);
+    }
+    getSupportedChains() {
+        return [...WdkProtocolService_1.SUPPORTED_CHAINS, 'solana', 'ton', 'tron'];
     }
 }
 exports.BridgeService = BridgeService;

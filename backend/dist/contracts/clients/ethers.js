@@ -3,9 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getContracts = exports.provider = void 0;
 exports.getSigner = getSigner;
 const ethers_1 = require("ethers");
-const env_1 = require("../../config/env");
-const logger_1 = require("../../utils/logger");
-const wdk_loader_1 = require("../../lib/wdk-loader");
+const env_1 = require("@/config/env");
+const logger_1 = require("@/utils/logger");
+const wdk_loader_1 = require("@/lib/wdk-loader");
 // Load ABIs
 const abis_1 = require("../abis");
 logger_1.logger.info({ rpcUrl: env_1.env.SEPOLIA_RPC_URL }, '[Ethers] Initializing provider');

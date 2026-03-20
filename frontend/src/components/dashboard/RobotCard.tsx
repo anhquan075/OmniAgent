@@ -46,7 +46,7 @@ const RobotCard: React.FC<RobotCardProps> = ({ id, type, icon, status, totalEarn
         </span>
       </div>
       <div className="text-sm font-heading font-bold text-tether-teal leading-none">
-        {totalEarned} <span className="text-[9px] text-neutral-gray font-normal">ETH</span>
+        {totalEarned} <span className="text-[9px] text-neutral-gray font-normal">USDT</span>
       </div>
       <div className="mt-1.5 text-[8px] text-neutral-gray font-mono tracking-wider">
         ID: {id}

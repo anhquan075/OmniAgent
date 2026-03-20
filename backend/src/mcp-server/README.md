@@ -16,7 +16,7 @@ curl -X POST http://localhost:3001/api/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
-## Available Tools (29 total)
+## Available Tools (23 total)
 
 ### X402 (4 tools)
 | Tool | Description | Risk |
@@ -52,7 +52,7 @@ curl -X POST http://localhost:3001/api/mcp \
 | `aa_getUserOpReceipt` | Get op receipt | Low |
 | `aa_getSupportedEntryPoints` | Get entry points | Low |
 
-### Sepolia (7 tools)
+### Sepolia (8 tools)
 | Tool | Description | Risk |
 |------|-------------|------|
 | `sepolia_create_wallet` | Create/retrieve Sepolia wallet | Low |
@@ -62,21 +62,7 @@ curl -X POST http://localhost:3001/api/mcp \
 | `sepolia_supply_aave` | Supply via Aave | Medium |
 | `sepolia_withdraw_aave` | Withdraw from Aave | Medium |
 | `sepolia_bridge_layerzero` | Bridge via LayerZero | High |
-
-### Solana (4 tools)
-| Tool | Description | Risk |
-|------|-------------|------|
-| `sol_createWallet` | Create/retrieve Solana wallet | Low |
-| `sol_getBalance` | Get SOL/USDC balance | Low |
-| `sol_transfer` | Transfer SOL/USDC | Medium |
-| `sol_swap` | Swap via Jupiter | Medium |
-
-### TON (3 tools)
-| Tool | Description | Risk |
-|------|-------------|------|
-| `ton_createWallet` | Create/retrieve TON wallet | Low |
-| `ton_getBalance` | Get TON balance | Low |
-| `ton_transfer` | Transfer TON | Medium |
+| `sepolia_getTransactionHistory` | Get recent transaction history | Low |
 
 ## PolicyGuard Integration
 
@@ -91,6 +77,4 @@ All transaction tools integrate with PolicyGuard:
 # .env
 WDK_SECRET_SEED=your_seed
 SEPOLIA_RPC_URL=https://ethereum-sepolia.publicnode.com
-SOLANA_RPC_URL=https://api.testnet.solana.com
-TON_RPC_URL=https://testnet.toncenter.com
 ```

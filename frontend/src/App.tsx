@@ -7,10 +7,15 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   BotIcon,
   BrainCircuitIcon,
+  CoinsIcon,
   ExternalLink,
+  GlobeIcon,
+  LayersIcon,
   Loader2,
   MenuIcon,
   ServerIcon,
+  TrendingUpIcon,
+  WalletIcon,
   XIcon,
   Zap,
 } from "lucide-react";
@@ -95,9 +100,14 @@ export default function App() {
   // Track streaming agent status from SSE data-status events
   const [agentStreamStatus, setAgentStreamStatus] = useState<any[]>([]);
   const initialSuggestions = [
-    { label: 'Vault Status', prompt: 'Show me the current vault status and liquidity.' },
-    { label: 'Check Yields', prompt: 'What are the best cross-chain yield opportunities right now?' },
-    { label: 'Risk Analysis', prompt: 'Run a Monte Carlo risk analysis on my current allocation.' },
+    { label: 'Sepolia Balance', prompt: 'Check my wallet balance on Sepolia testnet.', icon: WalletIcon },
+    { label: 'Sub-Agents', prompt: 'List all available sub-agents in the X402 fleet.', icon: BotIcon },
+    { label: 'Vault State', prompt: 'Show me the current vault state and buffer utilization.', icon: LayersIcon },
+    { label: 'Cycle State', prompt: 'What is the current cycle state of the WDK engine?', icon: Zap },
+    { label: 'Aave Position', prompt: 'Check my Aave lending position and health factor.', icon: CoinsIcon },
+    { label: 'Smart Account', prompt: 'Get the ERC-4337 smart account address for wallet 0xB789D888A53D34f6701C1A5876101Cb32dbF17cF and check its balance.', icon: ServerIcon },
+    { label: 'Market Prices', prompt: 'Get the current prices for ETH, BTC, and BNB from exchanges.', icon: TrendingUpIcon },
+    { label: 'Bridge Quote', prompt: 'Get a quote to bridge 100 USDT to Arbitrum using USD₮₀ protocol.', icon: GlobeIcon },
   ];
   const [suggestions, setSuggestions] = useState<any[]>(initialSuggestions);
   const [pendingSuggestions, setPendingSuggestions] = useState<any[]>([]);

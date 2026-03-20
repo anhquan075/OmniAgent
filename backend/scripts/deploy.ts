@@ -15,31 +15,59 @@ async function deployMockTokens() {
   const addresses: Record<string, string> = {};
   const MockERC20 = await ethers.getContractFactory("MockERC20");
 
-  const networkUsdt = env.SEPOLIA_USDT_ADDRESS || env.POLYGON_USDT_ADDRESS ||
-    env.ARBITRUM_USDT_ADDRESS || env.PLASMA_USDT_ADDRESS || env.ETHEREUM_USDT_ADDRESS;
+  // Check for real Tether tokens on Sepolia first
+  const sepoliaUsdt = env.SEPOLIA_USDT_ADDRESS || "0xd077a400968890eacc75cdc901f0356c943e4fdb";
+  const sepoliaXaut = env.SEPOLIA_XAUT_ADDRESS || "0x810249eF893D98ac8da4d6EB018E8CF7c16d536c";
+
+  // Use real Sepolia USDT if available and not a mock
+  const networkUsdt = env.SEPOLIA_USDT_ADDRESS || sepoliaUsdt;
   const usdtCandidate = networkUsdt || env.WDK_USDT_ADDRESS;
   if (usdtCandidate && (await hasContract(usdtCandidate))) {
-    console.log(`Using existing USDT: ${usdtCandidate}`);
-    addresses.WDK_USDT_ADDRESS = usdtCandidate;
+    // Check if it's a mock or real by trying to call name()
+    try {
+      const usdt = new ethers.Contract(usdtCandidate, ['function name() view returns (string)'], ethers.provider);
+      const name = await usdt.name();
+      console.log(`Using USDT: ${usdtCandidate} (${name})`);
+      addresses.WDK_USDT_ADDRESS = usdtCandidate;
+    } catch {
+      // Not a valid ERC20, deploy mock
+      console.log(`Deploying mock USDT...`);
+      const usdt = await (await MockERC20.deploy("Tether USD", "USDT")).waitForDeployment();
+      await (await usdt.setDecimals(6)).wait();
+      addresses.WDK_USDT_ADDRESS = await addr(usdt);
+      console.log(`Mock USDT (6 dec): ${addresses.WDK_USDT_ADDRESS}`);
+      updateEnv(addresses);
+    }
   } else {
     const usdt = await (await MockERC20.deploy("Tether USD", "USDT")).waitForDeployment();
     await (await usdt.setDecimals(6)).wait();
     addresses.WDK_USDT_ADDRESS = await addr(usdt);
-    console.log(`USDT (6 dec): ${addresses.WDK_USDT_ADDRESS}`);
+    console.log(`Mock USDT (6 dec): ${addresses.WDK_USDT_ADDRESS}`);
     updateEnv(addresses);
   }
 
-  const networkXaut = env.SEPOLIA_XAUT_ADDRESS || env.POLYGON_XAUT_ADDRESS ||
-    env.ARBITRUM_XAUT_ADDRESS || env.PLASMA_XAUT_ADDRESS || env.ETHEREUM_XAUT_ADDRESS;
+  // Use real Sepolia XAUT if available
+  const networkXaut = env.SEPOLIA_XAUT_ADDRESS || sepoliaXaut;
   const xautCandidate = networkXaut || env.WDK_XAUT_ADDRESS;
   if (xautCandidate && (await hasContract(xautCandidate))) {
-    console.log(`Using existing XAUT: ${xautCandidate}`);
-    addresses.WDK_XAUT_ADDRESS = xautCandidate;
+    try {
+      const xaut = new ethers.Contract(xautCandidate, ['function name() view returns (string)'], ethers.provider);
+      const name = await xaut.name();
+      console.log(`Using XAUT: ${xautCandidate} (${name})`);
+      addresses.WDK_XAUT_ADDRESS = xautCandidate;
+    } catch {
+      console.log(`Deploying mock XAUT...`);
+      const xaut = await (await MockERC20.deploy("Tether Gold", "XAUT")).waitForDeployment();
+      await (await xaut.setDecimals(4)).wait();
+      addresses.WDK_XAUT_ADDRESS = await addr(xaut);
+      console.log(`Mock XAUT (4 dec): ${addresses.WDK_XAUT_ADDRESS}`);
+      updateEnv(addresses);
+    }
   } else {
     const xaut = await (await MockERC20.deploy("Tether Gold", "XAUT")).waitForDeployment();
     await (await xaut.setDecimals(4)).wait();
     addresses.WDK_XAUT_ADDRESS = await addr(xaut);
-    console.log(`XAUT (4 dec): ${addresses.WDK_XAUT_ADDRESS}`);
+    console.log(`Mock XAUT (4 dec): ${addresses.WDK_XAUT_ADDRESS}`);
     updateEnv(addresses);
   }
 
@@ -47,24 +75,34 @@ async function deployMockTokens() {
 }
 
 async function deployMockOracles(usdtAddr: string, xautAddr: string) {
-  const deployer = await getDeployer();
+  const env = loadEnv();
+  const addresses: Record<string, string> = {};
 
-  const MockChainlink = await ethers.getContractFactory("MockChainlinkAggregator");
-  const usdtChainlink = await (await MockChainlink.deploy(8, ethers.parseUnits("1", 8))).waitForDeployment();
-  const xautChainlink = await (await MockChainlink.deploy(8, ethers.parseUnits("2000", 8))).waitForDeployment();
+  const CHAINLINK_ETH_USD = env.WDK_USDT_ORACLE_ADDRESS || "0x694AA1769357215DE4FAC081bf1f309aDC325306";
+  const CHAINLINK_BTC_USD = env.WDK_XAUT_ORACLE_ADDRESS || "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43";
 
-  const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
-  const usdtOracle = await (await MockPriceOracle.deploy(ethers.parseUnits("1", 8))).waitForDeployment();
-  const xautOracle = await (await MockPriceOracle.deploy(ethers.parseUnits("2000", 8))).waitForDeployment();
+  if (await hasContract(CHAINLINK_ETH_USD)) {
+    console.log(`Using real Chainlink ETH/USD: ${CHAINLINK_ETH_USD}`);
+    addresses.WDK_USDT_ORACLE_ADDRESS = CHAINLINK_ETH_USD;
+  } else {
+    const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
+    const usdtOracle = await (await MockPriceOracle.deploy(ethers.parseUnits("1", 8))).waitForDeployment();
+    addresses.WDK_USDT_ORACLE_ADDRESS = await addr(usdtOracle);
+    console.log(`Mock USDT Oracle: ${addresses.WDK_USDT_ORACLE_ADDRESS}`);
+  }
 
-  const addresses = {
-    WDK_USDT_ORACLE_ADDRESS: await addr(usdtOracle),
-    WDK_XAUT_ORACLE_ADDRESS: await addr(xautOracle),
-  };
-  console.log(`USDT Oracle: ${addresses.WDK_USDT_ORACLE_ADDRESS}`);
-  console.log(`XAUT Oracle: ${addresses.WDK_XAUT_ORACLE_ADDRESS}`);
+  if (await hasContract(CHAINLINK_BTC_USD)) {
+    console.log(`Using real Chainlink BTC/USD: ${CHAINLINK_BTC_USD}`);
+    addresses.WDK_XAUT_ORACLE_ADDRESS = CHAINLINK_BTC_USD;
+  } else {
+    const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
+    const xautOracle = await (await MockPriceOracle.deploy(ethers.parseUnits("2000", 8))).waitForDeployment();
+    addresses.WDK_XAUT_ORACLE_ADDRESS = await addr(xautOracle);
+    console.log(`Mock XAUT Oracle: ${addresses.WDK_XAUT_ORACLE_ADDRESS}`);
+  }
+
   updateEnv(addresses);
-  return { ...addresses, _usdtChainlink: await addr(usdtChainlink), _xautChainlink: await addr(xautChainlink) };
+  return addresses;
 }
 
 async function deployCoreContracts(
@@ -256,11 +294,22 @@ async function deployAdapters(usdtAddr: string, xautAddr: string, xautOracleAddr
     lendingAdapterAddr = env.WDK_LENDING_ADAPTER_ADDRESS;
     console.log(`Lending Adapter (resume): ${lendingAdapterAddr}`);
   } else {
-    const MockAavePool = await ethers.getContractFactory("MockAavePool");
-    const aavePool = await (await MockAavePool.deploy(usdtAddr, usdtAddr)).waitForDeployment();
+    const AAVE_V3_POOL = env.AAVE_V3_POOL_ARBITRUM || "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951";
+    let poolAddress: string;
+
+    if (await hasContract(AAVE_V3_POOL)) {
+      console.log(`Using real Aave V3 Pool: ${AAVE_V3_POOL}`);
+      poolAddress = AAVE_V3_POOL;
+    } else {
+      const MockAavePool = await ethers.getContractFactory("MockAavePool");
+      const aavePool = await (await MockAavePool.deploy(usdtAddr, usdtAddr)).waitForDeployment();
+      poolAddress = await addr(aavePool);
+      console.log(`Mock Aave Pool: ${poolAddress}`);
+    }
+
     const AaveLendingAdapter = await ethers.getContractFactory("AaveLendingAdapter");
     const lendingAdapter = await (await AaveLendingAdapter.deploy(
-      usdtAddr, usdtAddr, await addr(aavePool), deployer.address
+      usdtAddr, usdtAddr, poolAddress, deployer.address
     )).waitForDeployment();
     lendingAdapterAddr = await addr(lendingAdapter);
     console.log(`Lending Adapter: ${lendingAdapterAddr}`);
@@ -367,6 +416,33 @@ async function cmdFull() {
     core.sharpeTrackerAddr
   );
 
+  console.log("\n--- Phase 6.5: PolicyGuard & AgentNFA ---");
+  const PolicyGuard = await ethers.getContractFactory("PolicyGuard");
+  const policyGuard = await PolicyGuard.deploy(
+    deployer.address,
+    ethers.parseUnits("100000", 6),
+    ethers.parseUnits("1000000", 6),
+    10000,
+    3600
+  );
+  await policyGuard.waitForDeployment();
+  const policyGuardAddr = await addr(policyGuard);
+  console.log(`PolicyGuard: ${policyGuardAddr}`);
+
+  const AgentNFA = await ethers.getContractFactory("AgentNFA");
+  const agentNFA = await AgentNFA.deploy();
+  await agentNFA.waitForDeployment();
+  const agentNFAAddr = await addr(agentNFA);
+  console.log(`AgentNFA: ${agentNFAAddr}`);
+
+  await (await agentNFA.mint(deployer.address, deployer.address, policyGuardAddr)).wait();
+  console.log("Agent #0 minted for deployer");
+
+  await (await policyGuard.whitelistReceiver(vaultAddr)).wait();
+  console.log(`Whitelisted Vault: ${vaultAddr}`);
+  await (await policyGuard.whitelistReceiver(engineAddr)).wait();
+  console.log(`Whitelisted Engine: ${engineAddr}`);
+
   console.log("\n--- Phase 7: Seeding ---");
   await seedVault(tokens.WDK_USDT_ADDRESS, vaultAddr);
 
@@ -387,6 +463,8 @@ async function cmdFull() {
     WDK_SECONDARY_ADAPTER_ADDRESS: adapters.secondaryAdapterAddr,
     WDK_LP_ADAPTER_ADDRESS: adapters.lpAdapterAddr,
     WDK_LENDING_ADAPTER_ADDRESS: adapters.lendingAdapterAddr,
+    WDK_POLICY_GUARD_ADDRESS: policyGuardAddr,
+    WDK_AGENT_NFA_ADDRESS: agentNFAAddr,
   });
 
   console.log("\n=== DEPLOYMENT COMPLETE ===");
@@ -415,7 +493,7 @@ async function cmdErc4337() {
   console.log(`Deployer: ${deployer.address}`);
   await logNetwork();
 
-  const ENTRY_POINT = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+  const ENTRY_POINT = env.ERC4337_ENTRYPOINT_ADDRESS || "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 
   const SimpleAccountFactory = await ethers.getContractFactory("SimpleAccountFactory");
   const factory = await (await SimpleAccountFactory.deploy(ENTRY_POINT)).waitForDeployment();

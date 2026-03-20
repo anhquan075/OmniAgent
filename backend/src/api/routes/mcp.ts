@@ -4,11 +4,11 @@ import { sepoliaTools, handleSepoliaTool } from '../../mcp-server/handlers/sepol
 import { polygonTools, handlePolygonTool } from '../../mcp-server/handlers/polygon-tools';
 import { arbitrumTools, handleArbitrumTool } from '../../mcp-server/handlers/arbitrum-tools';
 import { gnosisTools, handleGnosisTool } from '../../mcp-server/handlers/gnosis-tools';
-// import { solanaTools, handleSolanaTool } from '../../mcp-server/handlers/solana-tools';
-// import { tonTools, handleTonTool } from '../../mcp-server/handlers/ton-tools';
 import { wdkTools, handleWdkTool } from '../../mcp-server/handlers/wdk-tools';
+import { wdkProtocolTools, handleWdkProtocolTool } from '../../mcp-server/handlers/wdk-protocol-tools';
 import { x402Tools, handleX402Tool } from '../../mcp-server/handlers/x402-tools';
 import { erc4337Tools, handleErc4337Tool } from '../../mcp-server/handlers/erc4337-tools';
+import { marketTools, handleMarketTool } from '../../mcp-server/handlers/market-tools';
 import { broadcastSignedTransaction, getPendingTransaction, createPendingTransactionId } from '../../lib/user-wallet-signer';
 
 import { McpExecutionContext, McpTool } from '../../mcp-server/types/mcp-protocol';
@@ -39,9 +39,6 @@ function initMcpTools() {
       return handleGnosisTool(tool.name, params, context);
     });
   }
-  // Solana/TON disabled - see imports above
-  // for (const tool of solanaTools) { ... }
-  // for (const tool of tonTools) { ... }
   for (const tool of wdkTools) {
     registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
       return handleWdkTool(tool.name, params, context);
@@ -55,6 +52,16 @@ function initMcpTools() {
   for (const tool of erc4337Tools) {
     registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
       return handleErc4337Tool(tool.name, params, context);
+    });
+  }
+  for (const tool of marketTools) {
+    registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
+      return handleMarketTool(tool.name, params, context);
+    });
+  }
+  for (const tool of wdkProtocolTools) {
+    registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
+      return handleWdkProtocolTool(tool.name, params, context);
     });
   }
   console.error(`[MCP] Registered ${registry.getToolCount()} tools`);

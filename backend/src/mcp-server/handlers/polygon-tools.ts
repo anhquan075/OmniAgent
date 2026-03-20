@@ -7,11 +7,16 @@ const CHAIN_ID = 'polygon_amoy';
 export const polygonTools: McpTool[] = [
   {
     name: 'polygon_createWallet',
-    description: 'Create or retrieve a Polygon Amoy wallet address',
+    description: 'Create or retrieve a Polygon Amoy wallet address from the WDK seed',
     inputSchema: {
       type: 'object',
       properties: {
-        walletIndex: { type: 'number', description: 'Wallet index (0 for main, 1+ for sub-wallets)', default: 0 }
+        walletIndex: {
+           type: 'number',
+           description: 'Wallet derivation index (0 for main wallet, 1+ for sub-wallets). Example: 0',
+           default: 0,
+           examples: ["0", "1", "2"],
+         }
       }
     },
     outputSchema: { type: 'object', properties: { address: { type: 'string' }, network: { type: 'string' } } },
@@ -25,7 +30,13 @@ export const polygonTools: McpTool[] = [
     description: 'Get native MATIC balance for a Polygon Amoy address',
     inputSchema: {
       type: 'object',
-      properties: { address: { type: 'string', description: 'Polygon address (optional)' } },
+      properties: {
+        address: {
+           type: 'string',
+           description: 'Polygon wallet address (optional, defaults to main wallet). Example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"',
+           examples: ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"],
+         }
+      },
       required: []
     },
     outputSchema: { type: 'object', properties: { nativeBalance: { type: 'string' }, nativeBalanceWei: { type: 'string' } } },
@@ -36,12 +47,20 @@ export const polygonTools: McpTool[] = [
   },
   {
     name: 'polygon_transfer',
-    description: 'Transfer native MATIC on Polygon Amoy',
+    description: 'Transfer native MATIC on Polygon Amoy network',
     inputSchema: {
       type: 'object',
       properties: {
-        to: { type: 'string', description: 'Recipient Polygon address' },
-        amount: { type: 'string', description: 'Amount in MATIC' }
+         to: {
+           type: 'string',
+           description: 'Recipient Polygon address (0x-prefixed). Example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"',
+           examples: ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"],
+         },
+         amount: {
+           type: 'string',
+           description: 'Amount in MATIC (decimal string). Example: "0.001" or "0.5"',
+           examples: ["0.001", "0.01", "0.1"],
+         }
       },
       required: ['to', 'amount']
     },
@@ -53,7 +72,7 @@ export const polygonTools: McpTool[] = [
   },
   {
     name: 'polygon_getGasPrice',
-    description: 'Get current gas price on Polygon Amoy',
+    description: 'Get current gas price on Polygon Amoy for transaction cost estimation',
     inputSchema: { type: 'object', properties: {}, required: [] },
     outputSchema: { type: 'object', properties: { gasPrice: { type: 'string' }, gasPriceGwei: { type: 'string' } } },
     version: '1.0.0',
@@ -88,13 +107,22 @@ export async function handlePolygonTool(name: string, params: Record<string, unk
         return { success: true, data: { nativeBalance: ethers.formatEther(balance), nativeBalanceWei: balance.toString() } };
       }
       case 'polygon_transfer': {
-        if (!params.to || !params.amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'to and amount required' } };
+        if (!params.to || !params.amount) {
+          return {
+            success: false,
+            error: {
+              code: MCP_ERRORS.INVALID_PARAMS,
+              message: 'Missing required parameters. Required: to (address like "0xd8dA6BF..."), amount (MATIC amount like "0.001")'
+            }
+          };
+        }
         const WalletAccountEvm = (await import('@tetherto/wdk-wallet-evm')).WalletAccountEvm;
         const account = new WalletAccountEvm(process.env.WDK_SECRET_SEED || '', "0'/0/0", { provider: POLYGON_RPC });
-        const wallet = new ethers.Wallet(account as any, provider);
-        const tx = await wallet.sendTransaction({ to: params.to as string, value: ethers.parseEther(params.amount as string) });
-        await tx.wait();
-        return { success: true, data: { txHash: tx.hash, status: 'confirmed' } };
+        const result = await account.sendTransaction({
+          to: params.to as string,
+          value: ethers.parseEther(params.amount as string)
+        });
+        return { success: true, data: { txHash: result.hash, status: 'confirmed' } };
       }
       case 'polygon_getGasPrice': {
         const gasPrice = await provider.getFeeData();

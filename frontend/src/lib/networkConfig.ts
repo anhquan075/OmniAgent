@@ -6,7 +6,7 @@ export const NETWORK_MODE = {
 };
 
 export const BLOCK_EXPLORERS = {
-  TESTNET: import.meta.env.VITE_SEPOLIA_BLOCK_EXPLORER || "https://sepolia.etherscan.com",
+  TESTNET: import.meta.env.VITE_SEPOLIA_BLOCK_EXPLORER || "https://sepolia.etherscan.io",
   MAINNET: import.meta.env.VITE_ETHEREUM_BLOCK_EXPLORER || "https://etherscan.io",
   WDK: import.meta.env.VITE_WDK_BLOCK_EXPLORER || "https://scan.wdk.io",
 };
@@ -21,37 +21,37 @@ export const NETWORK_CONFIGS = {
       "https://sepolia.infura.io/v3/",
     blockExplorer: BLOCK_EXPLORERS.TESTNET,
     nativeCurrency: { name: "SepoliaETH", symbol: "SepoliaETH", decimals: 18 },
-    vUSDTAddress: import.meta.env.VITE_SEPOLIA_VUSDT_ADDRESS || "0x5e68daa5deCdAB5a6bC97d2DB0E95adaD22E33e3",
+    vUSDTAddress: import.meta.env.VITE_TESTNET_USDT_ADDRESS || "0x5e68daa5deCdAB5a6bC97d2DB0E95adaD22E33e3",
     contracts: {
       vaultAddress:
-        import.meta.env.VITE_SEPOLIA_VAULT_ADDRESS ||
+        import.meta.env.VITE_TESTNET_VAULT_ADDRESS ||
         V2_TESTNET_PRESET.vaultAddress,
       engineAddress:
-        import.meta.env.VITE_SEPOLIA_ENGINE_ADDRESS ||
+        import.meta.env.VITE_TESTNET_ENGINE_ADDRESS ||
         V2_TESTNET_PRESET.engineAddress,
       tokenAddress:
-        import.meta.env.VITE_SEPOLIA_TOKEN_ADDRESS ||
+        import.meta.env.VITE_TESTNET_TOKEN_ADDRESS ||
         V2_TESTNET_PRESET.tokenAddress,
       circuitBreakerAddress:
-        import.meta.env.VITE_SEPOLIA_CIRCUIT_BREAKER_ADDRESS ||
+        import.meta.env.VITE_TESTNET_CIRCUIT_BREAKER_ADDRESS ||
         V2_TESTNET_PRESET.circuitBreakerAddress,
       sharpeTrackerAddress:
-        import.meta.env.VITE_SEPOLIA_SHARPE_TRACKER_ADDRESS ||
+        import.meta.env.VITE_TESTNET_SHARPE_TRACKER_ADDRESS ||
         V2_TESTNET_PRESET.sharpeTrackerAddress,
       pegArbExecutorAddress:
-        import.meta.env.VITE_SEPOLIA_PEG_ARB_EXECUTOR_ADDRESS ||
+        import.meta.env.VITE_TESTNET_PEG_ARB_EXECUTOR_ADDRESS ||
         V2_TESTNET_PRESET.pegArbExecutorAddress,
       riskPolicyAddress:
-        import.meta.env.VITE_SEPOLIA_POLICY_ADDRESS ||
+        import.meta.env.VITE_TESTNET_POLICY_ADDRESS ||
         V2_TESTNET_PRESET.riskPolicyAddress,
       wdkAdapterAddress:
-        import.meta.env.VITE_SEPOLIA_WDK_ADAPTER_ADDRESS ||
+        import.meta.env.VITE_TESTNET_WDK_ADAPTER_ADDRESS ||
         V2_TESTNET_PRESET.wdkAdapterAddress,
       secondaryAdapterAddress:
-        import.meta.env.VITE_SEPOLIA_SECONDARY_ADAPTER_ADDRESS ||
+        import.meta.env.VITE_TESTNET_SECONDARY_ADAPTER_ADDRESS ||
         V2_TESTNET_PRESET.secondaryAdapterAddress,
       executionAuctionAddress:
-        import.meta.env.VITE_SEPOLIA_EXECUTION_AUCTION_ADDRESS ||
+        import.meta.env.VITE_TESTNET_EXECUTION_AUCTION_ADDRESS ||
         V2_TESTNET_PRESET.executionAuctionAddress,
     },
   },

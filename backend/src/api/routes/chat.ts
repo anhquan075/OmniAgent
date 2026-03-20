@@ -96,6 +96,7 @@ async function generateSuggestions(
     .join('\n');
 
   const truncatedContext = conversationContext.slice(-2000);
+  const availableToolsContext = getAvailableToolsPrompt();
 
   try {
     const result = await generateText({
@@ -105,14 +106,20 @@ async function generateSuggestions(
 
 Based on the conversation context, generate 3 contextual follow-up questions that would naturally follow from what was discussed.
 
+AVAILABLE TOOLS:
+${availableToolsContext}
+
 Rules:
 - Each question should be specific and actionable
 - Questions should be 5-10 words as labels, with full question as prompt
-- Vary the questions - cover different aspects (analysis, action, details)
+- Vary the questions - mix of tool-based actions AND non-tool follow-ups (explanations, clarifications, deeper understanding)
 - Questions should feel like natural next steps in the conversation
+- Examples of non-tool suggestions: "Explain how this works", "What are the risks?", "Why did you choose this approach?"
+- Examples of tool suggestions: "Check my vault balance", "Show recent transactions"
+- Mix: aim for 1-2 tool-based and 1-2 non-tool suggestions based on context
 
 Return JSON array: [{"label": "Short Label", "prompt": "Full question here?"}, ...]`,
-      prompt: `CONVERSATION CONTEXT:\n${truncatedContext}\n\nINTENT: ${intent}\n\nGenerate 3 follow-up questions the user might naturally ask next.`,
+      prompt: `CONVERSATION CONTEXT:\n${truncatedContext}\n\nINTENT: ${intent}\n\nGenerate 3 follow-up questions the user might naturally ask next. Mix tool-based and non-tool suggestions.`,
     });
 
     let text = result.text.trim();
@@ -141,11 +148,17 @@ Return JSON array: [{"label": "Short Label", "prompt": "Full question here?"}, .
 
 Based on the conversation context, generate 3 contextual follow-up questions.
 
+AVAILABLE TOOLS:
+${availableToolsContext}
+
 Rules:
-- Each question should be specific and actionable
-- Questions should be 5-10 words as labels, with full question as prompt
-- Return JSON array only: [{"label": "Short Label", "prompt": "Full question here?"}, ...]`,
-          prompt: `CONVERSATION CONTEXT:\n${truncatedContext}\n\nINTENT: ${intent}\n\nGenerate 3 follow-up questions. Return JSON array only.`,
+- Mix tool-based actions AND non-tool follow-ups (explanations, clarifications)
+- Non-tool examples: "Explain how this works", "What are the risks?", "Why this approach?"
+- Tool examples: "Check my balance", "Show recent transactions"
+- Aim for 1-2 tool-based and 1-2 non-tool suggestions
+
+Return JSON array only: [{"label": "Short Label", "prompt": "Full question here?"}, ...]`,
+          prompt: `CONVERSATION CONTEXT:\n${truncatedContext}\n\nINTENT: ${intent}\n\nGenerate 3 follow-up questions. Mix tool-based and non-tool. Return JSON array only.`,
         });
         let text = retry.text.trim();
         const match = text.match(/\[[\s\S]*?\]/);

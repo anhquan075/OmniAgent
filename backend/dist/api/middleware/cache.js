@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.cacheMiddleware = void 0;
 const ai_1 = require("ai");
-const logger_1 = require("../../utils/logger");
+const logger_1 = require("@/utils/logger");
 // Simple in-memory cache for demo purposes
 const cache = new Map();
 exports.cacheMiddleware = {

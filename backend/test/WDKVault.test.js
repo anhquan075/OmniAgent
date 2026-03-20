@@ -420,7 +420,8 @@ describe("OmniAgent OmniAgentVault", function () {
     ).wait();
     await (await engine.executeCycle()).wait();
 
-    await ethers.provider.send("evm_increaseTime", [299]);
+    // Advance 297 seconds(300-s cooldown minus buffer for block timestamp advancement during txs)
+    await ethers.provider.send("evm_increaseTime", [297]);
     await ethers.provider.send("evm_mine", []);
 
     const [beforeBoundary, beforeReason] = await engine.canExecute();

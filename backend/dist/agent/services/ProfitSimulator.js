@@ -7,7 +7,7 @@ exports.ProfitSimulator = void 0;
 exports.createProfitSimulator = createProfitSimulator;
 const ethers_1 = require("ethers");
 const axios_1 = __importDefault(require("axios"));
-const logger_1 = require("../../utils/logger");
+const logger_1 = require("@/utils/logger");
 class ProfitSimulator {
     rpcUrl;
     gasPrice = 0n;

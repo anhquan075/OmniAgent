@@ -8,6 +8,7 @@ import {
   CopyIcon,
   LayersIcon,
   Loader2Icon,
+  TrendingUpIcon,
   WalletIcon,
   XIcon,
   ZapIcon,
@@ -182,142 +183,6 @@ const toolCategories: {
           {
             name: "recipientAddress",
             placeholder: "Recipient (optional)",
-            required: false,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "solana",
-    name: "Solana",
-    icon: ZapIcon,
-    color: "#14F195",
-    tools: [
-      {
-        name: "sol_createWallet",
-        description: "Create Solana wallet",
-        riskLevel: "low",
-        blockchain: "sol",
-        category: "wallet",
-        params: [
-          {
-            name: "walletIndex",
-            placeholder: "Wallet index (optional)",
-            required: false,
-          },
-        ],
-      },
-      {
-        name: "sol_getBalance",
-        description: "Get SOL balance",
-        riskLevel: "low",
-        blockchain: "sol",
-        category: "wallet",
-        params: [
-          {
-            name: "address",
-            placeholder: "Address (optional)",
-            required: false,
-          },
-          {
-            name: "tokenAddress",
-            placeholder: "Token address (optional)",
-            required: false,
-          },
-        ],
-      },
-      {
-        name: "sol_transfer",
-        description: "Transfer SOL/tokens",
-        riskLevel: "medium",
-        blockchain: "sol",
-        category: "transfer",
-        params: [
-          { name: "to", placeholder: "Recipient address", required: true },
-          { name: "amount", placeholder: "Amount", required: true },
-          {
-            name: "tokenAddress",
-            placeholder: "Token address (optional)",
-            required: false,
-          },
-        ],
-      },
-      {
-        name: "sol_swap",
-        description: "Swap tokens on Solana",
-        riskLevel: "medium",
-        blockchain: "sol",
-        category: "defi",
-        params: [
-          { name: "amountIn", placeholder: "Amount in", required: true },
-          { name: "tokenIn", placeholder: "Token in", required: true },
-          { name: "tokenOut", placeholder: "Token out", required: true },
-          {
-            name: "slippageBps",
-            placeholder: "Slippage bps (optional)",
-            required: false,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "ton",
-    name: "TON",
-    icon: ZapIcon,
-    color: "#0098EA",
-    tools: [
-      {
-        name: "ton_createWallet",
-        description: "Create TON wallet",
-        riskLevel: "low",
-        blockchain: "ton",
-        category: "wallet",
-        params: [
-          {
-            name: "walletIndex",
-            placeholder: "Wallet index (optional)",
-            required: false,
-          },
-        ],
-      },
-      {
-        name: "ton_getBalance",
-        description: "Get TON balance",
-        riskLevel: "low",
-        blockchain: "ton",
-        category: "wallet",
-        params: [
-          {
-            name: "address",
-            placeholder: "Address (optional)",
-            required: false,
-          },
-          {
-            name: "jettonAddress",
-            placeholder: "Jetton address (optional)",
-            required: false,
-          },
-        ],
-      },
-      {
-        name: "ton_transfer",
-        description: "Transfer TON/jettons",
-        riskLevel: "medium",
-        blockchain: "ton",
-        category: "transfer",
-        params: [
-          { name: "to", placeholder: "Recipient address", required: true },
-          { name: "amount", placeholder: "Amount", required: true },
-          {
-            name: "jettonAddress",
-            placeholder: "Jetton address (optional)",
-            required: false,
-          },
-          {
-            name: "comment",
-            placeholder: "Comment (optional)",
             required: false,
           },
         ],
@@ -676,14 +541,103 @@ const toolCategories: {
     ],
   },
   {
+    id: "market",
+    name: "Market Scanner",
+    icon: TrendingUpIcon,
+    color: "#10B981",
+    tools: [
+      {
+        name: "market_get_price_matrix",
+        description: "Get price matrix for pairs",
+        riskLevel: "low",
+        blockchain: "sepolia",
+        category: "market",
+        params: [
+          {
+            name: "pairs",
+            placeholder: "Pairs (comma-separated, e.g., USDT/USDC)",
+            required: false,
+          },
+        ],
+      },
+      {
+        name: "market_get_best_opportunity",
+        description: "Find best arb opportunity",
+        riskLevel: "low",
+        blockchain: "sepolia",
+        category: "market",
+        params: [
+          {
+            name: "minSpreadBps",
+            placeholder: "Min spread (bps, default:15)",
+            required: false,
+          },
+        ],
+      },
+      {
+        name: "market_calculate_profit",
+        description: "Calculate profit breakdown",
+        riskLevel: "low",
+        blockchain: "sepolia",
+        category: "market",
+        params: [
+          { name: "spreadBps", placeholder: "Spread (bps)", required: true },
+          { name: "volumeUsd", placeholder: "Volume (USD)", required: false },
+          { name: "buyExchange", placeholder: "Buy exchange", required: false },
+          { name: "sellExchange", placeholder: "Sell exchange", required: false },
+        ],
+      },
+      {
+        name: "market_start_scanner",
+        description: "Start price monitoring",
+        riskLevel: "low",
+        blockchain: "sepolia",
+        category: "market",
+      },
+      {
+        name: "market_stop_scanner",
+        description: "Stop price monitoring",
+        riskLevel: "low",
+        blockchain: "sepolia",
+        category: "market",
+      },
+    ],
+  },
+  {
     id: "bridge",
     name: "Cross-Chain Bridge",
     icon: LayersIcon,
     color: "#3B82F6",
     tools: [
       {
-        name: "wdk_bridge_bridge",
-        description: "Bridge USDT via LayerZero",
+        name: "wdk_bridge_usdt0",
+        description: "Bridge USD₮0 cross-chain",
+        riskLevel: "high",
+        blockchain: "multi",
+        category: "bridge",
+        params: [
+          { name: "targetChain", placeholder: "Target chain (e.g., arbitrum)", required: true },
+          { name: "recipient", placeholder: "Recipient address", required: true },
+          { name: "token", placeholder: "Token address", required: true },
+          { name: "amount", placeholder: "Amount (6 decimals)", required: true },
+        ],
+      },
+      {
+        name: "wdk_bridge_usdt0_status",
+        description: "Get bridge quote/status",
+        riskLevel: "low",
+        blockchain: "multi",
+        category: "bridge",
+        params: [
+          { name: "targetChain", placeholder: "Target chain", required: true },
+          { name: "recipient", placeholder: "Recipient address", required: true },
+          { name: "token", placeholder: "Token address", required: true },
+          { name: "amount", placeholder: "Amount (6 decimals)", required: true },
+        ],
+      },
+      {
+        name: "sepolia_bridgeLayerZero",
+        description: "Bridge via LayerZero (legacy)",
         riskLevel: "high",
         blockchain: "sepolia",
         category: "bridge",
@@ -698,21 +652,6 @@ const toolCategories: {
             name: "recipientAddress",
             placeholder: "Recipient (optional)",
             required: false,
-          },
-        ],
-      },
-      {
-        name: "wdk_bridge_getStatus",
-        description: "Get bridge quote",
-        riskLevel: "low",
-        blockchain: "sepolia",
-        category: "bridge",
-        params: [
-          { name: "amount", placeholder: "Amount", required: true },
-          {
-            name: "dstEid",
-            placeholder: "Destination chain ID",
-            required: true,
           },
         ],
       },

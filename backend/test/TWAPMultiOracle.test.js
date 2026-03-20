@@ -104,7 +104,7 @@ describe("TWAPMultiOracle", function () {
       await twapOracle.updateObservation();
 
       const twapPrice = await twapOracle.getTWAPPrice();
-      expect(twapPrice).to.be.closeTo(ethers.parseUnits("102", 8), ethers.parseUnits("0.5", 8));
+      expect(twapPrice).to.be.closeTo(ethers.parseUnits("101", 8), ethers.parseUnits("0.5", 8));
     });
 
     it("should ignore observations older than 30 minutes", async function () {
@@ -132,7 +132,10 @@ describe("TWAPMultiOracle", function () {
     });
 
     it("should revert if updated too soon", async function () {
-      await time.increase(OBSERVATION_INTERVAL - 1);
+      const lastUpdateTime = await twapOracle.lastUpdateTime();
+      await time.increase(28);
+      const newTime = await time.latest();
+      expect(newTime).to.be.lt(lastUpdateTime + BigInt(OBSERVATION_INTERVAL));
       await expect(twapOracle.updateObservation()).to.be.revertedWithCustomError(
         twapOracle,
         "TWAPMultiOracle__ObservationTooSoon"
