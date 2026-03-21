@@ -67,8 +67,7 @@ export function getFleetStatus() {
     status: r.status,
     totalEarned: r.totalEarned,
     taskCount: r.taskCount,
-    address: r.address,
-    derivationPath: r.agent?.derivationPath
+    address: r.address
   }));
 
   const fleetTotalEarned = robotList.reduce((sum, r) => {
@@ -159,21 +158,13 @@ function spawnFleet(): void {
 }
 
 async function initializeRobotAgents(): Promise<void> {
-  const mnemonic = process.env.WDK_SECRET_SEED || '';
-  if (!mnemonic || mnemonic.split(' ').length < 12) {
-    logger.error('[RobotFleet] Invalid WDK_SECRET_SEED for HD derivation');
-    return;
-  }
-  
-  const masterWallet = ethers.HDNodeWallet.fromPhrase(mnemonic);
   let index = 0;
   for (const robot of robots.values()) {
     try {
-      const derivedWallet = masterWallet.derivePath(String(index));
       const agent = new RobotAgent({
         id: robot.id,
         type: robot.type,
-        privateKey: derivedWallet.privateKey,
+        accountIndex: index,
         rpcUrl: fleetConfig.rpcUrl || process.env.SEPOLIA_RPC_URL || ''
       });
       

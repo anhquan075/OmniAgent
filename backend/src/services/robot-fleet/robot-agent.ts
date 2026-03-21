@@ -28,42 +28,46 @@ const SWAP_ABI = [
 export interface RobotAgentConfig {
   id: string;
   type: string;
-  privateKey: string;
+  accountIndex: number;
   rpcUrl: string;
 }
 
 export class RobotAgent {
   public readonly id: string;
   public readonly type: string;
+  public readonly accountIndex: number;
   
-  private wallet: ethers.Wallet;
+  private walletManager: any;
+  private account: any;
   private provider: ethers.JsonRpcProvider;
   private x402Fetch: typeof fetch | undefined;
-  private address: string;
+  private address: string = '';
   private shares: bigint = 0n;
 
   constructor(config: RobotAgentConfig) {
     this.id = config.id;
     this.type = config.type;
+    this.accountIndex = config.accountIndex;
     this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
-    this.wallet = new ethers.Wallet(config.privateKey, this.provider);
-    this.address = this.wallet.address;
   }
 
   async initialize(): Promise<void> {
     try {
       const { default: WalletManagerEvm } = await import('@tetherto/wdk-wallet-evm');
       
-      const walletManager = new WalletManagerEvm(
+      this.walletManager = new WalletManagerEvm(
         env.WDK_SECRET_SEED,
         { provider: env.SEPOLIA_RPC_URL }
       );
       
-      const account = await walletManager.getAccount("0'/0/0");
+      this.account = await this.walletManager.getAccount(this.accountIndex);
+      this.address = await this.account.getAddress();
+      
+      const account = this.account;
       const signer: ClientEvmSigner = {
         address: this.address as `0x${string}`,
         async signTypedData(message) {
-          return this.wallet.signTypedData(message as any) as Promise<`0x${string}`>;
+          return account.signTypedData(message as any) as Promise<`0x${string}`>;
         },
       };
       const client = new x402Client();
@@ -73,7 +77,8 @@ export class RobotAgent {
       logger.info({ 
         id: this.id, 
         type: this.type, 
-        address: this.address
+        address: this.address,
+        index: this.accountIndex 
       }, '[RobotAgent] Initialized');
     } catch (error) {
       logger.error({ error, id: this.id }, '[RobotAgent] Failed to initialize');
@@ -87,9 +92,8 @@ export class RobotAgent {
 
   async getBalance(): Promise<{ eth: string; usdt: string }> {
     try {
-      const ethBalance = await this.provider.getBalance(this.address);
-      const usdtContract = new ethers.Contract(env.WDK_USDT_ADDRESS, USDT_ABI, this.wallet);
-      const usdtBalance = await usdtContract.balanceOf(this.address);
+      const ethBalance = await this.account.getBalance();
+      const usdtBalance = await this.account.getTokenBalance(env.WDK_USDT_ADDRESS);
       
       return {
         eth: ethBalance.toString(),
@@ -118,7 +122,7 @@ export class RobotAgent {
       const depositData = vaultIface.encodeFunctionData('deposit', [usdtAmount, this.address]);
       
       logger.info({ id: this.id, amount: amountUsdt }, '[RobotAgent] Approving USDT for vault');
-      const approveResult = await this.wallet.sendTransaction({
+      const approveResult = await this.account.sendTransaction({
         to: usdtAddress,
         value: 0n,
         data: approveData
@@ -126,7 +130,7 @@ export class RobotAgent {
       await this.provider.waitForTransaction(approveResult.hash);
       
       logger.info({ id: this.id, amount: amountUsdt }, '[RobotAgent] Depositing to vault');
-      const depositResult = await this.wallet.sendTransaction({
+      const depositResult = await this.account.sendTransaction({
         to: vaultAddress,
         value: 0n,
         data: depositData
@@ -163,7 +167,7 @@ export class RobotAgent {
       const supplyData = aaveIface.encodeFunctionData('supply', [usdtAddress, usdtAmount, this.address, 0]);
       
       logger.info({ id: this.id, amount: amountUsdt }, '[RobotAgent] Approving USDT for Aave');
-      const approveResult = await this.wallet.sendTransaction({
+      const approveResult = await this.account.sendTransaction({
         to: usdtAddress,
         value: 0n,
         data: approveData
@@ -171,7 +175,7 @@ export class RobotAgent {
       await this.provider.waitForTransaction(approveResult.hash);
       
       logger.info({ id: this.id, amount: amountUsdt }, '[RobotAgent] Supplying to Aave');
-      const supplyResult = await this.wallet.sendTransaction({
+      const supplyResult = await this.account.sendTransaction({
         to: aavePool,
         value: 0n,
         data: supplyData
@@ -202,7 +206,7 @@ export class RobotAgent {
       const aaveIface = new ethers.Interface(AAVE_POOL_ABI);
       
       logger.info({ id: this.id, amount: amountUsdt }, '[RobotAgent] Withdrawing from Aave');
-      const withdrawResult = await this.wallet.sendTransaction({
+      const withdrawResult = await this.account.sendTransaction({
         to: aavePool,
         value: 0n,
         data: aaveIface.encodeFunctionData('withdraw', [usdtAddress, usdtAmount, this.address])
@@ -232,7 +236,7 @@ export class RobotAgent {
       const iface = new ethers.Interface(USDT_ABI);
       
       logger.info({ id: this.id, amount: amountUsdt, to: toAddress }, '[RobotAgent] Transferring USDT');
-      const txResult = await this.wallet.sendTransaction({
+      const txResult = await this.account.sendTransaction({
         to: usdtAddress,
         value: 0n,
         data: iface.encodeFunctionData('transfer', [toAddress, usdtAmount])
@@ -365,10 +369,10 @@ export class RobotAgent {
         return { success: false, error: 'Vault deposit would fail (maybe vault paused?)' };
       }
 
-      const approveResult = await this.wallet.sendTransaction({ to: usdtAddress, value: 0n, data: approveData });
+      const approveResult = await this.account.sendTransaction({ to: usdtAddress, value: 0n, data: approveData });
       await this.provider.waitForTransaction(approveResult.hash);
 
-      const depositResult = await this.wallet.sendTransaction({ to: vaultAddress, value: 0n, data: depositData });
+      const depositResult = await this.account.sendTransaction({ to: vaultAddress, value: 0n, data: depositData });
       const receipt = await this.provider.waitForTransaction(depositResult.hash);
       if (!receipt) {
         return { success: false, error: 'No transaction receipt for vault deposit' };
@@ -407,10 +411,10 @@ export class RobotAgent {
         return { success: false, error: 'Aave supply would fail (maybe no liquidity?)' };
       }
 
-      const approveResult = await this.wallet.sendTransaction({ to: usdtAddress, value: 0n, data: approveData });
+      const approveResult = await this.account.sendTransaction({ to: usdtAddress, value: 0n, data: approveData });
       await this.provider.waitForTransaction(approveResult.hash);
 
-      const supplyResult = await this.wallet.sendTransaction({ to: aavePool, value: 0n, data: supplyData });
+      const supplyResult = await this.account.sendTransaction({ to: aavePool, value: 0n, data: supplyData });
       const receipt = await this.provider.waitForTransaction(supplyResult.hash);
       if (!receipt) {
         return { success: false, error: 'No transaction receipt for Aave supply' };
@@ -441,7 +445,7 @@ export class RobotAgent {
         return { success: false, error: 'Aave withdraw would fail (no position or amount?)' };
       }
 
-      const withdrawResult = await this.wallet.sendTransaction({ to: aavePool, value: 0n, data: withdrawData });
+      const withdrawResult = await this.account.sendTransaction({ to: aavePool, value: 0n, data: withdrawData });
       const receipt = await this.provider.waitForTransaction(withdrawResult.hash);
       if (!receipt) {
         return { success: false, error: 'No transaction receipt for Aave withdraw' };
@@ -455,6 +459,9 @@ export class RobotAgent {
   }
 
   dispose(): void {
+    if (this.account?.dispose) {
+      this.account.dispose();
+    }
     logger.debug({ id: this.id }, '[RobotAgent] Disposed');
   }
 }
@@ -464,13 +471,10 @@ export async function createRobotAgent(
   type: string,
   robotIndex: number
 ): Promise<RobotAgent> {
-  const masterWallet = ethers.HDNodeWallet.fromPhrase(env.WDK_SECRET_SEED);
-  const derivedWallet = masterWallet.derivePath(String(robotIndex));
-  
   const agent = new RobotAgent({
     id,
     type,
-    privateKey: derivedWallet.privateKey,
+    accountIndex: robotIndex,
     rpcUrl: env.SEPOLIA_RPC_URL
   });
   
