@@ -49,7 +49,10 @@ export function ChatContainer({
 }: ChatContainerProps) {  
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
-  const safeMessages = Array.isArray(messages) && messages.length > 0 ? messages : [];
+  const safeMessages = React.useMemo(
+    () => (Array.isArray(messages) && messages.length > 0 ? messages : []),
+    [messages]
+  );
   const quickStartDismissed = safeMessages.length > 1;
   
   const { address } = useAccount();
