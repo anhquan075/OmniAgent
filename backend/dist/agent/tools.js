@@ -150,7 +150,7 @@ exports.agentTools = {
         },
     }),
     get_all_chain_balances: (0, ai_1.tool)({
-        description: 'Fetch the native token (e.g., ETH, SOL, TON) and USDT balances across all registered multi-chain wallets.',
+        description: 'Fetch the native token (ETH) and USDT balances across all registered wallets. Currently only Sepolia is connected. Returns address, nativeBalance, and usdtBalance per chain.',
         parameters: zod_1.z.object({
             context: zod_1.z.string().describe('Reason/context for this action.')
         }),
@@ -364,7 +364,7 @@ exports.agentTools = {
         },
     }),
     check_cross_chain_yields: (0, ai_1.tool)({
-        description: 'Scout yields across Sepolia, Solana, and TON and move capital if an opportunity exists.',
+        description: 'Scout yields across chains and move capital if a better opportunity exists. Currently only bridges from Sepolia to Solana. Returns actionTaken with result of scouting.',
         parameters: zod_1.z.object({
             threshold: zod_1.z.number().default(2.0).describe('Minimum yield premium to trigger a bridge.')
         }),
@@ -410,7 +410,7 @@ exports.agentTools = {
         },
     }),
     process_x402_payment: (0, ai_1.tool)({
-        description: 'Pay for infrastructure insights using x402 protocol.',
+        description: 'Pay for infrastructure insights using x402 protocol. Payment amount is fixed at 0.1 USDT — do NOT ask user for amount.',
         parameters: zod_1.z.object({
             serviceUrl: zod_1.z.string().describe('The URL of the gated service.'),
             providerAddress: zod_1.z.string().describe('The Ethereum address of the provider.')
@@ -893,9 +893,9 @@ exports.agentTools = {
         }
     }),
     wdk_vault_get_balance: (0, ai_1.tool)({
-        description: 'Get the vault balance for an account',
+        description: 'Get the USDT vault balance for an account. If no account provided, returns YOUR wallet vault balance automatically. Use when user asks "my vault balance".',
         parameters: zod_1.z.object({
-            account: zod_1.z.string().optional().describe('Account address to check balance for'),
+            account: zod_1.z.string().optional().describe('Account address (omit to check YOUR main wallet)'),
             context: zod_1.z.string().describe('Reason for checking vault balance.')
         }),
         // @ts-ignore
@@ -1105,9 +1105,9 @@ exports.agentTools = {
         }
     }),
     x402_get_balance: (0, ai_1.tool)({
-        description: 'Get USDT balance for x402 payments',
+        description: 'Get USDT balance for x402 payments. If no address provided, returns YOUR wallet balance automatically. Use when user asks "my USDT balance" or "x402 balance".',
         parameters: zod_1.z.object({
-            address: zod_1.z.string().optional().describe('Wallet address to check'),
+            address: zod_1.z.string().optional().describe('Wallet address (omit to check YOUR main wallet)'),
             context: zod_1.z.string().describe('Reason for checking balance.')
         }),
         // @ts-ignore
@@ -1197,9 +1197,9 @@ exports.agentTools = {
         }
     }),
     erc4337_get_account_address: (0, ai_1.tool)({
-        description: 'Get smart account address for owner',
+        description: 'Get smart account address for an owner. If no owner provided, returns YOUR smart account address automatically.',
         parameters: zod_1.z.object({
-            owner: zod_1.z.string().optional().describe('Owner address (defaults to agent wallet)')
+            owner: zod_1.z.string().optional().describe('Owner address (omit to check YOUR account)')
         }),
         // @ts-ignore
         execute: async ({ owner }) => {
@@ -1354,9 +1354,9 @@ exports.agentTools = {
         }
     }),
     erc4337_get_balance: (0, ai_1.tool)({
-        description: 'Get balance of smart account',
+        description: 'Get ETH balance of a smart account. If no address provided, returns YOUR smart account balance automatically.',
         parameters: zod_1.z.object({
-            account_address: zod_1.z.string().optional().describe('Account address to check'),
+            account_address: zod_1.z.string().optional().describe('Account address (omit to check YOUR smart account)'),
             context: zod_1.z.string().describe('Reason for checking balance.')
         }),
         // @ts-ignore
@@ -1377,9 +1377,9 @@ exports.agentTools = {
         }
     }),
     erc4337_get_deposit: (0, ai_1.tool)({
-        description: 'Get EntryPoint deposit for account',
+        description: 'Get EntryPoint deposit for an account. If no address provided, returns YOUR account deposit automatically.',
         parameters: zod_1.z.object({
-            account_address: zod_1.z.string().optional().describe('Account address'),
+            account_address: zod_1.z.string().optional().describe('Account address (omit to check YOUR account)'),
             context: zod_1.z.string().describe('Reason for checking deposit.')
         }),
         // @ts-ignore

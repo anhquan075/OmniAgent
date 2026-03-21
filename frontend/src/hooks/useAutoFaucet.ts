@@ -2,26 +2,31 @@ import { useState, useCallback, useEffect } from 'react';
 import { getApiUrl } from '@/lib/api';
 import { useAccount } from 'wagmi';
 
+interface FaucetStatusResponse {
+  eligible: boolean;
+  lastClaim: {
+    claimedAt: string;
+    tokens: { usdt: string; eth: string };
+  } | null;
+}
+
 interface FaucetStatus {
-  claimed: boolean;
   canClaim: boolean;
-  nextAvailableAt?: string;
-  amounts: {
-    usdt: string;
-    eth: string;
+  claimed: boolean;
+  amounts: { usdt: string; eth: string };
+}
+
+interface FaucetConfigResponse {
+  tokens: {
+    usdt: { amount: string; decimals: number; address: string };
+    eth: { amount: string; decimals: number };
   };
+  limits: { perWallet: string; perIP: string; cooldown: string };
 }
 
 interface FaucetConfig {
-  amounts: {
-    usdt: string;
-    eth: string;
-  };
-  cooldownMs: number;
-  minBalance: {
-    usdt: string;
-    eth: string;
-  };
+  amounts: { usdt: string; eth: string };
+  limits: { perWallet: string; perIP: string; cooldown: string };
 }
 
 export function useAutoFaucet() {
@@ -36,8 +41,14 @@ export function useAutoFaucet() {
     try {
       const res = await fetch(getApiUrl('/api/faucet/config'));
       if (res.ok) {
-        const data = await res.json();
-        setConfig(data);
+        const data: FaucetConfigResponse = await res.json();
+        setConfig({
+          amounts: {
+            usdt: data.tokens.usdt.amount,
+            eth: data.tokens.eth.amount,
+          },
+          limits: data.limits,
+        });
       }
     } catch (e) {
       console.error('[useAutoFaucet] Config fetch failed:', e);
@@ -50,13 +61,17 @@ export function useAutoFaucet() {
     try {
       const res = await fetch(getApiUrl(`/api/faucet/status/${address}`));
       if (res.ok) {
-        const data = await res.json();
-        setStatus(data);
+        const data: FaucetStatusResponse = await res.json();
+        setStatus({
+          canClaim: data.eligible,
+          claimed: !!data.lastClaim,
+          amounts: config?.amounts ?? { usdt: '10000', eth: '0.005' },
+        });
       }
     } catch (e) {
       console.error('[useAutoFaucet] Status fetch failed:', e);
     }
-  }, [address]);
+  }, [address, config?.amounts]);
 
   const claim = useCallback(async () => {
     if (!address || !isConnected) {
@@ -71,7 +86,7 @@ export function useAutoFaucet() {
       const res = await fetch(getApiUrl('/api/faucet/claim'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address }),
+        body: JSON.stringify({ walletAddress: address }),
       });
 
       const data = await res.json();

@@ -42,11 +42,15 @@ function generateAvailableToolsPrompt(): string {
   return tools.join('\n');
 }
 
-// Cache the tools prompt (regenerate only if needed)
 let cachedToolsPrompt: string | null = null;
+let cachedTimestamp = 0;
+const CACHE_TTL_MS = 60_000;
+
 function getAvailableToolsPrompt(): string {
-  if (!cachedToolsPrompt) {
+  const stale = cachedTimestamp === 0 || Date.now() - cachedTimestamp > CACHE_TTL_MS;
+  if (!cachedToolsPrompt || stale || process.env.FORCE_TOOLS_REGEN === 'true') {
     cachedToolsPrompt = generateAvailableToolsPrompt();
+    cachedTimestamp = Date.now();
   }
   return cachedToolsPrompt;
 }
@@ -354,19 +358,36 @@ chat.post('/', async (c) => {
 AVAILABLE TOOLS:
 ${getAvailableToolsPrompt()}
 
-CRITICAL RULES:
-1. When a tool returns data with success:true, USE that data to answer the user's question directly
-2. Never ask for information that a tool already provided in its result
-3. Tool results contain the answer — read the result data and respond with it
-4. If sepolia_get_balance returns nativeBalance, display it: "Your Sepolia balance is X ETH"
-5. Format balances nicely (e.g., "0.35 ETH" not "0.349998639697992143")
+ABSOLUTE RULES (NEVER violate):
+1. ALWAYS use the exact data returned in tool results — do not make up or hallucinate answers
+2. If a tool returns {success:true, nativeBalance:"0.35"}, you MUST say "Your balance is 0.35 ETH" — NOT explain what Sepolia is
+3. NEVER ignore tool result data — it IS the answer
+4. NEVER say you "cannot" or "don't have access to" when a tool just returned the data
+5. NEVER give explanations about test networks, real value, etc — just report what the tool returned
+6. Tool result data is the ground truth — use it verbatim
+7. When a tool has an optional address/account parameter, OMIT it to check YOUR wallet. Never ask the user for an address unless they specifically ask for a different wallet.
+8. NEVER ask "What is your address?" when the user asks about "my balance" — just call the tool without an address.
+9. After ANY tool call, read the FULL result object before responding. The answer is in the result.
+
+EXAMPLE - Correct:
+- User: "What's my balance?"
+- Tool result: {success:true, nativeBalance:"0.35 ETH"}
+- Correct response: "Your Sepolia wallet balance is 0.35 ETH"
+
+EXAMPLE - WRONG (never do this):
+- User: "What's my balance?"
+- Tool result: {success:true, nativeBalance:"0.35 ETH"}
+- Wrong response: "Sepolia is a test network so..." or "I cannot access wallet balances"
+
+EXAMPLE - Wrong asking for address:
+- User: "What's my vault balance?"
+- Tool result: {success:true, balance:"1000"}
+- Wrong response: "What's your wallet address?"
 
 WORKFLOW:
-1. Call tools to gather data
-2. Read the tool result data
-3. Respond with the actual data from the tool result
-
-RESPONSE FORMAT: Direct answer with data from tool results.`,
+1. Call tool
+2. Read the EXACT data from the result
+3. Tell the user that exact data`,
            messages: modelMessages,
         } as any); // Cast to any to bypass potential version mismatch errors in the types
 

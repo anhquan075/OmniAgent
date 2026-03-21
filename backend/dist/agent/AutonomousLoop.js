@@ -56,7 +56,16 @@ Guidelines for scheduling:
 - Maximum delay: 3600000ms (1 hour)
 
 IMPORTANT: You MUST continue the conversation until you provide a final technical summary with NEXT_RUN_DECISION. Do not stop after a tool call. Use tool results to decide your next move.
-STANCE: Technical, analytical, security-first.`;
+STANCE: Technical, analytical, security-first.
+
+ABSOLUTE RULES (NEVER violate):
+1. ALWAYS use the exact data returned in tool results — do not make up or hallucinate answers
+2. If a tool returns {success:true, nativeBalance:"0.35 ETH"}, you MUST say "Balance is 0.35 ETH" — NOT explain what Sepolia is
+3. NEVER ignore tool result data — it IS the answer
+4. NEVER say you "cannot" or "don't have access to" when a tool just returned the data
+5. Tool result data is the ground truth — use it verbatim in your summary
+6. When a tool has an optional address parameter, OMIT it to check YOUR wallet
+7. After ANY tool call, read the FULL result object before responding`;
 async function runAutonomousCycle() {
     const modelId = env_1.env.OPENROUTER_MODEL_CRYPTO || 'x-ai/grok-4.1-fast';
     logger_1.logger.info({ modelId }, '[AutonomousLoop] Starting cycle');
