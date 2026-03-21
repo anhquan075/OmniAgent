@@ -10,7 +10,7 @@ const hono_1 = require("hono");
 vitest_1.vi.mock('@/contracts/clients/ethers', () => ({
     getContracts: () => ({
         vault: {
-            totalAssets: vitest_1.vi.fn().mockResolvedValue(1000000000000000000000n), // 1000
+            totalAssets: vitest_1.vi.fn().mockResolvedValue(1000000000n), // 1000 USDT (6 decimals)
             bufferStatus: vitest_1.vi.fn().mockResolvedValue({
                 utilizationBps: 5000,
                 current: 500000000000000000000n,

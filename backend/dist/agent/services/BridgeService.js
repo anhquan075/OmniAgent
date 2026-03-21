@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BridgeService = void 0;
-const env_1 = require("@/config/env");
-const logger_1 = require("@/utils/logger");
-const WdkProtocolService_1 = require("@/services/WdkProtocolService");
+const env_1 = require("../../config/env");
+const logger_1 = require("../../utils/logger");
+const WdkProtocolService_1 = require("../../services/WdkProtocolService");
 const CHAIN_ID_MAP = {
     '1': 'ethereum',
     '42161': 'arbitrum',

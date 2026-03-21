@@ -6,11 +6,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.normalizedAgentTools = exports.agentTools = void 0;
 exports.getWdk = getWdk;
 exports.getToolsMetadata = getToolsMetadata;
-const env_1 = require("@/config/env");
-const ethers_1 = require("@/contracts/clients/ethers");
-const wdk_loader_1 = require("@/lib/wdk-loader");
-const RobotFleetService_1 = require("@/services/RobotFleetService");
-const logger_1 = require("@/utils/logger");
+const env_1 = require("../config/env");
+const ethers_1 = require("../contracts/clients/ethers");
+const wdk_loader_1 = require("../lib/wdk-loader");
+const RobotFleetService_1 = require("../services/RobotFleetService");
+const logger_1 = require("../utils/logger");
 const ai_1 = require("ai");
 const axios_1 = __importDefault(require("axios"));
 const ethers_2 = require("ethers");
@@ -619,9 +619,9 @@ exports.agentTools = {
         }
     }),
     sepolia_get_balance: (0, ai_1.tool)({
-        description: 'Get native ETH and token balance for a Sepolia address',
+        description: 'Get native ETH and token balance on Sepolia. If no address provided, returns YOUR wallet balance automatically. Use this when user asks "my balance", "wallet balance", "how much ETH I have".',
         parameters: zod_1.z.object({
-            address: zod_1.z.string().optional().describe('Sepolia address (optional, defaults to main wallet)'),
+            address: zod_1.z.string().optional().describe('Sepolia address (optional, omit or leave empty to check YOUR main wallet balance)'),
             context: zod_1.z.string().describe('Reason for checking balance.')
         }),
         // @ts-ignore
@@ -1659,7 +1659,7 @@ exports.agentTools = {
         }),
         // @ts-ignore
         execute: async ({ pairs }) => {
-            const { createMarketScanner } = await import('@/services/market-scanner');
+            const { createMarketScanner } = await import('../services/market-scanner/index.js');
             const scanner = createMarketScanner(env_1.env.SEPOLIA_RPC_URL, { scanIntervalMs: 5000, minSpreadThreshold: 0.1 });
             const matrix = await scanner.scan();
             return {
@@ -1678,7 +1678,7 @@ exports.agentTools = {
         }),
         // @ts-ignore
         execute: async ({ minSpreadBps }) => {
-            const { createMarketScanner } = await import('@/services/market-scanner');
+            const { createMarketScanner } = await import('../services/market-scanner/index.js');
             const scanner = createMarketScanner(env_1.env.SEPOLIA_RPC_URL, { scanIntervalMs: 5000, minSpreadThreshold: minSpreadBps ?? 0.1 });
             const matrix = await scanner.scan();
             if (!matrix.bestOpportunity) {
@@ -1707,7 +1707,7 @@ exports.agentTools = {
         }),
         // @ts-ignore
         execute: async ({ spreadBps, volumeUsd, buyExchange, sellExchange }) => {
-            const { calculateProfit } = await import('@/services/market-scanner/ProfitCalculator');
+            const { calculateProfit } = await import('../services/market-scanner/ProfitCalculator.js');
             const provider = new ethers_2.ethers.JsonRpcProvider(env_1.env.SEPOLIA_RPC_URL);
             let gasPriceGwei = 0.96;
             try {

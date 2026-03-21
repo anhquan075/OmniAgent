@@ -12,6 +12,7 @@ import robotFleetRoute from './api/routes/robot-fleet';
 import x402Route from './api/routes/x402';
 import mcpRoute from './api/routes/mcp';
 import toolsRoute from './api/routes/tools';
+import faucetRoute from './api/routes/faucet';
 import { createSecurityMiddleware } from './api/middleware/security';
 import { AgentService } from './agent/services/AgentService';
 import { startAutonomousLoop } from './agent/AutonomousLoop';
@@ -79,6 +80,7 @@ app.route('/api/robot-fleet', robotFleetRoute);
 app.route('/api/x402', x402Route);
 app.route('/api/mcp', mcpRoute);
 app.route('/api/tools', toolsRoute);
+app.route('/api/faucet', faucetRoute);
 
 const port = Number(env.PORT);
 

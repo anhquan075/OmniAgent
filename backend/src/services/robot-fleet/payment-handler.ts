@@ -2,6 +2,8 @@ import { ethers } from 'ethers';
 import { logger } from '@/utils/logger';
 import { x402Client, wrapFetchWithPayment } from '@x402/fetch';
 import { registerExactEvmScheme } from '@x402/evm/exact/client';
+import { ClientEvmSigner } from '@x402/evm';
+import { env } from '@/config/env';
 
 interface PendingTx {
   hash: string;
@@ -39,16 +41,21 @@ export class RobotFleetPaymentHandler {
 
     try {
       const { default: WalletManagerEvm } = await import('@tetherto/wdk-wallet-evm');
-      const { env } = await import('@/config/env');
       
       const walletManager = new WalletManagerEvm(
-        { phrase: env.WDK_SECRET_SEED, language: 'english' },
+        env.WDK_SECRET_SEED,
         { provider: env.SEPOLIA_RPC_URL }
       );
       const account = await walletManager.getAccount();
+      const signer: ClientEvmSigner = {
+        address: account.address as `0x${string}`,
+        async signTypedData(message) {
+          return account.signTypedData(message as any) as Promise<`0x${string}`>;
+        },
+      };
 
       const client = new x402Client();
-      registerExactEvmScheme(client, { signer: account });
+      registerExactEvmScheme(client, { signer });
       this.x402Fetch = wrapFetchWithPayment(fetch, client);
       
       logger.info('[PaymentHandler] x402 client initialized');

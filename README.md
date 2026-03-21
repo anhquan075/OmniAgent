@@ -19,6 +19,7 @@
 
 OmniAgent is an autonomous, non-custodial yield routing stack. It introduces a new paradigm: an autonomous AI capital allocator managing a **fleet of robot sub-agents** that coordinate yield strategies, pay each other for market intelligence via X402 micropayments, and verify risk decisions with zero-knowledge proofs — all while maintaining on-chain policy enforcement.
 
+
 ---
 
 ## Architecture
@@ -167,7 +168,7 @@ curl -X POST http://localhost:3001/api/mcp \
 | `wdk_autonomous_cycle` | Run autonomous yield cycle | High |
 | `wdk_autonomous_status` | Get agent state | Low |
 
-### ERC-4337 Smart Accounts (12 tools)
+### ERC-4337 Smart Accounts (17 tools)
 | Tool | Description | Risk |
 |------|-------------|------|
 | `erc4337_createAccount` | Create smart account | Low |
@@ -182,6 +183,18 @@ curl -X POST http://localhost:3001/api/mcp \
 | `erc4337_isTokenApproved` | Check approval status | Low |
 | `erc4337_getDeposit` | Get deposit info | Low |
 | `erc4337_isValidAccount` | Validate account | Low |
+| `erc4337_createSessionKey` | Create new session key pair | Low |
+| `erc4337_grantSessionKey` | Grant session key with limits | Medium |
+| `erc4337_revokeSessionKey` | Revoke session key instantly | Medium |
+| `erc4337_getSessionKeyData` | Get session key details | Low |
+| `erc4337_executeWithSessionKey` | Execute via session key | Medium |
+
+**Session Key Features:**
+- Spending limits per transaction
+- Daily spending limits with automatic reset
+- Target address restrictions
+- Expiration timestamps
+- Instant revocation
 
 ### Multi-Chain Wallets (22 tools)
 
@@ -237,7 +250,7 @@ Core contracts deployed on Sepolia testnet:
 | **PolicyGuard** | `0xE4fFcace565701C231FAF0222e3963e3c5a50690` | 9.6 KB | On-chain policy enforcement (B-scheme) |
 | **AgentNFA** | `0xf66e0865cCd84652808a261f97609862f4BA8c4c` | 8.9 KB | Agent NFA with execute() boundary |
 | **CircuitBreaker** | `0xf5B7bF143045B0e59E2D854726424A8C77CE2250` | 8.2 KB | Emergency pause mechanism |
-| **ERC4337SmartAccount** | `0x58Cc6439B281d46f40979f8E7A47B24C7f0F09f4` | 9 KB | Account abstraction support |
+| **SimpleAccountFactory** | `0x738428DD7930EBB2f61763a18C805782A1A6586b` | 9 KB | Factory with session key support |
 | **SharpeTracker** | `0x85a6394b36B075825Af18030EB3c57Dfac157A0F` | 7.9 KB | Risk-adjusted return tracking |
 | **RiskPolicy** | `0xCfd177b13e470B213B45D74Ae4d44C2FDFedDF50` | 5.5 KB | Risk parameter management |
 | **X402Registry** | TBD | 4.2 KB | X402 service registry |
@@ -271,10 +284,16 @@ ROBOT_FLEET_SIZE=8
 ```
 
 **How it works:**
-1. Virtual robots perform yield operations
-2. Robots pay each other via X402 for market intelligence
-3. Earnings tracked per-robot in fleet status
-4. Demonstrates real agent-to-agent economic coordination
+1. 8 virtual robots earn USDT by performing yield operations
+2. Each robot uses its own WDK-derived wallet for transfers (autonomous)
+3. 30% chance of DeFi operations (vault deposit, Aave supply/withdraw) with gas safety checks
+4. Earnings accumulate to fleet wallet: `0x26CEefE4F0C3558237016F213914764047f671bA`
+
+**DeFi Safety Features:**
+- Gas estimation before every transaction (prevents ETH burn on revert)
+- Minimum balance checks (0.002 ETH + 1 USDT required)
+- Graceful fallback to NoOp if DeFi fails
+- Null receipt protection on all transactions
 
 ---
 
@@ -303,6 +322,8 @@ ROBOT_FLEET_SIZE=8
 | `ROBOT_FLEET_SIZE` | `8` | Number of virtual robots |
 | `ROBOT_FLEET_TASK_INTERVAL_MIN` | `5000` | Min task interval (ms) |
 | `ROBOT_FLEET_TASK_INTERVAL_MAX` | `15000` | Max task interval (ms) |
+| `ROBOT_FLEET_EARNINGS_MIN` | `0.01` | Min USDT earnings per task |
+| `ROBOT_FLEET_EARNINGS_MAX` | `0.10` | Max USDT earnings per task |
 
 ### Optional — Contract Addresses (auto-populated after deployment)
 

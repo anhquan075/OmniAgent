@@ -442,32 +442,54 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
       }
 
       case 'erc4337_execute': {
-        const dest = (params.dest as string) || ethers.ZeroAddress;
-        const value = params.value ? BigInt(params.value as string) : 0n;
+        const to = (params.dest as string) || ethers.ZeroAddress;
+        const valueStr = params.value as string;
         const data = (params.data as string) || '0x';
 
         const wallet = await getErc4337Wallet();
-        const result = await wallet.execute(dest, value, data);
+        const account = await wallet.getAccount(0);
         
-        return { success: true, data: { txHash: result.hash } };
+        const value = valueStr ? ethers.parseEther(valueStr) : 0n;
+        const result = await account.sendTransaction({ to, value, data });
+        
+        return { success: true, data: { txHash: result.hash, fee: result.fee.toString() } };
       }
 
       case 'erc4337_executeBatch': {
         const dests = (params.dests as string[]) || [];
-        const values = (params.values as string[])?.map(v => BigInt(v)) || [];
+        const values = (params.values as string[]) || [];
         const datas = (params.datas as string[])?.map(d => d || '0x') || [];
 
+        if (dests.length === 0) {
+          throw new Error('At least one destination is required');
+        }
+
         const wallet = await getErc4337Wallet();
-        const tx = await wallet.executeBatch(dests, values, datas);
-        return { success: true, data: { txHash: tx.hash } };
+        const account = await wallet.getAccount(0);
+
+        const calls = dests.map((to, i) => ({
+          to,
+          value: values[i] ? ethers.parseEther(values[i]) : 0n,
+          data: datas[i] || '0x'
+        }));
+
+        const result = await account.sendTransaction({ calls });
+        return { success: true, data: { txHash: result.hash, fee: result.fee.toString() } };
       }
 
       case 'erc4337_addDeposit': {
-        const amount = params.amount ? BigInt(params.amount as string) : 0n;
-
+        const amountStr = params.amount as string;
+        
         const wallet = await getErc4337Wallet();
-        const result = await wallet.addDeposit({ value: amount });
-        return { success: true, data: { txHash: result.hash, deposit: amount.toString() } };
+        const account = await wallet.getAccount(0);
+        
+        const value = amountStr ? ethers.parseEther(amountStr) : 0n;
+        const result = await account.sendTransaction({ 
+          to: env.ERC4337_ENTRYPOINT_ADDRESS, 
+          value, 
+          data: '0x' 
+        });
+        return { success: true, data: { txHash: result.hash, deposit: value.toString(), note: 'Deposited ETH to EntryPoint for gas payments' } };
       }
 
       case 'erc4337_getBalance': {
@@ -494,48 +516,95 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
         const account = await wallet.getAccount(0);
         const address = await account.getAddress();
         
-        const deposit = await account.getDeposit();
-        return { 
-          success: true, 
-          data: { 
-            deposit: deposit.toString(), 
-            account: address,
-            note: 'EntryPoint deposit for gas payments'
-          } 
-        };
+        try {
+          const accountContract = getAccountContract(address);
+          const deposit = await accountContract.getDeposit();
+          return { 
+            success: true, 
+            data: { 
+              deposit: deposit.toString(), 
+              account: address,
+              note: 'EntryPoint deposit for gas payments'
+            } 
+          };
+        } catch (error) {
+          return {
+            success: true,
+            data: {
+              deposit: '0',
+              account: address,
+              note: 'No deposit found (account may not be deployed or EntryPoint not initialized)'
+            }
+          };
+        }
       }
 
       case 'erc4337_withdrawToken': {
         const token = (params.token as string) || ethers.ZeroAddress;
         const to = (params.to as string) || ethers.ZeroAddress;
-        const amount = params.amount ? BigInt(params.amount as string) : 0n;
+        const amountStr = params.amount as string;
 
         const wallet = await getErc4337Wallet();
-        const result = await wallet.withdrawToken(token, to, amount);
-        return { success: true, data: { txHash: result.hash } };
+        const account = await wallet.getAccount(0);
+        
+        const amount = amountStr ? ethers.parseUnits(amountStr, 18) : 0n;
+        
+        const iface = new ethers.Interface([
+          'function withdrawToken(address token, address to, uint256 amount)'
+        ]);
+        const data = iface.encodeFunctionData('withdrawToken', [token, to, amount]);
+        
+        const result = await account.sendTransaction({ 
+          to: await account.getAddress(), 
+          value: 0n, 
+          data 
+        });
+        return { success: true, data: { txHash: result.hash, token, to, amount: amount.toString() } };
       }
 
       case 'erc4337_withdrawNative': {
         const to = (params.to as string) || ethers.ZeroAddress;
-        const amount = params.amount ? BigInt(params.amount as string) : 0n;
+        const amountStr = params.amount as string;
 
         const wallet = await getErc4337Wallet();
-        const result = await wallet.withdrawNative(to, amount);
-        return { success: true, data: { txHash: result.hash } };
+        const account = await wallet.getAccount(0);
+        
+        const amount = amountStr ? ethers.parseEther(amountStr) : 0n;
+        
+        const iface = new ethers.Interface([
+          'function withdrawNative(address to, uint256 amount)'
+        ]);
+        const data = iface.encodeFunctionData('withdrawNative', [to, amount]);
+        
+        const result = await account.sendTransaction({ 
+          to: await account.getAddress(), 
+          value: 0n, 
+          data 
+        });
+        return { success: true, data: { txHash: result.hash, to, amount: amount.toString() } };
       }
 
       case 'erc4337_setTokenApproval': {
         const token = (params.token as string) || ethers.ZeroAddress;
         const approved = (params.approved as boolean) ?? true;
-        const rate = params.rate ? BigInt(params.rate as string) : 0n;
-
-        if (!approved) {
-          return { success: true, data: { note: 'Token approval removal not implemented via WDK SDK' } };
-        }
+        const rateStr = params.rate as string;
 
         const wallet = await getErc4337Wallet();
-        const result = await wallet.setTokenApproval(token, approved, rate);
-        return { success: true, data: { txHash: result.hash } };
+        const account = await wallet.getAccount(0);
+        
+        const rate = rateStr ? ethers.parseUnits(rateStr, 18) : 0n;
+        
+        const iface = new ethers.Interface([
+          'function setTokenApproval(address token, bool approved, uint256 rate)'
+        ]);
+        const data = iface.encodeFunctionData('setTokenApproval', [token, approved, rate]);
+        
+        const result = await account.sendTransaction({ 
+          to: await account.getAddress(), 
+          value: 0n, 
+          data 
+        });
+        return { success: true, data: { txHash: result.hash, token, approved, rate: rate.toString() } };
       }
 
       case 'erc4337_isTokenApproved': {
@@ -543,12 +612,14 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
 
         const wallet = await getErc4337Wallet();
         const account = await wallet.getAccount(0);
+        const accountAddress = await account.getAddress();
         
+        const accountContract = getAccountContract(accountAddress);
         try {
-          const allowance = await account.isTokenApproved(token);
-          return { success: true, data: { isApproved: allowance, allowance: '0' } };
+          const isApproved = await accountContract.isTokenApproved(token);
+          return { success: true, data: { isApproved, token } };
         } catch {
-          return { success: true, data: { isApproved: false, allowance: '0' } };
+          return { success: true, data: { isApproved: false, token } };
         }
       }
 
@@ -583,13 +654,17 @@ export async function handleErc4337Tool(name: string, params: Record<string, unk
 
       case 'erc4337_executeBatch': {
         const dests = (params.dests as string[]) || [];
-        const values = (params.values as string[])?.map(v => BigInt(v)) || [];
-        const datas = (params.datas as string[])?.map(d => d || '0x') || [];
+        const values = (params.values as (string | undefined)[]) || [];
+        const datas = (params.datas as (string | undefined)[]) || [];
+
+        if (dests.length === 0) {
+          throw new Error('At least one destination is required');
+        }
 
         const wallet = await getErc4337Wallet();
         const txs = dests.map((dest, i) => ({
           to: dest,
-          value: values[i] || 0n,
+          value: values[i] ? BigInt(values[i]) : 0n,
           data: datas[i] || '0x'
         }));
         

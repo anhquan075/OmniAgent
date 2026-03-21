@@ -8,6 +8,7 @@ import { wdkTools, handleWdkTool } from '../../mcp-server/handlers/wdk-tools';
 import { wdkProtocolTools, handleWdkProtocolTool } from '../../mcp-server/handlers/wdk-protocol-tools';
 import { x402Tools, handleX402Tool } from '../../mcp-server/handlers/x402-tools';
 import { erc4337Tools, handleErc4337Tool } from '../../mcp-server/handlers/erc4337-tools';
+import { sessionKeyTools, handleSessionKeyTool } from '../../mcp-server/handlers/session-key-tools';
 import { marketTools, handleMarketTool } from '../../mcp-server/handlers/market-tools';
 import { broadcastSignedTransaction, getPendingTransaction, createPendingTransactionId } from '../../lib/user-wallet-signer';
 
@@ -52,6 +53,11 @@ function initMcpTools() {
   for (const tool of erc4337Tools) {
     registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
       return handleErc4337Tool(tool.name, params, context);
+    });
+  }
+  for (const tool of sessionKeyTools) {
+    registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
+      return handleSessionKeyTool(tool.name, params, context);
     });
   }
   for (const tool of marketTools) {

@@ -17,6 +17,7 @@ const robot_fleet_1 = __importDefault(require("./api/routes/robot-fleet"));
 const x402_1 = __importDefault(require("./api/routes/x402"));
 const mcp_1 = __importDefault(require("./api/routes/mcp"));
 const tools_1 = __importDefault(require("./api/routes/tools"));
+const faucet_1 = __importDefault(require("./api/routes/faucet"));
 const security_1 = require("./api/middleware/security");
 const AutonomousLoop_1 = require("./agent/AutonomousLoop");
 const security_2 = require("./config/security");
@@ -77,6 +78,7 @@ app.route('/api/robot-fleet', robot_fleet_1.default);
 app.route('/api/x402', x402_1.default);
 app.route('/api/mcp', mcp_1.default);
 app.route('/api/tools', tools_1.default);
+app.route('/api/faucet', faucet_1.default);
 const port = Number(env_1.env.PORT);
 // Only start the server if this file is executed directly
 const isMain = process.argv[1]?.endsWith('src/index.ts') ||

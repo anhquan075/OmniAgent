@@ -916,99 +916,99 @@ export default function MCPServerDemo({
                                     </span>
                                   </div>
                                 </div>
-                                <button
-                                  onClick={() => {
-                                    if (
-                                      !tool.params ||
-                                      tool.params.length === 0
-                                    ) {
-                                      testTool(tool.name);
-                                    } else {
-                                      setShowArgs(
-                                        showArgsForTool ? null : tool.name,
-                                      );
-                                    }
-                                  }}
-                                  className="p-1 sm:p-1.5 rounded-md bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all cursor-pointer flex-shrink-0 active:scale-95"
-                                >
-                                  {isThisTesting ? (
-                                    <Loader2Icon className="w-2.5 h-2.5 sm:w-3 sm:h-3 animate-spin" />
-                                  ) : (
-                                    <ZapIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                  )}
-                                </button>
-                              </div>
+                                  <button
+                                    onClick={() => {
+                                      if (
+                                        !tool.params ||
+                                        tool.params.length === 0
+                                      ) {
+                                        testTool(tool.name);
+                                      } else {
+                                        setShowArgs(
+                                          showArgsForTool ? null : tool.name,
+                                        );
+                                      }
+                                    }}
+                                    className="p-1 sm:p-1.5 rounded-md bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all cursor-pointer flex-shrink-0 active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center sm:min-h-0 sm:min-w-0"
+                                  >
+                                    {isThisTesting ? (
+                                      <Loader2Icon className="w-2.5 h-2.5 sm:w-3 sm:h-3 animate-spin" />
+                                    ) : (
+                                      <ZapIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                    )}
+                                  </button>
+                                </div>
 
-                              {showArgsForTool &&
-                                tool.params &&
-                                tool.params.length > 0 && (
-                                  <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-white/10">
-                                    <div className="grid grid-cols-1 gap-1.5 sm:gap-2">
-                                      {tool.params.map((param) => (
-                                        <input
-                                          key={param.name}
-                                          type="text"
-                                          placeholder={param.placeholder}
-                                          value={
-                                            toolArgs[
-                                              `${tool.name}_${param.name}`
-                                            ] || ""
-                                          }
-                                          onChange={(e) =>
-                                            setToolArgs((prev) => ({
-                                              ...prev,
-                                              [`${tool.name}_${param.name}`]:
-                                                e.target.value,
-                                            }))
-                                          }
-                                          className="w-full px-1.5 sm:px-2 py-1 sm:py-1.5 text-[9px] sm:text-[10px] font-mono bg-black/30 border border-white/10 rounded text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none"
-                                        />
-                                      ))}
-                                      <button
-                                        onClick={() => testTool(tool.name)}
-                                        disabled={isTesting}
-                                        className="px-2 sm:px-3 py-1 sm:py-1.5 text-[9px] sm:text-[10px] font-medium bg-white/10 hover:bg-white/20 text-white rounded border border-white/20 cursor-pointer disabled:opacity-50 active:scale-[0.98]"
-                                      >
-                                        Execute
-                                      </button>
+                                {showArgsForTool &&
+                                  tool.params &&
+                                  tool.params.length > 0 && (
+                                    <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-white/10">
+                                      <div className="grid grid-cols-1 gap-1.5 sm:gap-2">
+                                        {tool.params.map((param) => (
+                                          <input
+                                            key={param.name}
+                                            type="text"
+                                            placeholder={param.placeholder}
+                                            value={
+                                              toolArgs[
+                                                `${tool.name}_${param.name}`
+                                              ] || ""
+                                            }
+                                            onChange={(e) =>
+                                              setToolArgs((prev) => ({
+                                                ...prev,
+                                                [`${tool.name}_${param.name}`]:
+                                                  e.target.value,
+                                              }))
+                                            }
+                                            className="w-full px-1.5 sm:px-2 py-1 sm:py-1.5 text-[9px] sm:text-[10px] font-mono bg-black/30 border border-white/10 rounded text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none min-h-[44px] sm:min-h-0"
+                                          />
+                                        ))}
+                                        <button
+                                          onClick={() => testTool(tool.name)}
+                                          disabled={isTesting}
+                                          className="px-2 sm:px-3 py-1 sm:py-1.5 text-[9px] sm:text-[10px] font-medium bg-white/10 hover:bg-white/20 text-white rounded border border-white/20 cursor-pointer disabled:opacity-50 active:scale-[0.98] min-h-[44px] sm:min-h-0"
+                                        >
+                                          Execute
+                                        </button>
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                                  )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {testResult && (
-            <div className="p-1.5 sm:p-2.5 rounded-lg bg-black/60 border border-white/10 flex-shrink-0">
-              <div className="flex items-center justify-between mb-1 sm:mb-2">
-                <span className="text-[8px] sm:text-[9px] text-neutral-gray font-mono">
-                  Response
-                </span>
-                <div className="flex items-center gap-0.5 sm:gap-1">
-                  <button
-                    onClick={() => copyToClipboard(testResult)}
-                    className="p-0.5 sm:p-1 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors cursor-pointer"
-                  >
-                    {copied ? (
-                      <CopyCheckIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-green-400" />
-                    ) : (
-                      <CopyIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setTestResult(null)}
-                    className="p-0.5 sm:p-1 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors cursor-pointer"
-                  >
-                    <XIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                  </button>
-                </div>
+            {testResult && (
+              <div className="p-1.5 sm:p-2.5 rounded-lg bg-black/60 border border-white/10 flex-shrink-0">
+                <div className="flex items-center justify-between mb-1 sm:mb-2">
+                  <span className="text-[8px] sm:text-[9px] text-neutral-gray font-mono">
+                    Response
+                  </span>
+                  <div className="flex items-center gap-0.5 sm:gap-1">
+                    <button
+                      onClick={() => copyToClipboard(testResult)}
+                      className="p-0.5 sm:p-1 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center sm:min-h-0 sm:min-w-0"
+                    >
+                      {copied ? (
+                        <CopyCheckIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-green-400" />
+                      ) : (
+                        <CopyIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setTestResult(null)}
+                      className="p-0.5 sm:p-1 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center sm:min-h-0 sm:min-w-0"
+                    >
+                      <XIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    </button>
+                  </div>
               </div>
               <pre className="text-[8px] sm:text-[9px] font-mono text-green-400/80 overflow-x-auto max-h-[60px] sm:max-h-[80px] leading-relaxed whitespace-pre-wrap break-all">
                 {testResult}

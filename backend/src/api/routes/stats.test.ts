@@ -7,7 +7,7 @@ import { Hono } from 'hono';
 vi.mock('@/contracts/clients/ethers', () => ({
   getContracts: () => ({
     vault: {
-      totalAssets: vi.fn().mockResolvedValue(1000000000000000000000n), // 1000
+      totalAssets: vi.fn().mockResolvedValue(1000000000n), // 1000 USDT (6 decimals)
       bufferStatus: vi.fn().mockResolvedValue({
         utilizationBps: 5000,
         current: 500000000000000000000n,

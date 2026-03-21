@@ -1,11 +1,16 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAccount } from 'wagmi';
 import { ChatHistory } from './ChatHistory';
 import { MessageInput } from './MessageInput';
+import { QuickStartCards } from './QuickStartCards';
 import { cn } from '@/lib/utils';
-import { ZapIcon, BrainCircuitIcon } from 'lucide-react';
+import { ZapIcon, BrainCircuitIcon, Shield } from 'lucide-react';
 import { OperationalPlan, TaskStatus } from './TaskStep';
 import { Conversation } from '../ai-elements/Conversation';
+import { SmartWalletModal } from '../smart-wallet/SmartWalletModal';
+import { callMcpTool } from '@/lib/mcp';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip';
 
 interface ChatContainerProps {
   messages: any[];
@@ -22,6 +27,7 @@ interface ChatContainerProps {
   error?: Error;
   data?: any[];
   suggestions?: any[];
+  showQuickStart?: boolean;
 }
 
 
@@ -38,10 +44,44 @@ export function ChatContainer({
   regenerate,  stop,
   error,
   data,
-  suggestions
+  suggestions,
+  showQuickStart = false
 }: ChatContainerProps) {  
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const quickStartDismissed = safeMessages.length > 1;
+  
+  const { address } = useAccount();
+  const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>(null);
+  const [sessionKeyActive, setSessionKeyActive] = useState(false);
+  const [showSmartWalletModal, setShowSmartWalletModal] = useState(false);
+
+  useEffect(() => {
+    if (address) {
+      checkSmartWalletStatus();
+    }
+  }, [address]);
+
+  const checkSmartWalletStatus = async () => {
+    try {
+      if (!address) return;
+      // First check if account exists
+      const accountRes = await callMcpTool(address, 'smartaccount_getAddress', {});
+      if (accountRes.result?.smartAccount && accountRes.result.smartAccount !== '0x0000000000000000000000000000000000000000') {
+        setSmartAccountAddress(accountRes.result.smartAccount);
+        
+        // Then check session key status
+        const statusRes = await callMcpTool(address, 'smartaccount_getSessionKeyStatus', {});
+        if (statusRes.result?.active) {
+          setSessionKeyActive(true);
+        } else {
+          setSessionKeyActive(false);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to check smart wallet status:', err);
+    }
+  };
   
   const safeMessages = Array.isArray(messages) && messages.length > 0 ? messages : [];
 
@@ -163,36 +203,34 @@ export function ChatContainer({
 
   return (
     <div className="flex flex-col h-full w-full rounded-2xl overflow-hidden bg-[#0B0E14]/80 backdrop-blur-xl shadow-2xl shadow-tether-teal/5 relative">
-      {/* Premium Header with Telemetry */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-2.5 sm:py-3 border-b border-white/10 bg-black/20 relative z-10">
-        <div className="flex flex-col">
-          <h2 className="font-heading text-tether-teal text-[11px] sm:text-sm font-semibold tracking-wider flex items-center gap-2 sm:gap-3">
-            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-tether-teal"></div>
-            Strategist Terminal
+      <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 border-b border-white/10 bg-black/20 relative z-10">
+        <div className="flex flex-col min-w-0">
+          <h2 className="font-heading text-tether-teal text-[10px] sm:text-xs md:text-sm font-semibold tracking-wider flex items-center gap-1.5 sm:gap-2 md:gap-3">
+            <div className="w-1.5 h-1.5 rounded-full bg-tether-teal shrink-0"></div>
+            <span className="truncate">Strategist Terminal</span>
           </h2>
-          <div className="flex items-center gap-3 mt-1 opacity-60">
-            <div className="flex items-center gap-1 text-[7px] sm:text-[8px] font-heading tracking-widest text-neutral-gray-light uppercase">
+          <div className="flex items-center gap-2 sm:gap-3 mt-0.5 sm:mt-1 opacity-60">
+            <div className="flex items-center gap-1 text-[6px] sm:text-[7px] md:text-[8px] font-heading tracking-widest text-neutral-gray-light uppercase">
               <span className="text-cyber-blue">Lat:</span> 24ms
             </div>
-            <div className="flex items-center gap-1 text-[7px] sm:text-[8px] font-heading tracking-widest text-neutral-gray-light uppercase">
+            <div className="flex items-center gap-1 text-[6px] sm:text-[7px] md:text-[8px] font-heading tracking-widest text-neutral-gray-light uppercase">
               <span className="text-neon-green">TPS:</span> 1.4k
             </div>
           </div>
         </div>
         
-        <div className="flex items-center gap-4">
-          {/* Progress Bar for Agent Thinking */}
+        <div className="flex items-center gap-2 sm:gap-4">
           {currentAgentStatus && (
-            <div className="flex flex-col items-end mr-4 min-w-[150px] max-w-[250px]">
-              <div className="flex items-center gap-2 mb-1 overflow-hidden w-full justify-end">
-                <span className="text-[7px] font-heading text-tether-teal uppercase tracking-widest whitespace-nowrap">
+            <div className="hidden sm:flex flex-col items-end mr-2 md:mr-4 min-w-[120px] md:min-w-[150px] max-w-[200px] md:max-w-[250px]">
+              <div className="flex items-center gap-1.5 md:gap-2 mb-1 overflow-hidden w-full justify-end">
+                <span className="text-[6px] md:text-[7px] font-heading text-tether-teal uppercase tracking-widest whitespace-nowrap">
                   [{currentAgentStatus.status}]
                 </span>
-                <span className="text-[7px] text-gray-400 font-mono truncate">
+                <span className="text-[6px] md:text-[7px] text-gray-400 font-mono truncate max-w-[80px] md:max-w-[120px]">
                   {currentAgentStatus.thought || 'Processing...'}
                 </span>
-                <span className="text-[7px] font-mono text-cyber-cyan shrink-0">
-                  (progress: {currentAgentStatus.progress}%)
+                <span className="text-[6px] md:text-[7px] font-mono text-cyber-cyan shrink-0">
+                  ({currentAgentStatus.progress}%)
                 </span>
               </div>
               <div className="w-full h-0.5 bg-white/5 rounded-full overflow-hidden">
@@ -205,20 +243,43 @@ export function ChatContainer({
             </div>
           )}
 
-          <div className="flex flex-col items-end mr-2">
+          <div className="hidden md:flex flex-col items-end mr-2">
             <span className="text-[7px] font-heading text-neutral-gray uppercase tracking-widest">Autonomous Feed</span>
             <div className="flex items-center gap-1.5">
               <div className="w-1 h-1 rounded-full bg-neon-green"></div>
-              <span className="text-[9px] font-mono text-gray-400">WDK: Connected</span>
+              <span className="text-[8px] md:text-[9px] font-mono text-gray-400">WDK: Connected</span>
             </div>
           </div>
-          <div className="h-8 border-l border-white/10 hidden sm:block"></div>
-          <div className="text-xs font-sans text-gray-400 flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+          <div className="h-6 md:h-8 border-l border-white/10 hidden sm:block"></div>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setShowSmartWalletModal(true)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all",
+                    sessionKeyActive 
+                      ? "bg-tether-teal/10 border-tether-teal/30 text-tether-teal hover:bg-tether-teal/20" 
+                      : "bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10"
+                  )}
+                >
+                  <Shield className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                  {sessionKeyActive && <span className="text-[8px] md:text-[9px] font-heading font-bold uppercase hidden sm:inline">Session Active</span>}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{sessionKeyActive ? "Agent can act within your daily limit" : "Configure autonomous permissions"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <div className="text-xs font-sans text-gray-400 flex items-center gap-1.5 md:gap-2">
+            <span className="relative flex h-1.5 w-1.5 md:h-2 md:w-2">
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 md:h-2 md:w-2 bg-green-500"></span>
             </span>
             <motion.span 
-              className="hidden sm:inline font-heading text-[10px] tracking-widest text-tether-teal"
+              className="hidden sm:inline font-heading text-[8px] md:text-[10px] tracking-widest text-tether-teal"
               animate={!isActuallyStreaming ? { y: [0, -2, 0] } : {}}
               transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
             >
@@ -228,13 +289,7 @@ export function ChatContainer({
         </div>
       </div>
 
-      {/* Messages Scroll Area */}
-      <Conversation 
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 scroll-smooth scrollbar-none custom-scrollbar pb-32"
-        style={{ overflowAnchor: 'auto' }}
-      >
+      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 scroll-smooth scrollbar-none custom-scrollbar pb-24 sm:pb-28 md:pb-32">
         <ChatHistory messages={messages} isStreaming={isActuallyStreaming} addToolOutput={addToolOutput} />
         
         {isActuallyStreaming && (
@@ -279,14 +334,23 @@ export function ChatContainer({
             </button>
           </div>
         )}
-      </Conversation>
+      </div>
 
-      {/* Input Anchored Area */}
-      <div className="p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent border-t border-white/5">
-        {/* Suggested Actions Chips */}
-        {activeSuggestions.length > 0 && (
+      <div className="p-2 sm:p-3 md:p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent border-t border-white/5">
+        {showQuickStart && !quickStartDismissed && (
+          <QuickStartCards
+            onSelect={(prompt) => {
+              if (!isActuallyStreaming) {
+                sendMessage({ text: prompt });
+              }
+            }}
+            disabled={isActuallyStreaming}
+          />
+        )}
+
+        {activeSuggestions.length > 0 && safeMessages.length > 1 && (
           <div className={cn(
-            "flex items-center gap-2 mb-4 overflow-x-auto pb-2 scrollbar-none no-scrollbar px-1 transition-opacity duration-300",
+            "flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4 overflow-x-auto pb-2 scrollbar-none no-scrollbar px-1 transition-opacity duration-300",
             isActuallyStreaming && "opacity-40 pointer-events-none"
           )}>
              {activeSuggestions.map((action: any) => (
@@ -300,10 +364,10 @@ export function ChatContainer({
                     sendMessage({ text });
                   }}
                   disabled={isActuallyStreaming}
-                 className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[9px] font-heading tracking-widest text-neutral-gray-light hover:bg-tether-teal/10 hover:border-tether-teal/30 hover:text-tether-teal transition-all duration-300 disabled:cursor-not-allowed"
+                 className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[8px] sm:text-[9px] font-heading tracking-widest text-neutral-gray-light hover:bg-tether-teal/10 hover:border-tether-teal/30 hover:text-tether-teal transition-all duration-300 disabled:cursor-not-allowed min-h-[32px] sm:min-h-[36px]"
               >
-                {action.icon && <action.icon className="w-3 h-3" />}
-                {action.label}
+                {action.icon && <action.icon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                <span className="whitespace-nowrap">{action.label}</span>
               </button>
             ))}
           </div>
@@ -318,6 +382,16 @@ export function ChatContainer({
           isActuallyStreaming={isActuallyStreaming}
         />
       </div>
+      <SmartWalletModal 
+        isOpen={showSmartWalletModal}
+        onClose={() => setShowSmartWalletModal(false)}
+        userAddress={address || ''}
+        smartAccountAddress={smartAccountAddress}
+        onSmartAccountReady={(addr) => {
+          setSmartAccountAddress(addr);
+          checkSmartWalletStatus();
+        }}
+      />
     </div>
   );
 }

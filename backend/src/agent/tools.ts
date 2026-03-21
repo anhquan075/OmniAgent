@@ -676,9 +676,9 @@ export const agentTools = {
   }),
 
   sepolia_get_balance: tool({
-    description: 'Get native ETH and token balance for a Sepolia address',
+    description: 'Get native ETH and token balance on Sepolia. If no address provided, returns YOUR wallet balance automatically. Use this when user asks "my balance", "wallet balance", "how much ETH I have".',
     parameters: z.object({
-      address: z.string().optional().describe('Sepolia address (optional, defaults to main wallet)'),
+      address: z.string().optional().describe('Sepolia address (optional, omit or leave empty to check YOUR main wallet balance)'),
       context: z.string().describe('Reason for checking balance.')
     }),
     // @ts-ignore
@@ -1798,7 +1798,7 @@ export const agentTools = {
     }),
     // @ts-ignore
     execute: async ({ pairs }: { pairs?: string[] }) => {
-      const { createMarketScanner } = await import('@/services/market-scanner');
+      const { createMarketScanner } = await import('../services/market-scanner/index.js');
       const scanner = createMarketScanner(env.SEPOLIA_RPC_URL, { scanIntervalMs: 5000, minSpreadThreshold: 0.1 });
       const matrix = await scanner.scan();
       return {
@@ -1818,7 +1818,7 @@ export const agentTools = {
     }),
     // @ts-ignore
     execute: async ({ minSpreadBps }: { minSpreadBps?: number }) => {
-      const { createMarketScanner } = await import('@/services/market-scanner');
+      const { createMarketScanner } = await import('../services/market-scanner/index.js');
       const scanner = createMarketScanner(env.SEPOLIA_RPC_URL, { scanIntervalMs: 5000, minSpreadThreshold: minSpreadBps ?? 0.1 });
       const matrix = await scanner.scan();
       if (!matrix.bestOpportunity) {
@@ -1848,7 +1848,7 @@ export const agentTools = {
     }),
     // @ts-ignore
     execute: async ({ spreadBps, volumeUsd, buyExchange, sellExchange }: { spreadBps: number; volumeUsd?: number; buyExchange?: string; sellExchange?: string }) => {
-      const { calculateProfit } = await import('@/services/market-scanner/ProfitCalculator');
+      const { calculateProfit } = await import('../services/market-scanner/ProfitCalculator.js');
       const provider = new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
       let gasPriceGwei = 0.96;
       try {

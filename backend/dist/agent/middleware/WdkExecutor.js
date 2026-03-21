@@ -3,10 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.WdkExecutor = void 0;
 const ethers_1 = require("ethers");
 const PolicyGuard_1 = require("./PolicyGuard");
-const OnChainPolicyGuard_1 = require("@/services/OnChainPolicyGuard");
-const NavShield_1 = require("@/services/NavShield");
-const env_1 = require("@/config/env");
-const logger_1 = require("@/utils/logger");
+const OnChainPolicyGuard_1 = require("../../services/OnChainPolicyGuard");
+const NavShield_1 = require("../../services/NavShield");
+const env_1 = require("../../config/env");
+const logger_1 = require("../../utils/logger");
 function chainToId(chain) {
     switch (chain) {
         case 'sepolia': return 11155111;

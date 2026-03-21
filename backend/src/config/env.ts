@@ -37,6 +37,7 @@ const envSchema = z.object({
   WDK_RISK_POLICY_ADDRESS: z.string().optional(),
   WDK_SHARPE_TRACKER_ADDRESS: z.string().optional(),
   WDK_AAVE_ADAPTER_ADDRESS: z.string().optional(),
+  AAVE_V3_POOL_SEPOLIA: z.string().default('0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951'),
   WDK_LZ_ADAPTER_ADDRESS: z.string().optional(),
   WDK_POLICY_GUARD_ADDRESS: z.string().optional(),
   WDK_AGENT_NFA_ADDRESS: z.string().optional(),
@@ -67,6 +68,7 @@ const envSchema = z.object({
 
   // ERC-4337 Smart Accounts (Pimlico v0.7)
   ERC4337_FACTORY_ADDRESS: z.string().optional(),
+  SIMPLE_ACCOUNT_FACTORY_ADDRESS: z.string().optional(),
   ERC4337_PAYMASTER_ADDRESS: z.string().default('0x777777777777AeC03fd955926DbF81597e66834C'),
   ERC4337_ENTRYPOINT_ADDRESS: z.string().default('0x0000000071727De22E5E9d8BAf0edAc6f37da032'), // v0.7
   ERC4337_BUNDLER_URL: z.string().default('https://public.pimlico.io/v2/11155111/rpc'),

@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.robotFleetService = void 0;
-const logger_1 = require("@/utils/logger");
+const logger_1 = require("../utils/logger");
 const events_1 = require("events");
 class RobotFleetService {
     static instance;

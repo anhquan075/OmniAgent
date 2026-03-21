@@ -120,7 +120,7 @@ const FleetStatus: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className={cn(
-            "transition-colors border h-6 px-2 text-[10px] font-medium uppercase tracking-wider",
+            "transition-colors border h-7 px-2.5 text-[10px] font-medium uppercase tracking-wider",
             isConnected 
               ? "bg-neon-green/10 text-neon-green border-neon-green/20" 
               : "bg-red-500/10 text-red-500 border-red-500/20"
@@ -132,15 +132,15 @@ const FleetStatus: React.FC = () => {
         </div>
         
         <div className="flex flex-col items-end">
-          <span className="text-[9px] text-neutral-gray uppercase tracking-wider mb-0.5">Session Earnings</span>
-          <div className="flex items-center gap-1.5 text-tether-teal font-heading font-bold text-xl leading-none">
-            <ZapIcon className="w-3.5 h-3.5 fill-current" />
+          <span className="text-[10px] text-neutral-gray uppercase tracking-wider mb-0.5">Session Earnings</span>
+          <div className="flex items-center gap-1.5 text-tether-teal font-heading font-bold text-2xl leading-none">
+            <ZapIcon className="w-4 h-4 fill-current" />
             <span className="animate-in fade-in slide-in-from-top-1 duration-500">{fleetTotal} USDT</span>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {robots.map(robot => (
           <RobotCard
             key={robot.id}

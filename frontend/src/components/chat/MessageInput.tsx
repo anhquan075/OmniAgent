@@ -146,7 +146,7 @@ export function MessageInput({ input, handleInputChange, handleSubmit, status, s
             onStop={stop}
             disabled={!input.trim() && !isActuallyStreaming}
             className={cn(
-              "h-9 w-9 rounded-xl transition-all duration-300 flex items-center justify-center focus-visible:ring-0 focus:outline-none",
+              "h-11 w-11 sm:h-9 sm:w-9 rounded-xl transition-all duration-300 flex items-center justify-center focus-visible:ring-0 focus:outline-none",
               (input.trim() || isActuallyStreaming)
                 ? "bg-tether-teal text-space-black hover:scale-105 active:scale-95 shadow-glow-sm"
                 : "bg-white/5 text-neutral-gray/40 grayscale opacity-50"

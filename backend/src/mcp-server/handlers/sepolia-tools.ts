@@ -62,11 +62,11 @@ export const sepoliaTools: McpTool[] = [
   },
   {
     name: 'sepolia_getBalance',
-    description: 'Get native ETH and USDT token balance for any Sepolia address. Both address and tokenAddress are optional - defaults to your main wallet and USDT token.',
+    description: 'Get native ETH and USDT token balance on Sepolia. If no address provided, automatically returns YOUR main wallet balance. Use when user asks "my balance", "wallet balance", "how much ETH do I have". Address and tokenAddress are both optional.',
     inputSchema: {
       type: 'object',
       properties: {
-        address: { type: 'string', description: 'Sepolia address to check (optional, defaults to main wallet). Example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"' },
+        address: { type: 'string', description: 'Sepolia address to check (optional, omit to check YOUR main wallet automatically). Example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"' },
         tokenAddress: { type: 'string', description: 'Token contract address (optional, defaults to USDT). Example: "0xd077a400968890eacc75cdc901f0356c943e4fdb"' }
       },
       required: []

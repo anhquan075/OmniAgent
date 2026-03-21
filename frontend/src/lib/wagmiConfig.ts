@@ -1,6 +1,6 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { sepolia } from 'wagmi/chains';
-import { createStorage, cookieStorage } from 'wagmi';
+import { createStorage } from 'wagmi';
 
 /**
  * Get the initial chain based on VITE_DEFAULT_NETWORK environment variable
@@ -35,7 +35,7 @@ export const wagmiConfig = getDefaultConfig({
   chains: getSupportedChains(),
   ssr: false,
   storage: createStorage({
-    storage: cookieStorage,
+    storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
   }),
   theme: {
     blurs: {

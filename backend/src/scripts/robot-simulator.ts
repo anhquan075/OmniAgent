@@ -377,9 +377,9 @@ export async function startSimulator(): Promise<void> {
 
   await initializeRobotAgents();
 
-  await fundRobotsWithUsdt();
-
-  await fundRobotsWithEth();
+  // Disabled: robots now earn their own USDT via tasks
+  // await fundRobotsWithUsdt();
+  // await fundRobotsWithEth();
 
   for (const robot of robots.values()) {
     logger.debug({ robotId: robot.id }, '[RobotFleet] Starting tasks');

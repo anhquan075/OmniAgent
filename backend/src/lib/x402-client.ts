@@ -1,5 +1,6 @@
 import { x402Client, wrapFetchWithPayment } from '@x402/fetch';
 import { registerExactEvmScheme } from '@x402/evm/exact/client';
+import { ClientEvmSigner } from '@x402/evm';
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
 
@@ -15,9 +16,16 @@ export async function getX402Client() {
     provider: env.SEPOLIA_RPC_URL
   });
   const account = await walletManager.getAccount();
+  
+  const signer: ClientEvmSigner = {
+    address: account.address as `0x${string}`,
+    async signTypedData(message) {
+      return account.signTypedData(message as any) as Promise<`0x${string}`>;
+    },
+  };
 
   const client = new x402Client();
-  registerExactEvmScheme(client, { signer: account });
+  registerExactEvmScheme(client, { signer });
 
   x402FetchInstance = wrapFetchWithPayment(fetch, client);
   logger.info('[x402] Client initialized with Semantic facilitator');

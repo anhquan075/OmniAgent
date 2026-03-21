@@ -131,12 +131,11 @@ describe('Phase 1 Core Upgrades Verification', () => {
 
     beforeEach(() => {
       simulator = new ProfitSimulator('https://mock-rpc.com');
-      vi.mocked(axios.get).mockResolvedValue({
-        data: {
-          binancecoin: {
-            usd: 600,
-          },
-        },
+      vi.mocked(axios.get).mockImplementation((url: string) => {
+        if (typeof url === 'string' && url.includes('coingecko')) {
+          return Promise.resolve({ data: { ethereum: { usd: 3500 } } });
+        }
+        return Promise.resolve({ data: { binancecoin: { usd: 600 } } });
       });
     });
 

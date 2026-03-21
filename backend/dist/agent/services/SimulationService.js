@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SimulationService = void 0;
 const ethers_1 = require("ethers");
-const logger_1 = require("@/utils/logger");
+const logger_1 = require("../../utils/logger");
 class SimulationService {
     provider;
     constructor(rpcUrl) {

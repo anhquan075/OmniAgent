@@ -1,4 +1,5 @@
 import { env } from '@/config/env';
+import { getWdkForSepolia } from '@/lib/wdk-loader';
 import { logger } from '@/utils/logger';
 
 let AaveProtocolEvm: any = null;
@@ -29,10 +30,8 @@ export function touchOracle(): void {
 }
 
 async function getWdkAccount() {
-  const WalletAccountEvm = (await import('@tetherto/wdk-wallet-evm')).WalletAccountEvm;
-  return new WalletAccountEvm(env.WDK_SECRET_SEED, "0'/0/0", {
-    provider: env.SEPOLIA_RPC_URL
-  });
+  const wdk = await getWdkForSepolia();
+  return wdk.getAccount('sepolia', 0);
 }
 
 async function loadAaveModule() {

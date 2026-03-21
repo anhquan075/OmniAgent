@@ -347,18 +347,26 @@ chat.post('/', async (c) => {
               }
             }
           },
-system: routerDecision.intent === 'small_talk'
-             ? `You are the OmniAgent Strategist. Keep responses brief and professional.`
-                : `You are the OmniAgent Strategist for yield optimization.
+           system: routerDecision.intent === 'small_talk'
+              ? `You are the OmniAgent Strategist. Keep responses brief and professional.`
+                 : `You are the OmniAgent Strategist for yield optimization.
 
 AVAILABLE TOOLS:
 ${getAvailableToolsPrompt()}
 
+CRITICAL RULES:
+1. When a tool returns data with success:true, USE that data to answer the user's question directly
+2. Never ask for information that a tool already provided in its result
+3. Tool results contain the answer — read the result data and respond with it
+4. If sepolia_get_balance returns nativeBalance, display it: "Your Sepolia balance is X ETH"
+5. Format balances nicely (e.g., "0.35 ETH" not "0.349998639697992143")
+
 WORKFLOW:
 1. Call tools to gather data
-2. Provide clear response with findings
+2. Read the tool result data
+3. Respond with the actual data from the tool result
 
-RESPONSE FORMAT: Direct answer after tool results.`,
+RESPONSE FORMAT: Direct answer with data from tool results.`,
            messages: modelMessages,
         } as any); // Cast to any to bypass potential version mismatch errors in the types
 
@@ -449,5 +457,148 @@ chat.get('/:id', async (c) => {
   const messages = await loadChat(c.req.param('id'));
   return c.json(messages);
 });
+
+// Intent parsing endpoint - natural language to DeFi actions
+import { getNLCommandParser } from '../../agent/services/NLCommandParser';
+import { IntentExecutor, MCPClient } from '../../agent/services/IntentExecutor';
+
+const nlParser = getNLCommandParser();
+
+// Create MCP client that calls the local MCP endpoint
+const localMCPClient: MCPClient = {
+  async call(method: string, params: Record<string, any>) {
+    const response = await fetch('http://localhost:3001/api/mcp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'tools/call',
+        params: { name: method, arguments: params }
+      })
+    });
+    const result = await response.json();
+    if (result.error) {
+      throw new Error(result.error.message || 'MCP call failed');
+    }
+    return result.result;
+  }
+};
+
+chat.post('/intent', async (c) => {
+  try {
+    const { message, walletAddress, riskProfile } = await c.req.json();
+
+    if (!message) {
+      return c.json({ error: 'Message is required' }, 400);
+    }
+
+    if (!walletAddress) {
+      return c.json({ error: 'Wallet address is required' }, 400);
+    }
+
+    // Parse intent from natural language
+    const intent = await nlParser.parseIntent(message, {
+      walletAddress,
+      riskProfile
+    });
+
+    logger.info({ intent, walletAddress }, '[Chat/Intent] Parsed intent');
+
+    // Low confidence - ask for clarification
+    if (intent.confidence < 0.5) {
+      return c.json({
+        type: 'clarification',
+        message: `I'm not sure what you mean. Here are some things I can help with:\n\n- **Protect my savings** - Move funds to stablecoins\n- **Grow my money** - Earn yield on DeFi protocols\n- **Send funds** - Transfer or bridge tokens\n- **Check balance** - View your portfolio`,
+        suggestions: [
+          { label: 'Protect Savings', prompt: 'protect my savings' },
+          { label: 'Grow Money', prompt: 'grow my money' },
+          { label: 'Check Balance', prompt: 'what is my balance' }
+        ]
+      });
+    }
+
+    // Medium confidence - ask for confirmation
+    if (intent.confidence < 0.8) {
+      const actionDescription = getActionDescription(intent);
+      return c.json({
+        type: 'confirmation',
+        message: `I think you want to: **${actionDescription}**\n\nShould I proceed?`,
+        intent,
+        requiresConfirmation: true
+      });
+    }
+
+    // High confidence - execute directly for queries, confirm for actions
+    if (intent.type === 'QUERY') {
+      const executor = new IntentExecutor(localMCPClient, walletAddress);
+      const result = await executor.execute(intent);
+      return c.json({
+        type: 'executed',
+        intent,
+        result
+      });
+    }
+
+    // For HEDGE/YIELD/TRANSFER actions, return the intent for confirmation
+    const actionDescription = getActionDescription(intent);
+    return c.json({
+      type: 'intent_ready',
+      message: `Ready to execute: **${actionDescription}**\n\nClick confirm to proceed.`,
+      intent,
+      requiresConfirmation: true
+    });
+
+  } catch (error: any) {
+    logger.error(error, '[Chat/Intent] Error parsing intent');
+    return c.json({
+      type: 'error',
+      message: `Failed to parse intent: ${error.message}`
+    }, 500);
+  }
+});
+
+// Execute confirmed intent
+chat.post('/intent/execute', async (c) => {
+  try {
+    const { intent, walletAddress } = await c.req.json();
+
+    if (!intent || !walletAddress) {
+      return c.json({ error: 'Intent and wallet address required' }, 400);
+    }
+
+    const executor = new IntentExecutor(localMCPClient, walletAddress);
+    const result = await executor.execute(intent);
+
+    return c.json({
+      type: 'executed',
+      intent,
+      result
+    });
+
+  } catch (error: any) {
+    logger.error(error, '[Chat/Intent] Error executing intent');
+    return c.json({
+      type: 'error',
+      message: `Execution failed: ${error.message}`
+    }, 500);
+  }
+});
+
+function getActionDescription(intent: any): string {
+  const descriptions: Record<string, string> = {
+    move_to_stablecoin: 'Move funds to USDT (stablecoin)',
+    move_to_gold: 'Move funds to XAUT (gold-backed)',
+    supply_to_aave: 'Deposit to Aave for yield',
+    optimize_yield: 'Optimize yield across protocols',
+    transfer_usdt: `Transfer ${intent.params.amount || 'funds'} to ${intent.params.recipient || 'specified address'}`,
+    bridge: `Bridge funds to ${intent.params.chain || 'another chain'}`,
+    get_balance: 'Check wallet balance',
+    get_yield_info: 'View yield information',
+    get_portfolio: 'Show portfolio',
+    get_risk_metrics: 'View risk metrics'
+  };
+  return descriptions[intent.action] || `Execute ${intent.action}`;
+}
 
 export default chat;

@@ -18,6 +18,8 @@ import {
   WalletIcon,
   XIcon,
   Zap,
+  ArrowRightLeft,
+  Shield,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { useAccount } from "wagmi";
@@ -28,6 +30,9 @@ import FleetStatus from "./components/dashboard/FleetStatus";
 import MCPServerDemo from "./components/dashboard/MCPServerDemo";
 import { ConnectionModal } from "./components/shared/ConnectionModal";
 import { GuestSplash } from "./components/shared/GuestSplash";
+import { OnboardingTooltip } from "./components/shared/OnboardingTooltip";
+import { useOnboarding } from "./hooks/useOnboarding";
+import { FaucetStatus } from "./components/shared/FaucetStatus";
 interface BentoCardProps {
   title: string;
   icon: React.ElementType;
@@ -46,15 +51,15 @@ const BentoCard = ({
   isExpanded,
 }: BentoCardProps) => (
   <div
-    className={`rounded-2xl p-3 sm:p-4 md:p-6 flex flex-col gap-2 sm:gap-4 shadow-2xl transition-all duration-500 group bg-space-black/60 backdrop-blur-xl border border-white/10 hover:border-tether-teal/30 hover:shadow-[0_0_20px_rgba(38,161,123,0.1)] relative overflow-hidden ${className}`}
+    className={`rounded-2xl p-4 sm:p-5 md:p-6 flex flex-col gap-3 sm:gap-4 shadow-2xl transition-all duration-500 group bg-space-black/60 backdrop-blur-xl border border-white/10 hover:border-tether-teal/30 hover:shadow-[0_0_20px_rgba(38,161,123,0.1)] relative overflow-hidden ${className}`}
   >
     <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-tether-teal/5 rounded-full blur-[40px] sm:blur-[60px] pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
     <div className="flex items-center justify-between flex-shrink-0 relative z-10">
       <div className="flex items-center gap-2 sm:gap-3">
-        <div className="p-1.5 sm:p-2 rounded-lg bg-white/5 text-tether-teal group-hover:scale-110 transition-transform font-heading border border-white/5 group-hover:border-tether-teal/30 group-hover:bg-tether-teal/10">
-          <Icon className="w-3 h-3 sm:w-4 sm:h-4" />
+        <div className="p-2 rounded-lg bg-white/5 text-tether-teal group-hover:scale-110 transition-transform font-heading border border-white/5 group-hover:border-tether-teal/30 group-hover:bg-tether-teal/10">
+          <Icon className="w-4 h-4" />
         </div>
-        <h3 className="font-heading text-[9px] sm:text-[10px] tracking-[0.15em] sm:tracking-[0.2em] text-neutral-gray-light uppercase group-hover:text-white transition-colors">
+        <h3 className="font-heading text-[10px] sm:text-[11px] tracking-[0.15em] sm:tracking-[0.2em] text-neutral-gray-light uppercase group-hover:text-white transition-colors">
           {title}
         </h3>
       </div>
@@ -62,15 +67,15 @@ const BentoCard = ({
         {onToggle && isExpanded !== undefined && (
           <button
             onClick={onToggle}
-            className="flex items-center gap-1 text-neutral-gray hover:text-white transition-colors cursor-pointer"
+            className="flex items-center gap-1 text-neutral-gray hover:text-white transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center sm:min-h-0 sm:min-w-0"
             aria-label={isExpanded ? "Collapse" : "Expand"}
           >
             {isExpanded ? (
-              <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             ) : (
-              <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             )}
@@ -92,13 +97,17 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
   const [mcpToolsExpanded, setMcpToolsExpanded] = useState(true);
-  const [minting, setMinting] = useState(false);
-  const [notification, setNotification] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
-  // Track streaming agent status from SSE data-status events
   const [agentStreamStatus, setAgentStreamStatus] = useState<any[]>([]);
+  
+  const { shouldShow, completeOnboarding, neverShowAgain } = useOnboarding();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (shouldShow) {
+      setShowOnboarding(true);
+    }
+  }, [shouldShow]);
+
   const initialSuggestions = [
     { label: 'Sepolia Balance', prompt: 'Check my wallet balance on Sepolia testnet.', icon: WalletIcon },
     { label: 'Sub-Agents', prompt: 'List all available sub-agents in the X402 fleet.', icon: BotIcon },
@@ -107,7 +116,7 @@ export default function App() {
     { label: 'Aave Position', prompt: 'Check my Aave lending position and health factor.', icon: CoinsIcon },
     { label: 'Smart Account', prompt: 'Get the ERC-4337 smart account address for wallet 0xB789D888A53D34f6701C1A5876101Cb32dbF17cF and check its balance.', icon: ServerIcon },
     { label: 'Market Prices', prompt: 'Get the current prices for ETH, BTC, and BNB from exchanges.', icon: TrendingUpIcon },
-    { label: 'Bridge Quote', prompt: 'Get a quote to bridge 100 USDT to Arbitrum using USD₮₀ protocol.', icon: GlobeIcon },
+    { label: 'Bridge Quote', prompt: 'Get a quote to bridge 100 USDT to Arbitrum using USD protocol.', icon: GlobeIcon },
   ];
   const [suggestions, setSuggestions] = useState<any[]>(initialSuggestions);
   const [pendingSuggestions, setPendingSuggestions] = useState<any[]>([]);
@@ -126,56 +135,6 @@ export default function App() {
     },
     refetchInterval: 10000,
   });
-
-  const handleMint = async () => {
-    if (!isConnected || !address) {
-      setNotification({
-        type: "error",
-        message: "Please connect wallet first",
-      });
-      setTimeout(() => setNotification(null), 5000);
-      return;
-    }
-    setNotification(null);
-    setMinting(true);
-    try {
-      const response = await fetch(getApiUrl("/api/mcp"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: Date.now(),
-          method: "tools/call",
-          params: {
-            name: "wdk_mint_test_token",
-            arguments: {
-              amount: "10000",
-              recipient: address,
-              context: "User minting via dashboard",
-            },
-          },
-        }),
-      });
-      const data = await response.json();
-      if (data.error) {
-        setNotification({
-          type: "error",
-          message: data.error.message || "Minting failed",
-        });
-      } else {
-        setNotification({ type: "success", message: "Minted 10,000 USDT" });
-        setTimeout(() => refetchStats(), 2000);
-      }
-    } catch (error) {
-      setNotification({
-        type: "error",
-        message: error instanceof Error ? error.message : "Minting failed",
-      });
-    } finally {
-      setMinting(false);
-      setTimeout(() => setNotification(null), 5000);
-    }
-  };
 
   const agentState = stats?.system?.isPaused
     ? "IDLE"
@@ -213,7 +172,7 @@ export default function App() {
         id: "initial-1",
         role: "assistant",
         content:
-          "System initialized. I am your **OmniAgent Strategist**. I am currently monitoring cross-chain liquidity for USDT and XAUT yield optimization.",
+          "Welcome to **OmniAgent** - your autonomous yield strategist.\n\n**What I can do:**\n- Check your wallet balances and portfolio\n- Monitor vault positions and NAV\n- Execute yield strategies across chains\n- Manage the robot fleet for automated trading\n- Transfer, swap, and bridge tokens\n\n**Quick tips:**\n- Click the suggestion chips below to get started\n- Ask me anything about your portfolio or strategies\n- I can execute transactions with your approval\n\nHow can I help you today?",
       } as any,
     ],
     onData: (dataPart: any) => {
@@ -257,7 +216,7 @@ export default function App() {
       !initialUpdatedRef.current
     ) {
       const portfolioMsg = stats?.vault?.totalAssets
-        ? ` My sensors indicate a total vault value of **${stats.vault.totalAssets} USDT** with **${(stats.risk?.drawdownBps || 0) / 100}%** expected drawdown.`
+        ? `\n\n**Your Portfolio:**\n- Vault Value: ${stats.vault.totalAssets} USDT\n- Expected Drawdown: ${(stats.risk?.drawdownBps || 0) / 100}%`
         : "";
 
       initialUpdatedRef.current = true;
@@ -265,7 +224,7 @@ export default function App() {
         {
           id: "initial-1",
           role: "assistant",
-          content: `System initialized. Welcome back, Commander **${address.slice(0, 6)}...${address.slice(-4)}**. I am your **OmniAgent Autonomous Strategist**. All settlement rails are hot.${portfolioMsg}`,
+          content: `Welcome back, Commander **${address.slice(0, 6)}...${address.slice(-4)}**!\n\nI am your **OmniAgent Autonomous Strategist**. All settlement rails are hot and ready.${portfolioMsg}\n\n**What would you like to do?**\n- Check my portfolio\n- View robot fleet status\n- Analyze yield opportunities\n- Execute a transaction`,
         } as any,
       ]);
     }
@@ -285,6 +244,26 @@ export default function App() {
       setIsConnectionModalOpen(false);
     }
   }, [isConnected]);
+
+  useEffect(() => {
+    if (!isConnected || !address) return;
+
+    const handleBeforeUnload = () => {
+      const payload = JSON.stringify({
+        jsonrpc: "2.0",
+        id: Date.now(),
+        method: "tools/call",
+        params: { name: "smartaccount_revokeSessionKey", arguments: {} },
+      });
+      navigator.sendBeacon(
+        "/api/mcp",
+        new Blob([payload], { type: "application/json" })
+      );
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isConnected, address]);
 
   const handleNewChat = () => {
     // Stop any active stream first
@@ -383,6 +362,12 @@ export default function App() {
         {!isConnected && <GuestSplash key="splash" />}
       </AnimatePresence>
 
+      <OnboardingTooltip
+        isOpen={showOnboarding}
+        onComplete={completeOnboarding}
+        onNeverShowAgain={neverShowAgain}
+      />
+
       <ConnectionModal
         isOpen={isConnectionModalOpen}
         onClose={() => setIsConnectionModalOpen(false)}
@@ -425,39 +410,7 @@ export default function App() {
           <div className="flex items-center gap-2 md:gap-4">
             <div className="h-8 border-l border-white/10 mx-1 md:mx-2 hidden lg:block"></div>
 
-            {/* Mint Button - positioned left of Ethereum badge */}
-            <div className="flex items-center gap-1">
-              <button
-                onClick={handleMint}
-                disabled={minting || !isConnected}
-                className="whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-semibold rounded-md border transition-all disabled:opacity-50"
-                style={{
-                  background: minting
-                    ? "rgba(234, 179, 8, 0.04)"
-                    : "rgba(234, 179, 8, 0.12)",
-                  borderColor: "rgba(234, 179, 8, 0.4)",
-                  color: "#FBBF24",
-                  cursor: minting || !isConnected ? "not-allowed" : "pointer",
-                }}
-              >
-                {minting ? (
-                  <Loader2 size={11} className="animate-spin" />
-                ) : (
-                  <Zap size={11} />
-                )}
-                {minting ? "Minting..." : "Mint 10k"}
-              </button>
-              <a
-                href="https://sepolia.etherscan.io/address/0xdea54eC5150Aa35ef2686b02EdD20b050430Ad7D"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-1"
-                style={{ color: "rgba(251, 191, 36, 0.5)" }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ExternalLink size={10} />
-              </a>
-            </div>
+            <FaucetStatus />
 
             <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 mr-2 shadow-glow-sm">
               <div className="w-5 h-5 rounded-full bg-[#627EEA]/10 flex items-center justify-center border border-[#627EEA]/20">
@@ -484,22 +437,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Notification Toast */}
-            {notification && (
-              <motion.div
-                initial={{ opacity: 0, y: -5, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                className={`absolute top-full right-0 mt-2 px-3 py-2 rounded-lg border text-[11px] font-medium whitespace-nowrap z-50 ${
-                  notification.type === "success"
-                    ? "bg-green-500/20 border-green-500/40 text-green-400"
-                    : "bg-red-500/20 border-red-500/40 text-red-400"
-                }`}
-              >
-                {notification.type === "success" ? "✓" : "✗"}{" "}
-                {notification.message}
-              </motion.div>
-            )}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" data-tour="connect">
               <ConnectButton
                 chainStatus="full"
                 showBalance={false}
@@ -508,7 +446,8 @@ export default function App() {
             </div>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg bg-white/5 border border-white/10 text-tether-teal"
+              className="lg:hidden p-2 rounded-lg bg-white/5 border border-white/10 text-tether-teal min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
             >
               {isMobileMenuOpen ? (
                 <XIcon className="w-5 h-5" />
@@ -523,8 +462,8 @@ export default function App() {
           {/* Column 1: Monitoring */}
           <div
             className={`
-            ${isMobileMenuOpen ? "fixed inset-0 top-[68px] md:top-[80px] z-40 bg-space-black/95 p-6 overflow-y-auto" : "hidden"} 
-            lg:relative lg:inset-auto lg:flex lg:flex-[2.5] xl:flex-[2] lg:flex-col lg:gap-4 xl:gap-6 lg:min-w-0 lg:min-h-0 lg:bg-transparent lg:overflow-hidden
+            ${isMobileMenuOpen ? "flex flex-col flex-1 overflow-y-auto p-4 bg-space-black/95 border-b border-white/10 mb-4" : "hidden"} 
+            lg:relative lg:inset-auto lg:flex lg:flex-[2.5] xl:flex-[2] lg:flex-col lg:gap-4 xl:gap-6 lg:min-w-0 lg:min-h-0 lg:bg-transparent lg:overflow-hidden lg:p-0 lg:border-none lg:mb-0
           `}
           >
             <BentoCard
@@ -533,6 +472,7 @@ export default function App() {
               className={`shrink-0 transition-all duration-300 ${mcpToolsExpanded ? "h-[320px] sm:h-[360px] md:h-[400px] lg:h-[480px]" : "h-[64px] md:h-[80px]"}`}
               onToggle={() => setMcpToolsExpanded(!mcpToolsExpanded)}
               isExpanded={mcpToolsExpanded}
+              data-tour="mcp-tools"
             >
               <MCPServerDemo
                 isExpanded={mcpToolsExpanded}
@@ -560,7 +500,7 @@ export default function App() {
           <div
             className={`flex-[7] xl:flex-[6] flex flex-col min-w-0 min-h-0 glass-dark rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative ${isMobileMenuOpen ? "hidden lg:flex" : "flex"}`}
           >
-            <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 flex flex-col min-h-0" data-tour="chat">
               <ChatContainer
                 messages={messages}
                 sendMessage={sendMessage}
@@ -575,6 +515,7 @@ export default function App() {
                 data={agentStreamStatus}
                 addToolOutput={addToolResult}
                 suggestions={suggestions}
+                showQuickStart={true}
               />
             </div>
           </div>
@@ -582,8 +523,8 @@ export default function App() {
           {/* Column 3: Operational State */}
           <div
             className={`
-            ${isMobileMenuOpen ? "fixed inset-0 top-[68px] md:top-[80px] z-40 bg-space-black/95 p-6 overflow-y-auto" : "hidden"} 
-            xl:relative xl:inset-auto xl:flex xl:flex-[2.5] 2xl:flex-[2] xl:flex-col xl:gap-4 2xl:gap-6 xl:min-w-0 xl:min-h-0 xl:bg-transparent xl:overflow-hidden xl:pl-1
+            ${isMobileMenuOpen ? "flex flex-col flex-1 overflow-y-auto p-4 bg-space-black/95" : "hidden"} 
+            xl:relative xl:inset-auto xl:flex xl:flex-[2.5] 2xl:flex-[2] xl:flex-col xl:gap-4 2xl:gap-6 xl:min-w-0 xl:min-h-0 xl:bg-transparent xl:overflow-hidden xl:pl-1 xl:p-0
           `}
           >
             <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-6 pr-1">
@@ -591,6 +532,7 @@ export default function App() {
                 title="Robot Fleet Operations"
                 icon={BotIcon}
                 className="min-h-[280px] shrink-0"
+                data-tour="fleet"
               >
                 <FleetStatus />
               </BentoCard>

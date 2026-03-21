@@ -489,6 +489,7 @@ async function cmdZkOracle() {
 }
 
 async function cmdErc4337() {
+  const env = loadEnv();
   const deployer = await getDeployer();
   console.log(`Deployer: ${deployer.address}`);
   await logNetwork();

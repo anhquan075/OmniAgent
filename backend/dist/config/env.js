@@ -38,7 +38,7 @@ const zod_1 = require("zod");
 const dotenv = __importStar(require("dotenv"));
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
-const logger_1 = require("@/utils/logger");
+const logger_1 = require("../utils/logger");
 // Load .env file (primary configuration)
 const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
 const envPath = path.resolve(process.cwd(), envFile);
@@ -67,6 +67,7 @@ const envSchema = zod_1.z.object({
     WDK_RISK_POLICY_ADDRESS: zod_1.z.string().optional(),
     WDK_SHARPE_TRACKER_ADDRESS: zod_1.z.string().optional(),
     WDK_AAVE_ADAPTER_ADDRESS: zod_1.z.string().optional(),
+    AAVE_V3_POOL_SEPOLIA: zod_1.z.string().default('0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951'),
     WDK_LZ_ADAPTER_ADDRESS: zod_1.z.string().optional(),
     WDK_POLICY_GUARD_ADDRESS: zod_1.z.string().optional(),
     WDK_AGENT_NFA_ADDRESS: zod_1.z.string().optional(),
@@ -92,6 +93,7 @@ const envSchema = zod_1.z.object({
     JWT_SECRET: zod_1.z.string().min(32).optional(),
     // ERC-4337 Smart Accounts (Pimlico v0.7)
     ERC4337_FACTORY_ADDRESS: zod_1.z.string().optional(),
+    SIMPLE_ACCOUNT_FACTORY_ADDRESS: zod_1.z.string().optional(),
     ERC4337_PAYMASTER_ADDRESS: zod_1.z.string().default('0x777777777777AeC03fd955926DbF81597e66834C'),
     ERC4337_ENTRYPOINT_ADDRESS: zod_1.z.string().default('0x0000000071727De22E5E9d8BAf0edAc6f37da032'), // v0.7
     ERC4337_BUNDLER_URL: zod_1.z.string().default('https://public.pimlico.io/v2/11155111/rpc'),
