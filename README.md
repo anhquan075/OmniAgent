@@ -34,12 +34,12 @@ graph TB
 
     subgraph Backend["Backend (Hono + TypeScript)"]
         MCPHandler[MCP Handler - JSON-RPC 2.0]
-        ToolRegistry[Tool Registry<br/>X402 | WDK | Sepolia | Arbitrum | Polygon | Gnosis | ERC4337]
-        PolicyGuard[PolicyGuard Middleware<br/>Whitelist | Volume Limits | On-Chain]
+        ToolRegistry[Tool Registry<br/>X402, WDK, Sepolia, Arbitrum, Polygon, Gnosis, ERC4337]
+        PolicyGuard[PolicyGuard Middleware<br/>Whitelist, Volume Limits, On-Chain]
         AutoAgent[AutonomousAgent Decision Loop]
-        WDKService[WDK Protocol Service<br/>Aave | USDT0 | Velora | X402]
-        WDKSigner[WDK Signer Adapter<br/>BIP-39 → ethers.js]
-        DirectERC4337[DirectERC4337 Service<br/>Session Keys | Account Factory]
+        WDKService[WDK Protocol Service<br/>Aave, USDT0, Velora, X402]
+        WDKSigner[WDK Signer Adapter<br/>BIP-39 to ethers.js]
+        DirectERC4337[DirectERC4337 Service<br/>Session Keys, Account Factory]
     end
 
     subgraph SmartContracts["Smart Contracts (Solidity)"]
@@ -50,7 +50,7 @@ graph TB
         CircuitBreaker[CircuitBreaker]
         ZKRiskOracle[ZKRiskOracle]
         SimpleAccountFactory[SimpleAccountFactory<br/>Session Key Support]
-        SimpleAccount[SimpleAccount<br/>Spending Limits | Daily Limits]
+        SimpleAccount[SimpleAccount<br/>Spending Limits, Daily Limits]
         X402Registry[X402Registry]
         More[+20 more]
     end
