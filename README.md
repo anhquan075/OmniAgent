@@ -520,7 +520,7 @@ ROBOT_FLEET_SIZE=8
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DEPLOYMENT_MODE` | `development` | `development` enables agent; `production` disables |
+| `DEPLOYMENT_MODE` | `local` | `local` enables agent; `production` disables |
 | `ALLOW_AGENT_RUN` | `true` | Enable autonomous agent loop |
 
 ### Optional — Contract Addresses (auto-populated after deployment)
