@@ -92,7 +92,7 @@ export function useAutoFaucet() {
       const data = await res.json();
 
       if (!res.ok) {
-        if (res.status === 403 && data.error?.includes('Already funded')) {
+        if ((res.status === 400 || res.status === 403) && data.error?.includes('Already funded')) {
           setStatus(prev => prev ? { ...prev, canClaim: false, claimed: true } : null);
           return { success: true, txHash: undefined };
         }

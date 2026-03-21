@@ -93,42 +93,37 @@ interface QuickStartCardsProps {
 
 export function QuickStartCards({ onSelect, disabled }: QuickStartCardsProps) {
   return (
-    <div className="px-2 sm:px-4 py-2 sm:py-3">
-      <div className="mb-2 sm:mb-3">
-        <h3 className="text-[10px] sm:text-xs font-heading text-tether-teal/80 tracking-wider uppercase">
+    <div className="px-2 py-1.5">
+      <div className="mb-1.5">
+        <h3 className="text-[9px] font-heading text-tether-teal/80 tracking-wider uppercase">
           What can I do?
         </h3>
-        <p className="text-[8px] sm:text-[9px] text-gray-500 font-heading tracking-wide mt-0.5 sm:mt-1">
-          Click a card to get started
-        </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-1.5 sm:gap-2 overflow-hidden">
+      <div className="grid grid-cols-4 gap-1 overflow-hidden">
         {quickStartCards.map((card, index) => (
           <motion.button
             key={card.id}
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
+            transition={{ delay: index * 0.03 }}
             onClick={() => !disabled && onSelect(card.prompt)}
             disabled={disabled}
             className={`
-              group relative p-2 sm:p-3 rounded-xl border border-white/5
+              group relative p-1.5 rounded-lg border border-white/5
               bg-gradient-to-br ${card.color}
               hover:border-tether-teal/30 hover:shadow-lg hover:shadow-tether-teal/10
-              transition-all duration-300 text-left min-h-[72px] sm:min-h-[88px]
+              transition-all duration-300 text-left min-h-[52px]
               disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]
             `}
           >
-            <div className="flex items-start gap-1.5 sm:gap-2 mb-1 sm:mb-2">
-              <div className="p-1 sm:p-1.5 rounded-lg bg-white/5 group-hover:bg-tether-teal/20 transition-colors">
-                <card.icon className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-tether-teal/60 group-hover:text-tether-teal" />
-              </div>
+            <div className="flex items-center gap-1 mb-0.5">
+              <card.icon className="w-2.5 h-2.5 text-tether-teal/60 group-hover:text-tether-teal" />
+              <h4 className="text-[8px] font-heading font-semibold text-white/90 tracking-wider truncate">
+                {card.title}
+              </h4>
             </div>
-            <h4 className="text-[9px] sm:text-[10px] font-heading font-semibold text-white/90 tracking-wider mb-0.5">
-              {card.title}
-            </h4>
-            <p className="text-[7px] sm:text-[8px] text-gray-400 leading-tight">
+            <p className="text-[7px] text-gray-400 leading-tight line-clamp-2">
               {card.description}
             </p>
           </motion.button>
