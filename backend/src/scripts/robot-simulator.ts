@@ -260,38 +260,6 @@ function generateEarnings(): string {
   return earnings.toFixed(2);
 }
 
-async function sendUsdtPayment(amount: string, toAddress: string): Promise<string | null> {
-  if (!wallet || !provider) {
-    logger.warn('[RobotFleet] Wallet not initialized, skipping payment');
-    return null;
-  }
-
-  try {
-    const usdtAddress = process.env.WDK_USDT_ADDRESS;
-    if (!usdtAddress) {
-      logger.error('[RobotFleet] USDT address not configured');
-      return null;
-    }
-
-    const USDT_ABI = [
-      'function transfer(address to, uint256 amount) returns (bool)'
-    ];
-
-    const usdt = new ethers.Contract(usdtAddress, USDT_ABI, wallet);
-    const usdtAmount = ethers.parseUnits(amount, 6);
-    
-    logger.info({ amount, to: toAddress }, '[RobotFleet] Sending USDT payment');
-    const tx = await usdt.transfer(toAddress, usdtAmount);
-    const receipt = await tx.wait();
-    
-    logger.info({ hash: receipt.hash }, '[RobotFleet] USDT payment confirmed');
-    return receipt.hash;
-  } catch (error: any) {
-    logger.error(error, '[RobotFleet] USDT payment failed');
-    return null;
-  }
-}
-
 function addEvent(event: FleetEvent): void {
   recentEvents.push(event);
   if (recentEvents.length > MAX_EVENTS) {
@@ -353,11 +321,16 @@ async function completeTask(robotId: string): Promise<void> {
   }
 
   if (targetAddress && targetAddress !== '0x0000000000000000000000000000000000000000') {
-    const hash = await sendUsdtPayment(earnings, targetAddress);
-    if (hash) {
-      finishTask(hash);
+    if (!robot.agent) {
+      logger.warn({ robotId: robot.id }, '[RobotFleet] No robot agent, skipping payment');
+      robot.status = 'Idle';
+      return;
+    }
+    const transferResult = await robot.agent.transferUsdt(targetAddress, earnings);
+    if (transferResult.success && transferResult.txHash) {
+      finishTask(transferResult.txHash);
     } else {
-      logger.warn({ robotId: robot.id }, '[RobotFleet] Skipping earning credit due to failed/skipped payment');
+      logger.warn({ robotId: robot.id, error: transferResult.error }, '[RobotFleet] Skipping earning credit due to failed payment');
       robot.status = 'Idle';
     }
   } else {

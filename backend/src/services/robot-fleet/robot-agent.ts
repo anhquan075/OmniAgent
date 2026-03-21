@@ -1,19 +1,28 @@
 import { ethers } from 'ethers';
 import { x402Client, wrapFetchWithPayment } from '@x402/fetch';
 import { registerExactEvmScheme } from '@x402/evm/exact/client';
+import { ClientEvmSigner } from '@x402/evm';
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
 
 const USDT_ABI = [
   'function approve(address spender, uint256 amount) returns (bool)',
-  'function balanceOf(address account) view returns (uint256)'
+  'function balanceOf(address account) view returns (uint256)',
+  'function transfer(address to, uint256 amount) returns (bool)'
 ];
 
 const VAULT_ABI = [
   'function deposit(uint256 assets, address receiver) external returns (uint256 shares)',
-  'function redeem(uint256 shares, address receiver) external returns (uint256 assets)',
-  'function maxDeposit(address) external view returns (uint256)',
-  'function previewRedeem(uint256 shares) external view returns (uint256)'
+  'function redeem(uint256 shares, address receiver) external returns (uint256 assets)'
+];
+
+const AAVE_POOL_ABI = [
+  'function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode) external',
+  'function withdraw(address asset, uint256 amount, address to) external returns (uint256)'
+];
+
+const SWAP_ABI = [
+  'function swap(address fromToken, address toToken, uint256 amount, address to) external returns (uint256)'
 ];
 
 export interface RobotAgentConfig {
@@ -31,7 +40,7 @@ export class RobotAgent {
   
   private walletManager: any;
   private account: any;
-  private x402Fetch: typeof fetch;
+  private x402Fetch: typeof fetch | undefined;
   private address: string;
   private shares: bigint = 0n;
 
@@ -54,8 +63,15 @@ export class RobotAgent {
       this.account = await this.walletManager.getAccount(this.derivationPath);
       this.address = await this.account.getAddress();
       
+      const account = this.account;
+      const signer: ClientEvmSigner = {
+        address: account.address as `0x${string}`,
+        async signTypedData(message) {
+          return account.signTypedData(message as any) as Promise<`0x${string}`>;
+        },
+      };
       const client = new x402Client();
-      registerExactEvmScheme(client, { signer: this.account });
+      registerExactEvmScheme(client, { signer });
       this.x402Fetch = wrapFetchWithPayment(fetch, client);
       
       logger.info({ 
@@ -102,26 +118,19 @@ export class RobotAgent {
       const provider = new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
       const signer = this.account;
       
-      const encodeApprove = (spender: string, amount: bigint) => {
-        const iface = new ethers.Interface(['function approve(address spender, uint256 amount)']);
-        return iface.encodeFunctionData('approve', [spender, amount]);
-      };
+      const iface = new ethers.Interface(USDT_ABI);
+      const vaultIface = new ethers.Interface(VAULT_ABI);
       
-      const encodeDeposit = (assets: bigint, receiver: string) => {
-        const iface = new ethers.Interface(['function deposit(uint256 assets, address receiver) returns (uint256 shares)']);
-        return iface.encodeFunctionData('deposit', [assets, receiver]);
-      };
+      const approveData = iface.encodeFunctionData('approve', [vaultAddress, ethers.MaxUint256]);
+      const depositData = vaultIface.encodeFunctionData('deposit', [usdtAmount, this.address]);
       
-      const approveData = encodeApprove(vaultAddress, ethers.MaxUint256);
-      const depositData = encodeDeposit(usdtAmount, this.address);
-      
-      logger.info({ id: this.id, amount: amountUsdt }, '[RobotAgent] Approving USDT');
+      logger.info({ id: this.id, amount: amountUsdt }, '[RobotAgent] Approving USDT for vault');
       const approveResult = await signer.sendTransaction({
         to: usdtAddress,
         value: 0n,
         data: approveData
       });
-      await provider.getTransactionReceipt(approveResult.hash);
+      await provider.waitForTransaction(approveResult.hash);
       
       logger.info({ id: this.id, amount: amountUsdt }, '[RobotAgent] Depositing to vault');
       const depositResult = await signer.sendTransaction({
@@ -129,13 +138,13 @@ export class RobotAgent {
         value: 0n,
         data: depositData
       });
-      const receipt = await provider.getTransactionReceipt(depositResult.hash);
+      const receipt = await provider.waitForTransaction(depositResult.hash);
       
-      logger.info({ 
-        id: this.id, 
-        txHash: receipt.hash, 
-      }, '[RobotAgent] Deposited to vault');
+      if (!receipt) {
+        throw new Error('Failed to get transaction receipt');
+      }
       
+      logger.info({ id: this.id, txHash: receipt.hash }, '[RobotAgent] Deposited to vault');
       return { success: true, txHash: receipt.hash, shares: '0' };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -144,7 +153,112 @@ export class RobotAgent {
     }
   }
 
+  async supplyToAave(amountUsdt: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    try {
+      const aavePool = (env as any).AAVE_V3_POOL_SEPOLIA || '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951';
+      const usdtAddress = env.WDK_USDT_ADDRESS;
+      
+      if (!usdtAddress) {
+        return { success: false, error: 'USDT address not configured' };
+      }
+      
+      const usdtAmount = ethers.parseUnits(amountUsdt, 6);
+      const signer = this.account;
+      const iface = new ethers.Interface(USDT_ABI);
+      const aaveIface = new ethers.Interface(AAVE_POOL_ABI);
+      
+      const approveData = iface.encodeFunctionData('approve', [aavePool, ethers.MaxUint256]);
+      const supplyData = aaveIface.encodeFunctionData('supply', [usdtAddress, usdtAmount, this.address, 0]);
+      
+      logger.info({ id: this.id, amount: amountUsdt }, '[RobotAgent] Approving USDT for Aave');
+      const approveResult = await signer.sendTransaction({
+        to: usdtAddress,
+        value: 0n,
+        data: approveData
+      });
+      await provider.waitForTransaction(approveResult.hash);
+      
+      logger.info({ id: this.id, amount: amountUsdt }, '[RobotAgent] Supplying to Aave');
+      const supplyResult = await signer.sendTransaction({
+        to: aavePool,
+        value: 0n,
+        data: supplyData
+      });
+      const receipt = await provider.waitForTransaction(supplyResult.hash);
+      
+      logger.info({ id: this.id, txHash: receipt.hash }, '[RobotAgent] Supplied to Aave');
+      return { success: true, txHash: receipt.hash };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ error: message, id: this.id }, '[RobotAgent] Aave supply failed');
+      return { success: false, error: message };
+    }
+  }
+
+  async withdrawFromAave(amountUsdt: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    try {
+      const aavePool = (env as any).AAVE_V3_POOL_SEPOLIA || '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951';
+      const usdtAddress = env.WDK_USDT_ADDRESS;
+      
+      if (!usdtAddress) {
+        return { success: false, error: 'USDT address not configured' };
+      }
+      
+      const usdtAmount = ethers.parseUnits(amountUsdt, 6);
+      const signer = this.account;
+      const aaveIface = new ethers.Interface(AAVE_POOL_ABI);
+      
+      logger.info({ id: this.id, amount: amountUsdt }, '[RobotAgent] Withdrawing from Aave');
+      const withdrawResult = await signer.sendTransaction({
+        to: aavePool,
+        value: 0n,
+        data: aaveIface.encodeFunctionData('withdraw', [usdtAddress, usdtAmount, this.address])
+      });
+      const receipt = await provider.waitForTransaction(withdrawResult.hash);
+      
+      logger.info({ id: this.id, txHash: receipt.hash }, '[RobotAgent] Withdrew from Aave');
+      return { success: true, txHash: receipt.hash };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ error: message, id: this.id }, '[RobotAgent] Aave withdraw failed');
+      return { success: false, error: message };
+    }
+  }
+
+  async transferUsdt(toAddress: string, amountUsdt: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    try {
+      const usdtAddress = env.WDK_USDT_ADDRESS;
+      
+      if (!usdtAddress) {
+        return { success: false, error: 'USDT address not configured' };
+      }
+      
+      const usdtAmount = ethers.parseUnits(amountUsdt, 6);
+      const signer = this.account;
+      const provider = new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
+      const iface = new ethers.Interface(USDT_ABI);
+      
+      logger.info({ id: this.id, amount: amountUsdt, to: toAddress }, '[RobotAgent] Transferring USDT');
+      const txResult = await signer.sendTransaction({
+        to: usdtAddress,
+        value: 0n,
+        data: iface.encodeFunctionData('transfer', [toAddress, usdtAmount])
+      });
+      const receipt = await provider.waitForTransaction(txResult.hash);
+      
+      logger.info({ id: this.id, txHash: receipt.hash }, '[RobotAgent] Transferred USDT');
+      return { success: true, txHash: receipt.hash };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ error: message, id: this.id }, '[RobotAgent] USDT transfer failed');
+      return { success: false, error: message };
+    }
+  }
+
   async payForResource(url: string, options: RequestInit = {}): Promise<Response> {
+    if (!this.x402Fetch) {
+      throw new Error('RobotAgent not initialized');
+    }
     return this.x402Fetch(url, options);
   }
 
@@ -156,23 +270,28 @@ export class RobotAgent {
     try {
       logger.info({ id: this.id, type: this.type, task: taskData }, '[RobotAgent] Executing task');
       
-      const depositAmount = (0.001 + Math.random() * 0.004).toFixed(3);
-      const vaultResult = await this.depositToVault(depositAmount);
+      const operations = [
+        { name: 'Aave Supply', fn: () => this.supplyToAave('0.01') },
+        { name: 'Aave Withdraw', fn: () => this.withdrawFromAave('0.005') },
+        { name: 'Vault Deposit', fn: () => this.depositToVault('0.01') }
+      ];
+      
+      const selectedOp = operations[Math.floor(Math.random() * operations.length)];
+      logger.info({ id: this.id, operation: selectedOp.name }, '[RobotAgent] Starting DeFi operation');
+      
+      const result = await selectedOp.fn();
       
       return {
-        success: true,
+        success: result.success,
         result: {
           taskId: `${this.id}-${Date.now()}`,
           executedBy: this.id,
           type: this.type,
+          operation: selectedOp.name,
           timestamp: new Date().toISOString(),
           data: taskData,
-          vaultDeposit: vaultResult.success ? {
-            amount: depositAmount,
-            txHash: vaultResult.txHash,
-            shares: vaultResult.shares
-          } : { error: vaultResult.error },
-          totalShares: this.shares.toString()
+          defiResult: result,
+          address: this.address
         }
       };
     } catch (error) {
