@@ -28,7 +28,7 @@ OmniAgent is an autonomous, non-custodial yield routing stack. It introduces a n
 graph TB
     subgraph Frontend["Frontend (React + Vite)"]
         Dashboard[Dashboard - SSE]
-        MCPPanel[MCP Panel - 54+ tools]
+        MCPPanel[MCP Panel - 59+ tools]
         ChatUI[Chat UI - Streaming]
     end
 
@@ -39,6 +39,7 @@ graph TB
         AutoAgent[AutonomousAgent Decision Loop]
         WDKService[WDK Protocol Service<br/>Aave | USDT0 | Velora | X402]
         WDKSigner[WDK Signer Adapter<br/>BIP-39 → ethers.js]
+        DirectERC4337[DirectERC4337 Service<br/>Session Keys | Account Factory]
     end
 
     subgraph SmartContracts["Smart Contracts (Solidity)"]
@@ -48,7 +49,8 @@ graph TB
         AgentNFA[AgentNFA]
         CircuitBreaker[CircuitBreaker]
         ZKRiskOracle[ZKRiskOracle]
-        ERC4337[ERC4337]
+        SimpleAccountFactory[SimpleAccountFactory<br/>Session Key Support]
+        SimpleAccount[SimpleAccount<br/>Spending Limits | Daily Limits]
         X402Registry[X402Registry]
         More[+20 more]
     end
@@ -65,6 +67,8 @@ graph TB
     AutoAgent --> AdaptiveScheduler[Adaptive Scheduler]
     WDKService --> WDKSigner
     WDKSigner --> SmartContracts
+    DirectERC4337 --> SimpleAccountFactory
+    SimpleAccountFactory --> SimpleAccount
 ```
 
 ---
@@ -232,6 +236,193 @@ graph TD
     style E fill:#9b59b6,color:#fff
     style F fill:#2ecc71,color:#fff
     style X fill:#95a5a6,color:#fff
+```
+
+---
+
+## Robot Fleet Economy
+
+OmniAgent includes a **Robot Fleet Simulator** — virtual sub-agents that demonstrate agent-to-agent economics:
+
+```mermaid
+graph TB
+    subgraph Fleet["Robot Fleet"]
+        FleetConfig[(Fleet Config<br/>8 robots)]
+        FleetEmitter([Event Emitter])
+        PaymentHandler[Payment Handler]
+    end
+
+    subgraph Robots["8 Robot Agents"]
+        R1[Robot #1<br/>Yield Sentry]
+        R2[Robot #2<br/>Swap Scout]
+        R3[Robot #3<br/>Lending Agent]
+        R4[Robot #4-8[Robot #4-8<br/>Multi-task]]
+    end
+
+    subgraph DeFi["DeFi Operations"]
+        Vault[WDKVault<br/>Deposit/Withdraw]
+        Aave[Aave V3<br/>Supply/Borrow]
+        Velora[Velora DEX<br/>Swap]
+        USDT[USDT Token<br/>Transfer]
+    end
+
+    subgraph Blockchain["Sepolia Testnet"]
+        ETH[ETH<br/>Gas]
+        Chainlink[Chainlink<br/>Price Feeds]
+        EntryPoint[EntryPoint v0.7]
+    end
+
+    FleetConfig --> R1
+    FleetConfig --> R2
+    FleetConfig --> R3
+    FleetConfig --> R4
+    
+    R1 -->|Approve + Deposit| Vault
+    R2 -->|Swap| Velora
+    R3 -->|Supply + Withdraw| Aave
+    R4 -->|Multi-Op| Vault
+    R4 -->|Multi-Op| Aave
+    
+    Vault <-->|Yield| R1
+    Aave <-->|Interest| R3
+    Velora <-->|Fees| R2
+    
+    PaymentHandler -->|Transfer USDT| R1
+    PaymentHandler -->|Transfer USDT| R2
+    PaymentHandler -->|Transfer USDT| R3
+    
+    USDT -->|0.5 USDT/robot| R1
+    USDT -->|0.5 USDT/robot| R2
+    USDT -->|0.5 USDT/robot| R3
+    
+    ETH -->|Gas| R1
+    ETH -->|Gas| R2
+    ETH -->|Gas| R3
+    ETH -->|Gas| R4
+    
+    Chainlink -->|Price| Vault
+    EntryPoint -->|Bundler| Vault
+    
+    FleetEmitter -->|Events| PaymentHandler
+```
+
+**Fleet Lifecycle:**
+
+```mermaid
+sequenceDiagram
+    participant Master as Master Wallet
+    participant Robot as Robot Agent
+    participant Vault as WDKVault
+    participant Fleet as Fleet Events
+
+    Master->>Robot: Fund 0.5 USDT + 0.005 ETH
+    Note over Robot: 30% chance DeFi ops
+    Robot->>Vault: Approve USDT
+    Robot->>Vault: deposit()
+    Robot->>Vault: withdraw()
+    Robot->>Vault: harvest yield
+    Vault-->>Robot: Shares + Yield
+    Robot->>Master: transfer(earnings)
+    Master->>Fleet: emit Event
+```
+
+---
+
+## Smart Contracts Architecture
+
+```mermaid
+graph TB
+    subgraph VaultCore["Vault Core"]
+        WDKVault[WDKVault<br/>ERC4626 Vault]
+        WDKVaultProxy[Proxy?]
+    end
+
+    subgraph YieldLayer["Yield Layer"]
+        WDKEarn[WDKEarnAdapter]
+        WDKEarnSwap[WDKEarnAdapterWithSwap]
+        Lending[AaveLendingAdapter]
+        LP[StableSwapLPYieldAdapter]
+    end
+
+    subgraph Strategy["Strategy & Risk"]
+        StrategyEngine[StrategyEngine<br/>Cycle Executor]
+        RiskPolicy[RiskPolicy<br/>Risk Params]
+        Sharpe[SharpeTracker<br/>Sharpe Ratio]
+        CircuitBreaker[CircuitBreaker<br/>Emergency Pause]
+    end
+
+    subgraph Access["Access Control"]
+        PolicyGuard[PolicyGuard<br/>On-Chain Rules]
+        AgentNFA[AgentNFA<br/>NFA Boundary]
+    end
+
+    subgraph Oracle["Oracles"]
+        Chainlink[ChainlinkPriceOracle]
+        TWAP[TWAPMultiOracle]
+        MultiAgg[MultiOracleAggregator]
+        ZKOracle[ZKRiskOracle<br/>ZK Verification]
+    end
+
+    subgraph ERC4337["Account Abstraction"]
+        Factory[SimpleAccountFactory]
+        SimpleAccount[SimpleAccount<br/>Session Keys]
+        Paymaster[Paymaster<br/>Gas Sponsorship]
+        EntryPoint[EntryPoint v0.7]
+    end
+
+    StrategyEngine --> WDKVault
+    WDKVault --> WDKEarn
+    WDKVault --> WDKEarnSwap
+    WDKVault --> Lending
+    WDKVault --> LP
+    
+    StrategyEngine --> RiskPolicy
+    StrategyEngine --> Sharpe
+    StrategyEngine --> CircuitBreaker
+    
+    WDKVault --> PolicyGuard
+    WDKVault --> AgentNFA
+    
+    StrategyEngine --> Chainlink
+    StrategyEngine --> TWAP
+    StrategyEngine --> MultiAgg
+    StrategyEngine --> ZKOracle
+    
+    Factory --> SimpleAccount
+    SimpleAccount --> EntryPoint
+    Paymaster --> EntryPoint
+```
+
+**Contract Interaction Flow:**
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Vault as WDKVault
+    participant Engine as StrategyEngine
+    participant Adapter as WDK EarnAdapter
+    participant Aave as Aave V3 Pool
+    participant Oracle as Chainlink
+
+    User->>Vault: deposit(assets)
+    Vault->>Adapter: supply(assets)
+    Adapter->>Aave: supply()
+    Aave-->>Adapter: aToken
+    Adapter-->>Vault: shares
+    
+    Note over Engine: Autonomous Cycle
+    Engine->>Oracle: getPrice()
+    Oracle-->>Engine: price
+    Engine->>Engine: calculateRisk()
+    Engine->>Adapter: harvest()
+    Adapter->>Aave: supply()
+    Aave-->>Adapter: yield
+    Adapter-->>Vault: report()
+    Vault->>Vault: update NAV
+    
+    Engine->>CircuitBreaker: check()
+    CircuitBreaker-->>Engine: OK
+    Engine->>Vault: executeRebalance()
 ```
 
 ---

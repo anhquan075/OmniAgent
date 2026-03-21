@@ -49,6 +49,7 @@ export function ChatContainer({
 }: ChatContainerProps) {  
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const safeMessages = Array.isArray(messages) && messages.length > 0 ? messages : [];
   const quickStartDismissed = safeMessages.length > 1;
   
   const { address } = useAccount();
@@ -82,8 +83,6 @@ export function ChatContainer({
       console.error('Failed to check smart wallet status:', err);
     }
   };
-  
-  const safeMessages = Array.isArray(messages) && messages.length > 0 ? messages : [];
 
   // Extract real-time status from data parts
   const currentAgentStatus = React.useMemo(() => {
