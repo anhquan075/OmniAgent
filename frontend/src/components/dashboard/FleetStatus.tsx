@@ -4,7 +4,7 @@ import RobotCard from './RobotCard';
 import ActivityFeed from './ActivityFeed';
 import { Badge } from '../ui/Badge';
 import { cn } from '../../lib/utils';
-import { ZapIcon, Truck, Sparkles, Scan, Shield, Radar, Zap, Lock, Eye, Activity, ShieldAlert, Target, LucideIcon } from 'lucide-react';
+import { ZapIcon, Truck, Sparkles, Scan, Shield, Radar, Zap, Lock, Eye, Activity, ShieldAlert, Target, Link, LucideIcon } from 'lucide-react';
 import { getApiUrl } from '../../lib/api';
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -19,6 +19,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   "[D]": Activity,
   "[M]": ShieldAlert,
   "[B]": Target,
+  "[X]": Link,
 };
 
 const FleetStatus: React.FC = () => {

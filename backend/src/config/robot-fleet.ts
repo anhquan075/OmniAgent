@@ -25,7 +25,8 @@ const DEFAULT_ROBOTS: RobotConfig[] = [
   { "id": "ROBO-005", "type": "Risk Oracle", "icon": "[O]" },
   { "id": "ROBO-006", "type": "Delta Neutral", "icon": "[D]" },
   { "id": "ROBO-007", "type": "MEV Shield", "icon": "[M]" },
-  { "id": "ROBO-008", "type": "Bounty Hunter", "icon": "[B]" }
+  { "id": "ROBO-008", "type": "Bounty Hunter", "icon": "[B]" },
+  { "id": "ROBO-009", "type": "Bridge Sentinel", "icon": "[X]" }
 ];
 
 function parseRobots(): RobotConfig[] {
@@ -41,7 +42,7 @@ function parseRobots(): RobotConfig[] {
 export function getRobotFleetConfig(): FleetConfig {
   return {
     enabled: process.env.ROBOT_FLEET_ENABLED === 'true',
-    fleetSize: parseInt(process.env.ROBOT_FLEET_SIZE || '8', 10),
+    fleetSize: parseInt(process.env.ROBOT_FLEET_SIZE || '9', 10),
     robots: parseRobots(),
     taskInterval: {
       min: parseInt(process.env.ROBOT_FLEET_TASK_INTERVAL_MIN || '5000', 10),

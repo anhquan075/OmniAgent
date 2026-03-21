@@ -159,14 +159,21 @@ function spawnFleet(): void {
 }
 
 async function initializeRobotAgents(): Promise<void> {
+  const mnemonic = process.env.WDK_SECRET_SEED || '';
+  if (!mnemonic || mnemonic.split(' ').length < 12) {
+    logger.error('[RobotFleet] Invalid WDK_SECRET_SEED for HD derivation');
+    return;
+  }
+  
+  const masterWallet = ethers.HDNodeWallet.fromPhrase(mnemonic);
   let index = 0;
   for (const robot of robots.values()) {
     try {
+      const derivedWallet = masterWallet.derivePath(String(index));
       const agent = new RobotAgent({
         id: robot.id,
         type: robot.type,
-        seedPhrase: fleetConfig.privateKey || process.env.WDK_SECRET_SEED || '',
-        derivationPath: `0'/${index}/0`,
+        privateKey: derivedWallet.privateKey,
         rpcUrl: fleetConfig.rpcUrl || process.env.SEPOLIA_RPC_URL || ''
       });
       
