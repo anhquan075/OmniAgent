@@ -121,7 +121,7 @@ class RobotFleetService {
   getFleetStatus(): FleetStatus {
     if (!this.simulator) {
       return {
-        enabled: false,
+        enabled: process.env.ROBOT_FLEET_ENABLED === 'true',
         robots: [],
         fleetTotalEarned: '0.0000',
         recentEvents: [],
@@ -130,7 +130,7 @@ class RobotFleetService {
       };
     }
     return this.simulator.getFleetStatus?.() || {
-      enabled: false,
+      enabled: process.env.ROBOT_FLEET_ENABLED === 'true',
       robots: [],
       fleetTotalEarned: '0.0000',
       recentEvents: [],
