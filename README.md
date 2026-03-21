@@ -516,6 +516,13 @@ ROBOT_FLEET_SIZE=8
 | `ROBOT_FLEET_EARNINGS_MIN` | `0.01` | Min USDT earnings per task |
 | `ROBOT_FLEET_EARNINGS_MAX` | `0.10` | Max USDT earnings per task |
 
+### Optional — Deployment
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DEPLOYMENT_MODE` | `development` | `development` enables agent; `production` disables |
+| `ALLOW_AGENT_RUN` | `true` | Enable autonomous agent loop |
+
 ### Optional — Contract Addresses (auto-populated after deployment)
 
 ```bash
