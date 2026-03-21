@@ -256,7 +256,7 @@ graph TB
         R1[Robot #1<br/>Yield Sentry]
         R2[Robot #2<br/>Swap Scout]
         R3[Robot #3<br/>Lending Agent]
-        R4[Robot #4-8[Robot #4-8<br/>Multi-task]]
+        R4[Robot #4-8<br/>Multi-task]
     end
 
     subgraph DeFi["DeFi Operations"]
