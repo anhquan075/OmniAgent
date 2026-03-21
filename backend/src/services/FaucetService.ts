@@ -1,4 +1,5 @@
-import { parseEther, formatEther } from 'ethers';
+import { parseEther, formatEther, ethers } from 'ethers';
+import { logger } from '@/utils/logger';
 
 interface FaucetClaim {
   walletAddress: string;
@@ -21,9 +22,27 @@ const WALLET_CLAIM_COOLDOWN_24H = 24 * 60 * 60 * 1000;
 const IP_MAX_CLAIMS_24H = 5;
 const IP_CLAIM_COOLDOWN_5MIN = 5 * 60 * 1000;
 
+const USDT_ABI = [
+  'function transfer(address to, uint256 amount) returns (bool)',
+  'function balanceOf(address account) view returns (uint256)'
+];
+
 export class FaucetService {
   private claims: Map<string, FaucetClaim> = new Map();
   private ipLimits: Map<string, RateLimitEntry> = new Map();
+  private wallet: ethers.Wallet | null = null;
+  private provider: ethers.JsonRpcProvider | null = null;
+
+  private getWallet(): ethers.Wallet {
+    if (!this.wallet) {
+      const rpcUrl = process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia.publicnode.com';
+      const privateKey = process.env.PRIVATE_KEY || process.env.ROBOT_FLEET_PRIVATE_KEY || '';
+      if (!privateKey) throw new Error('No private key configured for faucet');
+      this.provider = new ethers.JsonRpcProvider(rpcUrl);
+      this.wallet = new ethers.Wallet(privateKey, this.provider);
+    }
+    return this.wallet;
+  }
 
   async claim(walletAddress: string, ip: string): Promise<FaucetClaim> {
     const addr = walletAddress.toLowerCase();
@@ -99,17 +118,40 @@ export class FaucetService {
   }
 
   private async mintUSDT(to: string): Promise<void> {
-    console.log(`[Faucet] Minting 10k USDT to ${to}`);
-    // TODO: Integrate with wdk_mint_test_token MCP tool
+    const wallet = this.getWallet();
+    const usdt = new ethers.Contract(TEST_USDT_CONTRACT, USDT_ABI, wallet);
+    
+    const masterBalance = await usdt.balanceOf(wallet.address);
+    if (masterBalance < TEST_USDT_10K) {
+      logger.warn({ balance: ethers.formatUnits(masterBalance, 6) }, '[Faucet] Insufficient USDT in master wallet');
+      throw new Error('Faucet depleted. Try again later.');
+    }
+    
+    logger.info({ to, amount: '10000' }, '[Faucet] Transferring USDT');
+    const tx = await usdt.transfer(to, TEST_USDT_10K);
+    await tx.wait();
+    logger.info({ to, txHash: tx.hash }, '[Faucet] USDT transferred');
   }
 
   private async sendGasETH(to: string): Promise<void> {
-    console.log(`[Faucet] Sending 0.005 ETH gas to ${to}`);
-    // TODO: Send from backend wallet
+    const wallet = this.getWallet();
+    const provider = this.provider!;
+    
+    const balance = await provider.getBalance(wallet.address);
+    if (balance < TEST_ETH_GAS) {
+      logger.warn({ balance: ethers.formatEther(balance) }, '[Faucet] Insufficient ETH for gas');
+      return;
+    }
+    
+    logger.info({ to, amount: '0.005' }, '[Faucet] Sending ETH gas');
+    const tx = await wallet.sendTransaction({ to, value: TEST_ETH_GAS });
+    await tx.wait();
+    logger.info({ to, txHash: tx.hash }, '[Faucet] ETH gas sent');
   }
 
-  private async getUSDTBalance(_addr: string): Promise<bigint> {
-    // TODO: Query chain via ethers.Contract
-    return 0n;
+  private async getUSDTBalance(addr: string): Promise<bigint> {
+    const wallet = this.getWallet();
+    const usdt = new ethers.Contract(TEST_USDT_CONTRACT, USDT_ABI, wallet);
+    return usdt.balanceOf(addr);
   }
 }

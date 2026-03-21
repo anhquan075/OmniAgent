@@ -1,5 +1,6 @@
 import { logger } from '@/utils/logger';
 import { EventEmitter } from 'events';
+import * as simulator from '@/scripts/robot-simulator';
 
 export interface FleetEvent {
   robotId: string;
@@ -32,63 +33,19 @@ export interface FleetStatus {
 class RobotFleetService {
   private static instance: RobotFleetService;
   public emitter: EventEmitter;
-  private simulator: any = null;
+  private simulator: any = simulator;
   private isRunning: boolean = false;
 
   private constructor() {
     this.emitter = new EventEmitter();
-    this.init();
-  }
-
-  private async init() {
-    try {
-      const paths = [
-        '../scripts/robot-simulator.ts',
-        '../../scripts/robot-simulator.ts',
-        '../../../scripts/robot-simulator.ts'
-      ];
-
-      for (const p of paths) {
-        try {
-          const mod = await import(p);
-          this.simulator = mod.default || mod;
-          if (this.simulator && typeof this.simulator.startSimulator === 'function') {
-            logger.info({ path: p }, '[RobotFleetService] Simulator module loaded');
-            break;
-          }
-        } catch (e) {
-        }
-      }
-
-      if (!this.simulator || typeof this.simulator.startSimulator !== 'function') {
-        for (const p of paths) {
-          try {
-            const mod = require(p);
-            this.simulator = mod.default || mod;
-            if (this.simulator && typeof this.simulator.startSimulator === 'function') {
-              logger.info({ path: p }, '[RobotFleetService] Simulator module loaded via require');
-              break;
-            }
-          } catch (e) {
-          }
-        }
-      }
-
-      if (this.simulator) {
-        logger.info('[RobotFleetService] Simulator module initialized');
-      } else {
-        logger.warn('[RobotFleetService] Simulator module not found in any search path');
-      }
-    } catch (error: any) {
-      logger.error(error, '[RobotFleetService] Error during simulator initialization');
+    if (this.simulator && typeof this.simulator.startSimulator === 'function') {
+      logger.info('[RobotFleetService] Simulator module loaded statically');
+    } else {
+      logger.warn('[RobotFleetService] Simulator module missing startSimulator');
     }
   }
 
   public async startSimulator(): Promise<void> {
-    if (!this.simulator) {
-      await this.init();
-    }
-
     if (!this.simulator || typeof this.simulator.startSimulator !== 'function') {
       throw new Error('Simulator not loaded or startSimulator function not available');
     }

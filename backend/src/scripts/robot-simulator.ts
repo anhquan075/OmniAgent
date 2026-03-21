@@ -185,6 +185,8 @@ async function initializeRobotAgents(): Promise<void> {
 }
 
 async function fundRobotsWithUsdt(): Promise<void> {
+  const startTime = Date.now();
+  logger.info('[RobotFleet] Starting USDT funding process...');
   if (!wallet || !provider) {
     logger.warn('[RobotFleet] No wallet, skipping robot funding');
     return;
@@ -204,49 +206,103 @@ async function fundRobotsWithUsdt(): Promise<void> {
   const usdt = new ethers.Contract(usdtAddress, USDT_ABI, wallet);
   const fundAmount = ethers.parseUnits('0.5', 6);
   
+  const masterBalance = await usdt.balanceOf(wallet.address);
+  if (masterBalance < fundAmount) {
+    logger.warn({ balance: ethers.formatUnits(masterBalance, 6) }, '[RobotFleet] Master wallet has insufficient USDT, skipping funding');
+    return;
+  }
+
+  const robotsToFund: Robot[] = [];
   for (const robot of robots.values()) {
     if (!robot.address) continue;
-    
     try {
       const balance = await usdt.balanceOf(robot.address);
       if (balance < fundAmount) {
-        logger.info({ robotId: robot.id, currentBalance: ethers.formatUnits(balance, 6) }, '[RobotFleet] Funding robot with USDT');
-        const tx = await usdt.transfer(robot.address, fundAmount);
-        await tx.wait();
-        logger.info({ robotId: robot.id, txHash: tx.hash }, '[RobotFleet] Robot funded');
+        robotsToFund.push(robot);
       }
+    } catch (e) {
+      robotsToFund.push(robot);
+    }
+  }
+
+  if (robotsToFund.length === 0) {
+    logger.info('[RobotFleet] All robots already funded with USDT');
+    return;
+  }
+
+  logger.info({ count: robotsToFund.length }, '[RobotFleet] Funding robots with USDT');
+
+  let nonce = await provider.getTransactionCount(wallet.address, 'pending');
+  let funded = 0;
+  let failed = 0;
+
+  for (const robot of robotsToFund) {
+    try {
+      const tx = await usdt.transfer(robot.address!, fundAmount, { nonce });
+      nonce++;
+      await tx.wait();
+      funded++;
+      logger.info({ robotId: robot.id, txHash: tx.hash }, '[RobotFleet] Robot funded');
     } catch (error) {
+      failed++;
       logger.error({ error, robotId: robot.id }, '[RobotFleet] Failed to fund robot');
     }
   }
+
+  logger.info({ funded, failed, durationMs: Date.now() - startTime }, '[RobotFleet] USDT funding complete');
 }
 
 async function fundRobotsWithEth(): Promise<void> {
+  const startTime = Date.now();
   if (!wallet || !provider) {
     logger.warn('[RobotFleet] No wallet, skipping ETH funding');
     return;
   }
   
   const ethAmount = ethers.parseEther('0.005');
-  
+
+  const robotsToFund: Robot[] = [];
   for (const robot of robots.values()) {
     if (!robot.address) continue;
-    
     try {
       const balance = await provider.getBalance(robot.address);
       if (balance < ethAmount) {
-        logger.info({ robotId: robot.id, currentBalance: ethers.formatEther(balance) }, '[RobotFleet] Funding robot with ETH');
-        const tx = await wallet.sendTransaction({
-          to: robot.address,
-          value: ethAmount
-        });
-        await tx.wait();
-        logger.info({ robotId: robot.id, txHash: tx.hash }, '[RobotFleet] Robot funded with ETH');
+        robotsToFund.push(robot);
       }
+    } catch (e) {
+      robotsToFund.push(robot);
+    }
+  }
+
+  if (robotsToFund.length === 0) {
+    logger.info('[RobotFleet] All robots already funded with ETH');
+    return;
+  }
+
+  logger.info({ count: robotsToFund.length }, '[RobotFleet] Funding robots with ETH');
+
+  let nonce = await provider.getTransactionCount(wallet.address, 'pending');
+  let funded = 0;
+  let failed = 0;
+
+  for (const robot of robotsToFund) {
+    try {
+      const tx = await wallet.sendTransaction({
+        to: robot.address!,
+        value: ethAmount,
+        nonce
+      });
+      nonce++;
+      await tx.wait();
+      funded++;
+      logger.info({ robotId: robot.id, txHash: tx.hash }, '[RobotFleet] Robot funded with ETH');
     } catch (error) {
+      failed++;
       logger.error({ error, robotId: robot.id }, '[RobotFleet] Failed to fund robot with ETH');
     }
   }
+
+  logger.info({ funded, failed, durationMs: Date.now() - startTime }, '[RobotFleet] ETH funding complete');
 }
 
 function randomInRange(min: number, max: number): number {
@@ -377,9 +433,8 @@ export async function startSimulator(): Promise<void> {
 
   await initializeRobotAgents();
 
-  // Disabled: robots now earn their own USDT via tasks
-  // await fundRobotsWithUsdt();
-  // await fundRobotsWithEth();
+  await fundRobotsWithUsdt();
+  await fundRobotsWithEth();
 
   for (const robot of robots.values()) {
     logger.debug({ robotId: robot.id }, '[RobotFleet] Starting tasks');
