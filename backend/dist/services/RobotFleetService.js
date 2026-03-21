@@ -1,65 +1,57 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.robotFleetService = void 0;
 const logger_1 = require("../utils/logger");
 const events_1 = require("events");
+const simulator = __importStar(require("../scripts/robot-simulator"));
 class RobotFleetService {
     static instance;
     emitter;
-    simulator = null;
+    simulator = simulator;
     isRunning = false;
     constructor() {
         this.emitter = new events_1.EventEmitter();
-        this.init();
-    }
-    async init() {
-        try {
-            const paths = [
-                '../scripts/robot-simulator.ts',
-                '../../scripts/robot-simulator.ts',
-                '../../../scripts/robot-simulator.ts'
-            ];
-            for (const p of paths) {
-                try {
-                    const mod = await import(p);
-                    this.simulator = mod.default || mod;
-                    if (this.simulator && typeof this.simulator.startSimulator === 'function') {
-                        logger_1.logger.info({ path: p }, '[RobotFleetService] Simulator module loaded');
-                        break;
-                    }
-                }
-                catch (e) {
-                }
-            }
-            if (!this.simulator || typeof this.simulator.startSimulator !== 'function') {
-                for (const p of paths) {
-                    try {
-                        const mod = require(p);
-                        this.simulator = mod.default || mod;
-                        if (this.simulator && typeof this.simulator.startSimulator === 'function') {
-                            logger_1.logger.info({ path: p }, '[RobotFleetService] Simulator module loaded via require');
-                            break;
-                        }
-                    }
-                    catch (e) {
-                    }
-                }
-            }
-            if (this.simulator) {
-                logger_1.logger.info('[RobotFleetService] Simulator module initialized');
-            }
-            else {
-                logger_1.logger.warn('[RobotFleetService] Simulator module not found in any search path');
-            }
+        if (this.simulator && typeof this.simulator.startSimulator === 'function') {
+            logger_1.logger.info('[RobotFleetService] Simulator module loaded statically');
         }
-        catch (error) {
-            logger_1.logger.error(error, '[RobotFleetService] Error during simulator initialization');
+        else {
+            logger_1.logger.warn('[RobotFleetService] Simulator module missing startSimulator');
         }
     }
     async startSimulator() {
-        if (!this.simulator) {
-            await this.init();
-        }
         if (!this.simulator || typeof this.simulator.startSimulator !== 'function') {
             throw new Error('Simulator not loaded or startSimulator function not available');
         }
@@ -90,7 +82,7 @@ class RobotFleetService {
     getFleetStatus() {
         if (!this.simulator) {
             return {
-                enabled: false,
+                enabled: process.env.ROBOT_FLEET_ENABLED === 'true',
                 robots: [],
                 fleetTotalEarned: '0.0000',
                 recentEvents: [],
@@ -99,7 +91,7 @@ class RobotFleetService {
             };
         }
         return this.simulator.getFleetStatus?.() || {
-            enabled: false,
+            enabled: process.env.ROBOT_FLEET_ENABLED === 'true',
             robots: [],
             fleetTotalEarned: '0.0000',
             recentEvents: [],

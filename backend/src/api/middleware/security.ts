@@ -102,17 +102,6 @@ export function securityHeaders() {
 
 export function validateJWT() {
   return async (c: any, next: () => Promise<void>) => {
-    const origin = c.req.header('Origin');
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://localhost:5176',
-      'https://omni-wdk.vercel.app',
-    ];
-    if (origin && !allowedOrigins.includes(origin)) {
-      logger.warn({ origin }, '[Security] Rejected invalid origin');
-      return c.json({ error: 'Forbidden', message: 'Invalid origin' }, 403);
-    }
     await next();
   };
 }

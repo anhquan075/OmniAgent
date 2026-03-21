@@ -28,26 +28,25 @@ const SWAP_ABI = [
 export interface RobotAgentConfig {
   id: string;
   type: string;
-  seedPhrase: string;
-  derivationPath: string;
+  privateKey: string;
   rpcUrl: string;
 }
 
 export class RobotAgent {
   public readonly id: string;
   public readonly type: string;
-  public readonly derivationPath: string;
   
   private walletManager: any;
   private account: any;
   private x402Fetch: typeof fetch | undefined;
   private address: string;
+  private privateKey: string;
   private shares: bigint = 0n;
 
   constructor(config: RobotAgentConfig) {
     this.id = config.id;
     this.type = config.type;
-    this.derivationPath = config.derivationPath;
+    this.privateKey = config.privateKey;
     this.address = '';
   }
 
@@ -56,11 +55,11 @@ export class RobotAgent {
       const { default: WalletManagerEvm } = await import('@tetherto/wdk-wallet-evm');
       
       this.walletManager = new WalletManagerEvm(
-        env.WDK_SECRET_SEED,
+        this.privateKey,
         { provider: env.SEPOLIA_RPC_URL }
       );
       
-      this.account = await this.walletManager.getAccount(this.derivationPath);
+      this.account = await this.walletManager.getAccount("0'/0/0");
       this.address = await this.account.getAddress();
       
       const account = this.account;
@@ -486,11 +485,14 @@ export async function createRobotAgent(
   type: string,
   robotIndex: number
 ): Promise<RobotAgent> {
+  // Derive unique private key from master seed using HD derivation
+  const masterWallet = ethers.HDNodeWallet.fromPhrase(env.WDK_SECRET_SEED);
+  const derivedWallet = masterWallet.derivePath(`m/44'/60'/0'/0/${robotIndex}`);
+  
   const agent = new RobotAgent({
     id,
     type,
-    seedPhrase: env.WDK_SECRET_SEED,
-    derivationPath: `0'/${robotIndex}/0`,
+    privateKey: derivedWallet.privateKey,
     rpcUrl: env.SEPOLIA_RPC_URL
   });
   

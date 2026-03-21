@@ -24,7 +24,24 @@ const security_2 = require("./config/security");
 const RobotFleetService_1 = require("./services/RobotFleetService");
 const logger_1 = require("./utils/logger");
 const app = new hono_1.Hono();
-// Apply security middleware
+app.use('*', (0, cors_1.cors)({
+    origin: (origin) => {
+        const allowedOrigins = [
+            'http://localhost:3000',
+            'http://localhost:5173',
+            'http://localhost:5176',
+            'https://omni-wdk.vercel.app',
+        ];
+        if (!origin)
+            return '*';
+        return allowedOrigins.includes(origin) ? origin : '';
+    },
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+    exposeHeaders: ['Content-Length', 'X-Request-ID'],
+    maxAge: 86400,
+    credentials: true,
+}));
 (0, security_1.createSecurityMiddleware)(app);
 // Global Error Handler
 app.onError((err, c) => {
@@ -38,7 +55,6 @@ app.use('*', (0, hono_pino_1.pinoLogger)({
         reqId: () => crypto.randomUUID(),
     }
 }));
-app.use('*', (0, cors_1.cors)());
 app.use('/api/chat', async (c, next) => {
     if (c.req.method === 'POST') {
         try {

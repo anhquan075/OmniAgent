@@ -49,6 +49,7 @@ let paymentHandler: RobotFleetPaymentHandler | null = null;
 export const fleetEmitter = new EventEmitter();
 
 const MAX_EVENTS = 50;
+let fundingMutex = Promise.resolve();
 
 export function getRecentEvents(): FleetEvent[] {
   return [...recentEvents];
@@ -324,6 +325,40 @@ function addEvent(event: FleetEvent): void {
   fleetEmitter.emit('fleet:event', event);
 }
 
+async function ensureRobotFunded(robot: Robot): Promise<void> {
+  if (!wallet || !provider || !robot.address) return;
+  
+  const usdtAddress = process.env.WDK_USDT_ADDRESS;
+  if (!usdtAddress) return;
+  
+  const usdt = new ethers.Contract(usdtAddress, [
+    'function transfer(address to, uint256 amount) returns (bool)',
+    'function balanceOf(address account) view returns (uint256)'
+  ], wallet);
+  
+  const minBalance = ethers.parseUnits('0.5', 6);
+  const fundAmount = ethers.parseUnits('1', 6);
+  
+  fundingMutex = fundingMutex.then(async () => {
+    try {
+      const balance = await usdt.balanceOf(robot.address!);
+      if (balance < minBalance) {
+        const masterBalance = await usdt.balanceOf(wallet!.address);
+        if (masterBalance >= fundAmount) {
+          logger.info({ robotId: robot.id, balance: ethers.formatUnits(balance, 6) }, '[RobotFleet] Re-funding robot');
+          const tx = await usdt.transfer(robot.address!, fundAmount);
+          await tx.wait();
+          logger.info({ robotId: robot.id, txHash: tx.hash }, '[RobotFleet] Robot re-funded');
+        }
+      }
+    } catch (error) {
+      logger.error({ error, robotId: robot.id }, '[RobotFleet] Failed to re-fund robot');
+    }
+  });
+  
+  await fundingMutex;
+}
+
 async function completeTask(robotId: string): Promise<void> {
   const robot = robots.get(robotId);
   if (!robot) return;
@@ -382,6 +417,7 @@ async function completeTask(robotId: string): Promise<void> {
       robot.status = 'Idle';
       return;
     }
+    await ensureRobotFunded(robot);
     const transferResult = await robot.agent.transferUsdt(targetAddress, earnings);
     if (transferResult.success && transferResult.txHash) {
       finishTask(transferResult.txHash);
