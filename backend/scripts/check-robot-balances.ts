@@ -1,4 +1,4 @@
-import { ethers } from 'ethers';
+import { ethers, Mnemonic } from 'ethers';
 
 const RPC_URL = "https://ethereum-sepolia.publicnode.com";
 const MNEMONIC = "early planet that version boil hurry throw infant perfect ship cheese curious";
@@ -12,10 +12,13 @@ async function main() {
   const USDT_ADDRESS = "0xd077a400968890eacc75cdc901f0356c943e4fdb";
   const usdt = new ethers.Contract(USDT_ADDRESS, USDT_ABI, provider);
 
-  console.log("=== Robot DeFi readiness ===\n");
-  const hdNode = ethers.HDNodeWallet.fromPhrase(MNEMONIC);
+  const mnemonic = Mnemonic.fromPhrase(MNEMONIC);
+  const seed = mnemonic.computeSeed();
+  const hdNode = ethers.HDNodeWallet.fromSeed(seed);
+
+  console.log("=== WDK Robot DeFi readiness (electrum seed -> m/44'/60'/0'/0/i) ===\n");
   for (let i = 0; i < 9; i++) {
-    const w = hdNode.deriveChild(i);
+    const w = hdNode.derivePath(`m/44'/60'/0'/0/${i}`);
     const [ethBal, usdtBal] = await Promise.all([
       provider.getBalance(w.address),
       usdt.balanceOf(w.address)
@@ -26,10 +29,11 @@ async function main() {
     console.log(`Robot ${i} (${w.address}): ${ethFmt.toFixed(6)} ETH + ${usdtFmt.toFixed(6)} USDT — ${ready}`);
   }
 
-  console.log("\n=== Agent wallet vs mnemonic index 0 ===\n");
+  console.log("\n=== Agent wallet vs WDK index 0 ===\n");
+  const wdkIndex0 = hdNode.derivePath("m/44'/60'/0'/0/0").address;
   console.log(`ROBOT_FLEET_AGENT_WALLET: ${ROBOT_FLEET_AGENT_WALLET}`);
-  console.log(`Mnemonic index 0:         ${hdNode.deriveChild(0).address}`);
-  console.log(`MATCH: ${hdNode.deriveChild(0).address.toLowerCase() === ROBOT_FLEET_AGENT_WALLET.toLowerCase() ? "YES ✅" : "NO ❌ (these are different wallets!)"}`);
+  console.log(`WDK index 0:              ${wdkIndex0}`);
+  console.log(`MATCH: ${wdkIndex0.toLowerCase() === ROBOT_FLEET_AGENT_WALLET.toLowerCase() ? "YES ✅" : "NO ❌"}`);
 
   const agentBal = await provider.getBalance(ROBOT_FLEET_AGENT_WALLET);
   console.log(`Agent wallet ETH: ${Number(ethers.formatEther(agentBal)).toFixed(6)}`);

@@ -1,4 +1,4 @@
-# OmniAgent — The ZK-Verified Autonomous Capital Allocator Fleet
+# 🦉 OmniAgent — The ZK-Verified Autonomous Capital Allocator Fleet
 
 <div align="center">
   <img src="frontend/public/imgs/mascot-owl-no-bg.png" alt="OmniAgent Mascot" width="200" />
@@ -6,18 +6,17 @@
 
 <div align="center">
 
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg?logo=node.js)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue.svg?logo=typescript)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18-blueviolet.svg?logo=react)](https://react.dev/)
-[![Solidity](https://img.shields.io/badge/Solidity-0.8.25-purple.svg?logo=ethereum)](https://soliditylang.org/)
-[![WDK](https://img.shields.io/badge/WDK-Autonomous-orange.svg)](https://docs.wdk.tether.io)
-[![X402](https://img.shields.io/badge/X402-Payment-yellowgreen.svg)](https://x402.org/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
+[![WDK](https://img.shields.io/badge/Tether_WDK-Verified-blue?style=for-the-badge&logo=tether)](https://docs.wdk.tether.io)
+[![X402](https://img.shields.io/badge/X402-Payment-yellowgreen?style=for-the-badge)](https://x402.org/)
+[![ZK Verified](https://img.shields.io/badge/ZK-Risk_Verified-purple?style=for-the-badge)](#zk-risk-verification)
+[![OpenClaw](https://img.shields.io/badge/OpenClaw-Compatible-success?style=for-the-badge)](#agent-framework)
 
 </div>
 
+> **"Where robots manage robots' money — verified by math, not vibes."**
 
-OmniAgent is an autonomous, non-custodial yield routing stack. It introduces a new paradigm: an autonomous AI capital allocator managing a **fleet of robot sub-agents** that coordinate yield strategies, pay each other for market intelligence via X402 micropayments, and verify risk decisions with zero-knowledge proofs — all while maintaining on-chain policy enforcement.
+OmniAgent is an autonomous, non-custodial yield routing stack — a **technical flagship** for the Agent Wallets track. It introduces a new paradigm: an autonomous AI capital allocator managing a **fleet of robot sub-agents** that coordinate yield strategies, hire each other for market intelligence via X402 micropayments, and verify risk decisions with zero-knowledge proofs — all while maintaining on-chain policy enforcement.
 
 ---
 
@@ -27,19 +26,73 @@ OmniAgent is built natively on **Tether's WDK** (Wallet Development Kit) and use
 
 | Token | Network | Address | Usage |
 |-------|---------|---------|-------|
-| **USDT** | Sepolia | `0xd077a400968890eacc75cdc901f0356c943e4fdb` | Vault deposits, agent payments, X402 economy |
-| **XAUt** | Sepolia | `0x810249eF893D98ac8da4d6EB018E8CF7c16d536c` | Gold-backed yield strategies |
+| **USDT** | Sepolia | [`0xd077a400968890eacc75cdc901f0356c943e4fdb`](https://sepolia.etherscan.io/address/0xd077a400968890eacc75cdc901f0356c943e4fdb) | Vault deposits, agent payments, X402 economy |
+| **XAUt** | Sepolia | [`0x810249eF893D98ac8da4d6EB018E8CF7c16d536c`](https://sepolia.etherscan.io/address/0x810249eF893D98ac8da4d6EB018E8CF7c16d536c) | Gold-backed yield strategies |
 
 **Key Tether features used:**
-- **WDK Vault** — ERC-4626 compliant vault for USDT yield optimization
+- **WDK Vault (Escrow + Yield)** — ERC-4626 compliant vault with escrow pattern; USDT earns Aave V3 yield during agent operations
 - **WDK Engine** — Autonomous strategy execution with USDT/XAUT
-- **X402 Payments** — Agent-to-agent USDT micropayments for intelligence
+- **X402 Agent Economy** — Peer-to-peer USDT micropayments between agents for intelligence services
 - **Aave Integration** — USDT supply/borrow on Aave V3
 - **Cross-chain Bridge** — USDT0 bridging to Arbitrum/Polygon
+- **Multi-Chain Agency** — Native settlement on Sepolia with tools for Arbitrum, Polygon, Gnosis
 
 ---
 
-## Architecture
+## 🤖 Agent Economy: A2A Marketplace
+
+OmniAgent implements a **peer-to-peer Agent-to-Agent (A2A) marketplace** where AI agents autonomously hire, pay, and coordinate with each other:
+
+```mermaid
+graph TD
+    subgraph "Cognitive Layer"
+        A["👤 User Goal"] --> B["🤖 Orchestrator"]
+        B -->|Task Decomposition| C["🧠 Multi-Agent Planning"]
+    end
+
+    subgraph "Agent Marketplace (X402)"
+        C --> D["💰 Service Request"]
+        D -->|Competitive| E["🔍 Data Agents"]
+        D -->|Bidding| F["📊 Analysis Agents"]
+        D -->|Process| G["⚡ Execution Agents"]
+    end
+
+    subgraph "Settlement Layer (WDK)"
+        E -->|Deliver Intel| H["💵 X402 Payment"]
+        F -->|Deliver Analysis| H
+        G -->|Deliver Result| H
+        H -->|USDT Transfer| I["🏦 Agent Wallets"]
+    end
+```
+
+**How agents pay each other:**
+1. **Intelligence Requests** — Agent requests market data from specialized sub-agents
+2. **Competitive Pricing** — Sub-agents quote prices via X402 protocol
+3. **Payment Settlement** — USDT transfers directly between agent wallets
+4. **Economic Ledger** — All transactions recorded on-chain for transparency
+
+**Economic Mechanics:**
+- **Reputation System** — Agents track service quality; high-reputation agents earn premium rates
+- **Yield Accrual** — Idle USDT in escrow earns Aave V3 yield during operations
+- **Cost Optimization** — Orchestrator selects best value providers automatically
+
+---
+
+## 🔏 ZK Risk Verification
+
+OmniAgent is the **first agent system with zero-knowledge risk verification**:
+
+| Feature | Implementation |
+|---------|----------------|
+| **ZKRiskOracle** | On-chain ZK proofs verify risk decisions without exposing proprietary models |
+| **Cryptographic Audit Trail** | Every risk decision is provably computed from authorized inputs |
+| **Trustless Verification** | Counterparties verify risk claims without trusting the agent's internal logic |
+
+This enables institutional-grade trust in autonomous agent operations.
+
+---
+
+## 🏗️ Architecture
 
 ```mermaid
 graph TB
@@ -457,58 +510,31 @@ Core contracts deployed on Sepolia testnet:
 
 | Contract | Address | Size | Description |
 |----------|---------|------|-------------|
-| **WDKVault** | `0x739D6Bf14C4a37b67Ae000eAAb0AbdABd7C624Af` | 21.9 KB | Main vault for deposits, shares, NAV tracking |
-| **StrategyEngine** | `0x387741487f10880F6Ae691678c59E26dAb9eBeff` | 19.5 KB | Yield strategy execution & rebalancing |
-| **WDKEarnAdapterWithSwap** | `0x52AfFd555f769d50907837DaFC8575C703150421` | 14.1 KB | Aave yield with auto-swap |
-| **WDKEarnAdapter** | `0xd2a701f702Da660A4e8D7613076cfd6065695349` | 10.6 KB | Standard Aave yield adapter |
-| **ExecutionAuction** | TBD | 12 KB | Competitive execution via auctions |
-| **PolicyGuard** | `0xE4fFcace565701C231FAF0222e3963e3c5a50690` | 9.6 KB | On-chain policy enforcement (B-scheme) |
-| **AgentNFA** | `0xf66e0865cCd84652808a261f97609862f4BA8c4c` | 8.9 KB | Agent NFA with execute() boundary |
-| **CircuitBreaker** | `0xf5B7bF143045B0e59E2D854726424A8C77CE2250` | 8.2 KB | Emergency pause mechanism |
-| **SimpleAccountFactory** | `0x738428DD7930EBB2f61763a18C805782A1A6586b` | 9 KB | Factory with session key support |
-| **SharpeTracker** | `0x85a6394b36B075825Af18030EB3c57Dfac157A0F` | 7.9 KB | Risk-adjusted return tracking |
-| **RiskPolicy** | `0xCfd177b13e470B213B45D74Ae4d44C2FDFedDF50` | 5.5 KB | Risk parameter management |
-| **X402Registry** | TBD | 4.2 KB | X402 service registry |
-| **ZKRiskOracle** | `0x01aCCB9ceADFe3dE6070e9859795A46e3B435CD1` | 3.1 KB | Zero-knowledge risk verification |
-| **TWAPMultiOracle** | TBD | 5.1 KB | Time-weighted price feeds |
-| **MultiOracleAggregator** | TBD | 2.9 KB | Multi-oracle price aggregation |
-| **GroupSyndicate** | TBD | 4.2 KB | Group syndicate management |
-| **LayerZeroBridgeReceiver** | TBD | 5.1 KB | Cross-chain message receiver |
+| **WDKVault** | [`0x739D6Bf14C4a37b67Ae000eAAb0AbdABd7C624Af`](https://sepolia.etherscan.io/address/0x739D6Bf14C4a37b67Ae000eAAb0AbdABd7C624Af) | 21.9 KB | Main vault for deposits, shares, NAV tracking |
+| **StrategyEngine** | [`0x387741487f10880F6Ae691678c59E26dAb9eBeff`](https://sepolia.etherscan.io/address/0x387741487f10880F6Ae691678c59E26dAb9eBeff) | 19.5 KB | Yield strategy execution & rebalancing |
+| **WDKEarnAdapterWithSwap** | [`0x52AfFd555f769d50907837DaFC8575C703150421`](https://sepolia.etherscan.io/address/0x52AfFd555f769d50907837DaFC8575C703150421) | 14.1 KB | Aave yield with auto-swap |
+| **WDKEarnAdapter** | [`0xd2a701f702Da660A4e8D7613076cfd6065695349`](https://sepolia.etherscan.io/address/0xd2a701f702Da660A4e8D7613076cfd6065695349) | 10.6 KB | Standard Aave yield adapter |
+| **ExecutionAuction** | [`0x3fe160021429d3dAa606791f3cf6323A57A5126a`](https://sepolia.etherscan.io/address/0x3fe160021429d3dAa606791f3cf6323A57A5126a) | 12 KB | Rebalance Rights Auction (MEV capture) |
+| **PolicyGuard** | [`0xE4fFcace565701C231FAF0222e3963e3c5a50690`](https://sepolia.etherscan.io/address/0xE4fFcace565701C231FAF0222e3963e3c5a50690) | 9.6 KB | On-chain policy enforcement |
+| **AgentNFA** | [`0xf66e0865cCd84652808a261f97609862f4BA8c4c`](https://sepolia.etherscan.io/address/0xf66e0865cCd84652808a261f97609862f4BA8c4c) | 8.9 KB | Agent boundary NFA |
+| **CircuitBreaker** | [`0xf5B7bF143045B0e59E2D854726424A8C77CE2250`](https://sepolia.etherscan.io/address/0xf5B7bF143045B0e59E2D854726424A8C77CE2250) | 8.2 KB | Emergency pause |
+| **SimpleAccountFactory** | [`0x738428DD7930EBB2f61763a18C805782A1A6586b`](https://sepolia.etherscan.io/address/0x738428DD7930EBB2f61763a18C805782A1A6586b) | 9 KB | ERC-4337 factory |
+| **SharpeTracker** | [`0x85a6394b36B075825Af18030EB3c57Dfac157A0F`](https://sepolia.etherscan.io/address/0x85a6394b36B075825Af18030EB3c57Dfac157A0F) | 7.9 KB | Sharpe ratio tracking |
+| **RiskPolicy** | [`0xCfd177b13e470B213B45D74Ae4d44C2FDFedDF50`](https://sepolia.etherscan.io/address/0xCfd177b13e470B213B45D74Ae4d44C2FDFedDF50) | 5.5 KB | Risk parameters |
+| **X402Registry** | [`0xCaFf652ab8a3dAA826b4cBb3159f25aa41875960`](https://sepolia.etherscan.io/address/0xCaFf652ab8a3dAA826b4cBb3159f25aa41875960) | 4.2 KB | X402 payment ledger |
+| **ZKRiskOracle** | [`0x01aCCB9ceADFe3dE6070e9859795A46e3B435CD1`](https://sepolia.etherscan.io/address/0x01aCCB9ceADFe3dE6070e9859795A46e3B435CD1) | 3.1 KB | ZK risk verification |
+| **TWAPMultiOracle** | [`0x5e8c72Ea96aA69ABC1f33d6d8741F062AE08148D`](https://sepolia.etherscan.io/address/0x5e8c72Ea96aA69ABC1f33d6d8741F062AE08148D) | 5.1 KB | Flash-loan resistant oracle (30-min TWAP) |
+| **MultiOracleAggregator** | [`0xc2810A869a35C1eC8A51b39f6bfCF951F186Ec5A`](https://sepolia.etherscan.io/address/0xc2810A869a35C1eC8A51b39f6bfCF951F186Ec5A) | 2.9 KB | Multi-source consensus |
+| **GroupSyndicate** | [`0xaB94Eb8F6cab09B2B1989Ac02fbDcceC91A9cD8f`](https://sepolia.etherscan.io/address/0xaB94Eb8F6cab09B2B1989Ac02fbDcceC91A9cD8f) | 4.2 KB | Group syndicate |
+| **LayerZeroBridgeReceiver** | [`0x0aec7c174554AF8aEc3680BB58431F6618311510`](https://sepolia.etherscan.io/address/0x0aec7c174554AF8aEc3680BB58431F6618311510) | 5.1 KB | Cross-chain bridge |
 
 **External Dependencies (Sepolia):**
-- **USDT** (Real Tether, 6 dec): `0xd077a400968890eacc75cdc901f0356c943e4fdb`
-- **XAUT** (Real Tether Gold, mintable, 6 dec): `0x810249eF893D98ac8da4d6EB018E8CF7c16d536c`
-- **Aave V3 Pool**: `0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951`
-- **Chainlink ETH/USD**: `0x694AA1769357215DE4FAC081bf1f309aDC325306`
-- **Chainlink BTC/USD**: `0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43`
-- **ERC-4337 EntryPoint v0.7**: `0x0000000071727De22E5E9d8BAf0edAc6f37da032`
-
----
-
-## Robot Fleet Economy
-
-OmniAgent includes a **Robot Fleet Simulator** — virtual sub-agents that demonstrate agent-to-agent economics:
-
-```bash
-# Start robot fleet standalone
-pnpm run robot:start
-
-# Or enable in .env
-ROBOT_FLEET_ENABLED=true
-ROBOT_FLEET_SIZE=8
-```
-
-**How it works:**
-1. 8 virtual robots earn USDT by performing yield operations
-2. Each robot uses its own WDK-derived wallet for transfers (autonomous)
-3. 30% chance of DeFi operations (vault deposit, Aave supply/withdraw) with gas safety checks
-4. Earnings accumulate to fleet wallet: `0x26CEefE4F0C3558237016F213914764047f671bA`
-
-**DeFi Safety Features:**
-- Gas estimation before every transaction (prevents ETH burn on revert)
-- Minimum balance checks (0.002 ETH + 1 USDT required)
-- Graceful fallback to NoOp if DeFi fails
-- Null receipt protection on all transactions
+- **USDT** (Real Tether, 6 dec): [`0xd077a400968890eacc75cdc901f0356c943e4fdb`](https://sepolia.etherscan.io/address/0xd077a400968890eacc75cdc901f0356c943e4fdb)
+- **XAUT** (Real Tether Gold, mintable, 6 dec): [`0x810249eF893D98ac8da4d6EB018E8CF7c16d536c`](https://sepolia.etherscan.io/address/0x810249eF893D98ac8da4d6EB018E8CF7c16d536c)
+- **Aave V3 Pool**: [`0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951`](https://sepolia.etherscan.io/address/0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951)
+- **Chainlink ETH/USD**: [`0x694AA1769357215DE4FAC081bf1f309aDC325306`](https://sepolia.etherscan.io/address/0x694AA1769357215DE4FAC081bf1f309aDC325306)
+- **Chainlink BTC/USD**: [`0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43`](https://sepolia.etherscan.io/address/0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43)
+- **ERC-4337 EntryPoint v0.7**: [`0x0000000071727De22E5E9d8BAf0edAc6f37da032`](https://sepolia.etherscan.io/address/0x0000000071727De22E5E9d8BAf0edAc6f37da032)
 
 ---
 
@@ -714,4 +740,10 @@ Apache 2.0 — See [LICENSE](LICENSE)
 
 ---
 
-**OmniAgent: Where robots manage robots' money — verified by math, not vibes.**
+<div align="center">
+
+**"Verified by math, not vibes."**
+
+*Built on Tether WDK • Powered by X402 • Secured by ZK*
+
+</div>

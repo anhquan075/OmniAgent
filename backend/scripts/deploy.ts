@@ -617,11 +617,64 @@ async function cmdAdapters() {
   await (await (await ethers.getContractAt("LayerZeroBridgeReceiver", lzAdapterAddr)).setVault(vaultAddr)).wait();
   console.log("Adapters wired to vault");
 
+  // === Deploy ExecutionAuction (Rebalance Rights Auction) ===
+  const TWENTY_MINUTES = 20 * 60;
+  const TEN_MINUTES = 10 * 60;
+  const ExecutionAuction = await ethers.getContractFactory("ExecutionAuction");
+  const auction = await (await ExecutionAuction.deploy(
+    engineAddr,      // IStrategyEngine
+    vaultAddr,       // vault
+    usdtAddr,        // USDT token
+    TWENTY_MINUTES,  // bidWindow (20 min)
+    TEN_MINUTES,     // executeWindow (10 min)
+    ethers.parseUnits("10", 6),  // minBid (10 USDT)
+    100              // minBidIncrementBps (1%)
+  )).waitForDeployment();
+  const auctionAddr = await addr(auction);
+  console.log(`ExecutionAuction: ${auctionAddr}`);
+
+  // === Deploy MultiOracleAggregator (3% deviation consensus) ===
+  const chainlinkEthUsd = "0x694AA1769357215DE4FAC081bf1f309aDC325306";
+  const chainlinkBtcUsd = "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43";
+  const MultiOracleAggregator = await ethers.getContractFactory("MultiOracleAggregator");
+  const multiOracle = await (await MultiOracleAggregator.deploy(
+    [chainlinkEthUsd, chainlinkBtcUsd],  // at least 2 oracles required
+    deployer.address
+  )).waitForDeployment();
+  const multiOracleAddr = await addr(multiOracle);
+  console.log(`MultiOracleAggregator: ${multiOracleAddr}`);
+
+  // === Deploy TWAPMultiOracle (30-min TWAP, flash-loan resistant) ===
+  const TWAPMultiOracle = await ethers.getContractFactory("TWAPMultiOracle");
+  const twapOracle = await (await TWAPMultiOracle.deploy(
+    [chainlinkEthUsd, chainlinkBtcUsd, multiOracleAddr],  // 3+ oracles required
+    deployer.address
+  )).waitForDeployment();
+  const twapOracleAddr = await addr(twapOracle);
+  console.log(`TWAPMultiOracle: ${twapOracleAddr}`);
+
+  // === Deploy X402Registry (on-chain payment records) ===
+  const X402Registry = await ethers.getContractFactory("X402Registry");
+  const x402Registry = await (await X402Registry.deploy(deployer.address)).waitForDeployment();
+  const x402RegistryAddr = await addr(x402Registry);
+  console.log(`X402Registry: ${x402RegistryAddr}`);
+
+  // === Deploy GroupSyndicate ===
+  const GroupSyndicate = await ethers.getContractFactory("GroupSyndicate");
+  const syndicate = await (await GroupSyndicate.deploy(vaultAddr, deployer.address)).waitForDeployment();
+  const syndicateAddr = await addr(syndicate);
+  console.log(`GroupSyndicate: ${syndicateAddr}`);
+
   updateEnv({
     WDK_AAVE_ADAPTER_ADDRESS: aaveAdapterAddr,
     WDK_LZ_ADAPTER_ADDRESS: lzAdapterAddr,
+    WDK_AUCTION_ADDRESS: auctionAddr,
+    WDK_TWAP_ORACLE_ADDRESS: twapOracleAddr,
+    WDK_MULTI_ORACLE_ADDRESS: multiOracleAddr,
+    WDK_X402_REGISTRY_ADDRESS: x402RegistryAddr,
+    WDK_SYNDICATE_ADDRESS: syndicateAddr,
   });
-  console.log("Updated .env");
+  console.log("All contracts deployed and .env updated!");
 }
 
 async function cmdSeed() {
@@ -700,6 +753,48 @@ async function cmdWhitelist() {
   console.log("Whitelisting complete");
 }
 
+async function cmdDeployTwapOracle() {
+  const deployer = await getDeployer();
+  console.log(`Deployer: ${deployer.address}`);
+  await logNetwork();
+
+  // TWAPMultiOracle requires 3+ oracles with <5% deviation
+  // Deploy 3 mock oracles with matching prices for consensus
+  const MOCK_PRICE = ethers.parseUnits("2000", 8); // $2000.00
+  const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
+
+  console.log("\n--- Deploying Mock Oracles for TWAP ---");
+  const oracle1 = await (await MockPriceOracle.deploy(MOCK_PRICE)).waitForDeployment();
+  const oracle1Addr = await addr(oracle1);
+  console.log(`MockOracle #1: ${oracle1Addr}`);
+
+  const oracle2 = await (await MockPriceOracle.deploy(MOCK_PRICE)).waitForDeployment();
+  const oracle2Addr = await addr(oracle2);
+  console.log(`MockOracle #2: ${oracle2Addr}`);
+
+  const oracle3 = await (await MockPriceOracle.deploy(MOCK_PRICE)).waitForDeployment();
+  const oracle3Addr = await addr(oracle3);
+  console.log(`MockOracle #3: ${oracle3Addr}`);
+
+  // Deploy TWAPMultiOracle using 3 mock oracles
+  console.log("\n--- Deploying TWAPMultiOracle ---");
+  const TWAPMultiOracle = await ethers.getContractFactory("TWAPMultiOracle");
+  const twapOracle = await (await TWAPMultiOracle.deploy(
+    [oracle1Addr, oracle2Addr, oracle3Addr],
+    deployer.address
+  )).waitForDeployment();
+  const twapOracleAddr = await addr(twapOracle);
+  console.log(`TWAPMultiOracle: ${twapOracleAddr}`);
+
+  updateEnv({
+    WDK_TWAP_MOCK_ORACLE_1: oracle1Addr,
+    WDK_TWAP_MOCK_ORACLE_2: oracle2Addr,
+    WDK_TWAP_MOCK_ORACLE_3: oracle3Addr,
+    WDK_TWAP_ORACLE_ADDRESS: twapOracleAddr,
+  });
+  console.log("\nUpdated .env with TWAP oracle addresses");
+}
+
 const COMMANDS: Record<string, () => Promise<void>> = {
   full: cmdFull,
   "zk-oracle": cmdZkOracle,
@@ -710,6 +805,7 @@ const COMMANDS: Record<string, () => Promise<void>> = {
   seed: cmdSeed,
   init: cmdInit,
   whitelist: cmdWhitelist,
+  "twap-oracle": cmdDeployTwapOracle,
 };
 
 function printHelp() {
@@ -724,6 +820,7 @@ function printHelp() {
   console.log("  seed           Seed vault with 100k USDT from deployer");
   console.log("  init           Wire existing adapters to vault/engine");
   console.log("  whitelist      Whitelist vault/engine in existing PolicyGuard");
+  console.log("  twap-oracle    Deploy ChainlinkOracleAdapters + TWAPMultiOracle");
 }
 
 async function main() {

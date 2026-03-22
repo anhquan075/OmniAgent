@@ -121,6 +121,13 @@ if (isMain) {
     } catch (e) {
       logger.warn(e, '[RobotFleet] Robot fleet simulator failed to start');
     }
+
+    try {
+      const { startTwapObserver } = await import('./agent/services/TwapObserver.js');
+      startTwapObserver();
+    } catch (e) {
+      logger.warn(e, '[TwapObserver] TWAP observer failed to start');
+    }
     
     try {
       validateEnvironment();

@@ -10,6 +10,7 @@ import { x402Tools, handleX402Tool } from '../../mcp-server/handlers/x402-tools'
 import { erc4337Tools, handleErc4337Tool } from '../../mcp-server/handlers/erc4337-tools';
 import { sessionKeyTools, handleSessionKeyTool } from '../../mcp-server/handlers/session-key-tools';
 import { marketTools, handleMarketTool } from '../../mcp-server/handlers/market-tools';
+import { oracleTools, oracleHandlers } from '../../mcp-server/handlers/oracle-tools';
 import { broadcastSignedTransaction, getPendingTransaction, createPendingTransactionId } from '../../lib/user-wallet-signer';
 
 import { McpExecutionContext, McpTool } from '../../mcp-server/types/mcp-protocol';
@@ -63,6 +64,13 @@ function initMcpTools() {
   for (const tool of marketTools) {
     registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
       return handleMarketTool(tool.name, params, context);
+    });
+  }
+  for (const tool of oracleTools) {
+    registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
+      const handler = oracleHandlers[tool.name];
+      if (!handler) throw new Error(`No handler for ${tool.name}`);
+      return handler(params);
     });
   }
   for (const tool of wdkProtocolTools) {

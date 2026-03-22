@@ -10,7 +10,10 @@ import {
   CircuitBreakerAbi,
   OmniAgentVaultAbi,
   ExecutionAuctionAbi,
-  GroupSyndicateAbi
+  GroupSyndicateAbi,
+  TWAPMultiOracleAbi,
+  MultiOracleAggregatorAbi,
+  X402RegistryAbi
 } from '../abis';
 
 logger.info({ rpcUrl: env.SEPOLIA_RPC_URL }, '[Ethers] Initializing provider');
@@ -44,6 +47,7 @@ export const getContracts = () => {
     "function approve(address,uint256) returns (bool)",
     "function decimals() view returns (uint8)"
   ];
+
   return {
     vault: new Contract(env.WDK_VAULT_ADDRESS, vaultAbiActual, provider),
     zkOracle: new Contract(env.WDK_ZK_ORACLE_ADDRESS, oracleAbiActual, provider),
@@ -51,6 +55,9 @@ export const getContracts = () => {
     engine: new Contract(env.WDK_ENGINE_ADDRESS, engineAbi, provider),
     auction: new Contract(env.WDK_AUCTION_ADDRESS || ethers.ZeroAddress, auctionAbiActual, provider),
     syndicate: new Contract(env.WDK_SYNDICATE_ADDRESS || ethers.ZeroAddress, syndicateAbiActual, provider),
+    twapOracle: new Contract(env.WDK_TWAP_ORACLE_ADDRESS || ethers.ZeroAddress, TWAPMultiOracleAbi, provider),
+    multiOracle: new Contract(env.WDK_MULTI_ORACLE_ADDRESS || ethers.ZeroAddress, MultiOracleAggregatorAbi, provider),
+    x402Registry: new Contract(env.WDK_X402_REGISTRY_ADDRESS || ethers.ZeroAddress, X402RegistryAbi, provider),
     usdt: new Contract(env.WDK_USDT_ADDRESS, USDT_ABI, provider),
     provider
   };

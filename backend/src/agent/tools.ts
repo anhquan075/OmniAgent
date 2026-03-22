@@ -2003,6 +2003,117 @@ export const agentTools = {
       };
     },
   }),
+
+  // TWAP Oracle Tools
+  oracle_get_twap_price: tool({
+    description: 'Get 30-minute TWAP price from TWAPMultiOracle (flash-loan resistant).',
+    parameters: z.object({
+      context: z.string().describe('Reason/context for this action.')
+    }),
+    // @ts-ignore
+    execute: async ({ context }: { context: string }) => {
+      try {
+        const { twapOracle } = getContracts();
+        const [twapPrice, observationCount] = await Promise.all([
+          twapOracle.getTWAPPrice(),
+          twapOracle.observationCount()
+        ]);
+        return {
+          twapPrice: twapPrice.toString(),
+          twapPriceFormatted: (Number(twapPrice) / 1e8).toFixed(2),
+          observationCount: Number(observationCount)
+        };
+      } catch (e: any) {
+        return { error: "Failed to get TWAP price", message: e.message };
+      }
+    },
+  }),
+
+  oracle_get_instant_price: tool({
+    description: 'Get instant prices from Chainlink feeds (ETH/USD, BTC/USD) via adapters.',
+    parameters: z.object({
+      context: z.string().describe('Reason/context for this action.')
+    }),
+    // @ts-ignore
+    execute: async ({ context }: { context: string }) => {
+      try {
+        const CHAINLINK_ETH_USD_ADAPTER = '0xAbb4A2c701792f28D8e05D93F27cDadC75110917';
+        const CHAINLINK_BTC_USD_ADAPTER = '0xf3c8EA354B667771F69400Ea471316c13913455a';
+        const PRICE_ORACLE_ABI = ['function getPrice() view returns (uint256)'];
+        const { provider } = getContracts();
+        const { ethers: ethersLib } = await import('ethers');
+
+        const ethAdapter = new ethersLib.Contract(CHAINLINK_ETH_USD_ADAPTER, PRICE_ORACLE_ABI, provider);
+        const btcAdapter = new ethersLib.Contract(CHAINLINK_BTC_USD_ADAPTER, PRICE_ORACLE_ABI, provider);
+
+        const [ethPrice, btcPrice] = await Promise.all([
+          ethAdapter.getPrice(),
+          btcAdapter.getPrice(),
+        ]);
+
+        return {
+          ethUsd: ethPrice.toString(),
+          ethUsdFormatted: (Number(ethPrice) / 1e8).toFixed(2),
+          btcUsd: btcPrice.toString(),
+          btcUsdFormatted: (Number(btcPrice) / 1e8).toFixed(2),
+        };
+      } catch (e: any) {
+        return { error: "Failed to get instant price", message: e.message };
+      }
+    },
+  }),
+
+  oracle_update_observation: tool({
+    description: 'Update TWAP observation. Records current price in the 30-min buffer.',
+    parameters: z.object({
+      context: z.string().describe('Reason/context for this action.')
+    }),
+    // @ts-ignore
+    execute: async ({ context }: { context: string }) => {
+      try {
+        const { twapOracle } = getContracts();
+        const signer = await getWdkSigner(env.SEPOLIA_RPC_URL);
+        const twapWithSigner = twapOracle.connect(signer);
+        const tx = await (twapWithSigner as any).updateObservation();
+        const receipt = await tx.wait();
+        const newCount = await twapOracle.observationCount();
+        return {
+          success: true,
+          txHash: receipt.hash,
+          newObservationCount: Number(newCount)
+        };
+      } catch (e: any) {
+        return { error: "Failed to update observation", message: e.message };
+      }
+    },
+  }),
+
+  oracle_get_status: tool({
+    description: 'Get full status of TWAPMultiOracle including observations and locked status.',
+    parameters: z.object({
+      context: z.string().describe('Reason/context for this action.')
+    }),
+    // @ts-ignore
+    execute: async ({ context }: { context: string }) => {
+      try {
+        const { twapOracle } = getContracts();
+        const address = await twapOracle.getAddress();
+        const [isLocked, observationCount, lastUpdateTime] = await Promise.all([
+          twapOracle.locked(),
+          twapOracle.observationCount(),
+          twapOracle.lastUpdateTime()
+        ]);
+        return {
+          address,
+          isLocked,
+          observationCount: Number(observationCount),
+          lastUpdateTime: Number(lastUpdateTime)
+        };
+      } catch (e: any) {
+        return { error: "Failed to get oracle status", message: e.message };
+      }
+    },
+  }),
 };
 
 // Proxy to normalize tool names (trim whitespace from AI model tool calls)
