@@ -69,7 +69,8 @@ stats.get('/', async (c) => {
       isPaused,
       executionStatus,
       preview,
-      usdtBalance
+      usdtBalance,
+      agentWalletUsdt
     ] = await Promise.all([
       vault.totalAssets().catch((e) => { logger.error(e, "vault.totalAssets error"); return 0n; }),
       vault.bufferStatus().catch((e) => { logger.error(e, "vault.bufferStatus error"); return { utilizationBps: 0n, current: 0n, target: 0n }; }),
@@ -85,7 +86,8 @@ stats.get('/', async (c) => {
       breaker.isPaused().catch((e) => { logger.error(e, "breaker.isPaused error"); return false; }),
       engine.canExecute().catch((e) => { logger.error(e, "engine.canExecute error"); return [false, "0x00"]; }),
       engine.previewDecision().catch((e) => { logger.error(e, "engine.previewDecision error"); return { targetWDKBps: 0n, state: 0n }; }),
-      usdt.balanceOf(env.WDK_VAULT_ADDRESS).catch((e) => { logger.error(e, "usdt.balanceOf error"); return 0n; })
+      usdt.balanceOf(env.WDK_VAULT_ADDRESS).catch((e) => { logger.error(e, "usdt.balanceOf error"); return 0n; }),
+      usdt.balanceOf(env.ROBOT_FLEET_AGENT_WALLET || ethers.ZeroAddress).catch((e) => { logger.error(e, "agentWalletUsdt error"); return 0n; })
     ]);
 
     logger.debug('[Stats] Formatting response');
@@ -120,6 +122,10 @@ stats.get('/', async (c) => {
         bufferCurrent: ethers.formatUnits(bufferStatus?.current || 0n, USDT_DECIMALS),
         bufferTarget: ethers.formatUnits(bufferStatus?.target || 0n, USDT_DECIMALS),
         usdtBalance: ethers.formatUnits(usdtBalance || 0n, USDT_DECIMALS)
+      },
+      robotFleet: {
+        agentWalletUsdt: ethers.formatUnits(agentWalletUsdt || 0n, USDT_DECIMALS),
+        agentWalletAddress: env.ROBOT_FLEET_AGENT_WALLET || 'Not configured'
       },
       risk: {
         level: Number(riskMetrics?.monteCarloDrawdownBps || 0) >= 2000 ? 'HIGH' : Number(riskMetrics?.monteCarloDrawdownBps || 0) >= 1000 ? 'MEDIUM' : 'LOW',

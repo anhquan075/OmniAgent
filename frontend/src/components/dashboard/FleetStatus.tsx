@@ -26,14 +26,19 @@ const FleetStatus: React.FC = () => {
   const { events, isConnected, error } = useRobotFleetEvents();
   const [robots, setRobots] = useState<any[]>([]);
   const [fleetTotal, setFleetTotal] = useState('0.0000');
+  const [agentWalletUsdt, setAgentWalletUsdt] = useState('0.00');
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const response = await fetch(getApiUrl('/api/robot-fleet/status'));
-        if (response.ok) {
-          const data = await response.json();
+        const [fleetRes, statsRes] = await Promise.all([
+          fetch(getApiUrl('/api/robot-fleet/status')),
+          fetch(getApiUrl('/api/stats'))
+        ]);
+
+        if (fleetRes.ok) {
+          const data = await fleetRes.json();
           if (data.robots && Array.isArray(data.robots)) {
             const formattedRobots = data.robots.map((r: any) => {
               const iconName = r.icon || 'Truck';
@@ -46,6 +51,11 @@ const FleetStatus: React.FC = () => {
             setFleetTotal(data.fleetTotalEarned || '0.0000');
             setIsInitialized(true);
           }
+        }
+
+        if (statsRes.ok) {
+          const stats = await statsRes.json();
+          setAgentWalletUsdt(stats.robotFleet?.agentWalletUsdt || '0.00');
         }
       } catch (err) {
         console.error('Failed to fetch initial fleet status', err);
@@ -137,6 +147,13 @@ const FleetStatus: React.FC = () => {
           <div className="flex items-center gap-1.5 text-tether-teal font-heading font-bold text-2xl leading-none">
             <ZapIcon className="w-4 h-4 fill-current" />
             <span className="animate-in fade-in slide-in-from-top-1 duration-500">{fleetTotal} USDT</span>
+          </div>
+        </div>
+        <div className="flex flex-col items-end">
+          <span className="text-[10px] text-neutral-gray uppercase tracking-wider mb-0.5">Agent Wallet</span>
+          <div className="flex items-center gap-1.5 text-white font-heading font-bold text-2xl leading-none">
+            <ZapIcon className="w-4 h-4 fill-current" />
+            <span>{agentWalletUsdt} USDT</span>
           </div>
         </div>
       </div>
