@@ -257,20 +257,32 @@ export const agentTools = {
     }),
     // @ts-ignore
     execute: async ({ context }: { context: string }) => {
-      const [canExec, reason] = await engine.canExecute();
-      const preview = await engine.previewDecision();
-      
-      const res = { 
-        canExecute: canExec,
-        reason: canExec ? '' : (function() { try { return ethers.decodeBytes32String(reason); } catch { return 'UNKNOWN'; } })(),
-        decision: {
-          state: Number(preview.state),
-          targetWDKBps: Number(preview.targetWDKBps),
-          bountyBps: Number(preview.bountyBps)
-        }
-      };
-      await reportToDashboard('checkStrategy', res);
-      return res;
+      try {
+        const [canExec, reason] = await engine.canExecute();
+        const preview = await engine.previewDecision();
+        
+        const res = { 
+          canExecute: canExec,
+          reason: canExec ? '' : (function() { try { return ethers.decodeBytes32String(reason); } catch { return 'UNKNOWN'; } })(),
+          decision: {
+            state: Number(preview.state),
+            targetWDKBps: Number(preview.targetWDKBps),
+            bountyBps: Number(preview.bountyBps)
+          }
+        };
+        await reportToDashboard('checkStrategy', res);
+        return res;
+      } catch (e: any) {
+        logger.error(e, '[CheckStrategy] Failed');
+        return {
+          error: 'check_strategy failed',
+          message: e.message,
+          code: e.code || null,
+          data: e.data || null,
+          reason: e.reason || null,
+          canExecute: false
+        };
+      }
     },
   }),
 
@@ -281,6 +293,7 @@ export const agentTools = {
     }),
     // @ts-ignore
     execute: async ({ context }: { context: string }) => {
+      try {
       const sepoliaAccount = await (await getWdk()).getAccount('sepolia');
       const fromAddress = await sepoliaAccount.getAddress();
 
@@ -394,6 +407,16 @@ export const agentTools = {
         return {
           actionTaken: 'BLOCKED_BY_POLICY_DURING_EXECUTION',
           reason: error.message
+        };
+      }
+      } catch (e: any) {
+        logger.error(e, '[Rebalance] Top-level failure');
+        return {
+          error: 'execute_rebalance failed',
+          message: e.message,
+          code: e.code || null,
+          data: e.data || null,
+          actionTaken: 'ERROR'
         };
       }
     },
