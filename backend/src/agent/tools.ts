@@ -343,7 +343,9 @@ export const agentTools = {
             }, { riskLevel: profile.level as any, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
             return { actionTaken: 'AUCTION_EXECUTED_WINNER', txHash: execTx.hash };
           }
-        } catch (e) {}
+        } catch (e) {
+          logger.debug('[Tools] Winner execution failed, falling back to direct execution');
+        }
       }
 
       // 2. Direct Execution with Simulation & AI Scoring

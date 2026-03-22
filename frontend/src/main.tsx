@@ -9,6 +9,7 @@ import "./globals.css";
 import App from "./App";
 import { wagmiConfig, getInitialChain } from "./lib/wagmiConfig";
 import { TooltipProvider } from "./components/ui/Tooltip";
+import { ErrorBoundary } from "./components/shared/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -42,14 +43,16 @@ tetherTheme.colors.standby = '#26A17B';
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider initialChain={initialChain} theme={tetherTheme}>
-          <TooltipProvider>
-            <App />
-          </TooltipProvider>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <ErrorBoundary>
+      <WagmiProvider config={wagmiConfig}>
+        <QueryClientProvider client={queryClient}>
+          <RainbowKitProvider initialChain={initialChain} theme={tetherTheme}>
+            <TooltipProvider>
+              <App />
+            </TooltipProvider>
+          </RainbowKitProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </ErrorBoundary>
   </StrictMode>
 );

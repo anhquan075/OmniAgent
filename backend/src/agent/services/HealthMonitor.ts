@@ -32,7 +32,7 @@ export class AaveHealthMonitor {
 
   async getPositionData(userAddress: string): Promise<PositionData | null> {
     if (!this.aaveAdapterAddress) {
-      console.error('Aave adapter address not configured');
+      console.warn('Aave adapter address not configured - skipping position check');
       return null;
     }
 
@@ -46,15 +46,25 @@ export class AaveHealthMonitor {
       const data = await adapter.getUserAccountData(userAddress);
       const healthFactor = await adapter.getHealthFactor();
 
+      const hasNoPosition = data[2] === 0n && data[1] === 0n && healthFactor === 0n;
+      if (hasNoPosition) {
+        return null;
+      }
+
       return {
         supplied: data[2],
         borrowed: data[1],
-        healthFactor: healthFactor,
+        healthFactor,
         availableBorrows: data[3],
         liquidationThreshold: data[4]
       };
     } catch (error) {
-      console.error('Failed to get position data:', error);
+      const isContractRevert = error instanceof Error && 
+        (error.message.includes('revert') || error.message.includes('CALL_EXCEPTION'));
+      
+      if (!isContractRevert) {
+        console.error('Failed to get Aave position data:', error);
+      }
       return null;
     }
   }
@@ -97,7 +107,9 @@ export class AaveHealthMonitor {
 
   async monitorPosition(userAddress: string): Promise<HealthFactorAlert | null> {
     const position = await this.getPositionData(userAddress);
-    if (!position) return null;
+    if (!position) {
+      return null;
+    }
 
     const alert = this.checkHealthFactor(position.healthFactor);
     if (alert) {
@@ -109,15 +121,12 @@ export class AaveHealthMonitor {
 
   async getRecommendedAction(userAddress: string): Promise<string> {
     const position = await this.getPositionData(userAddress);
-    if (!position) return 'Unable to determine position status';
+    if (!position) return 'No active Aave position found';
 
     const hf = Number(ethers.formatEther(position.healthFactor));
     
     if (hf < 1.2) {
-      const borrowedValue = Number(ethers.formatEther(position.borrowed));
       const suppliedValue = Number(ethers.formatEther(position.supplied));
-      
-      // Calculate how much to withdraw to reach 1.5 health factor
       const targetHF = 1.5;
       const withdrawRatio = 1 - (hf / targetHF);
       const withdrawAmount = suppliedValue * withdrawRatio;

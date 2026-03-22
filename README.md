@@ -19,6 +19,23 @@
 
 OmniAgent is an autonomous, non-custodial yield routing stack. It introduces a new paradigm: an autonomous AI capital allocator managing a **fleet of robot sub-agents** that coordinate yield strategies, pay each other for market intelligence via X402 micropayments, and verify risk decisions with zero-knowledge proofs — all while maintaining on-chain policy enforcement.
 
+---
+
+## Tether Integration
+
+OmniAgent is built natively on **Tether's WDK** (Wallet Development Kit) and uses **Tether tokens** as the core asset for all operations:
+
+| Token | Network | Address | Usage |
+|-------|---------|---------|-------|
+| **USDT** | Sepolia | `0xd077a400968890eacc75cdc901f0356c943e4fdb` | Vault deposits, agent payments, X402 economy |
+| **XAUt** | Sepolia | `0x810249eF893D98ac8da4d6EB018E8CF7c16d536c` | Gold-backed yield strategies |
+
+**Key Tether features used:**
+- **WDK Vault** — ERC-4626 compliant vault for USDT yield optimization
+- **WDK Engine** — Autonomous strategy execution with USDT/XAUT
+- **X402 Payments** — Agent-to-agent USDT micropayments for intelligence
+- **Aave Integration** — USDT supply/borrow on Aave V3
+- **Cross-chain Bridge** — USDT0 bridging to Arbitrum/Polygon
 
 ---
 

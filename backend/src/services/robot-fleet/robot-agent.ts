@@ -152,7 +152,7 @@ export class RobotAgent {
 
   async supplyToAave(amountUsdt: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
-      const aavePool = (env as any).AAVE_V3_POOL_SEPOLIA || '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951';
+      const aavePool = env.AAVE_V3_POOL_SEPOLIA;
       const usdtAddress = env.WDK_USDT_ADDRESS;
       
       if (!usdtAddress) {
@@ -195,7 +195,7 @@ export class RobotAgent {
 
   async withdrawFromAave(amountUsdt: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
-      const aavePool = (env as any).AAVE_V3_POOL_SEPOLIA || '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951';
+      const aavePool = env.AAVE_V3_POOL_SEPOLIA;
       const usdtAddress = env.WDK_USDT_ADDRESS;
       
       if (!usdtAddress) {
@@ -387,7 +387,7 @@ export class RobotAgent {
 
   private async supplyToAaveWithSafety(amountUsdt: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
-      const aavePool = (env as any).AAVE_V3_POOL_SEPOLIA || '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951';
+      const aavePool = env.AAVE_V3_POOL_SEPOLIA;
       const usdtAddress = env.WDK_USDT_ADDRESS;
       if (!usdtAddress) {
         return { success: false, error: 'USDT address not configured' };
@@ -429,7 +429,7 @@ export class RobotAgent {
 
   private async withdrawFromAaveWithSafety(amountUsdt: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
-      const aavePool = (env as any).AAVE_V3_POOL_SEPOLIA || '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951';
+      const aavePool = env.AAVE_V3_POOL_SEPOLIA;
       const usdtAddress = env.WDK_USDT_ADDRESS;
       if (!usdtAddress) {
         return { success: false, error: 'USDT address not configured' };

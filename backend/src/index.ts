@@ -60,7 +60,9 @@ app.use('/api/chat', async (c, next) => {
     try {
       const body = await c.req.raw.clone().json();
       logger.debug({ body }, '[Request] POST /api/chat');
-    } catch (e) {}
+    } catch {
+      logger.debug('[Request] POST /api/chat - could not parse body');
+    }
   }
   await next();
 });
