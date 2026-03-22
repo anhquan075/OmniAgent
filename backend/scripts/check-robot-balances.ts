@@ -3,7 +3,7 @@ import { ethers, Mnemonic } from 'ethers';
 const RPC_URL = "https://ethereum-sepolia.publicnode.com";
 const MNEMONIC = "early planet that version boil hurry throw infant perfect ship cheese curious";
 const ROBOT_FLEET_AGENT_WALLET = "0x26CEefE4F0C3558237016F213914764047f671bA";
-const MIN_ETH = 0.002;
+const MIN_ETH = 0.005;
 const MIN_USDT = 1;
 
 async function main() {

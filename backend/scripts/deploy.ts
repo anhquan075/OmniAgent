@@ -78,11 +78,11 @@ async function deployMockOracles(usdtAddr: string, xautAddr: string) {
   const env = loadEnv();
   const addresses: Record<string, string> = {};
 
-  const CHAINLINK_ETH_USD = env.WDK_USDT_ORACLE_ADDRESS || "0x694AA1769357215DE4FAC081bf1f309aDC325306";
-  const CHAINLINK_BTC_USD = env.WDK_XAUT_ORACLE_ADDRESS || "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43";
+  const CHAINLINK_ETH_USD = env.WDK_USDT_ORACLE_ADDRESS || "0xAbb4A2c701792f28D8e05D93F27cDadC75110917";
+  const CHAINLINK_BTC_USD = env.WDK_XAUT_ORACLE_ADDRESS || "0xf3c8EA354B667771F69400Ea471316c13913455a";
 
   if (await hasContract(CHAINLINK_ETH_USD)) {
-    console.log(`Using real Chainlink ETH/USD: ${CHAINLINK_ETH_USD}`);
+    console.log(`Using ChainlinkOracleAdapter for ETH/USD: ${CHAINLINK_ETH_USD}`);
     addresses.WDK_USDT_ORACLE_ADDRESS = CHAINLINK_ETH_USD;
   } else {
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
@@ -92,7 +92,7 @@ async function deployMockOracles(usdtAddr: string, xautAddr: string) {
   }
 
   if (await hasContract(CHAINLINK_BTC_USD)) {
-    console.log(`Using real Chainlink BTC/USD: ${CHAINLINK_BTC_USD}`);
+    console.log(`Using ChainlinkOracleAdapter for BTC/USD: ${CHAINLINK_BTC_USD}`);
     addresses.WDK_XAUT_ORACLE_ADDRESS = CHAINLINK_BTC_USD;
   } else {
     const MockPriceOracle = await ethers.getContractFactory("MockPriceOracle");
@@ -230,9 +230,12 @@ async function deployVaultAndEngine(
     engineAddr = env.WDK_ENGINE_ADDRESS;
     console.log(`StrategyEngine (resume): ${engineAddr}`);
   } else {
+    let priceOracleAddr = usdtOracleAddr;
+    console.log(`Using Chainlink oracle for StrategyEngine: ${priceOracleAddr}`);
+    
     const StrategyEngine = await ethers.getContractFactory("StrategyEngine");
     const engine = await (await StrategyEngine.deploy(
-      vaultAddr, policyAddr, usdtOracleAddr, breakerAddr, sharpeTrackerAddr,
+      vaultAddr, policyAddr, priceOracleAddr, breakerAddr, sharpeTrackerAddr,
       ethers.parseUnits("1", 8)
     )).waitForDeployment();
     engineAddr = await addr(engine);
@@ -634,8 +637,8 @@ async function cmdAdapters() {
   console.log(`ExecutionAuction: ${auctionAddr}`);
 
   // === Deploy MultiOracleAggregator (3% deviation consensus) ===
-  const chainlinkEthUsd = "0x694AA1769357215DE4FAC081bf1f309aDC325306";
-  const chainlinkBtcUsd = "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43";
+  const chainlinkEthUsd = "0xAbb4A2c701792f28D8e05D93F27cDadC75110917"; // ChainlinkOracleAdapter for ETH/USD
+  const chainlinkBtcUsd = "0xf3c8EA354B667771F69400Ea471316c13913455a"; // ChainlinkOracleAdapter for BTC/USD
   const MultiOracleAggregator = await ethers.getContractFactory("MultiOracleAggregator");
   const multiOracle = await (await MultiOracleAggregator.deploy(
     [chainlinkEthUsd, chainlinkBtcUsd],  // at least 2 oracles required
@@ -795,6 +798,80 @@ async function cmdDeployTwapOracle() {
   console.log("\nUpdated .env with TWAP oracle addresses");
 }
 
+async function cmdRedeployEngine() {
+  const env = loadEnv();
+  const deployer = await getDeployer();
+  console.log(`Deployer: ${deployer.address}`);
+  await logNetwork();
+
+  // Check required dependencies
+  if (!env.WDK_VAULT_ADDRESS) throw new Error("WDK_VAULT_ADDRESS not set in .env");
+  if (!env.RISK_POLICY_ADDRESS) throw new Error("RISK_POLICY_ADDRESS not set in .env");
+  if (!env.WDK_BREAKER_ADDRESS) throw new Error("WDK_BREAKER_ADDRESS not set in .env");
+  if (!env.SHARPE_TRACKER_ADDRESS) throw new Error("SHARPE_TRACKER_ADDRESS not set in .env");
+  if (!env.WDK_USDT_ORACLE_ADDRESS) throw new Error("WDK_USDT_ORACLE_ADDRESS not set in .env");
+
+  // Verify contracts exist
+  if (!(await hasContract(env.WDK_VAULT_ADDRESS))) throw new Error(`Vault contract not found at ${env.WDK_VAULT_ADDRESS}`);
+  if (!(await hasContract(env.WDK_USDT_ORACLE_ADDRESS))) throw new Error(`USDT oracle contract not found at ${env.WDK_USDT_ORACLE_ADDRESS}`);
+  if (!(await hasContract(env.RISK_POLICY_ADDRESS))) throw new Error(`RiskPolicy contract not found at ${env.RISK_POLICY_ADDRESS}`);
+  if (!(await hasContract(env.WDK_BREAKER_ADDRESS))) throw new Error(`CircuitBreaker contract not found at ${env.WDK_BREAKER_ADDRESS}`);
+  if (!(await hasContract(env.SHARPE_TRACKER_ADDRESS))) throw new Error(`SharpeTracker contract not found at ${env.SHARPE_TRACKER_ADDRESS}`);
+
+  // Log deployment parameters
+  console.log("Deployment parameters:");
+  console.log(`  Vault: ${env.WDK_VAULT_ADDRESS}`);
+  console.log(`  Policy: ${env.RISK_POLICY_ADDRESS}`);
+  console.log(`  USDT Oracle: ${env.WDK_USDT_ORACLE_ADDRESS}`);
+  console.log(`  Breaker: ${env.WDK_BREAKER_ADDRESS}`);
+  console.log(`  SharpeTracker: ${env.SHARPE_TRACKER_ADDRESS}`);
+  console.log(`  Initial Price: 1.0 (1e8)`);
+
+  console.log("\n--- Deploying StrategyEngine with Chainlink oracle ---");
+  const StrategyEngine = await ethers.getContractFactory("StrategyEngine");
+  
+  let engine;
+  try {
+    engine = await StrategyEngine.deploy(
+      env.WDK_VAULT_ADDRESS,
+      env.RISK_POLICY_ADDRESS,
+      env.WDK_USDT_ORACLE_ADDRESS,
+      env.WDK_BREAKER_ADDRESS,
+      env.SHARPE_TRACKER_ADDRESS,
+      ethers.parseUnits("1", 8),
+      { gasLimit: 3000000 }
+    );
+    const tx = engine.deploymentTransaction();
+    if (tx) {
+      console.log(`Transaction hash: ${tx.hash}`);
+      console.log(`Waiting for confirmation...`);
+    }
+    await engine.waitForDeployment();
+  } catch (deployError: any) {
+    console.error("Deployment failed:", deployError.message);
+    if (deployError.data) {
+      console.error("Revert data:", deployError.data);
+    }
+    if (deployError.reason) {
+      console.error("Revert reason:", deployError.reason);
+    }
+    throw deployError;
+  }
+  
+  const newEngineAddr = await addr(engine);
+  console.log(`New StrategyEngine: ${newEngineAddr}`);
+  console.log(`Old StrategyEngine: ${env.WDK_ENGINE_ADDRESS || 'none'}`);
+  
+  // Update .env with new engine address
+  updateEnv({ WDK_ENGINE_ADDRESS: newEngineAddr });
+  console.log("\nUpdated .env with new WDK_ENGINE_ADDRESS");
+  
+  console.log("\nNote: You may need to:");
+  console.log("1. Update any hardcoded engine references in frontend/backend");
+  console.log("2. Re-run 'whitelist' command if using PolicyGuard");
+  console.log("3. Restart backend server");
+}
+
 const COMMANDS: Record<string, () => Promise<void>> = {
   full: cmdFull,
   "zk-oracle": cmdZkOracle,
@@ -806,6 +883,7 @@ const COMMANDS: Record<string, () => Promise<void>> = {
   init: cmdInit,
   whitelist: cmdWhitelist,
   "twap-oracle": cmdDeployTwapOracle,
+  "redeploy-engine": cmdRedeployEngine,
 };
 
 function printHelp() {
@@ -820,7 +898,8 @@ function printHelp() {
   console.log("  seed           Seed vault with 100k USDT from deployer");
   console.log("  init           Wire existing adapters to vault/engine");
   console.log("  whitelist      Whitelist vault/engine in existing PolicyGuard");
-  console.log("  twap-oracle    Deploy ChainlinkOracleAdapters + TWAPMultiOracle");
+  console.log("  twap-oracle    Deploy ChainlinkOracleAdapters + TWAPMultiOracle (optional)");
+  console.log("  redeploy-engine Redeploy StrategyEngine with Chainlink oracle (fixes oracle revert)");
 }
 
 async function main() {

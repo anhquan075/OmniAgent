@@ -435,7 +435,6 @@ graph TB
 
     subgraph Oracle["Oracles"]
         Chainlink[ChainlinkPriceOracle]
-        TWAP[TWAPMultiOracle]
         MultiAgg[MultiOracleAggregator]
         ZKOracle[ZKRiskOracle<br/>ZK Verification]
     end
@@ -461,7 +460,6 @@ graph TB
     WDKVault --> AgentNFA
     
     StrategyEngine --> Chainlink
-    StrategyEngine --> TWAP
     StrategyEngine --> MultiAgg
     StrategyEngine --> ZKOracle
     
@@ -511,7 +509,7 @@ Core contracts deployed on Sepolia testnet:
 | Contract | Address | Size | Description |
 |----------|---------|------|-------------|
 | **WDKVault** | [`0x739D6Bf14C4a37b67Ae000eAAb0AbdABd7C624Af`](https://sepolia.etherscan.io/address/0x739D6Bf14C4a37b67Ae000eAAb0AbdABd7C624Af) | 21.9 KB | Main vault for deposits, shares, NAV tracking |
-| **StrategyEngine** | [`0x387741487f10880F6Ae691678c59E26dAb9eBeff`](https://sepolia.etherscan.io/address/0x387741487f10880F6Ae691678c59E26dAb9eBeff) | 19.5 KB | Yield strategy execution & rebalancing |
+| **StrategyEngine** | [`0x4A3e42E49b69ef0fD569bdc50354EaB444f36476`](https://sepolia.etherscan.io/address/0x4A3e42E49b69ef0fD569bdc50354EaB444f36476) | 19.5 KB | Yield strategy execution & rebalancing (uses Chainlink oracle) |
 | **WDKEarnAdapterWithSwap** | [`0x52AfFd555f769d50907837DaFC8575C703150421`](https://sepolia.etherscan.io/address/0x52AfFd555f769d50907837DaFC8575C703150421) | 14.1 KB | Aave yield with auto-swap |
 | **WDKEarnAdapter** | [`0xd2a701f702Da660A4e8D7613076cfd6065695349`](https://sepolia.etherscan.io/address/0xd2a701f702Da660A4e8D7613076cfd6065695349) | 10.6 KB | Standard Aave yield adapter |
 | **ExecutionAuction** | [`0x3fe160021429d3dAa606791f3cf6323A57A5126a`](https://sepolia.etherscan.io/address/0x3fe160021429d3dAa606791f3cf6323A57A5126a) | 12 KB | Rebalance Rights Auction (MEV capture) |
@@ -523,7 +521,7 @@ Core contracts deployed on Sepolia testnet:
 | **RiskPolicy** | [`0xCfd177b13e470B213B45D74Ae4d44C2FDFedDF50`](https://sepolia.etherscan.io/address/0xCfd177b13e470B213B45D74Ae4d44C2FDFedDF50) | 5.5 KB | Risk parameters |
 | **X402Registry** | [`0xCaFf652ab8a3dAA826b4cBb3159f25aa41875960`](https://sepolia.etherscan.io/address/0xCaFf652ab8a3dAA826b4cBb3159f25aa41875960) | 4.2 KB | X402 payment ledger |
 | **ZKRiskOracle** | [`0x01aCCB9ceADFe3dE6070e9859795A46e3B435CD1`](https://sepolia.etherscan.io/address/0x01aCCB9ceADFe3dE6070e9859795A46e3B435CD1) | 3.1 KB | ZK risk verification |
-| **TWAPMultiOracle** | [`0x5e8c72Ea96aA69ABC1f33d6d8741F062AE08148D`](https://sepolia.etherscan.io/address/0x5e8c72Ea96aA69ABC1f33d6d8741F062AE08148D) | 5.1 KB | Flash-loan resistant oracle (30-min TWAP) |
+| **TWAPMultiOracle** | [`0x5e8c72Ea96aA69ABC1f33d6d8741F062AE08148D`](https://sepolia.etherscan.io/address/0x5e8c72Ea96aA69ABC1f33d6d8741F062AE08148D) | 5.1 KB | **Deprecated**: Flash-loan resistant oracle (30-min TWAP) - not used in current deployment |
 | **MultiOracleAggregator** | [`0xc2810A869a35C1eC8A51b39f6bfCF951F186Ec5A`](https://sepolia.etherscan.io/address/0xc2810A869a35C1eC8A51b39f6bfCF951F186Ec5A) | 2.9 KB | Multi-source consensus |
 | **GroupSyndicate** | [`0xaB94Eb8F6cab09B2B1989Ac02fbDcceC91A9cD8f`](https://sepolia.etherscan.io/address/0xaB94Eb8F6cab09B2B1989Ac02fbDcceC91A9cD8f) | 4.2 KB | Group syndicate |
 | **LayerZeroBridgeReceiver** | [`0x0aec7c174554AF8aEc3680BB58431F6618311510`](https://sepolia.etherscan.io/address/0x0aec7c174554AF8aEc3680BB58431F6618311510) | 5.1 KB | Cross-chain bridge |
