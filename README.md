@@ -1,4 +1,4 @@
-# 🦉 OmniAgent — The ZK-Verified Autonomous Capital Allocator Fleet
+# OmniAgent - The ZK-Verified Autonomous Capital Allocator Fleet
 
 <div align="center">
   <img src="frontend/public/imgs/mascot-owl-no-bg.png" alt="OmniAgent Mascot" width="200" />
@@ -39,29 +39,29 @@ OmniAgent is built natively on **Tether's WDK** (Wallet Development Kit) and use
 
 ---
 
-## 🤖 Agent Economy: A2A Marketplace
+## Agent Economy: A2A Marketplace
 
 OmniAgent implements a **peer-to-peer Agent-to-Agent (A2A) marketplace** where AI agents autonomously hire, pay, and coordinate with each other:
 
 ```mermaid
 graph TD
     subgraph "Cognitive Layer"
-        A["👤 User Goal"] --> B["🤖 Orchestrator"]
-        B -->|Task Decomposition| C["🧠 Multi-Agent Planning"]
+        A["User Goal"] --> B["Orchestrator"]
+        B -->|Task Decomposition| C["Multi-Agent Planning"]
     end
 
     subgraph "Agent Marketplace (X402)"
-        C --> D["💰 Service Request"]
-        D -->|Competitive| E["🔍 Data Agents"]
-        D -->|Bidding| F["📊 Analysis Agents"]
-        D -->|Process| G["⚡ Execution Agents"]
+        C --> D["Service Request"]
+        D -->|Competitive| E["Data Agents"]
+        D -->|Bidding| F["Analysis Agents"]
+        D -->|Process| G["Execution Agents"]
     end
 
     subgraph "Settlement Layer (WDK)"
-        E -->|Deliver Intel| H["💵 X402 Payment"]
+        E -->|Deliver Intel| H["X402 Payment"]
         F -->|Deliver Analysis| H
         G -->|Deliver Result| H
-        H -->|USDT Transfer| I["🏦 Agent Wallets"]
+        H -->|USDT Transfer| I["Agent Wallets"]
     end
 ```
 
@@ -78,7 +78,7 @@ graph TD
 
 ---
 
-## 🔏 ZK Risk Verification
+## ZK Risk Verification
 
 OmniAgent is the **first agent system with zero-knowledge risk verification**:
 
@@ -92,7 +92,7 @@ This enables institutional-grade trust in autonomous agent operations.
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```mermaid
 graph TB
