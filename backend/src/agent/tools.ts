@@ -2041,10 +2041,9 @@ export const agentTools = {
         const CHAINLINK_BTC_USD_ADAPTER = '0xf3c8EA354B667771F69400Ea471316c13913455a';
         const PRICE_ORACLE_ABI = ['function getPrice() view returns (uint256)'];
         const { provider } = getContracts();
-        const { ethers: ethersLib } = await import('ethers');
 
-        const ethAdapter = new ethersLib.Contract(CHAINLINK_ETH_USD_ADAPTER, PRICE_ORACLE_ABI, provider);
-        const btcAdapter = new ethersLib.Contract(CHAINLINK_BTC_USD_ADAPTER, PRICE_ORACLE_ABI, provider);
+        const ethAdapter = new ethers.Contract(CHAINLINK_ETH_USD_ADAPTER, PRICE_ORACLE_ABI, provider);
+        const btcAdapter = new ethers.Contract(CHAINLINK_BTC_USD_ADAPTER, PRICE_ORACLE_ABI, provider);
 
         const [ethPrice, btcPrice] = await Promise.all([
           ethAdapter.getPrice(),

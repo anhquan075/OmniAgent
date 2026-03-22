@@ -317,7 +317,9 @@ exports.agentTools = {
                         return { actionTaken: 'AUCTION_EXECUTED_WINNER', txHash: execTx.hash };
                     }
                 }
-                catch (e) { }
+                catch (e) {
+                    logger_1.logger.debug('[Tools] Winner execution failed, falling back to direct execution');
+                }
             }
             // 2. Direct Execution with Simulation & AI Scoring
             const [canExec, reason] = await engine.canExecute();
@@ -1847,6 +1849,113 @@ exports.agentTools = {
                 note: 'No Aave position on Sepolia. Supply USDT at app.aave.com (testnet mode) to create a position.',
                 aavePool: AAVE_V3_POOL_SEPOLIA
             };
+        },
+    }),
+    // TWAP Oracle Tools
+    oracle_get_twap_price: (0, ai_1.tool)({
+        description: 'Get 30-minute TWAP price from TWAPMultiOracle (flash-loan resistant).',
+        parameters: zod_1.z.object({
+            context: zod_1.z.string().describe('Reason/context for this action.')
+        }),
+        // @ts-ignore
+        execute: async ({ context }) => {
+            try {
+                const { twapOracle } = (0, ethers_1.getContracts)();
+                const [twapPrice, observationCount] = await Promise.all([
+                    twapOracle.getTWAPPrice(),
+                    twapOracle.observationCount()
+                ]);
+                return {
+                    twapPrice: twapPrice.toString(),
+                    twapPriceFormatted: (Number(twapPrice) / 1e8).toFixed(2),
+                    observationCount: Number(observationCount)
+                };
+            }
+            catch (e) {
+                return { error: "Failed to get TWAP price", message: e.message };
+            }
+        },
+    }),
+    oracle_get_instant_price: (0, ai_1.tool)({
+        description: 'Get instant prices from Chainlink feeds (ETH/USD, BTC/USD) via adapters.',
+        parameters: zod_1.z.object({
+            context: zod_1.z.string().describe('Reason/context for this action.')
+        }),
+        // @ts-ignore
+        execute: async ({ context }) => {
+            try {
+                const CHAINLINK_ETH_USD_ADAPTER = '0xAbb4A2c701792f28D8e05D93F27cDadC75110917';
+                const CHAINLINK_BTC_USD_ADAPTER = '0xf3c8EA354B667771F69400Ea471316c13913455a';
+                const PRICE_ORACLE_ABI = ['function getPrice() view returns (uint256)'];
+                const { provider } = (0, ethers_1.getContracts)();
+                const ethAdapter = new ethers_2.ethers.Contract(CHAINLINK_ETH_USD_ADAPTER, PRICE_ORACLE_ABI, provider);
+                const btcAdapter = new ethers_2.ethers.Contract(CHAINLINK_BTC_USD_ADAPTER, PRICE_ORACLE_ABI, provider);
+                const [ethPrice, btcPrice] = await Promise.all([
+                    ethAdapter.getPrice(),
+                    btcAdapter.getPrice(),
+                ]);
+                return {
+                    ethUsd: ethPrice.toString(),
+                    ethUsdFormatted: (Number(ethPrice) / 1e8).toFixed(2),
+                    btcUsd: btcPrice.toString(),
+                    btcUsdFormatted: (Number(btcPrice) / 1e8).toFixed(2),
+                };
+            }
+            catch (e) {
+                return { error: "Failed to get instant price", message: e.message };
+            }
+        },
+    }),
+    oracle_update_observation: (0, ai_1.tool)({
+        description: 'Update TWAP observation. Records current price in the 30-min buffer.',
+        parameters: zod_1.z.object({
+            context: zod_1.z.string().describe('Reason/context for this action.')
+        }),
+        // @ts-ignore
+        execute: async ({ context }) => {
+            try {
+                const { twapOracle } = (0, ethers_1.getContracts)();
+                const signer = await (0, wdk_loader_1.getWdkSigner)(env_1.env.SEPOLIA_RPC_URL);
+                const twapWithSigner = twapOracle.connect(signer);
+                const tx = await twapWithSigner.updateObservation();
+                const receipt = await tx.wait();
+                const newCount = await twapOracle.observationCount();
+                return {
+                    success: true,
+                    txHash: receipt.hash,
+                    newObservationCount: Number(newCount)
+                };
+            }
+            catch (e) {
+                return { error: "Failed to update observation", message: e.message };
+            }
+        },
+    }),
+    oracle_get_status: (0, ai_1.tool)({
+        description: 'Get full status of TWAPMultiOracle including observations and locked status.',
+        parameters: zod_1.z.object({
+            context: zod_1.z.string().describe('Reason/context for this action.')
+        }),
+        // @ts-ignore
+        execute: async ({ context }) => {
+            try {
+                const { twapOracle } = (0, ethers_1.getContracts)();
+                const address = await twapOracle.getAddress();
+                const [isLocked, observationCount, lastUpdateTime] = await Promise.all([
+                    twapOracle.locked(),
+                    twapOracle.observationCount(),
+                    twapOracle.lastUpdateTime()
+                ]);
+                return {
+                    address,
+                    isLocked,
+                    observationCount: Number(observationCount),
+                    lastUpdateTime: Number(lastUpdateTime)
+                };
+            }
+            catch (e) {
+                return { error: "Failed to get oracle status", message: e.message };
+            }
         },
     }),
 };

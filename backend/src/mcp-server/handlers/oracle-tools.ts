@@ -1,3 +1,4 @@
+import { Contract } from 'ethers';
 import { getContracts } from '../../contracts/clients/ethers';
 import { McpTool, MCP_ERRORS, McpToolResult } from '../types/mcp-protocol';
 
@@ -136,7 +137,6 @@ const PRICE_ORACLE_ABI = ['function getPrice() view returns (uint256)'];
 const handleGetInstantPrice = async (): Promise<McpToolResult> => {
   try {
     const { provider } = getContracts();
-    const { Contract } = await import('ethers');
 
     // Use adapters directly (MultiOracleAggregator was deployed with incompatible addresses)
     const ethAdapter = new Contract(CHAINLINK_ETH_USD_ADAPTER, PRICE_ORACLE_ABI, provider);

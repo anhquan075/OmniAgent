@@ -25,7 +25,7 @@ async function main() {
     ]);
     const ethFmt = Number(ethers.formatEther(ethBal));
     const usdtFmt = Number(ethers.formatUnits(usdtBal, 6));
-    const ready = ethFmt >= MIN_ETH && usdtFmt >= MIN_USDT ? "✅ READY" : ethFmt >= MIN_ETH && usdtFmt < MIN_USDT ? "⚠️ NEEDS USDT" : "❌ NEEDS ETH";
+    const ready = ethFmt >= MIN_ETH && usdtFmt >= MIN_USDT ? "[READY]" : ethFmt >= MIN_ETH && usdtFmt < MIN_USDT ? "[NEEDS USDT]" : "[NEEDS ETH]";
     console.log(`Robot ${i} (${w.address}): ${ethFmt.toFixed(6)} ETH + ${usdtFmt.toFixed(6)} USDT — ${ready}`);
   }
 
@@ -33,7 +33,7 @@ async function main() {
   const wdkIndex0 = hdNode.derivePath("m/44'/60'/0'/0/0").address;
   console.log(`ROBOT_FLEET_AGENT_WALLET: ${ROBOT_FLEET_AGENT_WALLET}`);
   console.log(`WDK index 0:              ${wdkIndex0}`);
-  console.log(`MATCH: ${wdkIndex0.toLowerCase() === ROBOT_FLEET_AGENT_WALLET.toLowerCase() ? "YES ✅" : "NO ❌"}`);
+  console.log(`MATCH: ${wdkIndex0.toLowerCase() === ROBOT_FLEET_AGENT_WALLET.toLowerCase() ? "YES" : "NO"}`);
 
   const agentBal = await provider.getBalance(ROBOT_FLEET_AGENT_WALLET);
   console.log(`Agent wallet ETH: ${Number(ethers.formatEther(agentBal)).toFixed(6)}`);

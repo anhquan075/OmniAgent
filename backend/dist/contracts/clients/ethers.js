@@ -42,6 +42,9 @@ const getContracts = () => {
         engine: new ethers_1.Contract(env_1.env.WDK_ENGINE_ADDRESS, engineAbi, exports.provider),
         auction: new ethers_1.Contract(env_1.env.WDK_AUCTION_ADDRESS || ethers_1.ethers.ZeroAddress, auctionAbiActual, exports.provider),
         syndicate: new ethers_1.Contract(env_1.env.WDK_SYNDICATE_ADDRESS || ethers_1.ethers.ZeroAddress, syndicateAbiActual, exports.provider),
+        twapOracle: new ethers_1.Contract(env_1.env.WDK_TWAP_ORACLE_ADDRESS || ethers_1.ethers.ZeroAddress, abis_1.TWAPMultiOracleAbi, exports.provider),
+        multiOracle: new ethers_1.Contract(env_1.env.WDK_MULTI_ORACLE_ADDRESS || ethers_1.ethers.ZeroAddress, abis_1.MultiOracleAggregatorAbi, exports.provider),
+        x402Registry: new ethers_1.Contract(env_1.env.WDK_X402_REGISTRY_ADDRESS || ethers_1.ethers.ZeroAddress, abis_1.X402RegistryAbi, exports.provider),
         usdt: new ethers_1.Contract(env_1.env.WDK_USDT_ADDRESS, USDT_ABI, exports.provider),
         provider: exports.provider
     };

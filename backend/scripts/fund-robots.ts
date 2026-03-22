@@ -48,21 +48,21 @@ async function main() {
       totalEthNeeded += ethNeeded;
       totalUsdtNeeded += usdtNeeded;
     }
-    console.log(`Robot ${i} (${w.address}): ${eth.toFixed(6)} ETH + ${usdtFmt.toFixed(2)} USDT ${ethNeeded > 0 || usdtNeeded > 0 ? '⚠️' : '✅'}`);
+    console.log(`Robot ${i} (${w.address}): ${eth.toFixed(6)} ETH + ${usdtFmt.toFixed(2)} USDT ${ethNeeded > 0 || usdtNeeded > 0 ? '[LOW]' : '[OK]'}`);
   }
 
-  if (underfunded.length === 0) { console.log("\nAll funded! ✅"); return; }
+  if (underfunded.length === 0) { console.log("\nAll funded!"); return; }
   console.log(`\nNeed: ~${totalEthNeeded.toFixed(4)} ETH + ~${totalUsdtNeeded.toFixed(2)} USDT`);
 
   const masterEthFmt = Number(ethers.formatEther(masterEth));
   const masterUsdtFmt = Number(ethers.formatUnits(masterUsdtBal, 6));
 
   if (masterEthFmt < totalEthNeeded + 0.005) {
-    console.error(`❌ Master ETH low (${masterEthFmt.toFixed(4)} ETH, need ${(totalEthNeeded + 0.005).toFixed(4)} ETH)`);
+    console.error(`Master ETH low (${masterEthFmt.toFixed(4)} ETH, need ${(totalEthNeeded + 0.005).toFixed(4)} ETH)`);
     return;
   }
   if (masterUsdtFmt < totalUsdtNeeded) {
-    console.error(`❌ Master USDT insufficient`);
+    console.error(`Master USDT insufficient`);
     return;
   }
 
@@ -82,7 +82,7 @@ async function main() {
       const tx = await masterWallet.sendTransaction({ to: r.addr, value: ethers.parseEther(ethNeeded.toFixed(6)), ...opts });
       await tx.wait();
       ethCount++;
-      console.log(`  ✅ Robot ${r.i} ETH +${ethNeeded.toFixed(6)}`);
+      console.log(`  Robot ${r.i} ETH +${ethNeeded.toFixed(6)}`);
     }
     if (usdtNeeded > 0) {
       const feeData = await provider.getFeeData();
@@ -96,7 +96,7 @@ async function main() {
       const tx = await usdt.transfer(r.addr, ethers.parseUnits(MIN_USDT.toString(), 6), opts);
       await tx.wait();
       usdtCount++;
-      console.log(`  ✅ Robot ${r.i} USDT +${MIN_USDT}`);
+      console.log(`  Robot ${r.i} USDT +${MIN_USDT}`);
     }
   }
   console.log(`\nDone! ETH funded: ${ethCount}, USDT funded: ${usdtCount}`);

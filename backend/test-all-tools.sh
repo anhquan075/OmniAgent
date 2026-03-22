@@ -27,16 +27,16 @@ test_tool() {
   
   if echo "$result" | grep -q '"error"'; then
     local error=$(echo "$result" | jq -r '.error.message // .error // "unknown error"' 2>/dev/null || echo "parse error")
-    echo "❌ ERROR: $error"
-    echo "❌ $name: $error" >> "$RESULTS_FILE"
+    echo "ERROR: $error"
+    echo "$name: $error" >> "$RESULTS_FILE"
     return 1
   elif echo "$result" | grep -q '"result"'; then
-    echo "✅ OK"
-    echo "✅ $name: OK" >> "$RESULTS_FILE"
+    echo "OK"
+    echo "$name: OK" >> "$RESULTS_FILE"
     return 0
   else
-    echo "⚠️ NO RESPONSE"
-    echo "⚠️ $name: No response" >> "$RESULTS_FILE"
+    echo "NO RESPONSE"
+    echo "$name: No response" >> "$RESULTS_FILE"
     return 1
   fi
 }
@@ -143,15 +143,15 @@ echo "=========================================="
 echo "TEST SUMMARY"
 echo "=========================================="
 
-PASSED=$(grep -c "✅" "$RESULTS_FILE" || echo "0")
-FAILED=$(grep -c "❌" "$RESULTS_FILE" || echo "0")
-WARNINGS=$(grep -c "⚠️" "$RESULTS_FILE" || echo "0")
+PASSED=$(grep -c ": OK" "$RESULTS_FILE" || echo "0")
+FAILED=$(grep -c ": ERROR" "$RESULTS_FILE" || echo "0")
+WARNINGS=$(grep -c ": No response" "$RESULTS_FILE" || echo "0")
 TOTAL=$((PASSED + FAILED + WARNINGS))
 
 echo "Total: $TOTAL | Passed: $PASSED | Failed: $FAILED | Warnings: $WARNINGS"
 echo ""
 echo "Failed tests:"
-grep "❌" "$RESULTS_FILE" || echo "None"
+grep ": ERROR" "$RESULTS_FILE" || echo "None"
 echo ""
 echo "Warning tests:"
-grep "⚠️" "$RESULTS_FILE" || echo "None"
+grep ": No response" "$RESULTS_FILE" || echo "None"

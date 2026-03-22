@@ -61,7 +61,9 @@ app.use('/api/chat', async (c, next) => {
             const body = await c.req.raw.clone().json();
             logger_1.logger.debug({ body }, '[Request] POST /api/chat');
         }
-        catch (e) { }
+        catch {
+            logger_1.logger.debug('[Request] POST /api/chat - could not parse body');
+        }
     }
     await next();
 });
@@ -113,6 +115,13 @@ if (isMain) {
         }
         catch (e) {
             logger_1.logger.warn(e, '[RobotFleet] Robot fleet simulator failed to start');
+        }
+        try {
+            const { startTwapObserver } = await import('./agent/services/TwapObserver.js');
+            startTwapObserver();
+        }
+        catch (e) {
+            logger_1.logger.warn(e, '[TwapObserver] TWAP observer failed to start');
         }
         try {
             (0, security_2.validateEnvironment)();

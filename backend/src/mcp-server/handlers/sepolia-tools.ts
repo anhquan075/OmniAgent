@@ -88,7 +88,7 @@ export const sepoliaTools: McpTool[] = [
   },
   {
     name: 'sepolia_transfer',
-    description: 'Transfer native ETH or ERC-20 tokens on Sepolia testnet. ⚠️ Requires: (1) sufficient balance, (2) recipient address, (3) amount. Use sepolia_getBalance first to verify funds. Set tokenAddress for ERC-20 transfers, omit for native ETH.',
+    description: 'Transfer native ETH or ERC-20 tokens on Sepolia testnet. WARNING: Requires (1) sufficient balance, (2) recipient address, (3) amount. Use sepolia_getBalance first to verify funds. Set tokenAddress for ERC-20 transfers, omit for native ETH.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -115,7 +115,7 @@ export const sepoliaTools: McpTool[] = [
   },
   {
     name: 'sepolia_swap',
-    description: 'Swap tokens on Uniswap V3 DEX on Sepolia testnet. ⚠️ Requires: (1) sufficient tokenIn balance, (2) token addresses for both input and output. Use sepolia_getBalance to verify before swapping. slippageBps is optional (default: 50 = 0.5%).',
+    description: 'Swap tokens on Uniswap V3 DEX on Sepolia testnet. WARNING: Requires (1) sufficient tokenIn balance, (2) token addresses for both input and output. Use sepolia_getBalance to verify before swapping. slippageBps is optional (default: 50 = 0.5%).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -141,7 +141,7 @@ export const sepoliaTools: McpTool[] = [
   },
   {
     name: 'sepolia_supplyAave',
-    description: 'Supply USDT to Aave V3 lending protocol on Sepolia testnet to earn yield. ⚠️ Requires: (1) sufficient USDT balance, (2) Aave adapter configured. Use sepolia_getBalance to verify USDT before supplying.',
+    description: 'Supply USDT to Aave V3 lending protocol on Sepolia testnet to earn yield. WARNING: Requires (1) sufficient USDT balance, (2) Aave adapter configured. Use sepolia_getBalance to verify USDT before supplying.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -163,7 +163,7 @@ export const sepoliaTools: McpTool[] = [
   },
   {
     name: 'sepolia_withdrawAave',
-    description: 'Withdraw USDT from Aave V3 lending protocol back to your wallet on Sepolia testnet. ⚠️ Requires: (1) existing Aave position, (2) sufficient supplied balance. Check position first using your vault balance tools.',
+    description: 'Withdraw USDT from Aave V3 lending protocol back to your wallet on Sepolia testnet. WARNING: Requires (1) existing Aave position, (2) sufficient supplied balance. Check position first using your vault balance tools.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -185,7 +185,7 @@ export const sepoliaTools: McpTool[] = [
   },
   {
     name: 'sepolia_bridgeLayerZero',
-    description: 'Bridge USDT cross-chain to another blockchain via LayerZero protocol. ⚠️ Requires: (1) sufficient USDT balance, (2) ~0.01 ETH for gas, (3) valid destination chain ID, (4) LayerZero adapter configured. This is a high-risk operation.',
+    description: 'Bridge USDT cross-chain to another blockchain via LayerZero protocol. WARNING: Requires (1) sufficient USDT balance, (2) ~0.01 ETH for gas, (3) valid destination chain ID, (4) LayerZero adapter configured. This is a high-risk operation.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -258,7 +258,7 @@ export const sepoliaTools: McpTool[] = [
   },
   {
     name: 'sepolia_getTransactionHistory',
-    description: 'Get recent transaction history for any Sepolia address. All parameters are optional. Returns array of transactions with hash, from/to addresses, value, gas, and status. ⚠️ Limited to last 10,000 blocks without Etherscan API key.',
+    description: 'Get recent transaction history for any Sepolia address. All parameters are optional. Returns array of transactions with hash, from/to addresses, value, gas, and status. Limited to last 10,000 blocks without Etherscan API key.',
     inputSchema: {
       type: 'object',
       properties: {
