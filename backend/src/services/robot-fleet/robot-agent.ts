@@ -270,12 +270,12 @@ export class RobotAgent {
       logger.info({ id: this.id, type: this.type, task: taskData }, '[RobotAgent] Executing task');
 
       const defiOperations = ['vault_deposit', 'aave_supply', 'aave_withdraw'];
-      const shouldAttemptDefi = Math.random() < 0.3;
+      const shouldAttemptDefi = Math.random() < 0.1;
 
       if (shouldAttemptDefi) {
         const op = defiOperations[Math.floor(Math.random() * defiOperations.length)];
         const balance = await this.getBalance();
-        const minEthForGas = ethers.parseEther('0.002');
+        const minEthForGas = ethers.parseEther('0.005');
         const minUsdtForOp = ethers.parseUnits('1', 6);
 
         const ethBalance = BigInt(balance.eth);
