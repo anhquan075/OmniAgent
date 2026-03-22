@@ -142,18 +142,20 @@ const FleetStatus: React.FC = () => {
           {error && <span className="text-[10px] text-red-400">Connection Error</span>}
         </div>
         
-        <div className="flex flex-col items-end">
-          <span className="text-[10px] text-neutral-gray uppercase tracking-wider mb-0.5">Session Earnings</span>
-          <div className="flex items-center gap-1.5 text-tether-teal font-heading font-bold text-2xl leading-none">
-            <ZapIcon className="w-4 h-4 fill-current" />
-            <span className="animate-in fade-in slide-in-from-top-1 duration-500">{fleetTotal} USDT</span>
+        <div className="flex items-center gap-6">
+          <div className="flex flex-col items-end">
+            <span className="text-[10px] text-neutral-gray uppercase tracking-wider mb-0.5">Session Earnings</span>
+            <div className="flex items-center gap-1.5 text-tether-teal font-heading font-bold text-2xl leading-none">
+              <ZapIcon className="w-4 h-4 fill-current" />
+              <span className="animate-in fade-in slide-in-from-top-1 duration-500">{fleetTotal} USDT</span>
+            </div>
           </div>
-        </div>
-        <div className="flex flex-col items-end">
-          <span className="text-[10px] text-neutral-gray uppercase tracking-wider mb-0.5">Agent Wallet</span>
-          <div className="flex items-center gap-1.5 text-white font-heading font-bold text-2xl leading-none">
-            <ZapIcon className="w-4 h-4 fill-current" />
-            <span>{agentWalletUsdt} USDT</span>
+          <div className="flex flex-col items-end">
+            <span className="text-[10px] text-neutral-gray uppercase tracking-wider mb-0.5">Agent Wallet</span>
+            <div className="flex items-center gap-1.5 text-white font-heading font-bold text-2xl leading-none">
+              <ZapIcon className="w-4 h-4 fill-current" />
+              <span>{agentWalletUsdt} USDT</span>
+            </div>
           </div>
         </div>
       </div>
