@@ -417,44 +417,6 @@ export const wdkTools: McpTool[] = [
     blockchain: 'sepolia',
     riskLevel: 'medium',
     category: 'lending'
-  },
-  {
-    name: 'wdk_bridge_usdt0',
-    description: 'Bridge USDT to another blockchain. Automatically approves USDT spending if needed. High risk operation requiring native gas fees.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        targetChain: { 
-           type: 'string', 
-           description: 'Target blockchain network. Example: "ethereum", "arbitrum", "polygon", "optimism"',
-           examples: ["ethereum", "arbitrum", "polygon"]
-         },
-        recipient: { 
-           type: 'string', 
-           description: 'Ethereum address to receive bridged USDT on destination chain. Example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"',
-           examples: ["0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"]
-         },
-        amount: { 
-           type: 'string', 
-           description: 'Amount of USDT to bridge in token units (6 decimals). Example: "100" for 100 USDT or "0.001" for 0.001 USDT',
-           default: '100',
-           examples: ["100", "0.001", "1000.5"]
-         }
-      },
-      required: ['targetChain', 'recipient', 'amount']
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        txHash: { type: 'string' },
-        destinationChainId: { type: 'string' },
-        estimatedReceive: { type: 'string' }
-      }
-    },
-    version: '1.0.0',
-    blockchain: 'sepolia',
-    riskLevel: 'high',
-    category: 'bridge'
   }
 ];
 
@@ -871,91 +833,6 @@ export async function handleWdkTool(name: string, params: Record<string, unknown
         await tx.wait();
         
         return { success: true, data: { txHash: tx.hash, amountWithdrawn: amount } };
-      }
-      
-      case 'wdk_bridge_usdt0': {
-        const targetChain = params.targetChain as string;
-        const recipient = params.recipient as string;
-        const amount = (params.amount as string) || '100';
-        
-        if (!targetChain) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'targetChain is required. Example: "ethereum", "arbitrum", "polygon"' } };
-        if (!recipient) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'recipient is required. Example: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"' } };
-        if (!amount) return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'amount is required. Example: "100" for 100 USDT or "0.001" for 0.001 USDT' } };
-        if (!MOCK_BRIDGE_ADDRESS) return { success: false, error: { code: MCP_ERRORS.INTERNAL_ERROR, message: 'MOCK_BRIDGE_ADDRESS not configured. Please set MOCK_BRIDGE_ADDRESS in .env file.' } };
-        
-        const walletAccount = await getWalletAccount();
-        const userAddress = await walletAccount.getAddress();
-        const usdtAmount = ethers.parseUnits(amount, 6);
-        const recipientAddress = recipient;
-        
-        // Map targetChain to chain ID (simplified mapping for demo)
-        const chainIdMap: Record<string, number> = {
-          'ethereum': 1,
-          'arbitrum': 42161,
-          'polygon': 137,
-          'optimism': 10
-        };
-        const destinationChainId = chainIdMap[targetChain.toLowerCase()] || 1;
-        
-        if (context.walletMode === 'user' && context.userWallet) {
-          const provider = new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
-          const nonce = await provider.getTransactionCount(userAddress);
-          
-          const approveIface = new ethers.Interface([
-            'function approve(address spender, uint256 amount)'
-          ]);
-          const approveData = approveIface.encodeFunctionData('approve', [MOCK_BRIDGE_ADDRESS, ethers.MaxUint256]);
-          
-          const bridgeIface = new ethers.Interface([
-            'function bridge(address token, uint256 amount, uint256 destinationChainId, address recipient)'
-          ]);
-          const bridgeData = bridgeIface.encodeFunctionData('bridge', [env.WDK_USDT_ADDRESS!, usdtAmount, destinationChainId, recipientAddress]);
-          
-          const approveTx = createUnsignedTransaction(env.WDK_USDT_ADDRESS!, approveData, 0n);
-          approveTx.nonce = nonce;
-          
-          const bridgeTx = createUnsignedTransaction(MOCK_BRIDGE_ADDRESS, bridgeData, 0n);
-          bridgeTx.nonce = nonce + 1;
-          
-          const approveId = createPendingTransactionId();
-          storePendingTransaction(approveId, approveTx, 'wdk_bridge_usdt0', `Approve bridge (${amount} USDT)`);
-          
-          const bridgeId = createPendingTransactionId();
-          storePendingTransaction(bridgeId, bridgeTx, 'wdk_bridge_usdt0', `Bridge ${amount} USDT to ${targetChain}`);
-          
-          return {
-            success: true,
-            data: {
-              requiresSignature: true,
-              pendingTxIds: [approveId, bridgeId],
-              description: `Bridge ${amount} USDT to ${targetChain}`
-            }
-          };
-        }
-        
-        const signer = await getWdkSigner();
-        
-        const usdtAbi = [
-          'function approve(address spender, uint256 amount) external returns (bool)',
-          'function allowance(address owner, address spender) external view returns (uint256)'
-        ];
-        const usdt = new ethers.Contract(env.WDK_USDT_ADDRESS!, usdtAbi, signer);
-        
-        const currentAllowance = await usdt.allowance(await signer.getAddress(), MOCK_BRIDGE_ADDRESS);
-        if (currentAllowance < usdtAmount) {
-          const approveTx = await usdt.approve(MOCK_BRIDGE_ADDRESS, ethers.MaxUint256);
-          await approveTx.wait();
-        }
-        
-        const bridgeAbi = [
-          'function bridge(address token, uint256 amount, uint256 destinationChainId, address recipient) external returns (bytes32 requestId)'
-        ];
-        const bridge = new ethers.Contract(MOCK_BRIDGE_ADDRESS, bridgeAbi, signer);
-        
-        const tx = await bridge.bridge(env.WDK_USDT_ADDRESS!, usdtAmount, destinationChainId, recipientAddress);
-        await tx.wait();
-        
-        return { success: true, data: { txHash: tx.hash, targetChain, estimatedReceive: amount } };
       }
       
       default:

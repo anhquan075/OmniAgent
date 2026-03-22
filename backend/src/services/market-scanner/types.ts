@@ -11,6 +11,8 @@ export interface PricePoint {
   ask?: number;
   spread: number;
   volume24h: number;
+  dailyChange?: number;
+  dailyChangePercent?: number;
   timestamp: number;
 }
 
@@ -66,6 +68,7 @@ export const DEFAULT_EXCHANGES: ExchangeConfig[] = [
   { name: 'binance', type: 'CEX', fees: { maker: 0.001, taker: 0.001 } },
   { name: 'bybit', type: 'CEX', fees: { maker: 0.001, taker: 0.001 } },
   { name: 'okx', type: 'CEX', fees: { maker: 0.0008, taker: 0.001 } },
+  { name: 'bitfinex', type: 'CEX', fees: { maker: 0.001, taker: 0.002 } },
   { name: 'uniswap', type: 'DEX', fees: { maker: 0, taker: 0.003 } },
   { name: 'curve', type: 'DEX', fees: { maker: 0, taker: 0.0004 } },
   { name: 'pancakeswap', type: 'DEX', fees: { maker: 0, taker: 0.0025 } },

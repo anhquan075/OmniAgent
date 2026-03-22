@@ -9,7 +9,18 @@ import {
   DEFAULT_PAIRS,
 } from './types';
 
+let BitfinexPricingClient: any = null;
+
+async function loadBitfinexClient() {
+  if (!BitfinexPricingClient) {
+    const mod = await import('@tetherto/wdk-pricing-bitfinex-http');
+    BitfinexPricingClient = mod.BitfinexPricingClient;
+  }
+  return BitfinexPricingClient;
+}
+
 export class MarketScanner {
+  private bitfinexClient: any = null;
   private provider: ethers.Provider;
   private config: MarketScannerConfig;
   private lastMatrix: PriceMatrix | null = null;
@@ -116,6 +127,47 @@ export class MarketScanner {
     return prices;
   }
 
+  async fetchBitfinexPrices(): Promise<Map<string, PricePoint>> {
+    const prices = new Map<string, PricePoint>();
+
+    try {
+      const Client = await loadBitfinexClient();
+      this.bitfinexClient = this.bitfinexClient ?? new Client();
+
+      const pairs = [
+        { from: 'BTC', to: 'USD' },
+        { from: 'ETH', to: 'USD' },
+        { from: 'USDT', to: 'USD' },
+        { from: 'XAUT', to: 'USD' },
+      ];
+
+      const priceDataList = await this.bitfinexClient.getMultiPriceData(pairs);
+
+      for (let i = 0; i < pairs.length; i++) {
+        const data = priceDataList[i];
+        if (!data) continue;
+
+        const pairName = `${pairs[i].from}/${pairs[i].to}`;
+        prices.set(pairName, {
+          exchange: 'bitfinex',
+          pair: pairName,
+          price: data.lastPrice,
+          bid: data.lastPrice,
+          ask: data.lastPrice,
+          spread: 0,
+          volume24h: 0,
+          dailyChange: data.dailyChange,
+          dailyChangePercent: data.dailyChangeRelative,
+          timestamp: Date.now(),
+        });
+      }
+    } catch (e) {
+      console.error('[MarketScanner] Bitfinex fetch error:', e);
+    }
+
+    return prices;
+  }
+
   calculateBestOpportunity(
     allPrices: Map<string, PricePoint>,
     gasPriceGwei: number
@@ -168,13 +220,14 @@ export class MarketScanner {
   }
 
   async scan(): Promise<PriceMatrix> {
-    const [gasPriceGwei, binancePrices, coingeckoPrices] = await Promise.all([
+    const [gasPriceGwei, binancePrices, coingeckoPrices, bitfinexPrices] = await Promise.all([
       this.getGasPrice(),
       this.fetchBinancePrices(),
       this.fetchCoingeckoPrices(),
+      this.fetchBitfinexPrices(),
     ]);
 
-    const allPrices = new Map([...binancePrices, ...coingeckoPrices]);
+    const allPrices = new Map([...binancePrices, ...coingeckoPrices, ...bitfinexPrices]);
 
     const pairs: PriceMatrix['pairs'] = {};
     for (const [pair, price] of allPrices) {

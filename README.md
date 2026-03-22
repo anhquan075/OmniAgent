@@ -132,7 +132,7 @@ curl -X POST http://localhost:3001/api/mcp \
 
 ---
 
-## MCP Tools (54+ Total)
+## MCP Tools (65+ Total)
 
 ### X402 Agent Economy (4 tools)
 | Tool | Description | Risk |
@@ -142,7 +142,7 @@ curl -X POST http://localhost:3001/api/mcp \
 | `x402_get_balance` | Get X402 wallet balance | Low |
 | `x402_fleet_status` | Get robot fleet earnings status | Low |
 
-### WDK Vault & Engine (13 tools)
+### WDK Vault & Engine (12 tools)
 | Tool | Description | Risk |
 |------|-------------|------|
 | `wdk_vault_deposit` | Deposit USDT into vault | Medium |
@@ -155,7 +155,6 @@ curl -X POST http://localhost:3001/api/mcp \
 | `wdk_aave_supply` | Supply to Aave via WDK | Medium |
 | `wdk_aave_withdraw` | Withdraw from Aave | Medium |
 | `wdk_aave_getPosition` | Get Aave position | Low |
-| `wdk_bridge_usdt0` | Bridge USDT0 cross-chain | Medium |
 | `wdk_bridge_usdt0_status` | Get bridge quote/status | Low |
 | `wdk_mint_test_token` | Mint test USDT (testnet only) | Low |
 
@@ -171,6 +170,14 @@ curl -X POST http://localhost:3001/api/mcp \
 | `wdk_swap_tokens` | Swap via Velora | Medium |
 | `wdk_autonomous_cycle` | Run autonomous yield cycle | High |
 | `wdk_autonomous_status` | Get agent state | Low |
+
+### Market Data — Bitfinex Pricing (1 tool)
+| Tool | Description | Risk |
+|------|-------------|------|
+| `market_scan` | Scan market prices from Bitfinex (BTC/ETH/USDT/XAUT) | Low |
+
+**Supported pairs:** BTC/USD, ETH/USD, USDT/USD, XAUT/USD
+**Exchange fees:** 0.1% maker / 0.2% taker
 
 ### ERC-4337 Smart Accounts (17 tools)
 | Tool | Description | Risk |
