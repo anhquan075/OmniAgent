@@ -72,26 +72,28 @@ async function main() {
     const usdtNeeded = r.usdtBal < MIN_USDT ? MIN_USDT - r.usdtBal : 0;
     if (ethNeeded > 0) {
       const feeData = await provider.getFeeData();
-      const gasPrice = feeData.maxFeePerGas ?? feeData.gasPrice;
-      const bumpedGasPrice = gasPrice ? gasPrice * 150n / 100n : undefined;
-      const tx = await masterWallet.sendTransaction({
-        to: r.addr,
-        value: ethers.parseEther(ethNeeded.toFixed(6)),
-        maxFeePerGas: bumpedGasPrice ?? undefined,
-        gasPrice: bumpedGasPrice ?? undefined,
-      });
+      const opts: Record<string, bigint> = {};
+      if (feeData.maxFeePerGas) {
+        opts.maxFeePerGas = feeData.maxFeePerGas * 150n / 100n;
+        opts.maxPriorityFeePerGas = (feeData.maxPriorityFeePerGas ?? ethers.parseUnits('2', 'gwei')) * 150n / 100n;
+      } else {
+        opts.gasPrice = (feeData.gasPrice ?? ethers.parseUnits('10', 'gwei')) * 150n / 100n;
+      }
+      const tx = await masterWallet.sendTransaction({ to: r.addr, value: ethers.parseEther(ethNeeded.toFixed(6)), ...opts });
       await tx.wait();
       ethCount++;
       console.log(`  ✅ Robot ${r.i} ETH +${ethNeeded.toFixed(6)}`);
     }
     if (usdtNeeded > 0) {
       const feeData = await provider.getFeeData();
-      const gasPrice = feeData.maxFeePerGas ?? feeData.gasPrice;
-      const bumpedGasPrice = gasPrice ? gasPrice * 150n / 100n : undefined;
-      const tx = await usdt.transfer(r.addr, ethers.parseUnits(MIN_USDT.toString(), 6), {
-        maxFeePerGas: bumpedGasPrice ?? undefined,
-        gasPrice: bumpedGasPrice ?? undefined,
-      });
+      const opts: Record<string, bigint> = {};
+      if (feeData.maxFeePerGas) {
+        opts.maxFeePerGas = feeData.maxFeePerGas * 150n / 100n;
+        opts.maxPriorityFeePerGas = (feeData.maxPriorityFeePerGas ?? ethers.parseUnits('2', 'gwei')) * 150n / 100n;
+      } else {
+        opts.gasPrice = (feeData.gasPrice ?? ethers.parseUnits('10', 'gwei')) * 150n / 100n;
+      }
+      const tx = await usdt.transfer(r.addr, ethers.parseUnits(MIN_USDT.toString(), 6), opts);
       await tx.wait();
       usdtCount++;
       console.log(`  ✅ Robot ${r.i} USDT +${MIN_USDT}`);
