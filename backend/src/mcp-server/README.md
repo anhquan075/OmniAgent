@@ -16,7 +16,43 @@ curl -X POST http://localhost:3001/api/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
-## Available Tools (65+ total)
+## HashKey Chain (11 tools — oracle deprecated, Safe pending contract deployment)
+| Tool | Description | Risk |
+|------|-------------|------|
+| `hashkey_getNetworkInfo` | Chain ID, block number, gas price | Low |
+| `hashkey_checkKyc` | Check KYC level (0-3) for address | Low |
+| `hashkey_getBalance` | Get HSK native + token balance | Low |
+| `hashkey_transfer` | Transfer HSK or ERC-20 tokens | High |
+| `hashkey_getVaultState` | Vault total assets, supply, NAV/share | Low |
+| `hashkey_vaultDeposit` | Deposit USDT into vault (KYC L2+ required) | Medium |
+| `hashkey_vaultWithdraw` | Withdraw USDT from vault (KYC L2+ required) | Medium |
+| `hashkey_getOraclePrice` | SUPRA oracle price for trading pair | Low |
+| `hashkey_createWallet` | Create/retrieve deterministic wallet | Low |
+| `hashkey_getSafeTxStatus` | Get pending Safe multisig transactions (requires `HASHKEY_SAFE_ADDRESS`) | Low |
+| `hashkey_executeSafeTx` | Execute via Safe multisig (requires `HASHKEY_SAFE_ADDRESS`) | High |
+
+## Available Tools (87 total)
+
+> **🤖 Chat UI Integration**: The OmniAgent features an autonomous AI agent accessible via the Chat UI. Users can chat with the agent to control the robot fleet, run autonomous cycles, and manage DeFi operations. The agent has access to both MCP tools and exclusive agent-only tools.
+
+### Robot Fleet (Agent Tools - via Chat UI)
+| Tool | Description | Risk |
+|------|-------------|------|
+| `robot_fleet_status` | Get fleet status, earnings, robot details | Low |
+| `robot_fleet_get_robots` | Get all robot details with status | Low |
+| `robot_fleet_start` | Start robot fleet operations | Medium |
+| `robot_fleet_get_events` | Get fleet event history | Low |
+
+**Note:** Robot fleet tools are available via the Chat UI (`/api/chat`) when in `agent` mode. They are NOT in MCP - they are agent-only tools.
+
+### Autonomous Agent (via Chat UI + API)
+| Tool | Description | Risk |
+|------|-------------|------|
+| `/api/agent/run-cycle` | Run full autonomous decision cycle | High |
+| `wdk_autonomous_cycle` | Execute yield strategy cycle | High |
+| `wdk_autonomous_status` | Get agent state & health | Low |
+
+**Note:** The autonomous agent is best controlled via the Chat UI. The `/api/agent/run-cycle` endpoint triggers a full decision cycle including risk analysis, fleet earnings tracking, and strategy execution.
 
 ### X402 Agent Economy (4 tools)
 | Tool | Description | Risk |
@@ -96,6 +132,18 @@ curl -X POST http://localhost:3001/api/mcp \
 | `smartaccount_getSessionKeyStatus` | Get session key status | Low |
 | `smartaccount_listSessionKeys` | List all session keys | Low |
 
+### Agent Tools (Available via Chat UI)
+
+The OmniAgent includes additional tools available exclusively through the Chat UI when in `agent` mode:
+
+| Tool | Description | Risk |
+|------|-------------|------|
+| `analyze_risk` | Analyze vault risk using ZK-proven metrics | Low |
+| `get_all_chain_balances` | Multi-chain balance check | Low |
+| `get_vault_status` | Get vault health & status | Low |
+| `check_strategy` | Evaluate current yield strategy | Low |
+| `check_cross_chain_yields` | Check yields across chains | Low |
+
 ### Multi-Chain Wallets (22 tools)
 
 | Chain | Tools | Description |
@@ -104,6 +152,7 @@ curl -X POST http://localhost:3001/api/mcp \
 | **Arbitrum** | 4 | `arbitrum_createWallet`, `arbitrum_getBalance`, `arbitrum_transfer`, `arbitrum_getGasPrice` |
 | **Polygon** | 4 | `polygon_createWallet`, `polygon_getBalance`, `polygon_transfer`, `polygon_getGasPrice` |
 | **Gnosis** | 4 | `gnosis_createWallet`, `gnosis_getBalance`, `gnosis_transfer`, `gnosis_getGasPrice` |
+| **HashKey** | 11 | `hashkey_getNetworkInfo`, `hashkey_checkKyc`, `hashkey_getBalance`, `hashkey_transfer`, `hashkey_getVaultState`, `hashkey_vaultDeposit`, `hashkey_vaultWithdraw`, `hashkey_getOraclePrice`, `hashkey_createWallet`, `hashkey_getSafeTxStatus`, `hashkey_executeSafeTx` |
 
 ## PolicyGuard Integration
 

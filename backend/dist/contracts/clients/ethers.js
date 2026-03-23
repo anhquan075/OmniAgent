@@ -1,15 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getContracts = exports.provider = void 0;
+exports.getContracts = exports.hashkeyProvider = exports.provider = void 0;
 exports.getSigner = getSigner;
 const ethers_1 = require("ethers");
 const env_1 = require("../../config/env");
 const logger_1 = require("../../utils/logger");
 const wdk_loader_1 = require("../../lib/wdk-loader");
-// Load ABIs
 const abis_1 = require("../abis");
 logger_1.logger.info({ rpcUrl: env_1.env.SEPOLIA_RPC_URL }, '[Ethers] Initializing provider');
 exports.provider = new ethers_1.ethers.JsonRpcProvider(env_1.env.SEPOLIA_RPC_URL);
+exports.hashkeyProvider = new ethers_1.ethers.JsonRpcProvider(env_1.env.HASHKEY_RPC_URL);
 let signerPromise = null;
 async function getSigner() {
     if (!signerPromise) {

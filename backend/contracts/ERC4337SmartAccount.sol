@@ -6,7 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title SimpleAccount - Minimal ERC-4337 compatible smart contract wallet
-/// @notice This is a simplified version for OmniAgent hackathon demo
+/// @notice This is a simplified version for OmniAgent demo
 /// @dev Follows ERC-4337 EntryPoint interface patterns
 
 interface IEntryPoint {

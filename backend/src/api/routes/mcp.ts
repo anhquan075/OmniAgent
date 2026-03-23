@@ -11,6 +11,7 @@ import { erc4337Tools, handleErc4337Tool } from '../../mcp-server/handlers/erc43
 import { sessionKeyTools, handleSessionKeyTool } from '../../mcp-server/handlers/session-key-tools';
 import { marketTools, handleMarketTool } from '../../mcp-server/handlers/market-tools';
 import { oracleTools, oracleHandlers } from '../../mcp-server/handlers/oracle-tools';
+import { hashkeyTools, handleHashKeyTool } from '../../mcp-server/handlers/hashkey-tools';
 import { broadcastSignedTransaction, getPendingTransaction, createPendingTransactionId } from '../../lib/user-wallet-signer';
 
 import { McpExecutionContext, McpTool } from '../../mcp-server/types/mcp-protocol';
@@ -76,6 +77,11 @@ function initMcpTools() {
   for (const tool of wdkProtocolTools) {
     registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
       return handleWdkProtocolTool(tool.name, params, context);
+    });
+  }
+  for (const tool of hashkeyTools) {
+    registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
+      return handleHashKeyTool(tool.name, params, context);
     });
   }
   console.error(`[MCP] Registered ${registry.getToolCount()} tools`);

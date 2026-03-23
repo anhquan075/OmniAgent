@@ -15,7 +15,161 @@ import { RiskService } from './services/RiskService';
 import { SimulationService } from './services/SimulationService';
 import { X402Client } from './x402-client';
 
+// MCP Tool imports for combined agent tools
+import { sepoliaTools, handleSepoliaTool } from '@/mcp-server/handlers/sepolia-tools';
+import { polygonTools, handlePolygonTool } from '@/mcp-server/handlers/polygon-tools';
+import { arbitrumTools, handleArbitrumTool } from '@/mcp-server/handlers/arbitrum-tools';
+import { gnosisTools, handleGnosisTool } from '@/mcp-server/handlers/gnosis-tools';
+import { wdkTools, handleWdkTool } from '@/mcp-server/handlers/wdk-tools';
+import { wdkProtocolTools, handleWdkProtocolTool } from '@/mcp-server/handlers/wdk-protocol-tools';
+import { x402Tools, handleX402Tool } from '@/mcp-server/handlers/x402-tools';
+import { erc4337Tools, handleErc4337Tool } from '@/mcp-server/handlers/erc4337-tools';
+import { sessionKeyTools, handleSessionKeyTool } from '@/mcp-server/handlers/session-key-tools';
+import { marketTools, handleMarketTool } from '@/mcp-server/handlers/market-tools';
+import { oracleTools, oracleHandlers } from '@/mcp-server/handlers/oracle-tools';
+import { hashkeyTools, handleHashKeyTool } from '@/mcp-server/handlers/hashkey-tools';
+import { McpExecutionContext } from '@/mcp-server/types/mcp-protocol';
 
+interface McpToolInputProperty {
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  description?: string;
+  default?: unknown;
+  enum?: string[];
+  minimum?: number;
+  maximum?: number;
+}
+
+interface McpToolInputSchema {
+  type: 'object';
+  properties: Record<string, McpToolInputProperty>;
+  required?: string[];
+  description?: string;
+}
+
+function convertMcpInputSchemaToZod(schema: McpToolInputSchema): z.ZodType<any> {
+  const shape: Record<string, z.ZodType<any>> = {};
+  const required: string[] = schema.required || [];
+
+  for (const [key, prop] of Object.entries(schema.properties)) {
+    let zodType: z.ZodType<any>;
+
+    switch (prop.type) {
+      case 'string':
+        if (prop.enum) {
+          zodType = z.enum(prop.enum as [string, ...string[]]);
+        } else {
+          zodType = z.string();
+        }
+        break;
+      case 'number':
+        zodType = z.number();
+        break;
+      case 'boolean':
+        zodType = z.boolean();
+        break;
+      case 'object':
+        zodType = z.record(z.string(), z.any());
+        break;
+      case 'array':
+        zodType = z.array(z.any());
+        break;
+      default:
+        zodType = z.any();
+    }
+
+    if (prop.default !== undefined) {
+      zodType = zodType.optional().default(prop.default as any);
+    } else if (!required.includes(key)) {
+      zodType = zodType.optional();
+    }
+
+    shape[key] = zodType;
+  }
+
+  return z.object(shape);
+}
+
+function createMcpToolExecutor(
+  handler: (params: Record<string, unknown>, context: McpExecutionContext) => Promise<any>
+) {
+  return async (params: Record<string, unknown>) => {
+    const context: McpExecutionContext = {
+      requestId: `agent-${Date.now()}`,
+      timestamp: Date.now(),
+      policyGuardEnabled: true,
+      walletMode: 'agent'
+    };
+    const result = await handler(params, context);
+    if (!result.success) {
+      throw new Error(result.error?.message || 'Tool execution failed');
+    }
+    return result.data;
+  };
+}
+
+const allMcpToolsArrays = [
+  sepoliaTools,
+  polygonTools,
+  arbitrumTools,
+  gnosisTools,
+  wdkTools,
+  wdkProtocolTools,
+  x402Tools,
+  erc4337Tools,
+  sessionKeyTools,
+  marketTools,
+  oracleTools,
+  hashkeyTools
+];
+
+const allMcpHandlers: Record<string, any> = {
+  ...Object.fromEntries(sepoliaTools.map(t => [t.name, handleSepoliaTool])),
+  ...Object.fromEntries(polygonTools.map(t => [t.name, handlePolygonTool])),
+  ...Object.fromEntries(arbitrumTools.map(t => [t.name, handleArbitrumTool])),
+  ...Object.fromEntries(gnosisTools.map(t => [t.name, handleGnosisTool])),
+  ...Object.fromEntries(wdkTools.map(t => [t.name, handleWdkTool])),
+  ...Object.fromEntries(wdkProtocolTools.map(t => [t.name, handleWdkProtocolTool])),
+  ...Object.fromEntries(x402Tools.map(t => [t.name, handleX402Tool])),
+  ...Object.fromEntries(erc4337Tools.map(t => [t.name, handleErc4337Tool])),
+  ...Object.fromEntries(sessionKeyTools.map(t => [t.name, handleSessionKeyTool])),
+  ...Object.fromEntries(marketTools.map(t => [t.name, handleMarketTool])),
+  ...Object.fromEntries(oracleTools.map(t => [t.name, oracleHandlers[t.name] || handleMarketTool])),
+  ...Object.fromEntries(hashkeyTools.map(t => [t.name, handleHashKeyTool])),
+};
+
+const mcpAgentTools: Record<string, any> = {};
+
+for (const tools of allMcpToolsArrays) {
+  for (const mcpTool of tools) {
+    const handler = allMcpHandlers[mcpTool.name];
+    if (!handler) {
+      logger.warn({ tool: mcpTool.name }, '[Tools] No handler found for MCP tool');
+      continue;
+    }
+
+    const execFn = async (params: Record<string, unknown>) => {
+      const context: McpExecutionContext = {
+        requestId: `agent-${Date.now()}`,
+        timestamp: Date.now(),
+        policyGuardEnabled: true,
+        walletMode: 'agent'
+      };
+      const result = await handler(params, context);
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Tool execution failed');
+      }
+      return result.data;
+    };
+
+    mcpAgentTools[mcpTool.name] = {
+      description: mcpTool.description,
+      parameters: convertMcpInputSchemaToZod(mcpTool.inputSchema as McpToolInputSchema),
+      execute: execFn
+    };
+  }
+}
+
+logger.info({ toolCount: Object.keys(mcpAgentTools).length }, '[Tools] Loaded MCP tools for agent');
 
 function validateWDKSecretSeed(): void {
   const seed = env.WDK_SECRET_SEED;
@@ -2138,8 +2292,15 @@ export const agentTools = {
   }),
 };
 
-// Proxy to normalize tool names (trim whitespace from AI model tool calls)
-export const normalizedAgentTools = new Proxy(agentTools, {
+const combinedTools = { ...agentTools, ...mcpAgentTools };
+
+logger.info({ 
+  agentTools: Object.keys(agentTools).length, 
+  mcpTools: Object.keys(mcpAgentTools).length,
+  total: Object.keys(combinedTools).length 
+}, '[Tools] Combined tools loaded');
+
+export const normalizedAgentTools = new Proxy(combinedTools, {
   get(target, prop) {
     const trimmedProp = typeof prop === 'string' ? prop.trim() : prop;
     if (trimmedProp !== prop) {

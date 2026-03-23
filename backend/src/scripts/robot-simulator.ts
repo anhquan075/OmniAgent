@@ -16,6 +16,7 @@ import { getRobotFleetConfig, FleetConfig as FleetConfigType } from '../config/r
 interface FleetConfig extends FleetConfigType {
   rpcUrl?: string;
   privateKey?: string;
+  hashkeyRpcUrl?: string;
 }
 
 interface Robot {
@@ -27,6 +28,7 @@ interface Robot {
   taskCount: number;
   agent?: RobotAgent;
   address?: string;
+  chain?: 'sepolia' | 'hashkey';
 }
 
 export interface FleetEvent {
@@ -68,7 +70,8 @@ export function getFleetStatus() {
     status: r.status,
     totalEarned: r.totalEarned,
     taskCount: r.taskCount,
-    address: r.address
+    address: r.address,
+    chain: r.chain ?? 'sepolia'
   }));
 
   const fleetTotalEarned = robotList.reduce((sum, r) => {
@@ -90,6 +93,7 @@ function loadConfig(): FleetConfig {
   const config = { ...fleetConfig } as FleetConfig;
 
   config.rpcUrl = process.env.SEPOLIA_RPC_URL || config.rpcUrl || 'https://ethereum-sepolia.publicnode.com';
+  config.hashkeyRpcUrl = process.env.HASHKEY_RPC_URL || 'https://testnet.hsk.xyz';
   config.privateKey = process.env.PRIVATE_KEY || process.env.ROBOT_FLEET_PRIVATE_KEY || process.env.WDK_SECRET_SEED || config.privateKey;
 
   return config;
@@ -152,7 +156,8 @@ function spawnFleet(): void {
       icon: robotConfig.icon || '',
       status: 'Idle',
       totalEarned: '0.0000',
-      taskCount: 0
+      taskCount: 0,
+      chain: robotConfig.chain ?? 'sepolia'
     };
     robots.set(robot.id, robot);
     logger.info({ type: robot.type, id: robot.id, icon: robot.icon }, '[RobotFleet] Spawned Robot');
@@ -163,11 +168,17 @@ async function initializeRobotAgents(): Promise<void> {
   let index = 0;
   for (const robot of robots.values()) {
     try {
+      const robotChain = robot.chain ?? 'sepolia';
+      const rpcUrl = robotChain === 'hashkey'
+        ? (fleetConfig.hashkeyRpcUrl || process.env.HASHKEY_RPC_URL || 'https://testnet.hsk.xyz')
+        : (fleetConfig.rpcUrl || process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia.publicnode.com');
+
       const agent = new RobotAgent({
         id: robot.id,
         type: robot.type,
         accountIndex: index,
-        rpcUrl: fleetConfig.rpcUrl || process.env.SEPOLIA_RPC_URL || ''
+        chain: robotChain,
+        rpcUrl
       });
       
       await agent.initialize();
@@ -176,8 +187,9 @@ async function initializeRobotAgents(): Promise<void> {
       
       logger.info({ 
         robotId: robot.id, 
-        address: robot.address 
-      }, '[RobotFleet] Robot agent initialized with WDK wallet');
+        address: robot.address,
+        chain: robotChain
+      }, '[RobotFleet] Robot agent initialized');
     } catch (error) {
       logger.error({ error, robotId: robot.id }, '[RobotFleet] Failed to initialize robot agent');
     }

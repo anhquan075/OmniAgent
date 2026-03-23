@@ -1186,56 +1186,7 @@ describe("Comprehensive Smart Contracts Test Suite", function () {
           1000,
           ethers.parseUnits("1.2", 18)
         )
-      )
-        .to.be.revertedWithCustomError(
-          (await RiskPolicy.deploy(
-            300,
-            200,
-            500,
-            ethers.parseUnits("0.97", 8),
-            100,
-            40,
-            9000,
-            9000,
-            10000,
-            0,
-            60,
-            0,
-            5,
-            0,
-            0,
-            0,
-            0,
-            1000,
-            ethers.parseUnits("1.2", 18)
-          ).catch(() => ({ interface: null }))) || { interface: null },
-          "RiskPolicy__AllocsNotMonotonic"
-        )
-        .catch(async () => {
-          await expect(
-            RiskPolicy.deploy(
-              300,
-              200,
-              500,
-              ethers.parseUnits("0.97", 8),
-              100,
-              40,
-              8000,
-              7000,
-              10000,
-              0,
-              60,
-              0,
-              5,
-              0,
-              0,
-              0,
-              0,
-              1000,
-              ethers.parseUnits("1.2", 18)
-            )
-          ).to.be.reverted;
-        });
+      ).to.be.revertedWithCustomError(RiskPolicy, "RiskPolicy__AllocsNotMonotonic");
 
       // drawdownWDKBps < guardedWDKBps should fail
       await expect(

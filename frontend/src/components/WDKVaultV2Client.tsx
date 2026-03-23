@@ -25,6 +25,7 @@ import {
 import { VaultTestnetDevPanel } from "@/components/shared/ui/VaultTestnetDevPanel";
 import { HealthMonitorCard } from "@/components/shared/cards/HealthMonitorCard";
 import { X402PaymentCard } from "@/components/shared/cards/X402PaymentCard";
+import { AutonomousAgentCard } from "@/components/shared/cards/AutonomousAgentCard";
 import { useHealthMonitor } from "@/hooks/useHealthMonitor";
 import { useX402Payment } from "@/hooks/useX402Payment";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -303,6 +304,14 @@ export default function OmniAgentVaultV2Client() {
     [actions, wallet.signer, pegArbExecutorAddress, refreshArgs]
   );
 
+  const handleRunAgentCycle = useCallback(async () => {
+    const API_URL = import.meta.env.VITE_API_URL || "";
+    const res = await fetch(`${API_URL}/api/agent/run-cycle`, { method: "POST" });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || "Failed");
+    return data;
+  }, []);
+
   // Testnet: silent refresh after minting mock tokens
   const handleMinted = useCallback(() => {
     const runnerProvider = wallet.provider ?? publicProvider;
@@ -547,6 +556,7 @@ export default function OmniAgentVaultV2Client() {
               alert={healthMonitor.alert}
               isLoading={healthMonitor.isLoading}
             />
+            <AutonomousAgentCard onRunAgentCycle={handleRunAgentCycle} />
           </div>
         </div>
         {/* ── Row 2: Execution + Arbitrage ── */}

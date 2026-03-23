@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:3000';
+const API_BASE = process.env.API_BASE_URL || 'http://localhost:3001';
 
 const serverAvailable = async (): Promise<boolean> => {
   try {
@@ -29,11 +29,10 @@ describe('[SMOKE] /api/faucet endpoints', () => {
       expect(res.ok).toBe(true);
 
       const data = await res.json();
-      expect(data).toHaveProperty('usdtAmount');
-      expect(data).toHaveProperty('ethAmount');
-      expect(data).toHaveProperty('cooldownMs');
-      expect(data.usdtAmount).toBe('10000');
-      expect(data.ethAmount).toBe('0.005');
+      expect(data).toHaveProperty('tokens');
+      expect(data.tokens.usdt.amount).toBe('10000');
+      expect(data.tokens.eth.amount).toBe('0.005');
+      expect(data.limits).toBeDefined();
     });
   });
 
@@ -46,8 +45,8 @@ describe('[SMOKE] /api/faucet endpoints', () => {
       expect(res.ok).toBe(true);
 
       const data = await res.json();
-      expect(data).toHaveProperty('canClaim');
-      expect(data).toHaveProperty('claimed');
+      expect(data).toHaveProperty('eligible');
+      expect(data).toHaveProperty('lastClaim');
     });
 
     it('returns 400 for invalid address', async () => {

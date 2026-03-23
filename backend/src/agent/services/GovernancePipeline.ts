@@ -3,6 +3,8 @@ import { getPolicyGuard } from '@/agent/middleware/PolicyGuard';
 import { detectTransactionAnomaly } from '@/agent/services/AnomalyDetector';
 import { RiskService } from '@/agent/services/RiskService';
 import { ethers } from 'ethers';
+import { hashkeyProvider } from '@/contracts/clients/ethers';
+import { env } from '@/config/env';
 
 export enum FinalOutcome {
   AUTO_APPROVE = 'auto_approve',
@@ -15,11 +17,13 @@ export interface TransactionInput {
   amount: string;
   data?: string;
   transactionType: 'supply' | 'withdraw' | 'swap' | 'transfer' | 'bridge';
+  chain?: 'sepolia' | 'ethereum' | 'hashkey';
 }
 
 export interface PipelineResult {
   outcome: FinalOutcome;
   layers: {
+    kyc: { passed: boolean; level?: number; reason?: string };
     rules: { passed: boolean; reason?: string };
     anomaly: { isAnomaly: boolean; reason?: string; confidence: string };
     ai: { riskScore: number; explanation: string };
@@ -39,6 +43,42 @@ export class GovernancePipeline {
     this.riskService = riskService;
   }
 
+  private async evaluateKycGate(
+    walletAddress: string,
+    input: TransactionInput
+  ): Promise<{ passed: boolean; level?: number; reason?: string }> {
+    if (input.chain !== 'hashkey') {
+      return { passed: true };
+    }
+
+    if (!env.HASHKEY_KYC_SBT_ADDRESS) {
+      return { passed: false, reason: 'KYC contract not configured' };
+    }
+
+    try {
+      const kycContract = new ethers.Contract(
+        env.HASHKEY_KYC_SBT_ADDRESS,
+        ['function isHuman(address) view returns (bool isValid, uint8 level)'],
+        hashkeyProvider
+      );
+      const [isValid, level] = await kycContract.isHuman(walletAddress) as [boolean, number];
+
+      if (!isValid) {
+        return { passed: false, level, reason: `Address ${walletAddress} not KYC-verified` };
+      }
+      if (level < 2) {
+        return { passed: false, level, reason: `KYC level ${level} below required level 2 (ADVANCED)` };
+      }
+
+      return { passed: true, level };
+    } catch (error) {
+      return {
+        passed: false,
+        reason: `KYC check failed: ${error instanceof Error ? error.message : 'Unknown'}`
+      };
+    }
+  }
+
   async processTransaction(
     walletAddress: string,
     input: TransactionInput
@@ -49,11 +89,21 @@ export class GovernancePipeline {
     const result: PipelineResult = {
       outcome: FinalOutcome.AUTO_APPROVE,
       layers: {
+        kyc: { passed: false },
         rules: { passed: false },
         anomaly: { isAnomaly: false, reason: '', confidence: 'high' },
         ai: { riskScore: 0, explanation: '' },
       }
     };
+
+    const kycResult = await this.evaluateKycGate(walletAddress, input);
+    result.layers.kyc = kycResult;
+
+    if (!kycResult.passed) {
+      result.outcome = FinalOutcome.REJECT;
+      result.rejectReason = kycResult.reason;
+      return { transaction: input, result };
+    }
 
     const rulesResult = await this.evaluateRules(walletAddress, input, policyGuard, portfolioValue);
     result.layers.rules = rulesResult;

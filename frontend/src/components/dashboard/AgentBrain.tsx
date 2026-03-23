@@ -176,7 +176,7 @@ export default function AgentBrain({ stats }: AgentBrainProps) {
                 <Badge variant="outline" className="text-[8px] h-5 px-2 border-white/10 text-neutral-gray uppercase">Alpha Scouting</Badge>
                 <Badge variant="outline" className="text-[8px] h-5 px-2 border-white/10 text-neutral-gray uppercase">Swarm Mode</Badge>
               </div>
-              <div className="text-[9px] font-mono text-neutral-gray/50">v2.2.0-hackathon</div>
+              <div className="text-[9px] font-mono text-neutral-gray/50">v2.2.0</div>
            </div>
         </CardContent>
       </Card>

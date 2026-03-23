@@ -3,7 +3,6 @@ import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
 import { getWdkSigner } from '@/lib/wdk-loader';
 
-// Load ABIs
 import {
   StrategyEngineAbi,
   ZKRiskOracleAbi,
@@ -18,6 +17,7 @@ import {
 
 logger.info({ rpcUrl: env.SEPOLIA_RPC_URL }, '[Ethers] Initializing provider');
 export const provider = new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
+export const hashkeyProvider = new ethers.JsonRpcProvider(env.HASHKEY_RPC_URL);
 
 let signerPromise: Promise<Signer> | null = null;
 

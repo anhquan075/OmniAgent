@@ -75,6 +75,44 @@ interface Suggestion {
   prompt: string;
 }
 
+function synthesizeToolResultText(toolName: string, data: any): string {
+  if (!data) return '';
+
+  const action = data.actionTaken ?? data.status ?? data.message ?? '';
+  const balance = data.balance ?? data.balanceFormatted ?? data.nativeBalance ?? '';
+  const balanceFormatted = data.balanceFormatted ?? data.formatted ?? '';
+  const txHash = data.txHash ?? data.transactionHash ?? '';
+  const vaultBalance = data.vaultBalance ?? data.vaultBalanceFormatted ?? '';
+  const totalSupply = data.totalSupply ?? data.totalSupplyFormatted ?? '';
+  const apy = data.apy ?? data.estimatedApy ?? data.currentApy ?? '';
+  const riskLevel = data.riskLevel ?? data.risk ?? '';
+  const success = data.success;
+  const error = data.error ?? data.errorMessage ?? '';
+
+  if (error) return `Operation failed: ${error}`;
+
+  const tool = toolName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+  if (success === false) return `The operation via ${tool} was not successful.`;
+
+  if (balance && balanceFormatted) return `${tool}: ${balanceFormatted} (raw: ${balance})`;
+  if (vaultBalance) return `Vault balance: ${vaultBalance}`;
+  if (totalSupply) return `Total supply: ${totalSupply}`;
+  if (apy) return `Current APY: ${apy}%`;
+  if (riskLevel) return `Risk level: ${riskLevel}`;
+  if (txHash) {
+    const short = txHash.slice(0, 10) + '...' + txHash.slice(-8);
+    return `${tool} completed. Transaction: ${short}`;
+  }
+  if (action) return `${tool}: ${action}`;
+  if (data.status) return `${tool} — ${data.status}`;
+
+  const keys = Object.keys(data).filter(k => !['success', 'error', 'errorMessage', 'txHash', 'transactionHash'].includes(k));
+  if (keys.length === 0) return `${tool} completed successfully.`;
+  if (keys.length === 1) return `${tool}: ${data[keys[0]]}`;
+  return `${tool}: ${JSON.stringify(data)}`;
+}
+
 async function generateSuggestions(
   openrouter: ReturnType<typeof createOpenRouter>,
   modelId: string,
@@ -275,6 +313,9 @@ chat.post('/', async (c) => {
 
         const modelMessages = await convertToModelMessages(normalizedMessages);
 
+        let lastToolResultData: any = null;
+        let lastToolName: string = '';
+
         const supportsNativeReasoning = modelId.includes('grok') || (modelId.includes('claude') && modelId.includes('thinking'));
         const result = await streamText({
           model: baseModel,
@@ -290,6 +331,12 @@ chat.post('/', async (c) => {
           onStepFinish: (arg: any) => {
             const toolResults = arg?.toolResults ?? [];
             const toolCalls = arg?.toolCalls ?? [];
+
+            if (toolResults.length > 0) {
+              const last = toolResults[toolResults.length - 1];
+              lastToolResultData = last?.result ?? null;
+              lastToolName = last?.toolName ?? '';
+            }
 
             // 1. Telemetry updates - Only for non-small talk
             if (routerDecision.intent !== 'small_talk' && toolCalls && toolCalls.length > 0) {
@@ -368,6 +415,10 @@ ABSOLUTE RULES (NEVER violate):
 7. When a tool has an optional address/account parameter, OMIT it to check YOUR wallet. Never ask the user for an address unless they specifically ask for a different wallet.
 8. NEVER ask "What is your address?" when the user asks about "my balance" — just call the tool without an address.
 9. After ANY tool call, read the FULL result object before responding. The answer is in the result.
+10. NEVER give one-line or terse responses — always provide context, explanation, and relevant details
+11. ALWAYS explain WHAT the data means, not just WHAT the data is — include implications, comparisons, or recommendations when applicable
+12. When showing numbers, include units, format nicely, and explain significance (e.g. "Your vault holds 7,881.0 USDT, which is earning 3.2% APY")
+13. If a transaction was executed, explain what happened and what the user should expect next
 
 EXAMPLE - Correct:
 - User: "What's my balance?"
@@ -384,24 +435,61 @@ EXAMPLE - Wrong asking for address:
 - Tool result: {success:true, balance:"1000"}
 - Wrong response: "What's your wallet address?"
 
+EXAMPLE - Detailed response (always do this):
+- User: "What's my vault balance?"
+- Tool result: {success:true, balance:"7881000000", balanceFormatted:"7,881.0", apy:"3.2", totalDeposited:"15000"}
+- Good response: "Your vault balance is 7,881.0 USDT. This represents about 52% of your total deposited amount (15,000 USDT). The funds are currently earning 3.2% APY in Aave, which translates to approximately 252 USDT in annual yield."
+
 WORKFLOW:
 1. Call tool
 2. Read the EXACT data from the result
-3. Tell the user that exact data`,
+3. You MUST produce a detailed text response — never stop silently after tool calls
+4. Format numbers nicely (e.g. "7,881.0 USDT" not "7881000000")
+5. Include relevant context and explain what the data means`,
            messages: modelMessages,
         } as any); // Cast to any to bypass potential version mismatch errors in the types
 
         const streamPromise = writer.merge(result.toUIMessageStream());
 
         if (routerDecision.intent !== 'small_talk') {
-          generateSuggestions(openrouter, modelId, normalizedMessages, routerDecision.intent)
-            .then((suggestions) => {
-              writer.write({ type: 'data-suggestions', data: suggestions });
-            })
-            .catch((err) => {
-              logger.error(err, '[Chat] Error in suggestion generation');
-              writer.write({ type: 'data-suggestions', data: fallbackSuggestions });
-            });
+          try {
+            const [response, finishReason] = await Promise.all([
+              result.response,
+              result.finishReason,
+            ]);
+            const generatedMessages = response.messages ?? [];
+
+            const hasVisibleText = generatedMessages.some((m: any) =>
+              m.role === 'assistant' && m.content && (
+                typeof m.content === 'string'
+                  ? m.content.trim().length > 0
+                  : m.parts?.some((p: any) => p.type === 'text' && p.text?.trim().length > 0)
+              )
+            );
+
+            if (finishReason === 'tool-calls' && !hasVisibleText && lastToolResultData) {
+              const msgId = `msg-${Date.now()}`;
+              const summary = synthesizeToolResultText(lastToolName, lastToolResultData);
+              if (summary) {
+                writer.write({ type: 'text-start', id: msgId });
+                writer.write({ type: 'text-delta', delta: summary, id: msgId });
+                writer.write({ type: 'text-end', id: msgId });
+              }
+            }
+
+            const lastMsg = generatedMessages[generatedMessages.length - 1];
+            const endedOnTool = lastMsg?.role === 'tool';
+            if (endedOnTool) {
+              writer.write({
+                type: 'data-status',
+                id: 'agent-status',
+                data: { status: 'Complete', progress: 100, thought: 'Analysis complete.' },
+                transient: true,
+              });
+            }
+          } catch (err) {
+            logger.error(err, '[Chat] Error in post-stream');
+          }
         }
 
         try {
@@ -461,8 +549,7 @@ WORKFLOW:
     },
     originalMessages: messages,
     onFinish: async ({ responseMessage, isAborted }) => {
-      if (isAborted) return;
-      if (!responseMessage) return;
+      if (isAborted || !responseMessage) return;
       try {
         await saveChat({ chatId, messages: [...messages, responseMessage] });
       } catch (err) {

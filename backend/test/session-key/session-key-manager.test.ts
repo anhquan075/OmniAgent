@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SessionKeyManager, SessionKeyConfig } from '@/services/session-key-manager';
 import { ethers } from 'ethers';
+import { generateSessionKey } from '@/lib/crypto-utils';
 
 vi.mock('@/lib/wdk-loader', () => ({
   getWdkSigner: vi.fn(async () => {
@@ -24,7 +25,6 @@ describe('[UNIT] SessionKeyManager', () => {
   const testSmartAccount = '0x1234567890123456789012345678901234567890';
 
   beforeEach(() => {
-    // Don't unstub env vars - we need SIMPLE_ACCOUNT_FACTORY_ADDRESS to persist
     process.env.SIMPLE_ACCOUNT_FACTORY_ADDRESS = '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0';
     process.env.SESSION_KEY_MASTER_SECRET = 'test-master-secret';
     manager = new SessionKeyManager();
@@ -33,7 +33,7 @@ describe('[UNIT] SessionKeyManager', () => {
 
   describe('generateSessionKeyPair', () => {
     it('should generate valid Ethereum key pair', async () => {
-      const { address, privateKey } = await manager.generateSessionKeyPair();
+      const { address, privateKey } = generateSessionKey();
       
       expect(address).toMatch(/^0x[0-9a-fA-F]{40}$/);
       expect(ethers.isAddress(address)).toBe(true);
@@ -41,15 +41,15 @@ describe('[UNIT] SessionKeyManager', () => {
     });
 
     it('should generate unique pairs', async () => {
-      const pair1 = await manager.generateSessionKeyPair();
-      const pair2 = await manager.generateSessionKeyPair();
+      const pair1 = generateSessionKey();
+      const pair2 = generateSessionKey();
       
       expect(pair1.address).not.toBe(pair2.address);
       expect(pair1.privateKey).not.toBe(pair2.privateKey);
     });
 
     it('should generate keys that create valid wallets', async () => {
-      const { address, privateKey } = await manager.generateSessionKeyPair();
+      const { address, privateKey } = generateSessionKey();
       
       const wallet = new ethers.Wallet(privateKey);
       expect(wallet.address).toBe(address);
@@ -173,7 +173,7 @@ describe('[UNIT] SessionKeyManager', () => {
     it('should never log private keys', async () => {
       const loggerSpy = vi.spyOn(console, 'log');
       
-      const { privateKey } = await manager.generateSessionKeyPair();
+      const { privateKey } = generateSessionKey();
       
       const logCalls = loggerSpy.mock.calls.flat().join(' ');
       expect(logCalls).not.toContain(privateKey);
@@ -182,7 +182,7 @@ describe('[UNIT] SessionKeyManager', () => {
     });
 
     it('should encrypt private keys before storage', async () => {
-      const { privateKey } = await manager.generateSessionKeyPair();
+      const { privateKey } = generateSessionKey();
       
       expect(privateKey).toMatch(/^[0-9a-f]{64}$/);
     });

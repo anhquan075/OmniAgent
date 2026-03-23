@@ -33,12 +33,12 @@ export class SessionKeyManager {
     this.provider = new ethers.JsonRpcProvider(env.SEPOLIA_RPC_URL);
   }
 
-  async createSmartAccount(ownerAddress: string): Promise<{ txHash: string }> {
+  async createSmartAccount(ownerAddress: string): Promise<{ txHash: string; accountAddress: string }> {
     const { wallet, account, address } = await createErc4337Account();
     
     logger.info({ address, ownerAddress }, '[SessionKeyManager] Smart account ready via WDK');
     
-    return { txHash: '' };
+    return { txHash: '', accountAddress: address };
   }
 
   async getSmartAccountAddress(ownerAddress: string): Promise<string> {

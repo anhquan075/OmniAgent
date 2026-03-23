@@ -380,3 +380,9 @@ function createDefaultHistory(agentId: string): CreditHistory {
     lastUpdated: Date.now(),
   };
 }
+
+export function __resetCacheForTests(): void {
+  if (fs.existsSync(CREDIT_FILE)) {
+    fs.unlinkSync(CREDIT_FILE);
+  }
+}

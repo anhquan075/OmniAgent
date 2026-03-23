@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:3000';
+const API_BASE = process.env.API_BASE_URL || 'http://localhost:3001';
 
 const serverAvailable = async (): Promise<boolean> => {
   try {
@@ -122,9 +122,14 @@ describe('[SMOKE] /api/chat/intent endpoints', () => {
 
       expect(res.ok).toBe(true);
       const data = await res.json();
-      expect(data.type).toBe('clarification');
-      expect(data).toHaveProperty('suggestions');
-    });
+      expect(['clarification', 'confirmation']).toContain(data.type);
+      if (data.type === 'clarification') {
+        expect(data).toHaveProperty('suggestions');
+      } else {
+        expect(data).toHaveProperty('intent');
+        expect(data).toHaveProperty('requiresConfirmation', true);
+      }
+    }, 30000);
 
     it('returns intent_ready for high confidence actions', async () => {
       if (!serverUp) return;

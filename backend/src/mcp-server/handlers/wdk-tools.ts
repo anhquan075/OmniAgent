@@ -95,15 +95,26 @@ async function getAavePosition(userAddress: string) {
 
 async function getBridgeQuote(amount: string, destinationChainId: string) {
   if (!MOCK_BRIDGE_ADDRESS) throw new Error('MOCK_BRIDGE_ADDRESS not configured. Please set MOCK_BRIDGE_ADDRESS in .env file.');
+  const amountBn = ethers.parseUnits(amount || '100', 6);
+  const dstEid = parseInt(destinationChainId, 10);
   const bridgeAbi = [
-    'function quote() external view returns (uint256 nativeFee, uint256 bridgeFeeBps)'
+    'function quote(uint32 dstEid, uint256 amount, bytes calldata options) external view returns (uint256 nativeFee)'
   ];
   const bridge = new ethers.Contract(MOCK_BRIDGE_ADDRESS, bridgeAbi, provider);
-  const quote = await bridge.quote();
-  return {
-    nativeFee: quote.nativeFee.toString(),
-    bridgeFee: (BigInt(amount) * BigInt(quote.bridgeFeeBps) / 10000n).toString()
-  };
+  try {
+    const nativeFee = await bridge.quote(dstEid, amountBn, '0x');
+    const bridgeFee = (amountBn * 100n) / 10000n;
+    return {
+      nativeFee: nativeFee.toString(),
+      bridgeFee: bridgeFee.toString()
+    };
+  } catch {
+    return {
+      nativeFee: '0',
+      bridgeFee: '0',
+      _note: 'Bridge quote unavailable — contract may need adapter configuration'
+    };
+  }
 }
 
 export const wdkTools: McpTool[] = [

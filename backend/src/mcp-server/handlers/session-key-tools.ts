@@ -316,17 +316,17 @@ export async function handleSessionKeyTool(
           };
         }
         
-        const { txHash } = await manager.createSmartAccount(userAddress);
+        const { txHash, accountAddress } = await manager.createSmartAccount(userAddress);
         
         logger.info({ userAddress, txHash }, '[SessionKeyTools] Smart account created');
         
         return { 
           success: true, 
           data: { 
-            account: await manager.getSmartAccountAddress(userAddress),
+            account: accountAddress,
             txHash,
             alreadyExists: false,
-            isDeployed: true
+            isDeployed: false
           } 
         };
       }

@@ -4,6 +4,7 @@ export interface RobotConfig {
   icon: string;
   capabilities?: string[];
   x402Endpoints?: string[];
+  chain?: 'sepolia' | 'hashkey';
 }
 
 export interface FleetConfig {
@@ -16,32 +17,44 @@ export interface FleetConfig {
   agentWalletAddress: string;
   useWdkAgents: boolean;
   x402Enabled: boolean;
+  hashkeyEnabled?: boolean;
 }
 
 const DEFAULT_ROBOTS: RobotConfig[] = [
-  { "id": "ROBO-001", "type": "Yield Sentry", "icon": "[S]" },
-  { "id": "ROBO-002", "type": "Liquidity Scout", "icon": "[L]" },
-  { "id": "ROBO-003", "type": "Flash Arbiter", "icon": "[A]" },
-  { "id": "ROBO-004", "type": "Peg Guardian", "icon": "[G]" },
-  { "id": "ROBO-005", "type": "Risk Oracle", "icon": "[O]" },
-  { "id": "ROBO-006", "type": "Delta Neutral", "icon": "[D]" }
+  { "id": "ROBO-001", "type": "Yield Sentry", "icon": "[S]", chain: "sepolia" },
+  { "id": "ROBO-002", "type": "Liquidity Scout", "icon": "[L]", chain: "sepolia" },
+  { "id": "ROBO-003", "type": "Flash Arbiter", "icon": "[A]", chain: "sepolia" },
+  { "id": "ROBO-004", "type": "Peg Guardian", "icon": "[G]", chain: "sepolia" },
+  { "id": "ROBO-005", "type": "HSK Staker", "icon": "[K]", chain: "hashkey" },
+  { "id": "ROBO-006", "type": "HashKey Vault Agent", "icon": "[V]", chain: "hashkey" }
+];
+
+const HASHKEY_ROBOTS: RobotConfig[] = [
+  { "id": "ROBO-007", "type": "HSK Staker Pro", "icon": "[K+]", chain: "hashkey" },
+  { "id": "ROBO-008", "type": "HashKey Yield Harvester", "icon": "[Y]", chain: "hashkey" }
 ];
 
 function parseRobots(): RobotConfig[] {
-  const env = process.env.ROBOT_FLEET_ROBOTS;
-  if (!env) return DEFAULT_ROBOTS;
-  try {
-    const parsed = JSON.parse(env);
-    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-  } catch {}
+  const envRobots = process.env.ROBOT_FLEET_ROBOTS;
+  if (envRobots) {
+    try {
+      const parsed = JSON.parse(envRobots);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch {}
+  }
+  if (process.env.ROBOT_FLEET_HASHKEY_ENABLED === 'true') {
+    return [...DEFAULT_ROBOTS, ...HASHKEY_ROBOTS];
+  }
   return DEFAULT_ROBOTS;
 }
 
 export function getRobotFleetConfig(): FleetConfig {
+  const robots = parseRobots();
+  const hashkeyEnabled = process.env.ROBOT_FLEET_HASHKEY_ENABLED === 'true';
   return {
     enabled: process.env.ROBOT_FLEET_ENABLED === 'true',
-    fleetSize: parseInt(process.env.ROBOT_FLEET_SIZE || '6', 10),
-    robots: parseRobots(),
+    fleetSize: parseInt(process.env.ROBOT_FLEET_SIZE || String(robots.length), 10),
+    robots,
     taskInterval: {
       min: parseInt(process.env.ROBOT_FLEET_TASK_INTERVAL_MIN || '5000', 10),
       max: parseInt(process.env.ROBOT_FLEET_TASK_INTERVAL_MAX || '15000', 10),
@@ -54,5 +67,6 @@ export function getRobotFleetConfig(): FleetConfig {
     agentWalletAddress: process.env.ROBOT_FLEET_AGENT_WALLET || '',
     useWdkAgents: process.env.ROBOT_FLEET_USE_WDK_AGENTS === 'true',
     x402Enabled: process.env.ROBOT_FLEET_X402_ENABLED !== 'false',
+    hashkeyEnabled,
   };
 }

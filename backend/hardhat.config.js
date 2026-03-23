@@ -1,5 +1,6 @@
-require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
+require("@nomicfoundation/hardhat-toolbox");
+require("./scripts/vault-tasks");
 
 const PRIVATE_KEY = (() => {
   const raw = (process.env.PRIVATE_KEY || "").trim();
@@ -67,6 +68,13 @@ module.exports = {
       url: process.env.PLASMA_RPC_URL || "https://rpc.chiadochain.net",
       accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
       chainId: 10200,
+      gasPrice: toGwei(process.env.GAS_PRICE_GWEI),
+    },
+    // HashKey Chain testnet (chain ID 133)
+    hashkey: {
+      url: process.env.HASHKEY_RPC_URL || "https://testnet.hsk.xyz",
+      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+      chainId: 133,
       gasPrice: toGwei(process.env.GAS_PRICE_GWEI),
     },
     // Ethereum mainnet (for production)

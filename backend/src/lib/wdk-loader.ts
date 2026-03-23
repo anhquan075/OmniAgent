@@ -141,6 +141,30 @@ export async function getWdkMultiChain() {
   return getWdkForSepolia();
 }
 
+export async function getWdkForHashKey() {
+  const WDK = await getWDK();
+  const WalletEVM = await getWalletEVM();
+
+  WDK.registerWallet('hashkey', WalletEVM, {
+    provider: env.HASHKEY_RPC_URL
+  });
+
+  logger.info('[wdk-loader] WDK initialized for HashKey Chain (chainId: 133)');
+  return WDK;
+}
+
+export async function getHashKeyAccount(accountIndex: number = 0) {
+  const wdk = await getWdkForHashKey();
+  return wdk.getAccount('hashkey', accountIndex);
+}
+
+export async function getHashKeySigner() {
+  const WalletAccountEvm = await getWalletAccountEvm();
+  const wdkAccount = new WalletAccountEvm(env.WDK_SECRET_SEED, "0'/0/0", { provider: env.HASHKEY_RPC_URL });
+  const provider = new ethers.JsonRpcProvider(env.HASHKEY_RPC_URL);
+  return new WdkSignerAdapter(wdkAccount, provider);
+}
+
 /**
  * Get account with protocol access.
  * Official pattern: const account = await wdk.getAccount('sepolia', 0)

@@ -22,6 +22,130 @@ const ProfitSimulator_1 = require("./services/ProfitSimulator");
 const RiskService_1 = require("./services/RiskService");
 const SimulationService_1 = require("./services/SimulationService");
 const x402_client_1 = require("./x402-client");
+// MCP Tool imports for combined agent tools
+const sepolia_tools_1 = require("../mcp-server/handlers/sepolia-tools");
+const polygon_tools_1 = require("../mcp-server/handlers/polygon-tools");
+const arbitrum_tools_1 = require("../mcp-server/handlers/arbitrum-tools");
+const gnosis_tools_1 = require("../mcp-server/handlers/gnosis-tools");
+const wdk_tools_1 = require("../mcp-server/handlers/wdk-tools");
+const wdk_protocol_tools_1 = require("../mcp-server/handlers/wdk-protocol-tools");
+const x402_tools_1 = require("../mcp-server/handlers/x402-tools");
+const erc4337_tools_1 = require("../mcp-server/handlers/erc4337-tools");
+const session_key_tools_1 = require("../mcp-server/handlers/session-key-tools");
+const market_tools_1 = require("../mcp-server/handlers/market-tools");
+const oracle_tools_1 = require("../mcp-server/handlers/oracle-tools");
+const hashkey_tools_1 = require("../mcp-server/handlers/hashkey-tools");
+function convertMcpInputSchemaToZod(schema) {
+    const shape = {};
+    const required = schema.required || [];
+    for (const [key, prop] of Object.entries(schema.properties)) {
+        let zodType;
+        switch (prop.type) {
+            case 'string':
+                if (prop.enum) {
+                    zodType = zod_1.z.enum(prop.enum);
+                }
+                else {
+                    zodType = zod_1.z.string();
+                }
+                break;
+            case 'number':
+                zodType = zod_1.z.number();
+                break;
+            case 'boolean':
+                zodType = zod_1.z.boolean();
+                break;
+            case 'object':
+                zodType = zod_1.z.record(zod_1.z.string(), zod_1.z.any());
+                break;
+            case 'array':
+                zodType = zod_1.z.array(zod_1.z.any());
+                break;
+            default:
+                zodType = zod_1.z.any();
+        }
+        if (prop.default !== undefined) {
+            zodType = zodType.optional().default(prop.default);
+        }
+        else if (!required.includes(key)) {
+            zodType = zodType.optional();
+        }
+        shape[key] = zodType;
+    }
+    return zod_1.z.object(shape);
+}
+function createMcpToolExecutor(handler) {
+    return async (params) => {
+        const context = {
+            requestId: `agent-${Date.now()}`,
+            timestamp: Date.now(),
+            policyGuardEnabled: true,
+            walletMode: 'agent'
+        };
+        const result = await handler(params, context);
+        if (!result.success) {
+            throw new Error(result.error?.message || 'Tool execution failed');
+        }
+        return result.data;
+    };
+}
+const allMcpToolsArrays = [
+    sepolia_tools_1.sepoliaTools,
+    polygon_tools_1.polygonTools,
+    arbitrum_tools_1.arbitrumTools,
+    gnosis_tools_1.gnosisTools,
+    wdk_tools_1.wdkTools,
+    wdk_protocol_tools_1.wdkProtocolTools,
+    x402_tools_1.x402Tools,
+    erc4337_tools_1.erc4337Tools,
+    session_key_tools_1.sessionKeyTools,
+    market_tools_1.marketTools,
+    oracle_tools_1.oracleTools,
+    hashkey_tools_1.hashkeyTools
+];
+const allMcpHandlers = {
+    ...Object.fromEntries(sepolia_tools_1.sepoliaTools.map(t => [t.name, sepolia_tools_1.handleSepoliaTool])),
+    ...Object.fromEntries(polygon_tools_1.polygonTools.map(t => [t.name, polygon_tools_1.handlePolygonTool])),
+    ...Object.fromEntries(arbitrum_tools_1.arbitrumTools.map(t => [t.name, arbitrum_tools_1.handleArbitrumTool])),
+    ...Object.fromEntries(gnosis_tools_1.gnosisTools.map(t => [t.name, gnosis_tools_1.handleGnosisTool])),
+    ...Object.fromEntries(wdk_tools_1.wdkTools.map(t => [t.name, wdk_tools_1.handleWdkTool])),
+    ...Object.fromEntries(wdk_protocol_tools_1.wdkProtocolTools.map(t => [t.name, wdk_protocol_tools_1.handleWdkProtocolTool])),
+    ...Object.fromEntries(x402_tools_1.x402Tools.map(t => [t.name, x402_tools_1.handleX402Tool])),
+    ...Object.fromEntries(erc4337_tools_1.erc4337Tools.map(t => [t.name, erc4337_tools_1.handleErc4337Tool])),
+    ...Object.fromEntries(session_key_tools_1.sessionKeyTools.map(t => [t.name, session_key_tools_1.handleSessionKeyTool])),
+    ...Object.fromEntries(market_tools_1.marketTools.map(t => [t.name, market_tools_1.handleMarketTool])),
+    ...Object.fromEntries(oracle_tools_1.oracleTools.map(t => [t.name, oracle_tools_1.oracleHandlers[t.name] || market_tools_1.handleMarketTool])),
+    ...Object.fromEntries(hashkey_tools_1.hashkeyTools.map(t => [t.name, hashkey_tools_1.handleHashKeyTool])),
+};
+const mcpAgentTools = {};
+for (const tools of allMcpToolsArrays) {
+    for (const mcpTool of tools) {
+        const handler = allMcpHandlers[mcpTool.name];
+        if (!handler) {
+            logger_1.logger.warn({ tool: mcpTool.name }, '[Tools] No handler found for MCP tool');
+            continue;
+        }
+        const execFn = async (params) => {
+            const context = {
+                requestId: `agent-${Date.now()}`,
+                timestamp: Date.now(),
+                policyGuardEnabled: true,
+                walletMode: 'agent'
+            };
+            const result = await handler(params, context);
+            if (!result.success) {
+                throw new Error(result.error?.message || 'Tool execution failed');
+            }
+            return result.data;
+        };
+        mcpAgentTools[mcpTool.name] = {
+            description: mcpTool.description,
+            parameters: convertMcpInputSchemaToZod(mcpTool.inputSchema),
+            execute: execFn
+        };
+    }
+}
+logger_1.logger.info({ toolCount: Object.keys(mcpAgentTools).length }, '[Tools] Loaded MCP tools for agent');
 function validateWDKSecretSeed() {
     const seed = env_1.env.WDK_SECRET_SEED;
     if (!seed) {
@@ -1984,8 +2108,13 @@ exports.agentTools = {
         },
     }),
 };
-// Proxy to normalize tool names (trim whitespace from AI model tool calls)
-exports.normalizedAgentTools = new Proxy(exports.agentTools, {
+const combinedTools = { ...exports.agentTools, ...mcpAgentTools };
+logger_1.logger.info({
+    agentTools: Object.keys(exports.agentTools).length,
+    mcpTools: Object.keys(mcpAgentTools).length,
+    total: Object.keys(combinedTools).length
+}, '[Tools] Combined tools loaded');
+exports.normalizedAgentTools = new Proxy(combinedTools, {
     get(target, prop) {
         const trimmedProp = typeof prop === 'string' ? prop.trim() : prop;
         if (trimmedProp !== prop) {

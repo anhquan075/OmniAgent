@@ -5,6 +5,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    // Exclude compiled dist/ files from test runs
+    exclude: ['**/node_modules/**', '**/dist/**'],
   },
   resolve: {
     alias: {

@@ -1,6 +1,9 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { sepolia } from 'wagmi/chains';
+import { mainnet, sepolia } from 'wagmi/chains';
 import { createStorage } from 'wagmi';
+import { mock } from 'wagmi/connectors';
+
+const TEST_ACCOUNTS = ['0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'] as const;
 
 /**
  * Get the initial chain based on VITE_DEFAULT_NETWORK environment variable
@@ -37,6 +40,12 @@ export const wagmiConfig = getDefaultConfig({
   storage: createStorage({
     storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
   }),
+  // In test mode (Playwright e2e), add mock connector that auto-connects
+  // so tests can bypass the wallet connect modal and go straight to the app.
+  // The mock connector uses the standard Hardhat/Anvil test account #0.
+  connectors: import.meta.env.VITE_PLAYWRIGHT
+    ? [mock({ accounts: TEST_ACCOUNTS, features: { defaultConnected: true } })]
+    : undefined,
   theme: {
     blurs: {
       modalOverlay: 'blur(4px)',

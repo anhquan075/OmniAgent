@@ -15,7 +15,11 @@ const {
 test.describe('Chat UI - Playwright Tests', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 15000 });
-    await page.waitForTimeout(1000); // Give React time to mount
+    // Wait for mock wagmi connector to auto-connect (VITE_PLAYWRIGHT=true)
+    await page.waitForFunction(() => {
+      return document.body.textContent?.includes('OmniAgent') ?? false;
+    }, { timeout: 10000 }).catch(() => {});
+    await page.waitForTimeout(1500); // Let React settle after connection
   });
 
   // ========== UI BASICS ==========

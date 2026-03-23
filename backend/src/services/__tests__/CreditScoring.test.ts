@@ -6,24 +6,19 @@ import {
   recordTransaction,
   checkCreditRequirements,
   getLeaderboard,
+  __resetCacheForTests,
 } from '../CreditScoring';
 
 const TEST_CREDIT_FILE = path.join(process.cwd(), 'cache', 'test-credit-scores.json');
 
 describe('CreditScoring', () => {
   beforeEach(() => {
-    // Use test file
     process.env.CREDIT_STORAGE_PATH = TEST_CREDIT_FILE;
-    // Clean up
-    if (fs.existsSync(TEST_CREDIT_FILE)) {
-      fs.unlinkSync(TEST_CREDIT_FILE);
-    }
+    __resetCacheForTests();
   });
 
   afterEach(() => {
-    if (fs.existsSync(TEST_CREDIT_FILE)) {
-      fs.unlinkSync(TEST_CREDIT_FILE);
-    }
+    __resetCacheForTests();
   });
 
   describe('getCreditScore', () => {

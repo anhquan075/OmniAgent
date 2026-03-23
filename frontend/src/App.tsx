@@ -121,7 +121,13 @@ export default function App() {
   const [suggestions, setSuggestions] = useState<any[]>(initialSuggestions);
   const [pendingSuggestions, setPendingSuggestions] = useState<any[]>([]);
   const queryClient = useQueryClient();
-  const { address, isConnected } = useAccount();
+  const { address: _address, isConnected: _isConnected } = useAccount();
+
+  // In E2E test mode (VITE_PLAYWRIGHT), force connected state to bypass wallet modal
+  const isConnected = import.meta.env.VITE_PLAYWRIGHT ? true : _isConnected;
+  const address = import.meta.env.VITE_PLAYWRIGHT
+    ? '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
+    : _address;
 
   // Local state for input as per modern ai-sdk best practices
   const [input, setInput] = useState("");

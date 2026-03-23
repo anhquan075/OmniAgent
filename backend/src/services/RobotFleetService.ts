@@ -19,6 +19,8 @@ export interface Robot {
   status: 'Working' | 'Idle';
   totalEarned: string;
   taskCount: number;
+  chain?: 'sepolia' | 'hashkey';
+  address?: string;
 }
 
 export interface FleetStatus {

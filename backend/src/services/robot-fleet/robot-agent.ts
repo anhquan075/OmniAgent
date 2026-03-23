@@ -4,6 +4,12 @@ import { registerExactEvmScheme } from '@x402/evm/exact/client';
 import { ClientEvmSigner } from '@x402/evm';
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
+import { spawn } from 'child_process';
+import * as path from 'path';
+
+type Chain = 'sepolia' | 'hashkey';
+
+export type { Chain };
 
 const USDT_ABI = [
   'function approve(address spender, uint256 amount) returns (bool)',
@@ -30,16 +36,20 @@ export interface RobotAgentConfig {
   type: string;
   accountIndex: number;
   rpcUrl: string;
+  chain?: Chain;
+  privateKey?: string;
 }
 
 export class RobotAgent {
   public readonly id: string;
   public readonly type: string;
   public readonly accountIndex: number;
+  public readonly chain: Chain;
   
   private walletManager: any;
   private account: any;
   private provider: ethers.JsonRpcProvider;
+  private signer: ethers.Signer | null = null;
   private x402Fetch: typeof fetch | undefined;
   private address: string = '';
   private shares: bigint = 0n;
@@ -48,11 +58,31 @@ export class RobotAgent {
     this.id = config.id;
     this.type = config.type;
     this.accountIndex = config.accountIndex;
+    this.chain = config.chain ?? 'sepolia';
     this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
   }
 
   async initialize(): Promise<void> {
     try {
+      if (this.chain === 'hashkey') {
+        // HashKey chain: use direct private key signer (no WDK dependency)
+        const pk = env.HASHKEY_DEPLOYER_PK || env.PRIVATE_KEY;
+        if (!pk) {
+          throw new Error('HASHKEY_DEPLOYER_PK or PRIVATE_KEY not set for HashKey robot');
+        }
+        this.signer = new ethers.Wallet(pk.replace(/^0x/, ''), this.provider);
+        this.address = await this.signer.getAddress();
+        
+        logger.info({ 
+          id: this.id, 
+          type: this.type,
+          address: this.address,
+          chain: this.chain 
+        }, '[RobotAgent] Initialized for HashKey');
+        return;
+      }
+
+      // Sepolia: use WDK wallet manager
       const { default: WalletManagerEvm } = await import('@tetherto/wdk-wallet-evm');
       
       this.walletManager = new WalletManagerEvm(
@@ -76,10 +106,10 @@ export class RobotAgent {
       
       logger.info({ 
         id: this.id, 
-        type: this.type, 
+        type: this.type,
         address: this.address,
         index: this.accountIndex 
-      }, '[RobotAgent] Initialized');
+      }, '[RobotAgent] Initialized for Sepolia');
     } catch (error) {
       logger.error({ error, id: this.id }, '[RobotAgent] Failed to initialize');
       throw error;
@@ -458,6 +488,132 @@ export class RobotAgent {
     }
   }
 
+  private async runHardhatTask(
+    taskName: string,
+    args: Record<string, string>,
+    timeoutMs = 60000
+  ): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    return new Promise((resolve) => {
+      const backendRoot = path.resolve(__dirname, '../../../');
+      const taskArgsList = Object.entries(args)
+        .filter(([, v]) => v !== undefined)
+        .flatMap(([k, v]) => ['--' + k, v]);
+
+      const child = spawn('npx', ['hardhat', taskName, ...taskArgsList, '--network', 'hashkey'], {
+        cwd: backendRoot,
+        timeout: timeoutMs,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        shell: false,
+      });
+
+      let stdout = '';
+      let stderr = '';
+
+      child.stdout?.on('data', (data) => { stdout += data.toString(); });
+      child.stderr?.on('data', (data) => { stderr += data.toString(); });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          const hashMatch = stdout.match(/0x[a-fA-F0-9]{64}/);
+          resolve({ success: true, txHash: hashMatch ? hashMatch[0] : undefined });
+        } else {
+          resolve({ success: false, error: stderr || stdout || `Hardhat task exited with code ${code}` });
+        }
+      });
+
+      child.on('error', (err) => {
+        resolve({ success: false, error: `Spawn error: ${err.message}` });
+      });
+    });
+  }
+
+  async getHashKeyBalance(): Promise<{ hsk: string; usdt: string }> {
+    if (this.chain !== 'hashkey') {
+      return { hsk: '0', usdt: '0' };
+    }
+    try {
+      const hskBalance = await this.provider.getBalance(this.address);
+      const usdtAddress = env.HASHKEY_USDT_ADDRESS;
+      let usdtBalance = '0';
+      if (usdtAddress) {
+        const usdt = new ethers.Contract(usdtAddress, [
+          'function balanceOf(address) view returns (uint256)'
+        ], this.provider);
+        usdtBalance = (await usdt.balanceOf(this.address)).toString();
+      }
+      return {
+        hsk: ethers.formatEther(hskBalance),
+        usdt: ethers.formatUnits(usdtBalance, 6)
+      };
+    } catch (error) {
+      logger.error({ error, id: this.id }, '[RobotAgent] Failed to get HashKey balance');
+      return { hsk: '0', usdt: '0' };
+    }
+  }
+
+  async hashkeyTransfer(to: string, amount: string, token: 'hsk' | 'usdt' = 'hsk'): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    if (this.chain !== 'hashkey') {
+      return { success: false, error: 'Robot not on HashKey chain' };
+    }
+    if (!this.signer) {
+      return { success: false, error: 'Signer not initialized' };
+    }
+    try {
+      if (token === 'hsk') {
+        const amountWei = ethers.parseEther(amount);
+        const tx = await this.signer.sendTransaction({ to, value: amountWei });
+        const receipt = await this.provider.waitForTransaction(tx.hash);
+        if (!receipt) return { success: false, error: 'No receipt' };
+        logger.info({ id: this.id, to, amount, txHash: receipt.hash }, '[RobotAgent] HSK transfer sent');
+        return { success: true, txHash: receipt.hash };
+      } else {
+        const usdtAddress = env.HASHKEY_USDT_ADDRESS;
+        if (!usdtAddress) return { success: false, error: 'HASHKEY_USDT_ADDRESS not set' };
+        const amountParsed = ethers.parseUnits(amount, 6);
+        const iface = new ethers.Interface([
+          'function transfer(address to, uint256 amount) returns (bool)'
+        ]);
+        const data = iface.encodeFunctionData('transfer', [to, amountParsed]);
+        const tx = await this.signer.sendTransaction({ to: usdtAddress, value: 0, data });
+        const receipt = await this.provider.waitForTransaction(tx.hash);
+        if (!receipt) return { success: false, error: 'No receipt' };
+        logger.info({ id: this.id, to, amount, txHash: receipt.hash }, '[RobotAgent] USDT transfer sent');
+        return { success: true, txHash: receipt.hash };
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error({ error: msg, id: this.id }, '[RobotAgent] HashKey transfer failed');
+      return { success: false, error: msg };
+    }
+  }
+
+  async hashkeyVaultDeposit(amount: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    if (this.chain !== 'hashkey') {
+      return { success: false, error: 'Robot not on HashKey chain' };
+    }
+    if (!this.signer) {
+      return { success: false, error: 'Signer not initialized' };
+    }
+    logger.info({ id: this.id, amount }, '[RobotAgent] HashKey vault deposit via Hardhat');
+    return this.runHardhatTask('vault-deposit', {
+      amount,
+    });
+  }
+
+  async hashkeyVaultWithdraw(shares: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    if (this.chain !== 'hashkey') {
+      return { success: false, error: 'Robot not on HashKey chain' };
+    }
+    if (!this.signer) {
+      return { success: false, error: 'Signer not initialized' };
+    }
+    logger.info({ id: this.id, shares }, '[RobotAgent] HashKey vault withdraw via Hardhat');
+    return this.runHardhatTask('vault-withdraw', {
+      shares,
+    });
+  }
+
+
   dispose(): void {
     if (this.account?.dispose) {
       this.account.dispose();
@@ -469,13 +625,16 @@ export class RobotAgent {
 export async function createRobotAgent(
   id: string,
   type: string,
-  robotIndex: number
+  robotIndex: number,
+  chain: Chain = 'sepolia',
+  rpcUrl?: string
 ): Promise<RobotAgent> {
   const agent = new RobotAgent({
     id,
     type,
     accountIndex: robotIndex,
-    rpcUrl: env.SEPOLIA_RPC_URL
+    chain,
+    rpcUrl: rpcUrl ?? (chain === 'hashkey' ? env.HASHKEY_RPC_URL : env.SEPOLIA_RPC_URL)
   });
   
   await agent.initialize();

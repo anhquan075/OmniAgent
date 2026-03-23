@@ -122,6 +122,26 @@ const envSchema = zod_1.z.object({
     X402_USDT0_STABLE: zod_1.z.string().default('0x779Ded0c9e1022225f8E0630b35a9b54bE713736'),
     LZ_BRIDGE_OPTIONS: zod_1.z.string().default('0x00030100110100000000000000000000000000030d40'),
     DEFAULT_CHAIN_ID: zod_1.z.string().default('11155111').transform(Number),
+    // HashKey Chain
+    HASHKEY_CHAIN_ENABLED: zod_1.z.string().default('false').transform(v => v === 'true'),
+    HASHKEY_RPC_URL: zod_1.z.string().default('https://testnet.hsk.xyz'),
+    HASHKEY_CHAIN_ID: zod_1.z.string().default('133').transform(Number),
+    HASHKEY_EXPLORER_URL: zod_1.z.string().default('https://testnet-explorer.hsk.xyz'),
+    // HashKey Chain deployed contracts
+    HASHKEY_VAULT_ADDRESS: zod_1.z.string().optional(),
+    HASHKEY_USDT_ADDRESS: zod_1.z.string().optional(),
+    HASHKEY_KYC_SBT_ADDRESS: zod_1.z.string().optional(),
+    HASHKEY_SAFE_ADDRESS: zod_1.z.string().optional(),
+    HASHKEY_STAKING_CONTRACT: zod_1.z.string().optional(),
+    HASHKEY_DEPLOYER_PK: zod_1.z.string().optional(),
+    // HashKey Chain oracles (SUPRA + APRO)
+    HASHKEY_SUPRA_PROXY_ADDRESS: zod_1.z.string().default('0x443A0f4Da5d2fdC47de3eeD45Af41d399F0E5702'),
+    HASHKEY_APRO_PRICE_FEED: zod_1.z.string().default('0x86CE42c1b714149Dc3A7b169EF67b5F78A224b'),
+    HASHKEY_SAFE_TX_SERVICE_URL: zod_1.z.string().default('https://safe-transaction-hashkey.safe.global'),
+    HASHKEY_SAFE_API_URL: zod_1.z.string().default('https://safe-api-hashkey.safe.global'),
+    // ERC-4337 on HashKey (if EntryPoint is deployed)
+    HASHKEY_ERC4337_ENTRYPOINT: zod_1.z.string().optional(),
+    HASHKEY_ERC4337_BUNDLER_URL: zod_1.z.string().optional(),
 });
 const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {

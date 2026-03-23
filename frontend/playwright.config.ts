@@ -1,4 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export default defineConfig({
   testDir: './e2e/tests',
@@ -11,23 +16,43 @@ export default defineConfig({
     ['list'],
   ],
   use: {
-    baseURL: 'http://localhost:5175',
+    baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    headless: false, // Run in headed mode (browser visible)
+    headless: false,
+    actionTimeout: 10000,
+    // Inject wagmi mock sessionStorage BEFORE app loads to bypass wallet modal
+    launchOptions: {
+      args: ['--disable-web-security'],
+    },
+    storageState: undefined,
+  },
+  webServer: {
+    command: 'VITE_PLAYWRIGHT=true VITE_API_URL=http://localhost:3001 VITE_DEFAULT_NETWORK=testnet pnpm run dev',
+    url: 'http://localhost:5173',
+    timeout: 120000,
+    reuseExistingServer: false, // Always restart to pick up env vars
+    cwd: resolve(__dirname, '.'),
+  },
+  timeout: 60000,
+  expect: {
+    timeout: 10000,
+  },
+  webServer: {
+    command: 'VITE_PLAYWRIGHT=true VITE_API_URL=http://localhost:3001 VITE_DEFAULT_NETWORK=testnet pnpm run dev',
+    url: 'http://localhost:5173',
+    timeout: 120000,
+    reuseExistingServer: true,
+    cwd: resolve(__dirname, '.'),
   },
 
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'], headless: false },
+      use: {
+        ...devices['Desktop Chrome'],
+        headless: false,
+      },
     },
   ],
-
-  webServer: {
-    command: 'pnpm run dev',
-    url: 'http://localhost:5175',
-    reuseExistingServer: true,
-    timeout: 180000,
-  },
 });

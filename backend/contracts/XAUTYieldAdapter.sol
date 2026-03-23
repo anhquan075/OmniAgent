@@ -90,7 +90,7 @@ contract XAUTYieldAdapter is Ownable2Step, IManagedAdapter {
 
     /**
      * @notice In a real implementation, this would swap USD₮ for XAU₮ on a DEX.
-     *         For the hackathon/testnet, we might mock this or expect the vault 
+     *         For the testnet, we might mock this or expect the vault 
      *         to have already performed the swap.
      *         The plan says 'Facilitate deposits via WDK'.
      */

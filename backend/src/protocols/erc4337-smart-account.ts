@@ -73,7 +73,7 @@ export async function getErc4337Wallet(seedPhrase?: string) {
 
 export async function createErc4337Account(seedPhrase?: string) {
   const wallet = await getErc4337Wallet(seedPhrase);
-  const account = wallet.getAccount(0);
+  const account = await wallet.getAccount(0);
   const address = await account.getAddress();
   logger.info({ address }, '[ERC4337] Account created/retrieved');
   return { wallet, account, address };

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:3000';
+const API_BASE = process.env.API_BASE_URL || 'http://localhost:3001';
 
 interface StatsResponse {
   vault: { totalAssets: string; bufferUtilizationBps: string };

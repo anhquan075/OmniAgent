@@ -20,6 +20,20 @@ OmniAgent is an autonomous, non-custodial yield routing stack — a **technical 
 
 ---
 
+## Live Demo
+
+**🚀 Try it now:** https://omni-wdk.vercel.app/
+
+The demo showcases:
+- **Autonomous AI Agent** — Click "Run Agent Cycle" to watch the agent make real decisions
+- **88+ MCP Tools** — Full WDK integration with vault, lending, bridging, swaps
+- **X402 Agent Economy** — Peer-to-peer payments between agents
+- **4-Layer Governance** — Hard rules → Anomaly → AI → Human review
+
+The agent demonstrates **"when and why"** decision-making — it analyzes risk, evaluates opportunities, and determines when to run its next cycle based on confidence scores.
+
+---
+
 ## Tether Integration
 
 OmniAgent is built natively on **Tether's WDK** (Wallet Development Kit) and uses **Tether tokens** as the core asset for all operations:
@@ -126,13 +140,46 @@ OmniAgent integrates with **OpenClaw** — an open-source AI agent framework for
 
 ---
 
+## HashKey Chain Integration
+
+OmniAgent is **multi-chain ready**, with HashKey testnet (chain 133) as the target:
+
+| Contract | Address | Description |
+|----------|---------|-------------|
+| **HashKeyVault** | [`0x605b6b8C83d8b0EA8867BEda4099DE4F042F7318`](https://testnet-explorer.hsk.xyz/address/0x605b6b8C83d8b0EA8867BEda4099DE4F042F7318) | KYC-gated ERC-4626 vault (KYC L2+) — v2 (no _updateYield) |
+| **MockKycSBT** | [`0x1525E262Cb5bDFC7b51802c36a1141bA94405F76`](https://testnet-explorer.hsk.xyz/address/0x1525E262Cb5bDFC7b51802c36a1141bA94405F76) | KYC SBT with 3-level verification |
+| **MockUSDT** | [`0xA3eb6Cb28659ec53388FE5Ff3E64920e3C274038`](https://testnet-explorer.hsk.xyz/address/0xA3eb6Cb28659ec53388FE5Ff3E64920e3C274038) | Mock USDT (6 decimals) |
+
+**KYC Levels:**
+- Level 1 — Basic (verified humans only)
+- Level 2 — Intermediate (enhanced verification)
+- Level 3 — Advanced (full vault access + yield operations)
+
+**Demo Flow:** Agent wallet (`0xA4c009f0541d9C7f86F12cF4470Faf60448B240B`) holds KYC Level 3, enabling vault deposit/withdraw and yield routing.
+
+### Deploy to HashKey
+
+```bash
+cd backend
+cp .env.example .env
+# Set WDK_SECRET_SEED and OPENROUTER_API_KEY
+
+# Deploy contracts (uses PRIVATE_KEY from .env or defaults to Hardhat account #1)
+npx tsx scripts/deploy-hashkey-direct.ts
+
+# Set KYC level 3 for agent wallet
+npx hardhat run scripts/set-kyc-agent.ts --network hashkey
+```
+
+---
+
 ## Architecture
 
 ```mermaid
 graph TB
     subgraph Frontend["Frontend (React + Vite)"]
         Dashboard[Dashboard - SSE]
-        MCPPanel[MCP Panel - 59+ tools]
+        MCPPanel[MCP Panel - 88+ tools]
         ChatUI[Chat UI - Streaming]
     end
 
@@ -144,6 +191,7 @@ graph TB
         WDKService[WDK Protocol Service<br/>Aave, USDT0, Velora, X402]
         WDKSigner[WDK Signer Adapter<br/>BIP-39 to ethers.js]
         DirectERC4337[DirectERC4337 Service<br/>Session Keys, Account Factory]
+        HashKeyService[HashKey Service<br/>KYC Gate, Vault, Multi-sig]
     end
 
     subgraph SmartContracts["Smart Contracts (Solidity)"]
@@ -171,6 +219,7 @@ graph TB
     AutoAgent --> AdaptiveScheduler[Adaptive Scheduler]
     WDKService --> WDKSigner
     WDKSigner --> SmartContracts
+    HashKeyService --> SmartContracts
     DirectERC4337 --> SimpleAccountFactory
     SimpleAccountFactory --> SimpleAccount
 ```
@@ -223,7 +272,7 @@ Open **http://localhost:5173** — Dashboard with MCP panel, chat, and autonomou
 ### 4. Test MCP Endpoint
 
 ```bash
-# List all 54+ tools
+# List all 88+ tools
 curl -X POST http://localhost:3001/api/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
@@ -236,7 +285,7 @@ curl -X POST http://localhost:3001/api/mcp \
 
 ---
 
-## MCP Tools (65+ Total)
+## MCP Tools (88+ Total)
 
 ### X402 Agent Economy (4 tools)
 | Tool | Description | Risk |
@@ -311,7 +360,7 @@ curl -X POST http://localhost:3001/api/mcp \
 - Expiration timestamps
 - Instant revocation
 
-### Multi-Chain Wallets (22 tools)
+### Multi-Chain Wallets (22+ tools)
 
 | Chain | Tools | Description |
 |-------|-------|-------------|
@@ -319,6 +368,7 @@ curl -X POST http://localhost:3001/api/mcp \
 | **Arbitrum** | 4 | `arbitrum_createWallet`, `arbitrum_getBalance`, `arbitrum_transfer`, `arbitrum_getGasPrice` |
 | **Polygon** | 4 | `polygon_createWallet`, `polygon_getBalance`, `polygon_transfer`, `polygon_getGasPrice` |
 | **Gnosis** | 4 | `gnosis_createWallet`, `gnosis_getBalance`, `gnosis_transfer`, `gnosis_getGasPrice` |
+| **HashKey** | 4+ | `hashkey_createWallet`, `hashkey_getBalance`, `hashkey_transfer`, `hashkey_deposit`, `hashkey_withdraw` |
 
 ---
 
@@ -579,6 +629,10 @@ Core contracts deployed on Sepolia testnet:
 | `WDK_SECRET_SEED` | BIP-39 mnemonic (12-24 words) for agent wallet |
 | `OPENROUTER_API_KEY` | OpenRouter API key for LLM calls |
 | `SEPOLIA_RPC_URL` | Sepolia RPC endpoint |
+| `HASHKEY_RPC_URL` | HashKey testnet RPC (`https://testnet.hsk.xyz`) |
+| `HASHKEY_VAULT_ADDRESS` | HashKey vault address |
+| `HASHKEY_USDT_ADDRESS` | HashKey mock USDT address |
+| `HASHKEY_KYC_SBT_ADDRESS` | HashKey KYC SBT address |
 
 ### Optional — LLM Models
 
@@ -624,6 +678,9 @@ WDK_BREAKER_ADDRESS=
 WDK_ZK_ORACLE_ADDRESS=
 WDK_POLICY_GUARD_ADDRESS=
 WDK_AGENT_NFA_ADDRESS=
+HASHKEY_VAULT_ADDRESS=     # HashKey testnet vault
+HASHKEY_USDT_ADDRESS=      # HashKey testnet USDT
+HASHKEY_KYC_SBT_ADDRESS=   # HashKey testnet KYC SBT
 ```
 
 Full list: see `backend/.env.example`
@@ -680,6 +737,8 @@ OmniAgent/
 │   │       └── robot-simulator.ts   # Robot fleet
 │   ├── scripts/
 │   │   ├── deploy.ts                # Unified deployment
+│   │   ├── deploy-hashkey.ts        # HashKey testnet deployment
+│   │   ├── set-kyc-agent.ts         # Set KYC level for agent wallet
 │   │   └── inspect.ts               # Contract inspection
 │   ├── test/
 │   │   └── services/
@@ -754,6 +813,16 @@ pnpm run deploy:full
 pnpm run deploy:full
 ```
 
+### HashKey Testnet
+
+```bash
+# Deploy HashKey-specific contracts
+npx hardhat run scripts/deploy-hashkey.ts --network hashkey
+
+# Set up agent KYC level
+npx hardhat run scripts/set-kyc-agent.ts --network hashkey
+```
+
 After deployment, update `.env` with contract addresses printed by the script.
 
 ---
@@ -777,6 +846,19 @@ pnpm run deploy:zk-oracle
 ### RPC Errors
 
 Check `SEPOLIA_RPC_URL` in `.env`.
+
+### HashKey Deployment Issues
+
+```bash
+# Verify contracts are deployed on HashKey testnet
+# Check explorer: https://testnet-explorer.hsk.xyz
+
+# Redeploy if needed
+npx hardhat run scripts/deploy-hashkey.ts --network hashkey
+
+# Set agent KYC after deployment
+npx hardhat run scripts/set-kyc-agent.ts --network hashkey
+```
 
 ---
 

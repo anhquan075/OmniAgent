@@ -9,7 +9,6 @@ pragma solidity 0.8.24;
  * Key Design: AI agent READS these parameters but CANNOT modify them,
  * providing cryptographic safety against prompt injection attacks.
  * 
- * Inspired by SafeAgent hackathon winner: https://dorahacks.io/buidl/40440
  */
 contract AgentRiskParameters {
     // ==================== IMMUTABLE PARAMETERS ====================
