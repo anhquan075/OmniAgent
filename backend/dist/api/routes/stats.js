@@ -60,7 +60,7 @@ stats.get('/', async (c) => {
         logger_1.logger.debug('[Stats] Fetching data from contracts');
         const { vault, zkOracle, breaker, engine, usdt } = (0, ethers_1.getContracts)();
         // Fetch in parallel with individual error handling
-        const [totalAssets, bufferStatus, riskMetrics, isPaused, executionStatus, preview, usdtBalance] = await Promise.all([
+        const [totalAssets, bufferStatus, riskMetrics, isPaused, executionStatus, preview, usdtBalance, agentWalletUsdt] = await Promise.all([
             vault.totalAssets().catch((e) => { logger_1.logger.error(e, "vault.totalAssets error"); return 0n; }),
             vault.bufferStatus().catch((e) => { logger_1.logger.error(e, "vault.bufferStatus error"); return { utilizationBps: 0n, current: 0n, target: 0n }; }),
             zkOracle.getVerifiedRiskBands().catch((e) => {
@@ -75,7 +75,8 @@ stats.get('/', async (c) => {
             breaker.isPaused().catch((e) => { logger_1.logger.error(e, "breaker.isPaused error"); return false; }),
             engine.canExecute().catch((e) => { logger_1.logger.error(e, "engine.canExecute error"); return [false, "0x00"]; }),
             engine.previewDecision().catch((e) => { logger_1.logger.error(e, "engine.previewDecision error"); return { targetWDKBps: 0n, state: 0n }; }),
-            usdt.balanceOf(env_1.env.WDK_VAULT_ADDRESS).catch((e) => { logger_1.logger.error(e, "usdt.balanceOf error"); return 0n; })
+            usdt.balanceOf(env_1.env.WDK_VAULT_ADDRESS).catch((e) => { logger_1.logger.error(e, "usdt.balanceOf error"); return 0n; }),
+            usdt.balanceOf(env_1.env.ROBOT_FLEET_AGENT_WALLET || ethers_2.ethers.ZeroAddress).catch((e) => { logger_1.logger.error(e, "agentWalletUsdt error"); return 0n; })
         ]);
         logger_1.logger.debug('[Stats] Formatting response');
         const [canExecute, executeReason] = executionStatus || [false, "0x00"];
@@ -104,6 +105,10 @@ stats.get('/', async (c) => {
                 bufferCurrent: ethers_2.ethers.formatUnits(bufferStatus?.current || 0n, USDT_DECIMALS),
                 bufferTarget: ethers_2.ethers.formatUnits(bufferStatus?.target || 0n, USDT_DECIMALS),
                 usdtBalance: ethers_2.ethers.formatUnits(usdtBalance || 0n, USDT_DECIMALS)
+            },
+            robotFleet: {
+                agentWalletUsdt: ethers_2.ethers.formatUnits(agentWalletUsdt || 0n, USDT_DECIMALS),
+                agentWalletAddress: env_1.env.ROBOT_FLEET_AGENT_WALLET || 'Not configured'
             },
             risk: {
                 level: Number(riskMetrics?.monteCarloDrawdownBps || 0) >= 2000 ? 'HIGH' : Number(riskMetrics?.monteCarloDrawdownBps || 0) >= 1000 ? 'MEDIUM' : 'LOW',

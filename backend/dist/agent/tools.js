@@ -235,24 +235,37 @@ exports.agentTools = {
         }),
         // @ts-ignore
         execute: async ({ context }) => {
-            const [canExec, reason] = await engine.canExecute();
-            const preview = await engine.previewDecision();
-            const res = {
-                canExecute: canExec,
-                reason: canExec ? '' : (function () { try {
-                    return ethers_2.ethers.decodeBytes32String(reason);
-                }
-                catch {
-                    return 'UNKNOWN';
-                } })(),
-                decision: {
-                    state: Number(preview.state),
-                    targetWDKBps: Number(preview.targetWDKBps),
-                    bountyBps: Number(preview.bountyBps)
-                }
-            };
-            await reportToDashboard('checkStrategy', res);
-            return res;
+            try {
+                const [canExec, reason] = await engine.canExecute();
+                const preview = await engine.previewDecision();
+                const res = {
+                    canExecute: canExec,
+                    reason: canExec ? '' : (function () { try {
+                        return ethers_2.ethers.decodeBytes32String(reason);
+                    }
+                    catch {
+                        return 'UNKNOWN';
+                    } })(),
+                    decision: {
+                        state: Number(preview.state),
+                        targetWDKBps: Number(preview.targetWDKBps),
+                        bountyBps: Number(preview.bountyBps)
+                    }
+                };
+                await reportToDashboard('checkStrategy', res);
+                return res;
+            }
+            catch (e) {
+                logger_1.logger.error(e, '[CheckStrategy] Failed');
+                return {
+                    error: 'check_strategy failed',
+                    message: e.message,
+                    code: e.code || null,
+                    data: e.data || null,
+                    reason: e.reason || null,
+                    canExecute: false
+                };
+            }
         },
     }),
     execute_rebalance: (0, ai_1.tool)({
@@ -262,105 +275,117 @@ exports.agentTools = {
         }),
         // @ts-ignore
         execute: async ({ context }) => {
-            const sepoliaAccount = await (await getWdk()).getAccount('sepolia');
-            const fromAddress = await sepoliaAccount.getAddress();
-            const riskService = new RiskService_1.RiskService(zkOracle, breaker, await getWdk());
-            const profile = await riskService.getRiskProfile();
-            const policyViolation = policyGuard.validateSwapTransaction({
-                fromToken: env_1.env.WDK_USDT_ADDRESS,
-                toToken: env_1.env.WDK_ENGINE_ADDRESS,
-                amount: '100000000',
-                currentRiskLevel: profile.level,
-                portfolioValue: (await vault.totalAssets()).toString(),
-                estimatedSlippageBps: 100,
-            });
-            if (policyViolation.violated) {
-                logger_1.logger.warn({ reason: policyViolation.reason }, '[Rebalance] Policy violation');
-                await reportToDashboard('executeRebalance', {
-                    actionTaken: 'BLOCKED_BY_POLICY',
-                    reason: policyViolation.reason,
-                    severity: policyViolation.severity,
-                });
-                return {
-                    actionTaken: 'BLOCKED_BY_POLICY',
-                    reason: policyViolation.reason,
-                    severity: policyViolation.severity,
-                };
-            }
-            // 1. Check Auction logic
-            if (await auction.getAddress() !== ethers_2.ethers.ZeroAddress) {
-                try {
-                    const status = await auction.roundStatus();
-                    const phase = Number(status.currentPhase);
-                    if (phase === 1) { // BidPhase
-                        const minBid = await auction.minBid();
-                        const currentBid = status.winningBid;
-                        const myBid = currentBid > 0n ? currentBid + (currentBid * 500n / 10000n) : minBid;
-                        const allowance = await usdt.allowance(fromAddress, await auction.getAddress());
-                        if (allowance < myBid) {
-                            await (await getWdkExecutor()).sendTransaction('sepolia', {
-                                to: env_1.env.WDK_USDT_ADDRESS,
-                                data: usdt.interface.encodeFunctionData("approve", [await auction.getAddress(), ethers_2.ethers.MaxUint256])
-                            }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
-                        }
-                        const bidTx = await (await getWdkExecutor()).sendTransaction('sepolia', {
-                            to: await auction.getAddress(),
-                            data: auction.interface.encodeFunctionData("bid", [myBid])
-                        }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
-                        return { actionTaken: 'AUCTION_BID_PLACED', txHash: bidTx.hash };
-                    }
-                    if (phase === 2 && status.winner.toLowerCase() === fromAddress.toLowerCase()) {
-                        const execTx = await (await getWdkExecutor()).sendTransaction('sepolia', {
-                            to: await auction.getAddress(),
-                            data: auction.interface.encodeFunctionData("winnerExecute", [])
-                        }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
-                        return { actionTaken: 'AUCTION_EXECUTED_WINNER', txHash: execTx.hash };
-                    }
-                }
-                catch (e) {
-                    logger_1.logger.debug('[Tools] Winner execution failed, falling back to direct execution');
-                }
-            }
-            // 2. Direct Execution with Simulation & AI Scoring
-            const [canExec, reason] = await engine.canExecute();
-            if (!canExec)
-                return { actionTaken: 'SKIPPED_NOT_READY' };
-            const txRequest = {
-                to: await engine.getAddress(),
-                from: fromAddress,
-                data: engine.interface.encodeFunctionData("executeCycle", []),
-                value: 0n
-            };
-            const simulator = new SimulationService_1.SimulationService(env_1.env.SEPOLIA_RPC_URL);
-            const simResult = await simulator.simulateTransaction(txRequest);
-            const aiScore = await riskService.getAIRiskScore(simResult, profile);
-            if (aiScore.score > 75 || !simResult.success) {
-                return { actionTaken: 'REJECTED_BY_AI', score: aiScore.score, reason: aiScore.explanation };
-            }
-            // Simulate profitability
-            const portfolioValue = await vault.totalAssets();
-            const profitSim = await profitSimulator.simulateRebalance({
-                portfolioValue: portfolioValue.toString(),
-                currentAllocation: { engine: 50, vault: 50 },
-                targetAllocation: { engine: 40, vault: 60 },
-                estimatedGasPerSwap: '1000000',
-            });
-            logger_1.logger.debug({ profitSim }, '[Rebalance] Profit simulation');
             try {
-                const tx = await (await getWdkExecutor()).sendTransaction('sepolia', {
-                    to: txRequest.to,
-                    data: txRequest.data,
-                    value: txRequest.value
-                }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: '100000000' });
-                const res = { actionTaken: 'REBALANCED', txHash: tx.hash, profitSimulation: profitSim };
-                await reportToDashboard('executeRebalance', res);
-                return res;
+                const sepoliaAccount = await (await getWdk()).getAccount('sepolia');
+                const fromAddress = await sepoliaAccount.getAddress();
+                const riskService = new RiskService_1.RiskService(zkOracle, breaker, await getWdk());
+                const profile = await riskService.getRiskProfile();
+                const policyViolation = policyGuard.validateSwapTransaction({
+                    fromToken: env_1.env.WDK_USDT_ADDRESS,
+                    toToken: env_1.env.WDK_ENGINE_ADDRESS,
+                    amount: '100000000',
+                    currentRiskLevel: profile.level,
+                    portfolioValue: (await vault.totalAssets()).toString(),
+                    estimatedSlippageBps: 100,
+                });
+                if (policyViolation.violated) {
+                    logger_1.logger.warn({ reason: policyViolation.reason }, '[Rebalance] Policy violation');
+                    await reportToDashboard('executeRebalance', {
+                        actionTaken: 'BLOCKED_BY_POLICY',
+                        reason: policyViolation.reason,
+                        severity: policyViolation.severity,
+                    });
+                    return {
+                        actionTaken: 'BLOCKED_BY_POLICY',
+                        reason: policyViolation.reason,
+                        severity: policyViolation.severity,
+                    };
+                }
+                // 1. Check Auction logic
+                if (await auction.getAddress() !== ethers_2.ethers.ZeroAddress) {
+                    try {
+                        const status = await auction.roundStatus();
+                        const phase = Number(status.currentPhase);
+                        if (phase === 1) { // BidPhase
+                            const minBid = await auction.minBid();
+                            const currentBid = status.winningBid;
+                            const myBid = currentBid > 0n ? currentBid + (currentBid * 500n / 10000n) : minBid;
+                            const allowance = await usdt.allowance(fromAddress, await auction.getAddress());
+                            if (allowance < myBid) {
+                                await (await getWdkExecutor()).sendTransaction('sepolia', {
+                                    to: env_1.env.WDK_USDT_ADDRESS,
+                                    data: usdt.interface.encodeFunctionData("approve", [await auction.getAddress(), ethers_2.ethers.MaxUint256])
+                                }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
+                            }
+                            const bidTx = await (await getWdkExecutor()).sendTransaction('sepolia', {
+                                to: await auction.getAddress(),
+                                data: auction.interface.encodeFunctionData("bid", [myBid])
+                            }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
+                            return { actionTaken: 'AUCTION_BID_PLACED', txHash: bidTx.hash };
+                        }
+                        if (phase === 2 && status.winner.toLowerCase() === fromAddress.toLowerCase()) {
+                            const execTx = await (await getWdkExecutor()).sendTransaction('sepolia', {
+                                to: await auction.getAddress(),
+                                data: auction.interface.encodeFunctionData("winnerExecute", [])
+                            }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: "0" });
+                            return { actionTaken: 'AUCTION_EXECUTED_WINNER', txHash: execTx.hash };
+                        }
+                    }
+                    catch (e) {
+                        logger_1.logger.debug('[Tools] Winner execution failed, falling back to direct execution');
+                    }
+                }
+                // 2. Direct Execution with Simulation & AI Scoring
+                const [canExec, reason] = await engine.canExecute();
+                if (!canExec)
+                    return { actionTaken: 'SKIPPED_NOT_READY' };
+                const txRequest = {
+                    to: await engine.getAddress(),
+                    from: fromAddress,
+                    data: engine.interface.encodeFunctionData("executeCycle", []),
+                    value: 0n
+                };
+                const simulator = new SimulationService_1.SimulationService(env_1.env.SEPOLIA_RPC_URL);
+                const simResult = await simulator.simulateTransaction(txRequest);
+                const aiScore = await riskService.getAIRiskScore(simResult, profile);
+                if (aiScore.score > 75 || !simResult.success) {
+                    return { actionTaken: 'REJECTED_BY_AI', score: aiScore.score, reason: aiScore.explanation };
+                }
+                // Simulate profitability
+                const portfolioValue = await vault.totalAssets();
+                const profitSim = await profitSimulator.simulateRebalance({
+                    portfolioValue: portfolioValue.toString(),
+                    currentAllocation: { engine: 50, vault: 50 },
+                    targetAllocation: { engine: 40, vault: 60 },
+                    estimatedGasPerSwap: '1000000',
+                });
+                logger_1.logger.debug({ profitSim }, '[Rebalance] Profit simulation');
+                try {
+                    const tx = await (await getWdkExecutor()).sendTransaction('sepolia', {
+                        to: txRequest.to,
+                        data: txRequest.data,
+                        value: txRequest.value
+                    }, { riskLevel: profile.level, portfolioValue: (await vault.totalAssets()).toString(), estimatedAmount: '100000000' });
+                    const res = { actionTaken: 'REBALANCED', txHash: tx.hash, profitSimulation: profitSim };
+                    await reportToDashboard('executeRebalance', res);
+                    return res;
+                }
+                catch (error) {
+                    logger_1.logger.warn(error, '[Rebalance] Execution failed');
+                    return {
+                        actionTaken: 'BLOCKED_BY_POLICY_DURING_EXECUTION',
+                        reason: error.message
+                    };
+                }
             }
-            catch (error) {
-                logger_1.logger.warn(error, '[Rebalance] Execution failed');
+            catch (e) {
+                logger_1.logger.error(e, '[Rebalance] Top-level failure');
                 return {
-                    actionTaken: 'BLOCKED_BY_POLICY_DURING_EXECUTION',
-                    reason: error.message
+                    error: 'execute_rebalance failed',
+                    message: e.message,
+                    code: e.code || null,
+                    data: e.data || null,
+                    actionTaken: 'ERROR'
                 };
             }
         },

@@ -78,6 +78,7 @@ const envSchema = zod_1.z.object({
     GITHUB_WEBHOOK_SECRET: zod_1.z.string().optional(),
     OPENROUTER_API_KEY: zod_1.z.string().optional(),
     PRIVATE_KEY: zod_1.z.string().optional(),
+    ROBOT_FLEET_AGENT_WALLET: zod_1.z.string().optional(),
     OPENROUTER_BASE_URL: zod_1.z.string().default('https://openrouter.ai/api/v1'),
     OPENROUTER_MODEL_GENERAL: zod_1.z.string().default('google/gemini-2.5-flash-lite'),
     OPENROUTER_MODEL_CRYPTO: zod_1.z.string().default('x-ai/grok-4.1-fast'),

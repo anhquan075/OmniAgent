@@ -92,6 +92,40 @@ This enables institutional-grade trust in autonomous agent operations.
 
 ---
 
+## OpenClaw Agent Framework
+
+OmniAgent integrates with **OpenClaw** — an open-source AI agent framework for autonomous reasoning:
+
+| Class | File | Description |
+|-------|------|-------------|
+| **OpenClawClient** | `services/openclaw-client.ts` | Gateway client for agent orchestration |
+| **OpenClawPolicyEnforcer** | `services/openclaw-policy.ts` | Financial policy enforcement |
+
+### OpenClawClient Methods
+
+| Method | Description |
+|--------|-------------|
+| `listAgents()` | List available agents in the network |
+| `getToolsCatalog()` | Get catalog of available tools |
+| `describeNode()` | Get node/agent information |
+| `listSessions()` | List active sessions |
+| `getCapabilities()` | Get framework capabilities |
+| `invokeTool()` | Execute tools via OpenClaw |
+| `chatCompletions()` | LLM chat interface |
+
+### OpenClawPolicyEnforcer Rules
+
+| Check | Logic |
+|-------|-------|
+| `checkTransaction()` | Size limits: <1 ETH allowed, >1 ETH blocked |
+| `checkYieldOpportunity()` | Low risk requires ≥8.5% APY, high risk requires 1.5x multiplier |
+| `checkExposure()` | Protocol exposure ≤20% of portfolio |
+| `checkAgentOperation()` | Whitelist: swap, supply, withdraw, transfer, bridge, stake |
+
+**Tests:** 16 tests covering all OpenClaw integration — run with `pnpm vitest run test/services/openclaw.test.ts`
+
+---
+
 ## Architecture
 
 ```mermaid
@@ -553,6 +587,15 @@ Core contracts deployed on Sepolia testnet:
 | `OPENROUTER_MODEL_GENERAL` | `google/gemini-2.5-flash-lite` | General reasoning model |
 | `OPENROUTER_MODEL_CRYPTO` | `x-ai/grok-4.1-fast` | Crypto-specialized model |
 
+### Optional — OpenClaw Agent Framework
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPENCLAW_GATEWAY_URL` | `https://gateway.openclaw.com/api` | OpenClaw gateway endpoint |
+| `OPENCLAW_API_KEY` | - | API key for OpenClaw (optional) |
+| `MAX_OPENCLAW_EXPOSURE_PERCENT` | `20` | Max protocol exposure % for yield |
+| `MIN_OPENCLAW_APY` | `8.5` | Min APY for high-risk yield |
+
 ### Optional — Robot Fleet
 
 | Variable | Default | Description |
@@ -619,7 +662,9 @@ OmniAgent/
 │   │   │   ├── AutonomousAgent.ts   # Main agent service
 │   │   │   ├── WdkProtocolService.ts # Aave/Bridge/Swap
 │   │   │   ├── WdkSignerAdapter.ts  # WDK → ethers.js
-│   │   │   └── NavShield.ts         # NAV safety checks
+│   │   │   ├── NavShield.ts         # NAV safety checks
+│   │   │   ├── openclaw-client.ts   # OpenClaw agent framework client
+│   │   │   └── openclaw-policy.ts  # OpenClaw policy enforcement
 │   │   ├── mcp-server/
 │   │   │   ├── tool-registry.ts     # Tool registration
 │   │   │   └── handlers/            # 54+ tool implementations
@@ -636,6 +681,9 @@ OmniAgent/
 │   ├── scripts/
 │   │   ├── deploy.ts                # Unified deployment
 │   │   └── inspect.ts               # Contract inspection
+│   ├── test/
+│   │   └── services/
+│   │       └── openclaw.test.ts      # OpenClaw integration tests
 │   ├── .env.example
 │   └── package.json
 ├── frontend/
