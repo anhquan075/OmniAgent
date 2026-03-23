@@ -34,7 +34,7 @@ app.use('*', cors({
     return allowedOrigins.includes(origin) ? origin : '';
   },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'x-wallet-connected'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'x-wallet-connected', 'x-user-wallet'],
   exposeHeaders: ['Content-Length', 'X-Request-ID'],
   maxAge: 86400,
   credentials: true,
