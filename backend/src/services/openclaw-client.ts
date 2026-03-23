@@ -87,6 +87,31 @@ export interface ChatCompletionResponse {
   };
 }
 
+// Response types for gateway endpoints
+interface ListAgentsResponse {
+  agents?: AgentInfo[];
+}
+
+interface ToolsCatalogResponse {
+  tools?: ToolDefinition[];
+}
+
+interface NodeResponse {
+  node?: NodeInfo;
+}
+
+interface SessionsResponse {
+  sessions?: Session[];
+}
+
+interface CapabilitiesResponse {
+  capabilities?: Capability[];
+}
+
+interface ToolInvokeResponse {
+  result?: unknown;
+}
+
 /**
  * OpenClawClient - Client for OpenClaw agent framework
  * 
@@ -137,7 +162,7 @@ export class OpenClawClient {
     logger.debug('[OpenClawClient] Listing agents');
 
     try {
-      const response = await this.makeRequest('GET', '/agents');
+      const response = await this.makeRequest<ListAgentsResponse>('GET', '/agents');
       return response.agents || [];
     } catch (error) {
       logger.error({ error }, '[OpenClawClient] Failed to list agents');
@@ -152,7 +177,7 @@ export class OpenClawClient {
     logger.debug('[OpenClawClient] Getting tools catalog');
 
     try {
-      const response = await this.makeRequest('GET', '/tools');
+      const response = await this.makeRequest<ToolsCatalogResponse>('GET', '/tools');
       return response.tools || [];
     } catch (error) {
       logger.error({ error }, '[OpenClawClient] Failed to get tools catalog');
@@ -168,7 +193,7 @@ export class OpenClawClient {
 
     try {
       const endpoint = nodeId ? `/nodes/${nodeId}` : '/nodes/self';
-      const response = await this.makeRequest('GET', endpoint);
+      const response = await this.makeRequest<NodeResponse>('GET', endpoint);
       return response.node || null;
     } catch (error) {
       logger.error({ error, nodeId }, '[OpenClawClient] Failed to describe node');
@@ -184,7 +209,7 @@ export class OpenClawClient {
 
     try {
       const endpoint = agentId ? `/sessions?agentId=${agentId}` : '/sessions';
-      const response = await this.makeRequest('GET', endpoint);
+      const response = await this.makeRequest<SessionsResponse>('GET', endpoint);
       return response.sessions || [];
     } catch (error) {
       logger.error({ error, agentId }, '[OpenClawClient] Failed to list sessions');
@@ -199,7 +224,7 @@ export class OpenClawClient {
     logger.debug('[OpenClawClient] Getting capabilities');
 
     try {
-      const response = await this.makeRequest('GET', '/capabilities');
+      const response = await this.makeRequest<CapabilitiesResponse>('GET', '/capabilities');
       return response.capabilities || [];
     } catch (error) {
       logger.error({ error }, '[OpenClawClient] Failed to get capabilities');
@@ -221,7 +246,7 @@ export class OpenClawClient {
     logger.debug({ toolName, arguments: arguments_ }, '[OpenClawClient] Invoking tool');
 
     try {
-      const response = await this.makeRequest('POST', '/tools/invoke', {
+      const response = await this.makeRequest<ToolInvokeResponse>('POST', '/tools/invoke', {
         tool: toolName,
         arguments: arguments_,
       });
@@ -239,8 +264,8 @@ export class OpenClawClient {
     logger.debug({ model: request.model, messageCount: request.messages.length }, '[OpenClawClient] Chat completions');
 
     try {
-      const response = await this.makeRequest('POST', '/chat/completions', request);
-      return response as ChatCompletionResponse;
+      const response = await this.makeRequest<ChatCompletionResponse>('POST', '/chat/completions', request);
+      return response;
     } catch (error) {
       logger.error({ error }, '[OpenClawClient] Failed chat completions');
       throw error;
@@ -250,7 +275,7 @@ export class OpenClawClient {
   /**
    * Make authenticated request to OpenClaw gateway
    */
-  private async makeRequest(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<unknown> {
+  private async makeRequest<T = Record<string, unknown>>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
     const url = `${this.gatewayUrl}${path}`;
     
     const headers: Record<string, string> = {
@@ -280,12 +305,12 @@ export class OpenClawClient {
           throw new Error('OpenClaw authentication failed');
         }
         if (response.status === 404) {
-          return {}; // Endpoint not found, return empty
+          return {} as T; // Endpoint not found, return empty
         }
         throw new Error(`OpenClaw request failed: ${response.status} ${response.statusText}`);
       }
 
-      return await response.json();
+      return (await response.json()) as T;
     } catch (error) {
       clearTimeout(timeoutId);
       
