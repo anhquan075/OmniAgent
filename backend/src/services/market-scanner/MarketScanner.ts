@@ -49,6 +49,18 @@ export class MarketScanner {
     }
   }
 
+  async getEthPrice(): Promise<number> {
+    try {
+      const CHAINLINK_ETH_USD = '0x694AA1769357215DE4FAC081bf1f309aDC325306';
+      const PRICE_ORACLE_ABI = ['function latestAnswer() view returns (int256)'];
+      const oracle = new ethers.Contract(CHAINLINK_ETH_USD, PRICE_ORACLE_ABI, this.provider);
+      const price = await oracle.latestAnswer();
+      return Number(ethers.formatUnits(price, 8));
+    } catch {
+      return 0;
+    }
+  }
+
   async fetchBinancePrices(): Promise<Map<string, PricePoint>> {
     const prices = new Map<string, PricePoint>();
     const binancePairs = ['USDCUSDT', 'DAIUSDT'];
@@ -220,8 +232,9 @@ export class MarketScanner {
   }
 
   async scan(): Promise<PriceMatrix> {
-    const [gasPriceGwei, binancePrices, coingeckoPrices, bitfinexPrices] = await Promise.all([
+    const [gasPriceGwei, ethPriceUsd, binancePrices, coingeckoPrices, bitfinexPrices] = await Promise.all([
       this.getGasPrice(),
+      this.getEthPrice(),
       this.fetchBinancePrices(),
       this.fetchCoingeckoPrices(),
       this.fetchBitfinexPrices(),
@@ -238,7 +251,7 @@ export class MarketScanner {
     const matrix: PriceMatrix = {
       timestamp: Date.now(),
       gasPriceGwei,
-      ethPriceUsd: 3500,
+      ethPriceUsd: ethPriceUsd || 3500,
       pairs,
       bestOpportunity: this.calculateBestOpportunity(allPrices, gasPriceGwei),
     };
