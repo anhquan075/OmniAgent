@@ -12,6 +12,7 @@ export interface FleetConfig {
   robots: RobotConfig[];
   taskInterval: { min: number; max: number };
   earningsRange: { min: string; max: string };
+  minTransferThreshold: number;
   agentWalletAddress: string;
   useWdkAgents: boolean;
   x402Enabled: boolean;
@@ -23,10 +24,7 @@ const DEFAULT_ROBOTS: RobotConfig[] = [
   { "id": "ROBO-003", "type": "Flash Arbiter", "icon": "[A]" },
   { "id": "ROBO-004", "type": "Peg Guardian", "icon": "[G]" },
   { "id": "ROBO-005", "type": "Risk Oracle", "icon": "[O]" },
-  { "id": "ROBO-006", "type": "Delta Neutral", "icon": "[D]" },
-  { "id": "ROBO-007", "type": "MEV Shield", "icon": "[M]" },
-  { "id": "ROBO-008", "type": "Bounty Hunter", "icon": "[B]" },
-  { "id": "ROBO-009", "type": "Bridge Sentinel", "icon": "[X]" }
+  { "id": "ROBO-006", "type": "Delta Neutral", "icon": "[D]" }
 ];
 
 function parseRobots(): RobotConfig[] {
@@ -42,7 +40,7 @@ function parseRobots(): RobotConfig[] {
 export function getRobotFleetConfig(): FleetConfig {
   return {
     enabled: process.env.ROBOT_FLEET_ENABLED === 'true',
-    fleetSize: parseInt(process.env.ROBOT_FLEET_SIZE || '9', 10),
+    fleetSize: parseInt(process.env.ROBOT_FLEET_SIZE || '6', 10),
     robots: parseRobots(),
     taskInterval: {
       min: parseInt(process.env.ROBOT_FLEET_TASK_INTERVAL_MIN || '5000', 10),
@@ -52,6 +50,7 @@ export function getRobotFleetConfig(): FleetConfig {
       min: process.env.ROBOT_FLEET_EARNINGS_MIN || '0.1',
       max: process.env.ROBOT_FLEET_EARNINGS_MAX || '0.5',
     },
+    minTransferThreshold: parseFloat(process.env.ROBOT_FLEET_MIN_TRANSFER_THRESHOLD || '1.0'),
     agentWalletAddress: process.env.ROBOT_FLEET_AGENT_WALLET || '',
     useWdkAgents: process.env.ROBOT_FLEET_USE_WDK_AGENTS === 'true',
     x402Enabled: process.env.ROBOT_FLEET_X402_ENABLED !== 'false',

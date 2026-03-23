@@ -45,6 +45,7 @@ let recentEvents: FleetEvent[] = [];
 let wallet: ethers.Wallet | null = null;
 let provider: ethers.JsonRpcProvider | null = null;
 let paymentHandler: RobotFleetPaymentHandler | null = null;
+let pendingEarnings: Map<string, number> = new Map();
 
 export const fleetEmitter = new EventEmitter();
 
@@ -139,6 +140,7 @@ function initializeWallet(): void {
 
 function spawnFleet(): void {
   robots.clear();
+  pendingEarnings.clear();
   
   if (!fleetConfig.robots) return;
 
@@ -329,24 +331,37 @@ async function ensureRobotFunded(robot: Robot): Promise<void> {
   const usdtAddress = process.env.WDK_USDT_ADDRESS;
   if (!usdtAddress) return;
   
-  const usdt = new ethers.Contract(usdtAddress, [
-    'function transfer(address to, uint256 amount) returns (bool)',
-    'function balanceOf(address account) view returns (uint256)'
-  ], wallet);
-  
-  const minBalance = ethers.parseUnits('0.5', 6);
-  const fundAmount = ethers.parseUnits('1', 6);
-  
   fundingMutex = fundingMutex.then(async () => {
     try {
+      const minEth = ethers.parseEther('0.003');
+      const ethBalance = await provider!.getBalance(robot.address!);
+      if (ethBalance < minEth) {
+        const masterEth = await provider!.getBalance(wallet!.address);
+        const fundEth = ethers.parseEther('0.005');
+        if (masterEth >= fundEth) {
+          logger.info({ robotId: robot.id, ethBalance: ethers.formatEther(ethBalance) }, '[RobotFleet] Re-funding ETH');
+          const tx = await wallet!.sendTransaction({ to: robot.address!, value: fundEth });
+          await tx.wait();
+          logger.info({ robotId: robot.id, txHash: tx.hash }, '[RobotFleet] ETH re-funded');
+        }
+      }
+
+      const usdt = new ethers.Contract(usdtAddress, [
+        'function transfer(address to, uint256 amount) returns (bool)',
+        'function balanceOf(address account) view returns (uint256)'
+      ], wallet!);
+      
+      const minBalance = ethers.parseUnits('0.5', 6);
+      const fundAmount = ethers.parseUnits('1', 6);
+      
       const balance = await usdt.balanceOf(robot.address!);
       if (balance < minBalance) {
         const masterBalance = await usdt.balanceOf(wallet!.address);
         if (masterBalance >= fundAmount) {
-          logger.info({ robotId: robot.id, balance: ethers.formatUnits(balance, 6) }, '[RobotFleet] Re-funding robot');
+          logger.info({ robotId: robot.id, balance: ethers.formatUnits(balance, 6) }, '[RobotFleet] Re-funding USDT');
           const tx = await usdt.transfer(robot.address!, fundAmount);
           await tx.wait();
-          logger.info({ robotId: robot.id, txHash: tx.hash }, '[RobotFleet] Robot re-funded');
+          logger.info({ robotId: robot.id, txHash: tx.hash }, '[RobotFleet] USDT re-funded');
         }
       }
     } catch (error) {
@@ -363,6 +378,27 @@ async function completeTask(robotId: string): Promise<void> {
 
   robot.status = 'Working';
   robot.taskCount++;
+
+  // SAFETY CHECK: Skip task if robot has insufficient ETH for gas
+  const minEthForTask = ethers.parseEther('0.001'); // 0.001 ETH minimum for gas
+  if (robot.address && provider) {
+    try {
+      const ethBalance = await provider.getBalance(robot.address);
+      if (ethBalance < minEthForTask) {
+        logger.warn({ 
+          robotId: robot.id, 
+          ethBalance: ethers.formatEther(ethBalance),
+          required: '0.001 ETH'
+        }, '[RobotFleet] Skipping task - insufficient ETH for gas');
+        robot.status = 'Idle';
+        return;
+      }
+    } catch (e) {
+      logger.warn({ robotId: robot.id, error: e }, '[RobotFleet] Could not check ETH balance, skipping');
+      robot.status = 'Idle';
+      return;
+    }
+  }
 
   const earnings = generateEarnings();
   const taskName = `${robot.type} Task #${robot.taskCount}`;
@@ -409,22 +445,33 @@ async function completeTask(robotId: string): Promise<void> {
     }
   }
 
-  if (targetAddress && targetAddress !== '0x0000000000000000000000000000000000000000') {
-    if (!robot.agent) {
-      logger.warn({ robotId: robot.id }, '[RobotFleet] No robot agent, skipping payment');
-      robot.status = 'Idle';
-      return;
-    }
+  const currentPending = pendingEarnings.get(robot.id) || 0;
+  const newPending = currentPending + parseFloat(earnings);
+  pendingEarnings.set(robot.id, newPending);
+
+  if (newPending >= fleetConfig.minTransferThreshold && robot.agent && targetAddress) {
+    const amountToTransfer = Math.floor(newPending * 1000000).toString();
     await ensureRobotFunded(robot);
-    const transferResult = await robot.agent.transferUsdt(targetAddress, earnings);
+    const transferResult = await robot.agent.transferUsdt(targetAddress, (newPending).toFixed(2));
     if (transferResult.success && transferResult.txHash) {
+      pendingEarnings.set(robot.id, 0);
       finishTask(transferResult.txHash);
     } else {
-      logger.warn({ robotId: robot.id, error: transferResult.error }, '[RobotFleet] Skipping earning credit due to failed payment');
+      logger.warn({ robotId: robot.id, error: transferResult.error, pending: newPending }, '[RobotFleet] Transfer failed, will retry next cycle');
       robot.status = 'Idle';
     }
   } else {
-    logger.error('[RobotFleet] No target address for payment, skipping task credit');
+    const event: FleetEvent = {
+      robotId: robot.id,
+      type: robot.type,
+      icon: robot.icon,
+      taskName,
+      earnings: '0',
+      timestamp: new Date().toISOString(),
+      txHash: undefined
+    };
+    addEvent(event);
+    logger.debug({ robotId: robot.id, pending: newPending, threshold: fleetConfig.minTransferThreshold }, '[RobotFleet] Pending earnings below threshold');
     robot.status = 'Idle';
   }
 }
@@ -467,9 +514,6 @@ export async function startSimulator(): Promise<void> {
 
   await initializeRobotAgents();
 
-  await fundRobotsWithUsdt();
-  await fundRobotsWithEth();
-
   for (const robot of robots.values()) {
     logger.debug({ robotId: robot.id }, '[RobotFleet] Starting tasks');
     startRobotTasks(robot.id);
@@ -494,4 +538,8 @@ if (require.main === module) {
   });
 }
 
-export { robots, recentEvents, fleetConfig };
+export { robots, recentEvents, fleetConfig, pendingEarnings };
+
+export function getPendingEarnings(): Map<string, number> {
+  return pendingEarnings;
+}

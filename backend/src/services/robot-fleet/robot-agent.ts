@@ -270,7 +270,7 @@ export class RobotAgent {
       logger.info({ id: this.id, type: this.type, task: taskData }, '[RobotAgent] Executing task');
 
       const defiOperations = ['vault_deposit', 'aave_supply', 'aave_withdraw'];
-      const shouldAttemptDefi = Math.random() < 0.1;
+      const shouldAttemptDefi = Math.random() < 0.02;
 
       if (shouldAttemptDefi) {
         const op = defiOperations[Math.floor(Math.random() * defiOperations.length)];
