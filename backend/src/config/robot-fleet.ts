@@ -23,13 +23,8 @@ export interface FleetConfig {
 const DEFAULT_ROBOTS: RobotConfig[] = [
   { "id": "ROBO-001", "type": "Yield Sentry", "icon": "[S]", chain: "sepolia" },
   { "id": "ROBO-002", "type": "Liquidity Scout", "icon": "[L]", chain: "sepolia" },
-  { "id": "ROBO-003", "type": "Flash Arbiter", "icon": "[A]", chain: "sepolia" },
-  { "id": "ROBO-004", "type": "Peg Guardian", "icon": "[G]", chain: "sepolia" },
   { "id": "ROBO-005", "type": "HSK Staker", "icon": "[K]", chain: "hashkey" },
-  { "id": "ROBO-006", "type": "HashKey Vault Agent", "icon": "[V]", chain: "hashkey" }
-];
-
-const HASHKEY_ROBOTS: RobotConfig[] = [
+  { "id": "ROBO-006", "type": "HashKey Vault Agent", "icon": "[V]", chain: "hashkey" },
   { "id": "ROBO-007", "type": "HSK Staker Pro", "icon": "[K+]", chain: "hashkey" },
   { "id": "ROBO-008", "type": "HashKey Yield Harvester", "icon": "[Y]", chain: "hashkey" }
 ];
@@ -41,9 +36,6 @@ function parseRobots(): RobotConfig[] {
       const parsed = JSON.parse(envRobots);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     } catch {}
-  }
-  if (process.env.ROBOT_FLEET_HASHKEY_ENABLED === 'true') {
-    return [...DEFAULT_ROBOTS, ...HASHKEY_ROBOTS];
   }
   return DEFAULT_ROBOTS;
 }
