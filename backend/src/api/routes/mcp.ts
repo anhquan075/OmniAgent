@@ -12,6 +12,7 @@ import { sessionKeyTools, handleSessionKeyTool } from '../../mcp-server/handlers
 import { marketTools, handleMarketTool } from '../../mcp-server/handlers/market-tools';
 import { oracleTools, oracleHandlers } from '../../mcp-server/handlers/oracle-tools';
 import { hashkeyTools, handleHashKeyTool } from '../../mcp-server/handlers/hashkey-tools';
+import { stakingTools, handleStakingTool } from '../../mcp-server/handlers/staking-tools';
 import { broadcastSignedTransaction, getPendingTransaction, createPendingTransactionId } from '../../lib/user-wallet-signer';
 
 import { McpExecutionContext, McpTool } from '../../mcp-server/types/mcp-protocol';
@@ -82,6 +83,11 @@ function initMcpTools() {
   for (const tool of hashkeyTools) {
     registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
       return handleHashKeyTool(tool.name, params, context);
+    });
+  }
+  for (const tool of stakingTools) {
+    registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
+      return handleStakingTool(tool.name, params, context);
     });
   }
   console.error(`[MCP] Registered ${registry.getToolCount()} tools`);

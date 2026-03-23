@@ -657,6 +657,117 @@ const toolCategories: {
       },
     ],
   },
+  {
+    id: "hashkey",
+    name: "HashKey Chain",
+    icon: ZapIcon,
+    color: "#00D4FF",
+    tools: [
+      {
+        name: "hashkey_createWallet",
+        description: "Create HashKey wallet",
+        riskLevel: "low",
+        blockchain: "hashkey",
+        category: "wallet",
+      },
+      {
+        name: "hashkey_getBalance",
+        description: "Get balance",
+        riskLevel: "low",
+        blockchain: "hashkey",
+        category: "wallet",
+        params: [
+          {
+            name: "address",
+            placeholder: "Address (optional)",
+            required: false,
+          },
+        ],
+      },
+      {
+        name: "hashkey_transfer",
+        description: "Transfer HSK/USDT",
+        riskLevel: "medium",
+        blockchain: "hashkey",
+        category: "transfer",
+        params: [
+          { name: "to", placeholder: "Recipient address", required: true },
+          { name: "amount", placeholder: "Amount", required: true },
+          { name: "token", placeholder: "Token (hsk/usdt)", required: false },
+        ],
+      },
+      {
+        name: "hashkey_checkKyc",
+        description: "Check KYC status",
+        riskLevel: "low",
+        blockchain: "hashkey",
+        category: "kyc",
+        params: [
+          {
+            name: "address",
+            placeholder: "Wallet address",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "hashkey_getVaultState",
+        description: "Get vault state",
+        riskLevel: "low",
+        blockchain: "hashkey",
+        category: "vault",
+      },
+      {
+        name: "hashkey_vaultDeposit",
+        description: "Deposit to vault",
+        riskLevel: "medium",
+        blockchain: "hashkey",
+        category: "vault",
+        params: [
+          { name: "amount", placeholder: "Amount", required: true },
+        ],
+      },
+      {
+        name: "hashkey_vaultWithdraw",
+        description: "Withdraw from vault",
+        riskLevel: "medium",
+        blockchain: "hashkey",
+        category: "vault",
+        params: [
+          { name: "amount", placeholder: "Amount", required: true },
+        ],
+      },
+      {
+        name: "hashkey_getNetworkInfo",
+        description: "Get network info",
+        riskLevel: "low",
+        blockchain: "hashkey",
+        category: "network",
+      },
+      {
+        name: "hashkey_getSafeTxStatus",
+        description: "Get Safe transaction status",
+        riskLevel: "low",
+        blockchain: "hashkey",
+        category: "wallet",
+        params: [
+          { name: "txHash", placeholder: "Transaction hash", required: true },
+        ],
+      },
+      {
+        name: "hashkey_executeSafeTx",
+        description: "Execute Safe transaction",
+        riskLevel: "high",
+        blockchain: "hashkey",
+        category: "wallet",
+        params: [
+          { name: "to", placeholder: "To address", required: true },
+          { name: "value", placeholder: "Value (wei)", required: true },
+          { name: "data", placeholder: "Calldata", required: false },
+        ],
+      },
+    ],
+  },
 ];
 
 interface MCPServerDemoProps {

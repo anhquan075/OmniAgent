@@ -872,6 +872,44 @@ async function cmdRedeployEngine() {
   console.log("3. Restart backend server");
 }
 
+async function cmdAgentStaking() {
+  const env = loadEnv();
+  const deployer = await getDeployer();
+  console.log(`Deployer: ${deployer.address}`);
+  await logNetwork();
+
+  const usdtAddr = env.WDK_USDT_ADDRESS;
+  const agentNFAAddr = env.WDK_AGENT_NFA_ADDRESS;
+  const sharpeTrackerAddr = env.SHARPE_TRACKER_ADDRESS || ethers.ZeroAddress;
+
+  if (!usdtAddr) throw new Error("WDK_USDT_ADDRESS not set in .env");
+  if (!agentNFAAddr) throw new Error("WDK_AGENT_NFA_ADDRESS not set in .env");
+
+  if (env.AGENT_STAKING_ADDRESS && (await hasContract(env.AGENT_STAKING_ADDRESS))) {
+    console.log(`AgentStaking already deployed: ${env.AGENT_STAKING_ADDRESS}`);
+    return;
+  }
+
+  const AgentStaking = await ethers.getContractFactory("AgentStaking");
+  const staking = await AgentStaking.deploy(
+    usdtAddr,
+    agentNFAAddr,
+    sharpeTrackerAddr,
+    deployer.address
+  );
+  await staking.waitForDeployment();
+  const stakingAddr = await addr(staking);
+
+  console.log(`AgentStaking: ${stakingAddr}`);
+  console.log(`USDT: ${usdtAddr}`);
+  console.log(`AgentNFA: ${agentNFAAddr}`);
+  console.log(`SharpeTracker: ${sharpeTrackerAddr}`);
+  console.log(`Guardian: ${deployer.address}`);
+
+  updateEnv({ AGENT_STAKING_ADDRESS: stakingAddr });
+  console.log("Updated .env");
+}
+
 const COMMANDS: Record<string, () => Promise<void>> = {
   full: cmdFull,
   "zk-oracle": cmdZkOracle,
@@ -884,6 +922,7 @@ const COMMANDS: Record<string, () => Promise<void>> = {
   whitelist: cmdWhitelist,
   "twap-oracle": cmdDeployTwapOracle,
   "redeploy-engine": cmdRedeployEngine,
+  "agent-staking": cmdAgentStaking,
 };
 
 function printHelp() {
@@ -900,6 +939,7 @@ function printHelp() {
   console.log("  whitelist      Whitelist vault/engine in existing PolicyGuard");
   console.log("  twap-oracle    Deploy ChainlinkOracleAdapters + TWAPMultiOracle (optional)");
   console.log("  redeploy-engine Redeploy StrategyEngine with Chainlink oracle (fixes oracle revert)");
+  console.log("  agent-staking   Deploy AgentStaking contract (requires WDK_USDT_ADDRESS, WDK_AGENT_NFA_ADDRESS)");
 }
 
 async function main() {

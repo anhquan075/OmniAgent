@@ -21,6 +21,8 @@ export const HIGH_RISK_TOOLS = new Set([
   'wdk_engine_execute',
   'x402_payForService',
   'aa_sendUserOperation',
+  'stake_to_agent',
+  'unstake_from_agent',
 ]);
 
 export class ToolRegistry {

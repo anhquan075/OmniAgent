@@ -30,7 +30,6 @@ describe("AgentStaking", function () {
     agentNFA = await AgentNFA.deploy();
     await agentNFA.waitForDeployment();
 
-    // Mint agent #0 (policyGuard must be non-zero)
     await agentNFA.mint(owner.address, operator.address, owner.address);
 
     const SharpeTracker = await ethers.getContractFactory("SharpeTracker");
@@ -46,13 +45,11 @@ describe("AgentStaking", function () {
     );
     await staking.waitForDeployment();
 
-    // Mint USDT to users and approve
     for (const user of [user1, user2, owner]) {
       await usdt.mint(user.address, ethers.parseUnits("1000000", 6));
       await usdt.connect(user).approve(await staking.getAddress(), ethers.MaxUint256);
     }
 
-    // Fund reward pool
     await usdt.mint(owner.address, REWARD_FUND);
     await staking.fundRewardPool(REWARD_FUND);
   }
@@ -60,8 +57,6 @@ describe("AgentStaking", function () {
   beforeEach(async function () {
     await deployFixture();
   });
-
-  // ── Staking ─────────────────────────────────────────────────
 
   describe("stake()", function () {
     it("should stake USDT on a valid agent", async function () {
@@ -111,13 +106,10 @@ describe("AgentStaking", function () {
       await staking.connect(user1).stake(AGENT_TOKEN_ID, STAKE_AMOUNT);
       await time.increase(ONE_YEAR);
       await staking.connect(user1).stake(AGENT_TOKEN_ID, STAKE_AMOUNT);
-      // Pending rewards should be claimed (no revert, stake succeeded)
       const info = await staking.getStakeInfo(user1.address, AGENT_TOKEN_ID);
       expect(info.stakedAmount).to.equal(STAKE_AMOUNT * 2n);
     });
   });
-
-  // ── Unstaking ───────────────────────────────────────────────
 
   describe("unstake()", function () {
     beforeEach(async function () {
@@ -154,15 +146,13 @@ describe("AgentStaking", function () {
     });
   });
 
-  // ── Rewards ─────────────────────────────────────────────────
-
   describe("Rewards", function () {
     it("should accrue time-based rewards", async function () {
       await staking.connect(user1).stake(AGENT_TOKEN_ID, STAKE_AMOUNT);
       await time.increase(ONE_YEAR);
 
-      const pending = await staking.getRewardsPending(user1.address, AGENT_TOKEN_ID);
-      expect(pending).to.be.gt(0);
+      const info = await staking.getStakeInfo(user1.address, AGENT_TOKEN_ID);
+      expect(info.pendingRewards).to.be.gt(0);
     });
 
     it("should pay rewards on unstake", async function () {
@@ -179,25 +169,21 @@ describe("AgentStaking", function () {
     it("should pay zero rewards with zero time", async function () {
       await staking.connect(user1).stake(AGENT_TOKEN_ID, STAKE_AMOUNT);
 
-      const pending = await staking.getRewardsPending(user1.address, AGENT_TOKEN_ID);
-      // With SharpeTracker returning (0,0,0) → 0.8x multiplier, but time=0 → 0 rewards
-      expect(pending).to.equal(0);
+      const info = await staking.getStakeInfo(user1.address, AGENT_TOKEN_ID);
+      expect(info.pendingRewards).to.equal(0);
     });
 
     it("should apply Sharpe performance multiplier", async function () {
       await staking.connect(user1).stake(AGENT_TOKEN_ID, STAKE_AMOUNT);
       await time.increase(ONE_YEAR);
 
-      const pending = await staking.getRewardsPending(user1.address, AGENT_TOKEN_ID);
-      // With SharpeTracker count=0 → (0,0,0) → multiplier 8000 bps (0.8x)
-      // Base APY 5% = 500 bps → 5% * 0.8 = 4% → 1000 * 0.04 = 40 USDT
-      // Allow small rounding differences
-      expect(pending).to.be.gte(35);
-      expect(pending).to.be.lte(45);
+      const info = await staking.getStakeInfo(user1.address, AGENT_TOKEN_ID);
+      // SharpeTracker count=0 → (0,0,0) → multiplier 8000 bps (0.8x)
+      // Base APY 5% * 0.8 = 4% → 1000 USDT * 0.04 = 40 USDT
+      expect(info.pendingRewards).to.be.gte(ethers.parseUnits("35", 6));
+      expect(info.pendingRewards).to.be.lte(ethers.parseUnits("45", 6));
     });
   });
-
-  // ── Slashing ────────────────────────────────────────────────
 
   describe("slash()", function () {
     beforeEach(async function () {
@@ -207,7 +193,7 @@ describe("AgentStaking", function () {
     it("should slash by guardian", async function () {
       await expect(staking.connect(guardian).slash(AGENT_TOKEN_ID, 1000, "Low Sharpe"))
         .to.emit(staking, "Slashed")
-        .withArgs(AGENT_TOKEN_ID, 1000, "Low Sharpe");
+        .withArgs(AGENT_TOKEN_ID, 1000, "Low Sharpe", guardian.address);
     });
 
     it("should slash by owner", async function () {
@@ -220,16 +206,24 @@ describe("AgentStaking", function () {
         .to.emit(staking, "Slashed");
     });
 
-    it("should reduce pool totalStaked by slash amount", async function () {
+    it("should mark pool as slashed with penalty", async function () {
       await staking.connect(guardian).slash(AGENT_TOKEN_ID, 1000, "Test slash");
       const pool = await staking.getAgentPool(AGENT_TOKEN_ID);
-      // 1000 bps = 10% → 1000 USDT * 0.1 = 100 USDT slashed
-      expect(pool.totalStaked).to.equal(STAKE_AMOUNT - (STAKE_AMOUNT * 1000n / 10000n));
+      expect(pool.isSlashed).to.be.true;
+      expect(pool.slashPercentage).to.equal(1000);
+    });
+
+    it("should apply slash penalty on unstake", async function () {
+      await staking.connect(guardian).slash(AGENT_TOKEN_ID, 1000, "Test slash");
+      const before = await usdt.balanceOf(user1.address);
+      await staking.connect(user1).unstake(AGENT_TOKEN_ID, STAKE_AMOUNT);
+      const after = await usdt.balanceOf(user1.address);
+      // 10% slash → receive 90% principal (+ possible rounding from rewards)
+      expect(after - before).to.be.gte(STAKE_AMOUNT * 90n / 100n);
     });
 
     it("should revert on max slash exceeded (50%)", async function () {
       await staking.connect(guardian).slash(AGENT_TOKEN_ID, 5000, "Max slash");
-      // Further slash should fail
       await expect(staking.connect(guardian).slash(AGENT_TOKEN_ID, 1, "Double slash"))
         .to.be.revertedWithCustomError(staking, "AgentStaking__AlreadySlashed");
     });
@@ -245,23 +239,24 @@ describe("AgentStaking", function () {
     });
   });
 
-  // ── Admin ───────────────────────────────────────────────────
-
   describe("Admin functions", function () {
-    it("should set guardian by owner", async function () {
-      await staking.setGuardian(user1.address);
+    it("should set guardian by guardian", async function () {
+      await staking.connect(guardian).setGuardian(user1.address);
       expect(await staking.guardian()).to.equal(user1.address);
     });
 
-    it("should set SharpeTracker by owner", async function () {
+    it("should set SharpeTracker by guardian", async function () {
       const newTracker = await (await ethers.getContractFactory("SharpeTracker")).deploy(20);
       await newTracker.waitForDeployment();
-      await staking.setSharpeTracker(await newTracker.getAddress());
+      await staking.connect(guardian).setSharpeTracker(await newTracker.getAddress());
       expect(await staking.sharpeTracker()).to.equal(await newTracker.getAddress());
     });
-  });
 
-  // ── Views ───────────────────────────────────────────────────
+    it("should revert setGuardian from non-guardian", async function () {
+      await expect(staking.connect(owner).setGuardian(user1.address))
+        .to.be.revertedWithCustomError(staking, "AgentStaking__NotAuthorized");
+    });
+  });
 
   describe("View functions", function () {
     it("should return correct pool data", async function () {
@@ -278,15 +273,13 @@ describe("AgentStaking", function () {
       expect(pool.stakerCount).to.equal(0);
     });
 
-    it("should return staked agents for user", async function () {
+    it("should return all staked agents", async function () {
       await staking.connect(user1).stake(AGENT_TOKEN_ID, STAKE_AMOUNT);
-      const agents = await staking.getStakedAgents(user1.address);
+      const agents = await staking.getStakedAgents();
       expect(agents.length).to.equal(1);
       expect(agents[0]).to.equal(AGENT_TOKEN_ID);
     });
   });
-
-  // ── No SharpeTracker ────────────────────────────────────────
 
   describe("Without SharpeTracker", function () {
     it("should deploy without SharpeTracker (address(0))", async function () {
@@ -300,27 +293,27 @@ describe("AgentStaking", function () {
       await stakingNoSharpe.waitForDeployment();
 
       await usdt.connect(user1).approve(await stakingNoSharpe.getAddress(), ethers.MaxUint256);
+      await usdt.mint(owner.address, REWARD_FUND);
+      await usdt.connect(owner).approve(await stakingNoSharpe.getAddress(), ethers.MaxUint256);
       await stakingNoSharpe.fundRewardPool(REWARD_FUND);
 
       await stakingNoSharpe.connect(user1).stake(AGENT_TOKEN_ID, STAKE_AMOUNT);
       await time.increase(ONE_YEAR);
 
-      const pending = await stakingNoSharpe.getRewardsPending(user1.address, AGENT_TOKEN_ID);
-      // 1x multiplier → 5% APY → 1000 * 0.05 = 50 USDT
-      expect(pending).to.be.gte(45);
-      expect(pending).to.be.lte(55);
+      const info = await stakingNoSharpe.getStakeInfo(user1.address, AGENT_TOKEN_ID);
+      // 1x multiplier → 5% APY → 1000 USDT * 0.05 = 50 USDT
+      expect(info.pendingRewards).to.be.gte(ethers.parseUnits("45", 6));
+      expect(info.pendingRewards).to.be.lte(ethers.parseUnits("55", 6));
     });
   });
 
-  // ── Fund Reward Pool ────────────────────────────────────────
-
   describe("fundRewardPool()", function () {
     it("should accept reward funding", async function () {
-      const before = await staking.rewardsAvailable();
+      const before = await staking.rewardPool();
       const fundAmount = ethers.parseUnits("50000", 6);
       await usdt.mint(owner.address, fundAmount);
       await staking.fundRewardPool(fundAmount);
-      const after = await staking.rewardsAvailable();
+      const after = await staking.rewardPool();
       expect(after - before).to.equal(fundAmount);
     });
 
@@ -330,35 +323,28 @@ describe("AgentStaking", function () {
     });
   });
 
-  // ── Edge Cases ──────────────────────────────────────────────
-
   describe("Edge cases", function () {
     it("should handle multiple agents per user", async function () {
-      // Mint second agent
       await agentNFA.mint(owner.address, operator.address, owner.address);
 
       await staking.connect(user1).stake(AGENT_TOKEN_ID, STAKE_AMOUNT);
       await staking.connect(user1).stake(1, STAKE_AMOUNT);
 
-      const agents = await staking.getStakedAgents(user1.address);
+      const agents = await staking.getStakedAgents();
       expect(agents.length).to.equal(2);
     });
 
     it("should cap rewards to available pool", async function () {
-      // Stake a large amount
       const largeStake = ethers.parseUnits("100000", 6);
       await usdt.mint(user1.address, largeStake);
       await staking.connect(user1).stake(AGENT_TOKEN_ID, largeStake);
 
-      // Wait a very long time (100 years)
       await time.increase(100 * ONE_YEAR);
 
-      // Unstake should succeed but rewards capped to pool
       const before = await usdt.balanceOf(user1.address);
       await staking.connect(user1).unstake(AGENT_TOKEN_ID, largeStake);
       const after = await usdt.balanceOf(user1.address);
 
-      // Should not revert (capped)
       expect(after).to.be.gt(before);
     });
   });
