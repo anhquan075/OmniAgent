@@ -46,6 +46,8 @@ const READONLY_TOOLS: [string, Record<string, unknown>][] = [
   ['oracle_get_status', {}],
   ['oracle_get_instant_price', { pair: 'ETH/USD' }],
   ['oracle_get_twap_price', { pair: 'ETH/USD' }],
+  ['get_agent_reputation', { agentTokenId: 0 }],
+  ['get_staking_rewards', { agentTokenId: 0 }],
 ];
 
 async function callTool(request: APIRequestContext, name: string, args: Record<string, unknown> = {}, timeout = 30000) {

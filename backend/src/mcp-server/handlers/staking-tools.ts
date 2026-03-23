@@ -1,4 +1,4 @@
-import { McpTool, McpExecutionContext, MCP_ERRORS } from '../types/mcp-protocol';
+import { McpTool, McpToolResult, MCP_ERRORS } from '../types/mcp-protocol';
 import { ethers } from 'ethers';
 import { env } from '../../config/env';
 
@@ -53,7 +53,7 @@ export const stakingTools: McpTool[] = [
     version: '1.0.0',
     blockchain: 'sepolia',
     riskLevel: 'medium',
-    category: 'staking'
+    category: 'defi'
   },
   {
     name: 'unstake_from_agent',
@@ -79,7 +79,7 @@ export const stakingTools: McpTool[] = [
     version: '1.0.0',
     blockchain: 'sepolia',
     riskLevel: 'medium',
-    category: 'staking'
+    category: 'defi'
   },
   {
     name: 'get_agent_reputation',
@@ -107,7 +107,7 @@ export const stakingTools: McpTool[] = [
     version: '1.0.0',
     blockchain: 'sepolia',
     riskLevel: 'low',
-    category: 'staking'
+    category: 'defi'
   },
   {
     name: 'get_staking_rewards',
@@ -132,15 +132,11 @@ export const stakingTools: McpTool[] = [
     version: '1.0.0',
     blockchain: 'sepolia',
     riskLevel: 'low',
-    category: 'staking'
+    category: 'defi'
   }
 ];
 
-export async function handleStakingTool(
-  toolName: string,
-  params: Record<string, unknown>,
-  context: McpExecutionContext
-): Promise<{ success: boolean; data?: Record<string, unknown>; error?: { code: string; message: string } }> {
+export async function handleStakingTool(toolName: string, params: Record<string, unknown>): Promise<McpToolResult> {
   try {
     const privateKey = env.PRIVATE_KEY;
     if (!privateKey) throw new Error('PRIVATE_KEY not configured');
@@ -178,13 +174,9 @@ export async function handleStakingTool(
         const staking = getStakingContract(signer);
 
         const infoBefore = await staking.getStakeInfo(signer.address, agentTokenId);
-        const balanceBefore = await getUsdtContract(signer).balanceOf(signer.address);
 
         const tx = await staking.unstake(agentTokenId, amountWei);
         const receipt = await tx.wait();
-
-        const balanceAfter = await getUsdtContract(signer).balanceOf(signer.address);
-        const received = balanceAfter - balanceBefore;
 
         return {
           success: true,
@@ -229,23 +221,16 @@ export async function handleStakingTool(
         const { agentTokenId, userAddress } = params as { agentTokenId: number; userAddress?: string };
         const staking = getStakingContract();
         const rewardPoolBalance = await staking.rewardPool();
-
-        let userStake = '0';
-        let pendingRewards = '0';
-        let slashPenalty = '0';
         const addr = userAddress || signer.address;
         const info = await staking.getStakeInfo(addr, agentTokenId);
-        userStake = ethers.formatUnits(info.stakedAmount, 6);
-        pendingRewards = ethers.formatUnits(info.pendingRewards, 6);
-        slashPenalty = ethers.formatUnits(info.slashPenalty, 6);
 
         return {
           success: true,
           data: {
             rewardPoolBalance: ethers.formatUnits(rewardPoolBalance, 6),
-            userStake,
-            pendingRewards,
-            slashPenalty
+            userStake: ethers.formatUnits(info.stakedAmount, 6),
+            pendingRewards: ethers.formatUnits(info.pendingRewards, 6),
+            slashPenalty: ethers.formatUnits(info.slashPenalty, 6)
           }
         };
       }

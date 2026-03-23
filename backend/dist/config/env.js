@@ -75,6 +75,7 @@ const envSchema = zod_1.z.object({
     WDK_POLICY_GUARD_ADDRESS: zod_1.z.string().optional(),
     WDK_AGENT_NFA_ADDRESS: zod_1.z.string().optional(),
     AGENT_RISK_PARAMS_ADDRESS: zod_1.z.string().optional(),
+    AGENT_STAKING_ADDRESS: zod_1.z.string().optional(),
     GITHUB_WEBHOOK_SECRET: zod_1.z.string().optional(),
     OPENROUTER_API_KEY: zod_1.z.string().optional(),
     PRIVATE_KEY: zod_1.z.string().optional(),

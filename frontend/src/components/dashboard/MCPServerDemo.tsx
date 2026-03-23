@@ -768,6 +768,58 @@ const toolCategories: {
       },
     ],
   },
+  {
+    id: "staking",
+    name: "Agent Staking",
+    icon: CoinsIcon,
+    color: "#2DD4BF",
+    tools: [
+      {
+        name: "stake_to_agent",
+        description: "Stake USDT to agent",
+        riskLevel: "medium",
+        blockchain: "sepolia",
+        category: "staking",
+        params: [
+          { name: "agentTokenId", placeholder: "Agent NFA token ID", required: true },
+          { name: "amount", placeholder: "Amount USDT (e.g., 100)", required: true },
+        ],
+      },
+      {
+        name: "unstake_from_agent",
+        description: "Unstake USDT from agent",
+        riskLevel: "medium",
+        blockchain: "sepolia",
+        category: "staking",
+        params: [
+          { name: "agentTokenId", placeholder: "Agent NFA token ID", required: true },
+          { name: "amount", placeholder: "Amount USDT (e.g., 50)", required: true },
+        ],
+      },
+      {
+        name: "get_agent_reputation",
+        description: "Get agent staking pool info",
+        riskLevel: "low",
+        blockchain: "sepolia",
+        category: "staking",
+        params: [
+          { name: "agentTokenId", placeholder: "Agent NFA token ID", required: true },
+          { name: "user", placeholder: "User address (optional)", required: false },
+        ],
+      },
+      {
+        name: "get_staking_rewards",
+        description: "Get staking rewards info",
+        riskLevel: "low",
+        blockchain: "sepolia",
+        category: "staking",
+        params: [
+          { name: "agentTokenId", placeholder: "Agent NFA token ID", required: true },
+          { name: "user", placeholder: "User address (optional)", required: false },
+        ],
+      },
+    ],
+  },
 ];
 
 interface MCPServerDemoProps {

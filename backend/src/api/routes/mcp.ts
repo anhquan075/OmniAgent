@@ -86,8 +86,8 @@ function initMcpTools() {
     });
   }
   for (const tool of stakingTools) {
-    registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
-      return handleStakingTool(tool.name, params, context);
+    registry.registerTool(tool, async (params: Record<string, unknown>, _context: McpExecutionContext) => {
+      return handleStakingTool(tool.name, params);
     });
   }
   console.error(`[MCP] Registered ${registry.getToolCount()} tools`);

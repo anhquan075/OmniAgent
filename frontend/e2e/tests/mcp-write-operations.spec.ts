@@ -35,6 +35,8 @@ const WRITE_TOOLS: [string, Record<string, unknown>][] = [
   ['hashkey_vaultDeposit', { amount: '1' }],
   ['hashkey_vaultWithdraw', { amount: '1' }],
   ['hashkey_executeSafeTx', { safeTxHash: '0xabc' }],
+  ['stake_to_agent', { agentTokenId: 0, amount: '1' }],
+  ['unstake_from_agent', { agentTokenId: 0, amount: '1' }],
 ];
 
 async function callTool(request: APIRequestContext, name: string, args: Record<string, unknown> = {}, timeout = 60000) {

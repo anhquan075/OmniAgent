@@ -1399,29 +1399,7 @@ export const agentTools = {
     }
   }),
 
-  x402_list_services: tool({
-    description: 'List available sub-agent services that can be hired via x402 payments',
-    parameters: z.object({
-      context: z.string().describe('Reason for listing services.')
-    }),
-    // @ts-ignore
-    execute: async ({ context }: { context: string }) => {
-      try {
-        const services = [
-          { id: 'risk_analysis', name: 'Risk Analysis Agent', description: 'Advanced risk assessment', priceUsdt: '0.1' },
-          { id: 'arbitrage_scan', name: 'Arbitrage Scanner', description: 'Cross-exchange arbitrage detection', priceUsdt: '0.2' },
-          { id: 'yield_optimization', name: 'Yield Optimizer', description: 'Find best yield farming opportunities', priceUsdt: '0.15' },
-          { id: 'data_fetch', name: 'Data Fetcher', description: 'On-chain and off-chain data retrieval', priceUsdt: '0.05' }
-        ];
-        
-        await reportToDashboard('x402_list_services', { serviceCount: services.length });
-        return { success: true, services };
-      } catch (e: any) {
-        logger.error(e, '[Tools] Error in x402_list_services');
-        throw e;
-      }
-    }
-  }),
+
 
   x402_fleet_status: tool({
     description: 'Get the robot fleet status and earnings',

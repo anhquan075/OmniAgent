@@ -17,7 +17,7 @@ export interface McpTool {
   version: string;
   blockchain: 'sepolia' | 'ethereum' | 'polygon_amoy' | 'arbitrum_sepolia' | 'gnosis_chiado' | 'hashkey';
   riskLevel: 'low' | 'medium' | 'high';
-  category: 'wallet' | 'defi' | 'bridge' | 'lending' | 'utility' | 'account-abstraction' | 'x402' | 'swap' | 'agent' | 'oracle' | 'multisig';
+  category: 'wallet' | 'defi' | 'bridge' | 'lending' | 'utility' | 'account-abstraction' | 'x402' | 'swap' | 'agent' | 'oracle' | 'multisig' | 'staking';
 }
 
 /**
