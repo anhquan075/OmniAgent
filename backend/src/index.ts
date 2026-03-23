@@ -122,11 +122,15 @@ if (isMain) {
       logger.warn(e, '[RobotFleet] Robot fleet simulator failed to start');
     }
 
-    try {
-      const { startTwapObserver } = await import('./agent/services/TwapObserver.js');
-      startTwapObserver();
-    } catch (e) {
-      logger.warn(e, '[TwapObserver] TWAP observer failed to start');
+    if (process.env.WDK_TWAP_ORACLE_ADDRESS) {
+      try {
+        const { startTwapObserver } = await import('./agent/services/TwapObserver.js');
+        startTwapObserver();
+      } catch (e) {
+        logger.warn(e, '[TwapObserver] TWAP observer failed to start');
+      }
+    } else {
+      logger.info('[TwapObserver] Disabled - WDK_TWAP_ORACLE_ADDRESS not set (TWAP deprecated)');
     }
     
     try {
