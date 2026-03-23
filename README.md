@@ -368,7 +368,7 @@ curl -X POST http://localhost:3001/api/mcp \
 | **Arbitrum** | 4 | `arbitrum_createWallet`, `arbitrum_getBalance`, `arbitrum_transfer`, `arbitrum_getGasPrice` |
 | **Polygon** | 4 | `polygon_createWallet`, `polygon_getBalance`, `polygon_transfer`, `polygon_getGasPrice` |
 | **Gnosis** | 4 | `gnosis_createWallet`, `gnosis_getBalance`, `gnosis_transfer`, `gnosis_getGasPrice` |
-| **HashKey** | 4+ | `hashkey_createWallet`, `hashkey_getBalance`, `hashkey_transfer`, `hashkey_deposit`, `hashkey_withdraw` |
+| **HashKey** | 10 | `hashkey_createWallet`, `hashkey_getBalance`, `hashkey_transfer`, `hashkey_checkKyc`, `hashkey_getVaultState`, `hashkey_vaultDeposit`, `hashkey_vaultWithdraw`, `hashkey_getNetworkInfo`, `hashkey_getSafeTxStatus`, `hashkey_executeSafeTx` |
 
 ---
 
@@ -408,16 +408,18 @@ OmniAgent includes a **Robot Fleet Simulator** — virtual sub-agents that demon
 ```mermaid
 graph TB
     subgraph Fleet["Robot Fleet"]
-        FleetConfig[(Fleet Config<br/>8 robots)]
+        FleetConfig[(Fleet Config<br/>6 robots)]
         FleetEmitter([Event Emitter])
         PaymentHandler[Payment Handler]
     end
 
-    subgraph Robots["8 Robot Agents"]
-        R1[Robot #1<br/>Yield Sentry]
-        R2[Robot #2<br/>Swap Scout]
-        R3[Robot #3<br/>Lending Agent]
-        R4[Robot #4-8<br/>Multi-task]
+    subgraph Robots["6 Robot Agents"]
+        R1[Robot #1<br/>Sepolia Yield]
+        R2[Robot #2<br/>Sepolia Swap]
+        R3[Robot #3<br/>HashKey Vault]
+        R4[Robot #4<br/>HashKey Transfer]
+        R5[Robot #5<br/>HashKey KYC]
+        R6[Robot #6<br/>HashKey Multi]
     end
 
     subgraph DeFi["DeFi Operations"]
@@ -655,11 +657,14 @@ Core contracts deployed on Sepolia testnet:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ROBOT_FLEET_ENABLED` | `false` | Enable robot fleet simulator |
-| `ROBOT_FLEET_SIZE` | `8` | Number of virtual robots |
-| `ROBOT_FLEET_TASK_INTERVAL_MIN` | `5000` | Min task interval (ms) |
-| `ROBOT_FLEET_TASK_INTERVAL_MAX` | `15000` | Max task interval (ms) |
-| `ROBOT_FLEET_EARNINGS_MIN` | `0.01` | Min USDT earnings per task |
-| `ROBOT_FLEET_EARNINGS_MAX` | `0.10` | Max USDT earnings per task |
+| `ROBOT_FLEET_SIZE` | `6` | Number of virtual robots (2 Sepolia + 4 HashKey) |
+| `ROBOT_FLEET_TASK_INTERVAL_MIN` | `3600000` | Min task interval (ms, default 1 hour) |
+| `ROBOT_FLEET_TASK_INTERVAL_MAX` | `7200000` | Max task interval (ms, default 2 hours) |
+| `ROBOT_FLEET_EARNINGS_MIN` | `0.1` | Min USDT earnings per task |
+| `ROBOT_FLEET_EARNINGS_MAX` | `0.5` | Max USDT earnings per task |
+| `ROBOT_FLEET_MIN_TRANSFER_THRESHOLD` | `2.0` | Min USDT threshold before transfer to master |
+| `ROBOT_FLEET_USE_WDK_AGENTS` | `true` | Use WDK agent wallets for fleet |
+| `ROBOT_FLEET_X402_ENABLED` | `true` | Enable X402 payments between robots |
 
 ### Optional — Deployment
 
