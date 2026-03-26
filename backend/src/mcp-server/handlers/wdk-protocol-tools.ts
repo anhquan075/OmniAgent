@@ -183,6 +183,30 @@ export const wdkProtocolTools: McpTool[] = [
     category: 'defi'
   },
   {
+    name: 'wdk_swap_to_xaut',
+    description: 'Swap USDT to XAUt for risk-off positioning. Triggered when volatility exceeds safe threshold. Gold-backed token provides safe harbor during market stress.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        amount: { type: 'string', description: 'Amount of USDT to swap for XAUt. Example: "100" to swap 100 USDT', examples: ['50', '500'] }
+      },
+      required: ['amount']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        txHash: { type: 'string' },
+        tokenInAmount: { type: 'string' },
+        tokenOutAmount: { type: 'string' },
+        strategy: { type: 'string' }
+      }
+    },
+    version: '1.0.0',
+    blockchain: 'sepolia',
+    riskLevel: 'medium',
+    category: 'defi'
+  },
+  {
     name: 'wdk_autonomous_cycle',
     description: 'Execute one complete autonomous agent decision cycle on Ethereum Sepolia: evaluate Aave position, analyze market conditions, decide strategy (supply/withdraw/borrow/repay/hold), and execute transaction if conditions are favorable. Returns action taken, reasoning, success status, and updated agent state. High risk - modifies real positions.',
     inputSchema: {
@@ -554,6 +578,38 @@ export async function handleWdkProtocolTool(
             txHash: result.hash,
             tokenInAmount: result.tokenInAmount.toString(),
             tokenOutAmount: result.tokenOutAmount.toString()
+          }
+        };
+      }
+
+      case 'wdk_swap_to_xaut': {
+        if (!params.amount) {
+          return { success: false, error: { code: MCP_ERRORS.INVALID_PARAMS, message: 'Missing required parameter "amount". Example: "100" to swap 100 USDT for XAUt' } };
+        }
+        if (context.walletMode === 'user' && context.userWallet) {
+          const walletAddress = await getWdkWalletAddress();
+          return {
+            success: true,
+            data: {
+              requiresSignature: true,
+              note: 'Risk-off XAUt swap uses agent wallet',
+              executedBy: 'agent_wallet',
+              agentWallet: walletAddress
+            }
+          };
+        }
+
+        const usdtAddress = TOKEN_ADDRESSES.mainnet.USDT;
+        const xautAddress = TOKEN_ADDRESSES.mainnet.XAUT;
+        const amount = parseTokenAmount(params.amount as string, 'USDT');
+        const result = await swapTokens(usdtAddress, xautAddress, amount);
+        return {
+          success: true,
+          data: {
+            txHash: result.hash,
+            tokenInAmount: result.tokenInAmount.toString(),
+            tokenOutAmount: result.tokenOutAmount.toString(),
+            strategy: 'risk-off'
           }
         };
       }

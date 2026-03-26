@@ -123,6 +123,10 @@ const envSchema = z.object({
   // ERC-4337 on HashKey (if EntryPoint is deployed)
   HASHKEY_ERC4337_ENTRYPOINT: z.string().optional(),
   HASHKEY_ERC4337_BUNDLER_URL: z.string().optional(),
+
+  // Tool pruning flags (disabled by default for hackathon demo)
+  ENABLE_CROSS_CHAIN: z.string().default('false'),
+  ENABLE_X402: z.string().default('false'),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -17,10 +17,14 @@ import { broadcastSignedTransaction, getPendingTransaction, createPendingTransac
 
 import { McpExecutionContext, McpTool } from '../../mcp-server/types/mcp-protocol';
 import { logger } from '@/utils/logger';
+import { env } from '@/config/env';
 
 const mcpRoute = new Hono();
 
 const registry = new ToolRegistry();
+
+const ENABLE_CROSS_CHAIN = env.ENABLE_CROSS_CHAIN === 'true';
+const ENABLE_X402 = env.ENABLE_X402 === 'true';
 
 function initMcpTools() {
   for (const tool of sepoliaTools) {
@@ -28,31 +32,39 @@ function initMcpTools() {
       return handleSepoliaTool(tool.name, params, context);
     });
   }
-  for (const tool of polygonTools) {
-    registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
-      return handlePolygonTool(tool.name, params, context);
-    });
+
+  if (ENABLE_CROSS_CHAIN) {
+    for (const tool of polygonTools) {
+      registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
+        return handlePolygonTool(tool.name, params, context);
+      });
+    }
+    for (const tool of arbitrumTools) {
+      registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
+        return handleArbitrumTool(tool.name, params, context);
+      });
+    }
+    for (const tool of gnosisTools) {
+      registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
+        return handleGnosisTool(tool.name, params, context);
+      });
+    }
   }
-  for (const tool of arbitrumTools) {
-    registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
-      return handleArbitrumTool(tool.name, params, context);
-    });
-  }
-  for (const tool of gnosisTools) {
-    registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
-      return handleGnosisTool(tool.name, params, context);
-    });
-  }
+
   for (const tool of wdkTools) {
     registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
       return handleWdkTool(tool.name, params, context);
     });
   }
-  for (const tool of x402Tools) {
-    registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
-      return handleX402Tool(tool.name, params, context);
-    });
+
+  if (ENABLE_X402) {
+    for (const tool of x402Tools) {
+      registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
+        return handleX402Tool(tool.name, params, context);
+      });
+    }
   }
+
   for (const tool of erc4337Tools) {
     registry.registerTool(tool, async (params: Record<string, unknown>, context: McpExecutionContext) => {
       return handleErc4337Tool(tool.name, params, context);
