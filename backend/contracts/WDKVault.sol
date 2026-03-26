@@ -53,6 +53,7 @@ contract OmniAgentVault is ERC4626, Ownable, TransientReentrancyGuard {
     event AdaptersSet(address indexed wdk, address indexed secondary, address indexed lp, address lending);
     event ConfigurationLocked();
     event YieldWithdrawn(address indexed user, address indexed receiver, uint256 amount);
+    event AdapterCallFailed(address indexed adapter, string method, uint256 amount);
 
     // --- Errors ---
     error OmniAgentVault__ZeroAddress();
@@ -283,45 +284,77 @@ contract OmniAgentVault is ERC4626, Ownable, TransientReentrancyGuard {
     function _rebalanceLpWithdraw(uint256 deployable, uint256 lpTargetBps) internal {
         if (address(lpAdapter) == address(0)) return;
         uint256 lpTarget = (deployable * lpTargetBps) / BPS_DENOMINATOR;
-        uint256 currentLp = lpAdapter.managedAssets();
+        uint256 currentLp;
+        try lpAdapter.managedAssets() returns (uint256 v) { currentLp = v; } catch {
+            emit AdapterCallFailed(address(lpAdapter), "managedAssets", 0);
+            return;
+        }
         if (currentLp > lpTarget) {
-            lpAdapter.withdrawToVault(currentLp - lpTarget);
+            try lpAdapter.withdrawToVault(currentLp - lpTarget) {} catch {
+                emit AdapterCallFailed(address(lpAdapter), "withdrawToVault", currentLp - lpTarget);
+            }
         }
     }
 
     function _rebalanceLpDeposit(uint256 deployable, uint256 lpTargetBps, uint256 buffer) internal {
         if (address(lpAdapter) == address(0) || lpTargetBps == 0) return;
         uint256 lpTarget = (deployable * lpTargetBps) / BPS_DENOMINATOR;
-        uint256 currentLp = lpAdapter.managedAssets();
+        uint256 currentLp;
+        try lpAdapter.managedAssets() returns (uint256 v) { currentLp = v; } catch {
+            emit AdapterCallFailed(address(lpAdapter), "managedAssets", 0);
+            return;
+        }
         if (lpTarget > currentLp) {
             uint256 toSend = Math.min(lpTarget - currentLp, _availableIdle(buffer));
-            if (toSend > 0) lpAdapter.onVaultDeposit(toSend);
+            if (toSend > 0) {
+                try lpAdapter.onVaultDeposit(toSend) {} catch {
+                    emit AdapterCallFailed(address(lpAdapter), "onVaultDeposit", toSend);
+                }
+            }
         }
     }
 
     function _rebalanceLendingWithdraw(uint256 deployable, uint256 lendingTargetBps) internal {
         if (address(lendingAdapter) == address(0)) return;
         uint256 lendingTarget = (deployable * lendingTargetBps) / BPS_DENOMINATOR;
-        uint256 currentLending = lendingAdapter.managedAssets();
+        uint256 currentLending;
+        try lendingAdapter.managedAssets() returns (uint256 v) { currentLending = v; } catch {
+            emit AdapterCallFailed(address(lendingAdapter), "managedAssets", 0);
+            return;
+        }
         if (currentLending > lendingTarget) {
-            lendingAdapter.withdrawToVault(currentLending - lendingTarget);
+            try lendingAdapter.withdrawToVault(currentLending - lendingTarget) {} catch {
+                emit AdapterCallFailed(address(lendingAdapter), "withdrawToVault", currentLending - lendingTarget);
+            }
         }
     }
 
     function _rebalanceLendingDeposit(uint256 deployable, uint256 lendingTargetBps, uint256 buffer) internal {
         if (address(lendingAdapter) == address(0) || lendingTargetBps == 0) return;
         uint256 lendingTarget = (deployable * lendingTargetBps) / BPS_DENOMINATOR;
-        uint256 currentLending = lendingAdapter.managedAssets();
+        uint256 currentLending;
+        try lendingAdapter.managedAssets() returns (uint256 v) { currentLending = v; } catch {
+            emit AdapterCallFailed(address(lendingAdapter), "managedAssets", 0);
+            return;
+        }
         if (lendingTarget > currentLending) {
             uint256 toSend = Math.min(lendingTarget - currentLending, _availableIdle(buffer));
-            if (toSend > 0) lendingAdapter.onVaultDeposit(toSend);
+            if (toSend > 0) {
+                try lendingAdapter.onVaultDeposit(toSend) {} catch {
+                    emit AdapterCallFailed(address(lendingAdapter), "onVaultDeposit", toSend);
+                }
+            }
         }
     }
 
     function _rebalanceSecondary(uint256 buffer) internal {
         if (address(secondaryAdapter) == address(0)) return;
         uint256 idle = IERC20(asset()).balanceOf(address(this)) + _venusUnderlyingBalance();
-        if (idle > buffer) secondaryAdapter.onVaultDeposit(idle - buffer);
+        if (idle > buffer) {
+            try secondaryAdapter.onVaultDeposit(idle - buffer) {} catch {
+                emit AdapterCallFailed(address(secondaryAdapter), "onVaultDeposit", idle - buffer);
+            }
+        }
     }
 
     function _payExecutorBounty(address executor, uint256 bountyBps, uint256 totalAssets_) internal {
@@ -385,10 +418,15 @@ contract OmniAgentVault is ERC4626, Ownable, TransientReentrancyGuard {
 
         // Tier 2: Pull from lending adapter (Aave)
         if (address(lendingAdapter) != address(0)) {
-            uint256 lendingAvail = lendingAdapter.managedAssets();
+            uint256 lendingAvail;
+            try lendingAdapter.managedAssets() returns (uint256 v) { lendingAvail = v; } catch {
+                emit AdapterCallFailed(address(lendingAdapter), "managedAssets", 0);
+            }
             if (lendingAvail > 0) {
                 uint256 still = needed - idle;
-                lendingAdapter.withdrawToVault(Math.min(still, lendingAvail));
+                try lendingAdapter.withdrawToVault(Math.min(still, lendingAvail)) {} catch {
+                    emit AdapterCallFailed(address(lendingAdapter), "withdrawToVault", Math.min(still, lendingAvail));
+                }
                 idle = IERC20(asset()).balanceOf(address(this));
                 if (idle >= needed) return;
             }
@@ -396,10 +434,15 @@ contract OmniAgentVault is ERC4626, Ownable, TransientReentrancyGuard {
 
         // Tier 3: Pull from LP adapter
         if (address(lpAdapter) != address(0)) {
-            uint256 lpAvail = lpAdapter.managedAssets();
+            uint256 lpAvail;
+            try lpAdapter.managedAssets() returns (uint256 v) { lpAvail = v; } catch {
+                emit AdapterCallFailed(address(lpAdapter), "managedAssets", 0);
+            }
             if (lpAvail > 0) {
                 uint256 still = needed - idle;
-                lpAdapter.withdrawToVault(Math.min(still, lpAvail));
+                try lpAdapter.withdrawToVault(Math.min(still, lpAvail)) {} catch {
+                    emit AdapterCallFailed(address(lpAdapter), "withdrawToVault", Math.min(still, lpAvail));
+                }
                 idle = IERC20(asset()).balanceOf(address(this));
                 if (idle >= needed) return;
             }
@@ -407,10 +450,15 @@ contract OmniAgentVault is ERC4626, Ownable, TransientReentrancyGuard {
 
         // Tier 4: Pull from secondary adapter
         if (address(secondaryAdapter) != address(0)) {
-            uint256 secAvail = secondaryAdapter.managedAssets();
+            uint256 secAvail;
+            try secondaryAdapter.managedAssets() returns (uint256 v) { secAvail = v; } catch {
+                emit AdapterCallFailed(address(secondaryAdapter), "managedAssets", 0);
+            }
             if (secAvail > 0) {
                 uint256 still = needed - idle;
-                secondaryAdapter.withdrawToVault(Math.min(still, secAvail));
+                try secondaryAdapter.withdrawToVault(Math.min(still, secAvail)) {} catch {
+                    emit AdapterCallFailed(address(secondaryAdapter), "withdrawToVault", Math.min(still, secAvail));
+                }
                 idle = IERC20(asset()).balanceOf(address(this));
                 if (idle >= needed) return;
             }
@@ -418,10 +466,15 @@ contract OmniAgentVault is ERC4626, Ownable, TransientReentrancyGuard {
 
         // Tier 5: Pull from WDK adapter (synchronous)
         if (address(wdkAdapter) != address(0)) {
-            uint256 wdkAvail = wdkAdapter.managedAssets();
+            uint256 wdkAvail;
+            try wdkAdapter.managedAssets() returns (uint256 v) { wdkAvail = v; } catch {
+                emit AdapterCallFailed(address(wdkAdapter), "managedAssets", 0);
+            }
             if (wdkAvail > 0) {
                 uint256 still = needed - idle;
-                wdkAdapter.withdrawToVault(Math.min(still, wdkAvail));
+                try wdkAdapter.withdrawToVault(Math.min(still, wdkAvail)) {} catch {
+                    emit AdapterCallFailed(address(wdkAdapter), "withdrawToVault", Math.min(still, wdkAvail));
+                }
                 idle = IERC20(asset()).balanceOf(address(this));
                 if (idle >= needed) return;
             }
