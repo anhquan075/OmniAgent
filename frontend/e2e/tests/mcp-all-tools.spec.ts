@@ -3,9 +3,10 @@ import { test, expect, APIRequestContext } from '@playwright/test';
 const API = 'http://localhost:3001';
 
 const READONLY_TOOLS: [string, Record<string, unknown>][] = [
-  ['x402_list_services', {}],
-  ['x402_fleet_status', {}],
-  ['x402_get_balance', {}],
+  // X402 tools disabled by default (ENABLE_X402=false)
+  // ['x402_list_services', {}],
+  // ['x402_fleet_status', {}],
+  // ['x402_get_balance', {}],
   ['wdk_vault_getBalance', {}],
   ['wdk_vault_getState', {}],
   ['wdk_engine_getRiskMetrics', {}],
@@ -26,15 +27,16 @@ const READONLY_TOOLS: [string, Record<string, unknown>][] = [
   ['sepolia_getBalance', {}],
   ['sepolia_getNavInfo', {}],
   ['sepolia_getCreditScore', {}],
-  ['arbitrum_createWallet', {}],
-  ['arbitrum_getBalance', {}],
-  ['arbitrum_getGasPrice', {}],
-  ['polygon_createWallet', {}],
-  ['polygon_getBalance', {}],
-  ['polygon_getGasPrice', {}],
-  ['gnosis_createWallet', {}],
-  ['gnosis_getBalance', {}],
-  ['gnosis_getGasPrice', {}],
+  // Cross-chain tools disabled by default (ENABLE_CROSS_CHAIN=false)
+  // ['arbitrum_createWallet', {}],
+  // ['arbitrum_getBalance', {}],
+  // ['arbitrum_getGasPrice', {}],
+  // ['polygon_createWallet', {}],
+  // ['polygon_getBalance', {}],
+  // ['polygon_getGasPrice', {}],
+  // ['gnosis_createWallet', {}],
+  // ['gnosis_getBalance', {}],
+  // ['gnosis_getGasPrice', {}],
   ['hashkey_createWallet', {}],
   ['hashkey_getBalance', { address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266' }],
   ['hashkey_checkKyc', { address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266' }],
@@ -83,7 +85,8 @@ test.describe('All Read-Only MCP Tools — Comprehensive Tests', () => {
     const tools = json.result?.tools || [];
     const names = tools.map((t: any) => t.name);
     console.log(`Total tools registered: ${names.length}`);
-    expect(names.length).toBeGreaterThanOrEqual(80);
+    // Reduced from 80+ to 40+ due to disabled cross-chain and X402 tools
+    expect(names.length).toBeGreaterThanOrEqual(40);
   });
 
   for (const [name, args] of READONLY_TOOLS) {
