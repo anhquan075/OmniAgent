@@ -19,11 +19,13 @@ contract ZKRiskOracle is Ownable2Step {
     }
 
     RiskMetrics public latestMetrics;
+    mapping(bytes32 => bool) public verifiedProofs;
 
     error ZKRiskOracle__UnauthorizedVerifier();
     error ZKRiskOracle__ZeroAddress();
 
     event RiskMetricsVerified(uint32 sharpe, uint32 drawdown, uint32 buffer);
+    event ProofVerified(bytes32 indexed proofHash, uint32 timestamp);
     event ZkVerifierUpdated(address indexed oldVerifier, address indexed newVerifier);
 
     constructor(address _zkVerifier) Ownable(msg.sender) {
@@ -39,12 +41,15 @@ contract ZKRiskOracle is Ownable2Step {
     ///         IBrevisVerifier.verifyProof integration in the production deployment.
     function fulfillRiskCalculation(
         bytes32 /* _requestId */,
-        bytes calldata /* _proof */,
+        bytes calldata _proof,
         uint32 _computedSharpe,
         uint32 _computedDrawdownBps,
         uint32 _recommendedBufferBps
     ) external {
         if (msg.sender != zkVerifier) revert ZKRiskOracle__UnauthorizedVerifier();
+
+        bytes32 proofHash = keccak256(_proof);
+        verifiedProofs[proofHash] = true;
 
         latestMetrics = RiskMetrics({
             timestamp: uint32(block.timestamp),
@@ -54,6 +59,12 @@ contract ZKRiskOracle is Ownable2Step {
         });
 
         emit RiskMetricsVerified(_computedSharpe, _computedDrawdownBps, _recommendedBufferBps);
+        emit ProofVerified(proofHash, uint32(block.timestamp));
+    }
+
+    /// @notice Check if a proof has been verified
+    function isProofVerified(bytes32 proofHash) external view returns (bool) {
+        return verifiedProofs[proofHash];
     }
 
     function getVerifiedRiskBands() external view returns (RiskMetrics memory) {
