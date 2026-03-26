@@ -22,6 +22,7 @@ contract PolicyGuard {
 
     // ── Events ────────────────────────────────────────────────────
     event OperatorUpdated(address indexed oldOperator, address indexed newOperator);
+    event AuthorizedCallerUpdated(address indexed oldCaller, address indexed newCaller);
     event ReceiverWhitelisted(address indexed receiver);
     event ReceiverRemoved(address indexed receiver);
     event SpendingLimitUpdated(uint256 oldLimit, uint256 newLimit);
@@ -33,6 +34,7 @@ contract PolicyGuard {
 
     // ── State ─────────────────────────────────────────────────────
     address public operator;
+    address public authorizedCaller;
     bool public emergencyBreaker;
 
     // Spending limits (in USDT, 18 decimals)
@@ -52,9 +54,17 @@ contract PolicyGuard {
     mapping(address => bool) public whitelistedReceivers;
     mapping(address => bool) public blockedReceivers;
 
+    // ── Modifiers ──────────────────────────────────────────────────
+    modifier onlyAuthorized() {
+        if (msg.sender != authorizedCaller && msg.sender != operator)
+            revert PolicyGuard__NotOperator();
+        _;
+    }
+
     // ── Constructor ───────────────────────────────────────────────
     constructor(
         address operator_,
+        address authorizedCaller_,
         uint256 maxSingleTxUsdt_,
         uint256 dailyLimitUsdt_,
         uint256 maxPercentageBps_,
@@ -66,6 +76,7 @@ contract PolicyGuard {
         if (maxPercentageBps_ > 10000) revert PolicyGuard__MaxPercentageExceeded(maxPercentageBps_, 10000);
 
         operator = operator_;
+        authorizedCaller = authorizedCaller_;
         maxSingleTxUsdt = maxSingleTxUsdt_;
         dailyLimitUsdt = dailyLimitUsdt_;
         maxPercentageBps = maxPercentageBps_;
@@ -134,9 +145,9 @@ contract PolicyGuard {
 
     /**
      * @notice Commit policy state after successful execution.
-     * @dev Called by AgentNFA after each write operation.
+     * @dev Called by AgentNFA or authorized vault/engine after each write operation.
      */
-    function commit(uint256 amountUsdt) external {
+    function commit(uint256 amountUsdt) external onlyAuthorized {
         _resetDailyIfNeeded();
         dailySpentUsdt += amountUsdt;
         lastTradeTimestamp = block.timestamp;
@@ -151,6 +162,13 @@ contract PolicyGuard {
         address old = operator;
         operator = newOperator;
         emit OperatorUpdated(old, newOperator);
+    }
+
+    function setAuthorizedCaller(address newCaller) external {
+        require(msg.sender == operator, "Only operator");
+        address old = authorizedCaller;
+        authorizedCaller = newCaller;
+        emit AuthorizedCallerUpdated(old, newCaller);
     }
 
     function whitelistReceiver(address receiver) external {

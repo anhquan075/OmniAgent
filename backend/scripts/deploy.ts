@@ -423,6 +423,7 @@ async function cmdFull() {
   const PolicyGuard = await ethers.getContractFactory("PolicyGuard");
   const policyGuard = await PolicyGuard.deploy(
     deployer.address,
+    deployer.address, // authorizedCaller = deployer (operator can change later)
     ethers.parseUnits("100000", 6),
     ethers.parseUnits("1000000", 6),
     10000,
@@ -552,6 +553,7 @@ async function cmdPolicyGuard() {
   const PolicyGuard = await ethers.getContractFactory("PolicyGuard");
   const policyGuard = await PolicyGuard.deploy(
     deployer.address,
+    deployer.address, // authorizedCaller = deployer (operator can change later)
     ethers.parseUnits("1000", 18),
     ethers.parseUnits("10000", 18),
     500,
