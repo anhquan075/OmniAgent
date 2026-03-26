@@ -1,38 +1,51 @@
 import { env } from '@/config/env';
-import { robotFleetService } from '@/services/RobotFleetService';
 import { logger } from '@/utils/logger';
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText } from 'ai';
 import { EventEmitter } from 'events';
 import { healthMonitor } from './services/HealthMonitor';
 import { agentTools } from './tools';
+import { getCouncil, type CouncilConsensus, type MarketContext } from './council/council';
+import { AaveAnalyst } from './council/members/AaveAnalyst';
+import { MarketVolatilityAnalyst } from './council/members/MarketVolatilityAnalyst';
+import { ZKRiskAnalyst } from './council/members/ZKRiskAnalyst';
 
 // Event Emitter for Dashboard Stream
 export const agentEvents = new EventEmitter();
-
-// Track fleet earnings across cycles
-let lastFleetTotalEarned = "0.0";
 
 const openai = createOpenAI({
   apiKey: env.OPENROUTER_API_KEY,
   baseURL: env.OPENROUTER_BASE_URL,
 });
 
+// Initialize Council of Experts
+const council = getCouncil();
+council.addMember(new AaveAnalyst());
+council.addMember(new MarketVolatilityAnalyst());
+council.addMember(new ZKRiskAnalyst());
+
 const SYSTEM_PROMPT = `You are the OmniAgent AFOS Strategist, an autonomous AI agent managing a DeFi vault.
 Directive: Yield optimization for USDT and XAUT via Tether WDK & OmniAgent.
 You are a Multi-VM Native Agent. You monitor and manage assets across EVM (Ethereum/Sepolia), Solana, and TON blockchains simultaneously.
 
-WORKFLOW:
-1. START by calling analyze_risk to get the latest proven risk metrics.
-2. CHECK BALANCES by calling get_all_chain_balances to understand your multi-chain portfolio state.
-3. EVALUATE the risk level based on the tool output.
-   - If risk is HIGH: Call handle_emergency immediately.
-   - If MEDIUM or LOW: Proceed to check_strategy or check_cross_chain_yields or hire_fleet_robot to find yield opportunities or gain insights.
-4. OPTIMIZE: If opportunities exist, execute rebalances, bridging (bridge_via_layerzero), or institutional lending (supply_to_aave / withdraw_from_aave) across supported chains.
-   - For Aave V3 on Sepolia: Use supply_to_aave when USDT supply APY is attractive and health factor > 1.5. Use withdraw_from_aave to reclaim liquidity if needed for rebalancing or emergency.
-   - For Cross-chain: Use bridge_via_layerzero to move idle USDT to chains with higher yield potential.
+WORKFLOW (Council of Experts Pattern):
+1. COUNCIL CONSENSUS: The Council of Experts (3 sub-agents) has already analyzed the market and reached consensus.
+   - AaveAnalyst: Analyzed lending APY and health factor
+   - MarketVolatilityAnalyst: Analyzed price volatility and regime state  
+   - ZKRiskAnalyst: Analyzed ZKRiskOracle metrics and drawdown probability
+   Their consensus decision and confidence score are provided in your context.
+
+2. START by calling analyze_risk to validate council metrics with on-chain data.
+3. CHECK BALANCES by calling get_all_chain_balances to understand your multi-chain portfolio state.
+4. EXECUTE based on council consensus + your analysis:
+   - If council recommends 'risk-off' AND confidence > 0.7: Execute XAUt swap for safety
+   - If council recommends 'yield-chase' AND confidence > 0.7: Execute Aave supply
+   - If council recommends 'rebalance' AND confidence > 0.7: Execute rebalance
+   - If confidence 0.4-0.7: Log warning, proceed cautiously
+   - If confidence < 0.4: Skip cycle, sleep longer
+
 5. SWEEP: Use yield_sweep if there's profit.
-6. FINISH: Provide a technical summary of all findings and actions.
+6. FINISH: Provide a technical summary with NEXT_RUN_DECISION.
 
 SCHEDULING DECISIONS:
 At the end of your summary, MUST include a scheduling decision in this format:
@@ -91,40 +104,50 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
     }
   }
 
-  // Calculate fleet earnings since last cycle
-  const fleetStatus = robotFleetService.getFleetStatus();
-  const currentTotal = parseFloat(fleetStatus.fleetTotalEarned || "0");
-  const lastTotal = parseFloat(lastFleetTotalEarned);
-  const cycleEarnings = Math.max(0, currentTotal - lastTotal).toFixed(4);
-  
-  // Update last total for next cycle
-  lastFleetTotalEarned = fleetStatus.fleetTotalEarned;
+  // Council of Experts deliberation
+  const marketContext: MarketContext = {
+    vaultBalance: '0',
+    aaveApy: 5.0,
+    volatility: 15.0,
+    riskScore: 30,
+    drawdownProbabilityBps: 500,
+  };
 
-  let currentSystemPrompt = SYSTEM_PROMPT;
-  let robotEarningsDetected = false;
+  let councilConsensus: CouncilConsensus | null = null;
+  try {
+    councilConsensus = await council.deliberate(marketContext);
+    logger.info({
+      decision: councilConsensus.decision,
+      confidence: councilConsensus.confidence,
+    }, '[AutonomousLoop] Council consensus reached');
 
-  if (parseFloat(cycleEarnings) > 0) {
-    logger.info({ cycleEarnings }, '[AutonomousLoop] Fleet earnings since last cycle');
-    currentSystemPrompt += `\n\n[FLEET UPDATE]: Since your last cycle, the autonomous robot fleet has earned ${cycleEarnings} ETH (Sepolia). Consider this new capital in your strategy.`;
-    robotEarningsDetected = true;
+    agentEvents.emit('council:consensus', councilConsensus);
+
+    // Skip cycle if council confidence too low
+    if (councilConsensus.confidence < 0.4) {
+      logger.warn({ confidence: councilConsensus.confidence }, '[AutonomousLoop] Council confidence too low, skipping cycle');
+      return {
+        text: `Council confidence ${councilConsensus.confidence.toFixed(2)} below threshold. Skipping cycle.`,
+        messages: [],
+        nextRunDelay: 3600000,
+        schedulingConfidence: 0.3,
+        schedulingReason: 'Low council confidence, sleeping longer',
+      };
+    }
+  } catch (error) {
+    logger.warn({ error }, '[AutonomousLoop] Council deliberation failed, proceeding without consensus');
   }
 
-  // Listen for robot fleet earnings (real-time during cycle)
-  const fleetEmitter = robotFleetService.getEmitter();
-  const onFleetEarning = (event: any) => {
-    if (event.earnings && parseFloat(event.earnings) > 0) {
-      logger.info({ robotId: event.robotId, earnings: event.earnings }, '[AutonomousLoop] Robot fleet earning detected');
-      robotEarningsDetected = true;
-    }
-  };
-  fleetEmitter.on('fleet:event', onFleetEarning);
-
   try {
+    const councilContext = councilConsensus
+      ? `\n\n[COUNCIL CONSENSUS]: Decision=${councilConsensus.decision}, Confidence=${councilConsensus.confidence.toFixed(2)}. Reasoning: ${councilConsensus.reasoning}`
+      : '\n\n[COUNCIL CONSENSUS]: Unavailable, proceed with caution.';
+
     const result = await generateText({
       model: openai.chat(modelId),
       tools: agentTools as any,
       maxSteps: 10,
-      system: currentSystemPrompt,
+      system: SYSTEM_PROMPT + councilContext,
       temperature: 0,
       prompt: "Perform a full autonomous strategy cycle. Start with risk analysis and do not stop until you provide a final summary with NEXT_RUN_DECISION.",
       onStepFinish: (step: any) => {
@@ -150,16 +173,16 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
       
       const summaryResult = await generateText({
         model: openai.chat(modelId),
-        system: currentSystemPrompt,
-        temperature: 0,
-        messages: [
-          { role: 'user', content: "Perform a full autonomous strategy cycle. Start with risk analysis and do not stop until you provide a final summary with NEXT_RUN_DECISION." },
-          ...messageHistory,
-          { role: 'user', content: 'Summarize the above tool results and provide a final technical summary of the autonomous cycle. MUST include NEXT_RUN_DECISION.' }
-        ],
-      });
+      system: SYSTEM_PROMPT + councilContext,
+      temperature: 0,
+      messages: [
+        { role: 'user', content: "Perform a full autonomous strategy cycle. Start with risk analysis and do not stop until you provide a final summary with NEXT_RUN_DECISION." },
+        ...messageHistory,
+        { role: 'user', content: 'Summarize the above tool results and provide a final technical summary of the autonomous cycle. MUST include NEXT_RUN_DECISION.' }
+      ],
+    });
 
-      logger.info('[AutonomousLoop] Synthesis complete');
+    logger.info('[AutonomousLoop] Synthesis complete');
       
       finalResult = {
         ...result,
@@ -188,9 +211,12 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
       success: true, 
       summary: summaryText, 
       decision: schedulingDecision,
-      robotEarningsDetected 
+      councilConsensus: councilConsensus ? {
+        decision: councilConsensus.decision,
+        confidence: councilConsensus.confidence,
+      } : null,
     });
-    updateDashboardState({ type: 'cycle:end', data: { success: true, summary: summaryText, decision: schedulingDecision, robotEarningsDetected } });
+    updateDashboardState({ type: 'cycle:end', data: { success: true, summary: summaryText, decision: schedulingDecision, councilConsensus } });
 
     return cycleResult;
   } catch (error: any) {
@@ -206,8 +232,6 @@ export async function runAutonomousCycle(): Promise<AutonomousCycleResult> {
       schedulingConfidence: 0.5,
       schedulingReason: "Error occurred, using safe delay"
     };
-  } finally {
-    fleetEmitter.off('fleet:event', onFleetEarning);
   }
 }
 

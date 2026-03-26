@@ -87,6 +87,12 @@ export interface ChatCompletionResponse {
   };
 }
 
+export interface SubAgentResult {
+  recommendation: string;
+  confidence: number;
+  reasoning: string;
+}
+
 // Response types for gateway endpoints
 interface ListAgentsResponse {
   agents?: AgentInfo[];
@@ -270,6 +276,51 @@ export class OpenClawClient {
       logger.error({ error }, '[OpenClawClient] Failed chat completions');
       throw error;
     }
+  }
+
+  /**
+   * Spawn a sub-agent for specialized analysis (Council of Experts pattern).
+   * Used by council members to get role-specific analysis from OpenClaw.
+   */
+  async spawnSubAgent(role: string, systemPrompt: string, context: string): Promise<SubAgentResult> {
+    logger.debug({ role }, '[OpenClawClient] Spawning sub-agent');
+
+    try {
+      const response = await this.chatCompletions({
+        model: 'openclaw-reasoning',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: context },
+        ],
+        temperature: 0.3,
+        maxTokens: 300,
+      });
+
+      const content = response.choices[0]?.message?.content || '';
+      const confidenceMatch = content.match(/confidence[:\s]+(\d+(?:\.\d+)?)/i);
+      const confidence = confidenceMatch ? Math.min(1, parseFloat(confidenceMatch[1]) / 100) : 0.5;
+
+      return {
+        recommendation: this.extractRecommendation(content),
+        confidence,
+        reasoning: content.slice(0, 200),
+      };
+    } catch (error) {
+      logger.error({ error, role }, '[OpenClawClient] Sub-agent spawn failed');
+      return {
+        recommendation: 'hold',
+        confidence: 0,
+        reasoning: `Sub-agent ${role} failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
+  }
+
+  private extractRecommendation(content: string): string {
+    const lower = content.toLowerCase();
+    if (lower.includes('risk-off') || lower.includes('riskoff')) return 'risk-off';
+    if (lower.includes('yield-chase') || lower.includes('yieldchase')) return 'yield-chase';
+    if (lower.includes('rebalance')) return 'rebalance';
+    return 'hold';
   }
 
   /**
