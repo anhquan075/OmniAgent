@@ -1,0 +1,11 @@
+current_year = "2026"
+required_kyc_level = "2"
+subject = "940557095283377910899329311718361458122028688395"
+agent_token_id = "42"
+proof_valid_until = "1893456000"
+nullifier = "112233445566778899"
+
+birth_year = "1995"
+country_code = "702"
+kyc_level = "3"
+agent_holder = "940557095283377910899329311718361458122028688395"

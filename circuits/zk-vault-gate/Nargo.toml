@@ -1,0 +1,7 @@
+[package]
+name = "zk_vault_gate"
+type = "bin"
+authors = ["OmniAgent"]
+compiler_version = ">=0.31.0"
+
+[dependencies]

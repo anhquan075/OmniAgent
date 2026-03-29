@@ -1,0 +1,9 @@
+proof_path = "./target/zk_vault_gate.proof"
+verification_key_path = "./target/vk"
+
+current_year = "2026"
+required_kyc_level = "2"
+subject = "940557095283377910899329311718361458122028688395"
+agent_token_id = "42"
+proof_valid_until = "1893456000"
+nullifier = "112233445566778899"
