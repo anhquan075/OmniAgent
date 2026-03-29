@@ -39,13 +39,7 @@ interface OnboardingTooltipProps {
 
 export function OnboardingTooltip({ isOpen, onComplete, onNeverShowAgain }: OnboardingTooltipProps) {
   const [currentStep, setCurrentStep] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsVisible(true);
-    }
-  }, [isOpen]);
+  const [isExiting, setIsExiting] = useState(false);
 
   const handleNext = () => {
     if (currentStep < onboardingSteps.length - 1) {
@@ -56,26 +50,32 @@ export function OnboardingTooltip({ isOpen, onComplete, onNeverShowAgain }: Onbo
   };
 
   const handleComplete = () => {
-    setIsVisible(false);
-    setTimeout(onComplete, 300);
+    setIsExiting(true);
+    setTimeout(() => {
+      onComplete();
+      setIsExiting(false);
+    }, 300);
   };
 
   const handleNeverShow = () => {
-    setIsVisible(false);
-    setTimeout(onNeverShowAgain, 300);
+    setIsExiting(true);
+    setTimeout(() => {
+      onNeverShowAgain();
+      setIsExiting(false);
+    }, 300);
   };
 
   const handleSkip = () => {
     handleComplete();
   };
 
-  if (!isOpen || !isVisible) return null;
+  if (!isOpen) return null;
 
   const step = onboardingSteps[currentStep];
 
   return (
     <AnimatePresence>
-      {isVisible && (
+      {isOpen && (
         <>
           <motion.div
             initial={{ opacity: 0 }}

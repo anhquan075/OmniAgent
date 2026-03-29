@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { ShieldCheck, Zap, Globe, Cpu, TrendingUp, Lock, Zap as ZapIcon } from 'lucide-react';
+import { ShieldCheck, Zap, Globe, Cpu, TrendingUp, Lock, Zap as ZapIcon, Fingerprint, Brain } from 'lucide-react';
 
 export function GuestSplash() {
   // Detect user's motion preference (WCAG accessibility requirement)
@@ -33,27 +33,27 @@ export function GuestSplash() {
   const features = [
     { 
       icon: ShieldCheck, 
-      title: "Self-Custodial", 
-      desc: "Your keys, your assets",
+      title: "KYC-Gated Vaults", 
+      desc: "SBT-verified access on HashKey",
+      accent: "from-emerald-400 to-tether-teal"
+    },
+    { 
+      icon: Fingerprint, 
+      title: "ZK Identity", 
+      desc: "Privacy-preserving proofs",
       accent: "from-tether-teal to-cyan-400"
     },
     { 
-      icon: Cpu, 
-      title: "AI-Managed", 
-      desc: "Autonomous optimization",
+      icon: Brain, 
+      title: "AI Agents", 
+      desc: "Autonomous yield strategies",
       accent: "from-cyan-400 to-blue-400"
     },
     { 
       icon: Globe, 
-      title: "Multi-Chain", 
-      desc: "Cross-chain liquidity",
+      title: "Dual-Chain", 
+      desc: "HashKey Chain + Sepolia",
       accent: "from-blue-400 to-purple-400"
-    },
-    { 
-      icon: Zap, 
-      title: "Instant", 
-      desc: "Real-time settlement",
-      accent: "from-purple-400 to-pink-400"
     }
   ];
 
@@ -88,18 +88,17 @@ export function GuestSplash() {
             >
               <h1 className="text-2xl sm:text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-heading font-bold leading-tight">
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-tether-teal via-cyan-400 to-blue-400">
-                  Autonomous
+                  OmniAgent
                 </span>
                 <br />
                 <span className="text-white">Yield Engine</span>
               </h1>
               <p className="text-xs sm:text-sm sm:text-base md:text-lg text-neutral-gray-light leading-relaxed max-w-2xl">
-                AI-powered capital allocation across Tether's multi-chain settlement rails. 
-                Let robots manage your {' '}
-                <span className="text-tether-teal font-semibold">USD₮</span>
-                {' '} and{' '}
-                <span className="text-tether-teal font-semibold">XAU₮</span>
-                {' '}with institutional-grade security.
+                KYC-gated vaults with ZK identity proofs and AI-driven capital allocation — 
+                built on{' '}
+                <span className="text-[#00D395] font-semibold">HashKey Chain</span>
+                {' '}and{' '}
+                <span className="text-tether-teal font-semibold">Tether WDK</span>.
               </p>
             </motion.div>
 
@@ -112,15 +111,15 @@ export function GuestSplash() {
               <div className="flex items-start gap-2 sm:gap-3">
                 <TrendingUp className="w-4 sm:w-5 h-4 sm:h-5 text-tether-teal flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-semibold text-white">Higher Yields</div>
-                  <div className="text-neutral-gray text-xs">Optimized rebalancing</div>
+                  <div className="font-semibold text-white">KYC SBT</div>
+                  <div className="text-neutral-gray text-xs">On-chain compliance</div>
                 </div>
               </div>
               <div className="flex items-start gap-2 sm:gap-3">
                 <Lock className="w-4 sm:w-5 h-4 sm:h-5 text-cyan-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-semibold text-white">100% Secure</div>
-                  <div className="text-neutral-gray text-xs">Non-custodial design</div>
+                  <div className="font-semibold text-white">Non-Custodial</div>
+                  <div className="text-neutral-gray text-xs">Self-sovereign vaults</div>
                 </div>
               </div>
             </motion.div>
@@ -143,8 +142,8 @@ export function GuestSplash() {
                           className="w-full px-4 sm:px-6 sm:px-8 py-3 sm:py-4 rounded-md sm:rounded-lg bg-gradient-to-r from-white/10 to-white/5 hover:from-white/15 hover:to-white/10 transition-all text-xs sm:text-sm sm:text-base text-white font-heading font-bold uppercase tracking-widest flex items-center justify-center gap-2 sm:gap-3 cursor-pointer min-h-[44px]"
                         >
                         <ZapIcon className="w-4 sm:w-5 h-4 sm:h-5 text-tether-teal" />
-                        <span className="hidden sm:inline">Initialize WDK Agent</span>
-                        <span className="sm:hidden">Initialize</span>
+                        <span className="hidden sm:inline">Connect & Start Earning</span>
+                        <span className="sm:hidden">Connect</span>
                       </motion.button>
                     )}
                   </ConnectButton.Custom>
@@ -153,8 +152,8 @@ export function GuestSplash() {
 
               {/* Secondary Info */}
               <p className="text-xs text-neutral-gray text-center">
-                <span className="hidden sm:inline">Powered by Tether WDK • Ethereum Sepolia • Solana • TON</span>
-                <span className="sm:hidden">Tether WDK • Multi-chain</span>
+                <span className="hidden sm:inline">Powered by Tether WDK • HashKey Chain • Ethereum Sepolia</span>
+                <span className="sm:hidden">Tether WDK • HashKey • Sepolia</span>
               </p>
             </motion.div>
           </div>
@@ -180,6 +179,11 @@ export function GuestSplash() {
             <div className="relative backdrop-blur-xl bg-white/5 p-6 sm:p-8 rounded-2xl sm:rounded-3xl border border-white/10 shadow-2xl">
               {/* Gradient Border Effect */}
               <div className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-tether-teal/20 via-transparent to-cyan-400/20 pointer-events-none"></div>
+
+              {/* Mascot */}
+              <div className="relative flex justify-center mb-4">
+                <img src="/imgs/mascot-owl-no-bg.png" alt="OmniAgent Mascot" className="w-20 h-20 sm:w-24 sm:h-24 object-contain drop-shadow-[0_0_20px_rgba(38,161,123,0.4)]" />
+              </div>
 
               {/* Features Grid */}
               <motion.div 
@@ -221,7 +225,7 @@ export function GuestSplash() {
                  transition={{ delay: prefersReducedMotion ? 0 : 1.2, duration: prefersReducedMotion ? 0 : 0.6 }}
                >
                 <p className="text-xs text-neutral-gray text-center">
-                  <span className="text-tether-teal font-semibold">No permission needed</span> • Start earning in seconds
+                  <span className="text-tether-teal font-semibold">KYC verified</span> • Start earning in seconds
                 </p>
               </motion.div>
             </div>

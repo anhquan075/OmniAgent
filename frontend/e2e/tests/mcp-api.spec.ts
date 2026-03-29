@@ -178,14 +178,17 @@ test.describe('Stats API Tests', () => {
     expect(response.ok()).toBeTruthy();
     const json = await response.json();
     expect(json).toBeDefined();
-    expect(json.totalAssets).toBeDefined();
+    expect(json.vault).toBeDefined();
+    expect(json.vault.totalAssets).toBeDefined();
   });
 
   test('Risk metrics endpoint returns risk data', async ({ request }) => {
-    const response = await request.get(`${API_URL}/api/stats/risk`);
+    const response = await request.get(`${API_URL}/api/stats`);
     
     expect(response.ok()).toBeTruthy();
     const json = await response.json();
     expect(json).toBeDefined();
+    expect(json.risk).toBeDefined();
+    expect(json.risk.level).toBeDefined();
   });
 });
