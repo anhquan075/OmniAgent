@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
     plugins: [react(), tailwindcss()],
+    target: ['es2022', 'chrome89', 'edge89', 'firefox89', 'safari15'],
     server: {
       proxy: {
         '/api': {
@@ -26,8 +27,13 @@ export default defineConfig(({ mode }) => {
       loader: "tsx",
       include: /\.(js|jsx|ts|tsx)$/,
       exclude: [],
+      supported: { 'top-level-await': true },
+    },
+    build: {
+      target: ['es2022', 'chrome89', 'edge89', 'firefox89', 'safari15'],
     },
     optimizeDeps: {
+      exclude: ['@aztec/bb.js'],
       esbuildOptions: {
         loader: {
           ".js": "jsx",

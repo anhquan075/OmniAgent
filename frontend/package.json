@@ -17,7 +17,9 @@
   "dependencies": {
     "@ai-sdk/react": "^3.0.118",
     "@ai-sdk/ui-utils": "^1.2.11",
+    "@aztec/bb.js": "0.66.0",
     "@fontsource-variable/geist": "^5.2.8",
+    "@noir-lang/noir_js": "0.37.0",
     "@radix-ui/react-use-controllable-state": "^1.2.2",
     "@rainbow-me/rainbowkit": "^2.2.8",
     "@rive-app/react-webgl2": "^4.27.1",

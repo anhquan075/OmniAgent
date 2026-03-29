@@ -33,6 +33,7 @@ import { GuestSplash } from "./components/shared/GuestSplash";
 import { OnboardingTooltip } from "./components/shared/OnboardingTooltip";
 import { useOnboarding } from "./hooks/useOnboarding";
 import { FaucetStatus } from "./components/shared/FaucetStatus";
+import HashKeyVaultDashboard from "./components/dashboard/HashKeyVaultDashboard";
 interface BentoCardProps {
   title: string;
   icon: React.ElementType;
@@ -121,7 +122,7 @@ export default function App() {
   const [suggestions, setSuggestions] = useState<any[]>(initialSuggestions);
   const [pendingSuggestions, setPendingSuggestions] = useState<any[]>([]);
   const queryClient = useQueryClient();
-  const { address: _address, isConnected: _isConnected } = useAccount();
+  const { address: _address, isConnected: _isConnected, chain } = useAccount();
 
   // In E2E test mode (VITE_PLAYWRIGHT), force connected state to bypass wallet modal
   const isConnected = import.meta.env.VITE_PLAYWRIGHT ? true : _isConnected;
@@ -418,30 +419,34 @@ export default function App() {
 
             <FaucetStatus />
 
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 mr-2 shadow-glow-sm">
-              <div className="w-5 h-5 rounded-full bg-[#627EEA]/10 flex items-center justify-center border border-[#627EEA]/20">
-                <img
-                  src="/coins/ethereum.png"
-                  alt="Ethereum"
-                  className="w-3.5 h-3.5 object-contain"
-                  onError={(e) => {
-                    e.currentTarget.src = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png";
-                  }}
-                />
+            {chain && (
+              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 mr-2 shadow-glow-sm">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center border ${
+                  chain.id === 133 || chain.id === 177
+                    ? "bg-[#00D395]/10 border-[#00D395]/20"
+                    : "bg-[#627EEA]/10 border-[#627EEA]/20"
+                }`}>
+                  <img
+                    src={chain.id === 133 || chain.id === 177 ? "/coins/hsk.png" : "/coins/ethereum.png"}
+                    alt={chain.name}
+                    className="w-3.5 h-3.5 object-contain"
+                    onError={(e) => {
+                      e.currentTarget.src = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png";
+                    }}
+                  />
+                </div>
+                <div className="flex flex-col leading-none">
+                  <span className={`text-[9px] font-bold uppercase ${
+                    chain.id === 133 || chain.id === 177 ? "text-[#00D395]" : "text-[#627EEA]"
+                  }`}>
+                    {chain.name}
+                  </span>
+                  <span className="text-[7px] text-neutral-gray uppercase tracking-wider">
+                    {chain.testnet ? "Testnet" : "Mainnet"}
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-col leading-none">
-                <span className="text-[9px] font-bold text-[#627EEA] uppercase">
-                  Ethereum
-                </span>
-                <span className="text-[7px] text-neutral-gray uppercase tracking-wider">
-                  {import.meta.env.VITE_DEFAULT_NETWORK?.includes("mainnet") ||
-                  (import.meta.env.VITE_DEFAULT_NETWORK?.includes("ethereum") &&
-                    !import.meta.env.VITE_DEFAULT_NETWORK?.includes("sepolia"))
-                    ? "Mainnet"
-                    : "Sepolia"}
-                </span>
-              </div>
-            </div>
+            )}
 
             <div className="flex items-center gap-2" data-tour="connect">
               <ConnectButton
@@ -551,6 +556,15 @@ export default function App() {
                 <div className="h-full overflow-y-auto custom-scrollbar pr-2">
                   <AgentBrain stats={stats} />
                 </div>
+              </BentoCard>
+
+              <BentoCard
+                title="HashKey Vault"
+                icon={WalletIcon}
+                className="min-h-[400px] shrink-0"
+                data-tour="hashkey-vault"
+              >
+                <HashKeyVaultDashboard />
               </BentoCard>
             </div>
           </div>

@@ -17,9 +17,15 @@ importers:
       '@ai-sdk/ui-utils':
         specifier: ^1.2.11
         version: 1.2.11(zod@4.3.6)
+      '@aztec/bb.js':
+        specifier: 0.66.0
+        version: 0.66.0
       '@fontsource-variable/geist':
         specifier: ^5.2.8
         version: 5.2.8
+      '@noir-lang/noir_js':
+        specifier: 0.37.0
+        version: 0.37.0
       '@radix-ui/react-use-controllable-state':
         specifier: ^1.2.2
         version: 1.2.2(@types/react@19.2.14)(react@19.0.0)
@@ -235,6 +241,10 @@ packages:
 
   '@antfu/ni@25.0.0':
     resolution: {integrity: sha512-9q/yCljni37pkMr4sPrI3G4jqdIk074+iukc5aFJl7kmDCCsiJrbZ6zKxnES1Gwg+i9RcDZwvktl23puGslmvA==}
+    hasBin: true
+
+  '@aztec/bb.js@0.66.0':
+    resolution: {integrity: sha512-x6VXq2/9dI12HsCFe1nzTXISHkjJ2VxtT+r+OCT5rmNEreLiaSc5g0ll1hRC3wMXSCexLRmlrYnhkgWJWD3Zzw==}
     hasBin: true
 
   '@babel/code-frame@7.29.0':
@@ -1047,6 +1057,18 @@ packages:
   '@nodelib/fs.walk@1.2.8':
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
+
+  '@noir-lang/acvm_js@0.53.0':
+    resolution: {integrity: sha512-485V4Lwwdj2p6WsuMx6kmwLB33P2E8hhL5LUomme5q5MdroNvY2D9QFBp7zYhte6wwDS/0SYA/CWjpMYBOgi8g==}
+
+  '@noir-lang/noir_js@0.37.0':
+    resolution: {integrity: sha512-KZgErWz9OrLetcfKh6JSmtEPDR3fhoOiA5bXWoFguqD9b3QzvM0cRSyaDh9BMve38zKrRohJQDu1g2OptqSojg==}
+
+  '@noir-lang/noirc_abi@0.37.0':
+    resolution: {integrity: sha512-l6rCuqz/iUpqP7URORQ0vYHhM8BXdvsiW/G0L/Lw0A7i7awHvMDkWdDasBDFBQJMx0h7B7I5QWevzPsb5xQnBA==}
+
+  '@noir-lang/types@0.37.0':
+    resolution: {integrity: sha512-34Rb2E0MMQZfM7h706jbBiH72lgDtLhQIXuhlUSCelCke/O/CMe8KJQ99x2Tq+kGdhRPpxsX197f6re107tZFA==}
 
   '@open-draft/deferred-promise@2.2.0':
     resolution: {integrity: sha512-CecwLWx3rhxVQF6V4bAgPS5t+So2sTbPgAzafKkVizyi7tlwpcFpdFqq+wqF2OwNBmqFuu6tOyouTuxgpMfzmA==}
@@ -3393,8 +3415,15 @@ packages:
     resolution: {integrity: sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==}
     engines: {node: '>= 0.8'}
 
+  comlink@4.4.2:
+    resolution: {integrity: sha512-OxGdvBmJuNKSCMO4NTl1L47VRp6xn2wG4F/2hYzB6tiCb709otOxtEYCSvK80PtjODfXXZu8ds+Nw5kVCjqd2g==}
+
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
+
+  commander@10.0.1:
+    resolution: {integrity: sha512-y4Mg2tXshplEbSGzx7amzPwKKOCGuoSRP/CjEdwwk0FOGlUbq6lKuoyDZTNZkmxHdJtp54hdfY/JUrdL7Xfdug==}
+    engines: {node: '>=14'}
 
   commander@11.1.0:
     resolution: {integrity: sha512-yPVavfyCcRhmorC7rWlkHn15b4wDVgVmBA7kV4QVBsF7kv/9TKJAbAXVTxvTnwP8HHKjRCJDClKbciiYS7p0DQ==}
@@ -5245,6 +5274,9 @@ packages:
   package-manager-detector@1.6.0:
     resolution: {integrity: sha512-61A5ThoTiDG/C8s8UMZwSorAGwMJ0ERVGj2OjoW5pAalsNOg15+iQiPzrLJ4jhZ1HJzmC2PIHT2oEiH3R5fzNA==}
 
+  pako@2.1.0:
+    resolution: {integrity: sha512-w+eufiZ1WuJYgPXbV/PO3NCMEc3xqylkKHzp8bxp1uW4qaSNQUkwmLLEc3kKsfz8lpV1F8Ht3U1Cm+9Srog2ug==}
+
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
     engines: {node: '>=6'}
@@ -6768,6 +6800,17 @@ snapshots:
       package-manager-detector: 1.6.0
       tinyexec: 1.0.4
 
+  '@aztec/bb.js@0.66.0':
+    dependencies:
+      comlink: 4.4.2
+      commander: 10.0.1
+      debug: 4.4.3
+      fflate: 0.8.2
+      pako: 2.1.0
+      tslib: 2.8.1
+    transitivePeerDependencies:
+      - supports-color
+
   '@babel/code-frame@7.29.0':
     dependencies:
       '@babel/helper-validator-identifier': 7.28.5
@@ -7659,6 +7702,20 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
+
+  '@noir-lang/acvm_js@0.53.0': {}
+
+  '@noir-lang/noir_js@0.37.0':
+    dependencies:
+      '@noir-lang/acvm_js': 0.53.0
+      '@noir-lang/noirc_abi': 0.37.0
+      '@noir-lang/types': 0.37.0
+
+  '@noir-lang/noirc_abi@0.37.0':
+    dependencies:
+      '@noir-lang/types': 0.37.0
+
+  '@noir-lang/types@0.37.0': {}
 
   '@open-draft/deferred-promise@2.2.0': {}
 
@@ -10947,7 +11004,11 @@ snapshots:
     dependencies:
       delayed-stream: 1.0.0
 
+  comlink@4.4.2: {}
+
   comma-separated-tokens@2.0.3: {}
+
+  commander@10.0.1: {}
 
   commander@11.1.0: {}
 
@@ -13101,6 +13162,8 @@ snapshots:
   p-try@2.2.0: {}
 
   package-manager-detector@1.6.0: {}
+
+  pako@2.1.0: {}
 
   parent-module@1.0.1:
     dependencies:
