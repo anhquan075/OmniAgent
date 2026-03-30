@@ -146,9 +146,13 @@ OmniAgent is **multi-chain ready**, with HashKey testnet (chain 133) as the targ
 
 | Contract | Address | Description |
 |----------|---------|-------------|
-| **HashKeyVault** | [`0x605b6b8C83d8b0EA8867BEda4099DE4F042F7318`](https://testnet-explorer.hsk.xyz/address/0x605b6b8C83d8b0EA8867BEda4099DE4F042F7318) | KYC-gated ERC-4626 vault (KYC L2+) — v2 (no _updateYield) |
+| **HashKeyVault** | [`0x605b6b8C83d8b0EA8867BEda4099DE4F042F7318`](https://testnet-explorer.hsk.xyz/address/0x605b6b8C83d8b0EA8867BEda4099DE4F042F7318) | KYC-gated ERC-4626 vault (KYC L2+) — v2 |
 | **MockKycSBT** | [`0x1525E262Cb5bDFC7b51802c36a1141bA94405F76`](https://testnet-explorer.hsk.xyz/address/0x1525E262Cb5bDFC7b51802c36a1141bA94405F76) | KYC SBT with 3-level verification |
 | **MockUSDT** | [`0xA3eb6Cb28659ec53388FE5Ff3E64920e3C274038`](https://testnet-explorer.hsk.xyz/address/0xA3eb6Cb28659ec53388FE5Ff3E64920e3C274038) | Mock USDT (6 decimals) |
+| **ZKIdentityGate** | [`0x82f3c7967Fe2A0ae8C9C3caCA79b8c5C1805843E`](https://testnet-explorer.hsk.xyz/address/0x82f3c7967Fe2A0ae8C9C3caCA79b8c5C1805843E) | ZK proof gate for vault deposits (Noir circuit) |
+| **ZKVerifier** | [`0xBf90d38B9128FB70C91F0D1CB9908c5F5eE28276`](https://testnet-explorer.hsk.xyz/address/0xBf90d38B9128FB70C91F0D1CB9908c5F5eE28276) | Structure-validating ZK proof verifier |
+| **AgentNFA** | [`0xdFf5A296102818507313639E646C15cC53c5153A`](https://testnet-explorer.hsk.xyz/address/0xdFf5A296102818507313639E646C15cC53c5153A) | NFT-based agent boundary (execute routes through PolicyGuard) |
+| **PolicyGuard** | [`0x1E997a52FEd011C74d5a8579a74DEf1BaC035fcD`](https://testnet-explorer.hsk.xyz/address/0x1E997a52FEd011C74d5a8579a74DEf1BaC035fcD) | Emergency breaker, whitelist/blocked receivers, tx limits |
 
 **KYC Levels:**
 - Level 1 — Basic (verified humans only)
