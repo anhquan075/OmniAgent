@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { resolve as pathResolve } from 'path';
 import { readFileSync, existsSync } from 'fs';
 import { createHash } from 'crypto';
+import { verifyAuth } from '../middleware/auth';
 
 const zkProof = new Hono();
 
@@ -13,7 +14,7 @@ function getCircuit() {
   return JSON.parse(readFileSync(circuitPath, 'utf8'));
 }
 
-zkProof.post('/generate', async (c) => {
+zkProof.post('/generate', verifyAuth, async (c) => {
   try {
     const body = await c.req.json();
     const {

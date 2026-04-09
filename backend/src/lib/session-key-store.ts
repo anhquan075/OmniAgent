@@ -150,18 +150,15 @@ export async function getSessionKeyInfo(ownerAddress: string): Promise<{
 }
 
 export async function decryptSessionKey(
-  ownerAddress: string,
-  masterSecret?: string
-): Promise<string | null> {
+  ownerAddress: string
+): Promise<string> {
   const stored = await getSessionKey(ownerAddress);
-  if (!stored) return null;
+  if (!stored) throw new Error('Session key not found');
   
-  const secret = masterSecret || getMasterSecret();
-  try {
-    return decryptPrivateKey(stored.encryptedPrivateKey, secret);
-  } catch {
-    return null;
-  }
+  const secret = getMasterSecret();
+  const decrypted = decryptPrivateKey(stored.encryptedPrivateKey, secret);
+  if (!decrypted) throw new Error('Failed to decrypt session key');
+  return decrypted;
 }
 
 export function checkRateLimit(ownerAddress: string): boolean {

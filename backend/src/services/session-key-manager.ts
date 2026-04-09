@@ -194,9 +194,13 @@ export class SessionKeyManager {
   }
 
   async getSignerForUser(userAddress: string): Promise<ethers.Wallet | null> {
-    const decryptedPk = await decryptSessionKey(userAddress);
-    if (!decryptedPk) return null;
-    return new ethers.Wallet(decryptedPk, this.provider);
+    try {
+      const decryptedPk = await decryptSessionKey(userAddress);
+      return new ethers.Wallet(decryptedPk, this.provider);
+    } catch {
+      logger.warn({ userAddress }, '[SessionKeyManager] Failed to decrypt session key');
+      return null;
+    }
   }
 
   async executeWithSessionKey(
