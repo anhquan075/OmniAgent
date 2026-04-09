@@ -81,14 +81,15 @@ export function OnboardingTooltip({ isOpen, onComplete, onNeverShowAgain }: Onbo
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
+            onClick={handleSkip}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 cursor-pointer"
           />
 
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90%] max-w-md"
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90%] max-w-md pointer-events-auto"
           >
             <div className="rounded-2xl bg-space-black/95 border border-tether-teal/30 shadow-2xl shadow-tether-teal/20 overflow-hidden">
               <div className="p-6">

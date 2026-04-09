@@ -123,44 +123,43 @@ const FleetStatus: React.FC = () => {
     }
   }, [events, isInitialized]);
 
-  useEffect(() => {
-  }, []);
-
   return (
     <div className="flex flex-col gap-4 h-full">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-        <div className="flex items-center gap-2">
+      {/* Status + stats header — always compact row, no viewport-based font scaling */}
+      <div className="flex items-center justify-between gap-2 px-1">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Badge variant="outline" className={cn(
-            "transition-colors border h-7 px-2.5 text-[10px] font-medium uppercase tracking-wider",
-            isConnected 
-              ? "bg-neon-green/10 text-neon-green border-neon-green/20" 
+            "transition-colors border h-6 px-2 text-[10px] font-medium uppercase tracking-wider",
+            isConnected
+              ? "bg-neon-green/10 text-neon-green border-neon-green/20"
               : "bg-red-500/10 text-red-500 border-red-500/20"
           )}>
             <span className={cn("mr-1.5 inline-block h-1.5 w-1.5 rounded-full", isConnected ? "bg-neon-green animate-pulse shadow-[0_0_5px_rgba(74,222,128,0.5)]" : "bg-red-500")} />
             {isConnected ? 'Live' : 'Offline'}
           </Badge>
-          {error && <span className="text-[10px] text-red-400">Connection Error</span>}
+          {error && <span className="text-[10px] text-red-400 hidden sm:inline">Error</span>}
         </div>
-        
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col items-end">
-            <span className="text-[10px] text-neutral-gray uppercase tracking-wider mb-0.5">Session Earnings</span>
-            <div className="flex items-center gap-1.5 text-tether-teal font-heading font-bold text-2xl leading-none">
-              <ZapIcon className="w-4 h-4 fill-current" />
-              <span className="animate-in fade-in slide-in-from-top-1 duration-500">{fleetTotal} USDT</span>
+
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex flex-col items-end min-w-0 max-w-[100px]">
+            <span className="text-[9px] text-neutral-gray uppercase tracking-wider mb-0.5 whitespace-nowrap">Session</span>
+            <div className="flex items-center gap-1 text-tether-teal font-heading font-bold text-sm leading-none min-w-0 overflow-hidden">
+              <ZapIcon className="w-3 h-3 fill-current flex-shrink-0" />
+              <span className="truncate block max-w-[70px]">{fleetTotal} <span className="text-[10px] font-normal">USDT</span></span>
             </div>
           </div>
-          <div className="flex flex-col items-end">
-            <span className="text-[10px] text-neutral-gray uppercase tracking-wider mb-0.5">Agent Wallet</span>
-            <div className="flex items-center gap-1.5 text-white font-heading font-bold text-2xl leading-none">
-              <ZapIcon className="w-4 h-4 fill-current" />
-              <span>{agentWalletUsdt} USDT</span>
+          <div className="h-6 w-px bg-white/10 flex-shrink-0" />
+          <div className="flex flex-col items-end min-w-0 max-w-[100px]">
+            <span className="text-[9px] text-neutral-gray uppercase tracking-wider mb-0.5 whitespace-nowrap">Wallet</span>
+            <div className="flex items-center gap-1 text-white font-heading font-bold text-sm leading-none min-w-0 overflow-hidden">
+              <ZapIcon className="w-3 h-3 fill-current flex-shrink-0" />
+              <span className="truncate block max-w-[70px]">{agentWalletUsdt} <span className="text-[10px] font-normal">USDT</span></span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-2">
         {robots.map(robot => (
           <RobotCard
             key={robot.id}

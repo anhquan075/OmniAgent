@@ -1,7 +1,19 @@
 import { encryptPrivateKey, decryptPrivateKey } from './crypto-utils';
 
 function getMasterSecret(): string {
-  return process.env.SESSION_KEY_MASTER_SECRET || 'default-dev-secret-change-in-production';
+  const secret = process.env.SESSION_KEY_MASTER_SECRET;
+  if (secret) return secret;
+  
+  // Only allow insecure fallback in development
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('[Security] SESSION_KEY_MASTER_SECRET environment variable is required in production');
+  }
+  
+  // Warn about insecure fallback in dev
+  if (process.env.NODE_ENV !== 'test') {
+    console.warn('[Security] Using default session key master secret - NOT SAFE FOR PRODUCTION');
+  }
+  return 'default-dev-secret-change-in-production';
 }
 
 export interface StoredSessionKey {
@@ -99,29 +111,12 @@ export async function getSessionKeyStatus(
   };
 }
 
-export async function revokeSessionKey(
-  ownerAddress: string
-): Promise<void> {
+export async function revokeSessionKey(ownerAddress: string): Promise<void> {
   const key = ownerAddress.toLowerCase();
   const stored = sessionKeyStore.get(key);
-  
   if (stored) {
     stored.revoked = true;
     sessionKeyStore.set(key, stored);
-  }
-}
-
-export async function decryptSessionKey(
-  ownerAddress: string
-): Promise<string | null> {
-  const stored = await getSessionKey(ownerAddress);
-  
-  if (!stored) return null;
-  
-  try {
-    return decryptPrivateKey(stored.encryptedPrivateKey, getMasterSecret());
-  } catch {
-    throw new Error('Failed to decrypt session key');
   }
 }
 
@@ -131,23 +126,52 @@ export async function updateDailyLimit(
 ): Promise<void> {
   const key = ownerAddress.toLowerCase();
   const stored = sessionKeyStore.get(key);
-  
-  if (!stored) {
-    throw new Error('Session key not found');
+  if (stored) {
+    stored.dailyLimitUSD = newLimitUSD;
+    sessionKeyStore.set(key, stored);
   }
+}
+
+export async function getSessionKeyInfo(ownerAddress: string): Promise<{
+  sessionKeyAddress: string;
+  expiresAt: Date;
+  dailyLimitUSD: number;
+  allowedTargets: string[];
+} | null> {
+  const stored = await getSessionKey(ownerAddress);
+  if (!stored) return null;
   
-  stored.dailyLimitUSD = newLimitUSD;
-  sessionKeyStore.set(key, stored);
+  return {
+    sessionKeyAddress: stored.sessionKeyAddress,
+    expiresAt: stored.expiresAt,
+    dailyLimitUSD: stored.dailyLimitUSD,
+    allowedTargets: stored.allowedTargets
+  };
+}
+
+export async function decryptSessionKey(
+  ownerAddress: string,
+  masterSecret?: string
+): Promise<string | null> {
+  const stored = await getSessionKey(ownerAddress);
+  if (!stored) return null;
+  
+  const secret = masterSecret || getMasterSecret();
+  try {
+    return decryptPrivateKey(stored.encryptedPrivateKey, secret);
+  } catch {
+    return null;
+  }
 }
 
 export function checkRateLimit(ownerAddress: string): boolean {
   const key = ownerAddress.toLowerCase();
   const now = Date.now();
-  const counter = rateLimitCounters.get(key);
   
+  let counter = rateLimitCounters.get(key);
   if (!counter || counter.resetTime < now) {
-    rateLimitCounters.set(key, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
-    return true;
+    counter = { count: 0, resetTime: now + RATE_LIMIT_WINDOW_MS };
+    rateLimitCounters.set(key, counter);
   }
   
   if (counter.count >= RATE_LIMIT_MAX_KEYS) {
@@ -155,27 +179,9 @@ export function checkRateLimit(ownerAddress: string): boolean {
   }
   
   counter.count++;
-  rateLimitCounters.set(key, counter);
   return true;
 }
 
-export function recordTransaction(
-  ownerAddress: string,
-  sessionKeyAddress: string,
-  amountUSD: number
-): void {
-  const trackerKey = `${ownerAddress.toLowerCase()}:${sessionKeyAddress}`;
-  const now = Date.now();
-  const tracker = dailySpentTrackers.get(trackerKey);
-  
-  if (!tracker || tracker.resetTime < now) {
-    dailySpentTrackers.set(trackerKey, {
-      amountUSD,
-      resetTime: now + 24 * 60 * 60 * 1000
-    });
-    return;
-  }
-  
-  tracker.amountUSD += amountUSD;
-  dailySpentTrackers.set(trackerKey, tracker);
+export async function getAllSessionKeys(): Promise<StoredSessionKey[]> {
+  return Array.from(sessionKeyStore.values());
 }

@@ -125,6 +125,7 @@ for (const tools of allMcpToolsArrays) {
             logger_1.logger.warn({ tool: mcpTool.name }, '[Tools] No handler found for MCP tool');
             continue;
         }
+        const toolName = mcpTool.name;
         const execFn = async (params) => {
             const context = {
                 requestId: `agent-${Date.now()}`,
@@ -132,7 +133,7 @@ for (const tools of allMcpToolsArrays) {
                 policyGuardEnabled: true,
                 walletMode: 'agent'
             };
-            const result = await handler(params, context);
+            const result = await handler(toolName, params, context);
             if (!result.success) {
                 throw new Error(result.error?.message || 'Tool execution failed');
             }

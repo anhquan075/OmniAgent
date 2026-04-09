@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import { env } from '@/config/env';
 import { hashkeyProvider } from '@/contracts/clients/ethers';
 import { getHashKeySigner } from '@/lib/wdk-loader';
+import { logger } from '@/utils/logger';
 
 const SAFE_TX_SERVICE = env.HASHKEY_SAFE_TX_SERVICE_URL || 'https://safe-transaction-hashkey.safe.global';
 const SAFE_API = env.HASHKEY_SAFE_API_URL || 'https://safe-api-hashkey.safe.global/api/v1';
@@ -45,7 +46,8 @@ async function safeFetch(path: string, options?: RequestInit): Promise<unknown> 
     },
   });
   if (!res.ok) {
-    throw new Error(`Safe API error ${res.status}: ${await res.text()}`);
+    const errorText = await res.text();
+    throw new Error(`Safe API error ${res.status}: ${errorText}`);
   }
   return res.json();
 }
@@ -61,7 +63,8 @@ export async function getPendingTxs(safeAddress: string): Promise<SafeTx[]> {
       `/safes/${safeAddress}/multisig-transactions/?executed=false&queued=false`
     );
     return (data as { results: SafeTx[] }).results || [];
-  } catch {
+  } catch (err) {
+    logger.warn({ safeAddress, error: err instanceof Error ? err.message : String(err) }, '[SafeMultisig] Failed to fetch pending transactions');
     return [];
   }
 }

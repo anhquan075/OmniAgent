@@ -9,19 +9,18 @@ import {
   BrainCircuitIcon,
   CoinsIcon,
   ExternalLink,
+  Fingerprint,
   GlobeIcon,
   LayersIcon,
   Loader2,
   MenuIcon,
   ServerIcon,
   TrendingUpIcon,
-  WalletIcon,
   XIcon,
-  Zap,
   ArrowRightLeft,
   Shield,
 } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useAccount } from "wagmi";
 import { ChatContainer } from "./components/chat/ChatContainer";
 import { ChatHistorySidebar } from "./components/chat/ChatHistorySidebar";
@@ -30,10 +29,9 @@ import FleetStatus from "./components/dashboard/FleetStatus";
 import MCPServerDemo from "./components/dashboard/MCPServerDemo";
 import { ConnectionModal } from "./components/shared/ConnectionModal";
 import { GuestSplash } from "./components/shared/GuestSplash";
-import { OnboardingTooltip } from "./components/shared/OnboardingTooltip";
-import { useOnboarding } from "./hooks/useOnboarding";
 import { FaucetStatus } from "./components/shared/FaucetStatus";
 import HashKeyVaultDashboard from "./components/dashboard/HashKeyVaultDashboard";
+import { ShinyText } from "./components/ui/ShinyText";
 interface BentoCardProps {
   title: string;
   icon: React.ElementType;
@@ -50,47 +48,78 @@ const BentoCard = ({
   className = "",
   onToggle,
   isExpanded,
-}: BentoCardProps) => (
-  <div
-    className={`rounded-2xl p-4 sm:p-5 md:p-6 flex flex-col gap-3 sm:gap-4 shadow-2xl transition-all duration-500 group bg-space-black/60 backdrop-blur-xl border border-white/10 hover:border-tether-teal/30 hover:shadow-[0_0_20px_rgba(38,161,123,0.1)] relative overflow-hidden ${className}`}
-  >
-    <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-tether-teal/5 rounded-full blur-[40px] sm:blur-[60px] pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
-    <div className="flex items-center justify-between flex-shrink-0 relative z-10">
-      <div className="flex items-center gap-2 sm:gap-3">
-        <div className="p-2 rounded-lg bg-white/5 text-tether-teal group-hover:scale-110 transition-transform font-heading border border-white/5 group-hover:border-tether-teal/30 group-hover:bg-tether-teal/10">
-          <Icon className="w-4 h-4" />
+}: BentoCardProps) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    card.style.setProperty("--sx", `${e.clientX - rect.left}px`);
+    card.style.setProperty("--sy", `${e.clientY - rect.top}px`);
+    card.style.setProperty("--so", "1");
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    cardRef.current?.style.setProperty("--so", "0");
+  }, []);
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className={`rounded-2xl p-4 sm:p-5 md:p-6 flex flex-col gap-3 sm:gap-4 shadow-2xl transition-all duration-500 group bg-space-black/60 backdrop-blur-xl border border-white/10 hover:border-tether-teal/30 hover:shadow-[0_0_20px_rgba(38,161,123,0.1)] relative overflow-hidden ${className}`}
+      style={{ "--sx": "50%", "--sy": "50%", "--so": "0" } as React.CSSProperties}
+    >
+      {/* Corner glow */}
+      <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-tether-teal/5 rounded-full blur-[40px] sm:blur-[60px] pointer-events-none -translate-y-1/2 translate-x-1/2" />
+      {/* Mouse spotlight */}
+      <div
+        className="pointer-events-none absolute inset-0 z-10 rounded-[inherit] transition-opacity duration-500"
+        style={{
+          background:
+            "radial-gradient(400px circle at var(--sx) var(--sy), rgba(38,161,123,0.07), transparent 70%)",
+          opacity: "var(--so)",
+        }}
+      />
+      <div className="flex items-center justify-between flex-shrink-0 relative z-20">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="p-2 rounded-lg bg-white/5 text-tether-teal group-hover:scale-110 transition-transform font-heading border border-white/5 group-hover:border-tether-teal/30 group-hover:bg-tether-teal/10">
+            <Icon className="w-4 h-4" />
+          </div>
+          <h3 className="font-heading text-[10px] sm:text-[11px] tracking-[0.15em] sm:tracking-[0.2em] text-neutral-gray-light uppercase group-hover:text-white transition-colors">
+            {title}
+          </h3>
         </div>
-        <h3 className="font-heading text-[10px] sm:text-[11px] tracking-[0.15em] sm:tracking-[0.2em] text-neutral-gray-light uppercase group-hover:text-white transition-colors">
-          {title}
-        </h3>
+        <div className="flex items-center gap-3">
+          {onToggle && isExpanded !== undefined && (
+            <button
+              onClick={onToggle}
+              className="flex items-center gap-1 text-neutral-gray hover:text-white transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center sm:min-h-0 sm:min-w-0"
+              aria-label={isExpanded ? "Collapse" : "Expand"}
+            >
+              {isExpanded ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              )}
+              <span className="hidden sm:inline uppercase tracking-wider text-[10px]">
+                {isExpanded ? "Collapse" : "Expand"}
+              </span>
+            </button>
+          )}
+          <div className="w-1.5 h-1.5 rounded-full bg-tether-teal/40 shadow-[0_0_8px_rgba(38,161,123,0.4)] animate-pulse" />
+        </div>
       </div>
-      <div className="flex items-center gap-3">
-        {onToggle && isExpanded !== undefined && (
-          <button
-            onClick={onToggle}
-            className="flex items-center gap-1 text-neutral-gray hover:text-white transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center sm:min-h-0 sm:min-w-0"
-            aria-label={isExpanded ? "Collapse" : "Expand"}
-          >
-            {isExpanded ? (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            )}
-            <span className="hidden sm:inline uppercase tracking-wider text-[10px]">
-              {isExpanded ? "Collapse" : "Expand"}
-            </span>
-          </button>
-        )}
-        <div className="w-1.5 h-1.5 rounded-full bg-tether-teal/40 shadow-[0_0_8px_rgba(38,161,123,0.4)] animate-pulse"></div>
-      </div>
+      <div className="flex-1 min-h-0 relative z-20">{children}</div>
     </div>
-    <div className="flex-1 min-h-0 relative z-10">{children}</div>
-  </div>
-);
+  );
+};
 
 const INITIAL_SESSION_ID = "session-" + Date.now();
 
@@ -100,24 +129,17 @@ export default function App() {
   const [mcpToolsExpanded, setMcpToolsExpanded] = useState(true);
   const [agentStreamStatus, setAgentStreamStatus] = useState<any[]>([]);
   
-  const { shouldShow, completeOnboarding, neverShowAgain } = useOnboarding();
-  const [showOnboarding, setShowOnboarding] = useState(false);
 
-  useEffect(() => {
-    if (shouldShow) {
-      setShowOnboarding(true);
-    }
-  }, [shouldShow]);
 
   const initialSuggestions = [
-    { label: 'Sepolia Balance', prompt: 'Check my wallet balance on Sepolia testnet.', icon: WalletIcon },
-    { label: 'Sub-Agents', prompt: 'List all available sub-agents in the X402 fleet.', icon: BotIcon },
+    { label: 'HashKey Vault', prompt: 'Show me the HashKey vault state, KYC status, and current APY.', icon: Shield },
+    { label: 'ZK Identity', prompt: 'Check my ZK identity proof status on HashKey Chain.', icon: Fingerprint },
+    { label: 'Agent Fleet', prompt: 'List all robot agents and their current earnings.', icon: BotIcon },
     { label: 'Vault State', prompt: 'Show me the current vault state and buffer utilization.', icon: LayersIcon },
-    { label: 'Cycle State', prompt: 'What is the current cycle state of the WDK engine?', icon: Zap },
     { label: 'Aave Position', prompt: 'Check my Aave lending position and health factor.', icon: CoinsIcon },
-    { label: 'Smart Account', prompt: 'Get the ERC-4337 smart account address for wallet 0xB789D888A53D34f6701C1A5876101Cb32dbF17cF and check its balance.', icon: ServerIcon },
-    { label: 'Market Prices', prompt: 'Get the current prices for ETH, BTC, and BNB from exchanges.', icon: TrendingUpIcon },
-    { label: 'Bridge Quote', prompt: 'Get a quote to bridge 100 USDT to Arbitrum using USD protocol.', icon: GlobeIcon },
+    { label: 'Smart Account', prompt: 'Get the ERC-4337 smart account address and check its balance.', icon: ServerIcon },
+    { label: 'Market Prices', prompt: 'Get the current prices for ETH, BTC, and HSK from exchanges.', icon: TrendingUpIcon },
+    { label: 'Multi-Chain', prompt: 'Show balances across HashKey, Sepolia, Polygon, and Arbitrum.', icon: GlobeIcon },
   ];
   const [suggestions, setSuggestions] = useState<any[]>(initialSuggestions);
   const [pendingSuggestions, setPendingSuggestions] = useState<any[]>([]);
@@ -366,14 +388,14 @@ export default function App() {
   return (
     <div className="h-screen w-full bg-space-black text-white font-sans flex flex-col items-center selection:bg-tether-teal/30 overflow-hidden">
       <AnimatePresence>
-        {!isConnected && <GuestSplash key="splash" />}
+        {!isConnected && (
+          <div className="fixed inset-0 z-50 overflow-hidden">
+            <GuestSplash key="splash" />
+          </div>
+        )}
       </AnimatePresence>
 
-      <OnboardingTooltip
-        isOpen={showOnboarding}
-        onComplete={completeOnboarding}
-        onNeverShowAgain={neverShowAgain}
-      />
+
 
       <ConnectionModal
         isOpen={isConnectionModalOpen}
@@ -381,9 +403,31 @@ export default function App() {
       />
 
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] bg-tether-teal/5 rounded-full blur-[100px] will-change-transform opacity-40"></div>
-        <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] bg-xaut-gold/5 rounded-full blur-[100px] will-change-transform opacity-40"></div>
+        <div
+          className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] bg-tether-teal/5 rounded-full blur-[100px] will-change-transform opacity-40"
+          style={{ animation: "blob-drift-a 18s ease-in-out infinite alternate" }}
+        />
+        <div
+          className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] bg-xaut-gold/5 rounded-full blur-[100px] will-change-transform opacity-40"
+          style={{ animation: "blob-drift-b 22s ease-in-out infinite alternate" }}
+        />
       </div>
+      <style>{`
+        @keyframes omni-shine {
+          0%   { background-position: 200% center; }
+          100% { background-position: -200% center; }
+        }
+        @keyframes blob-drift-a {
+          0%   { transform: translate(0%, 0%) scale(1); }
+          50%  { transform: translate(4%, -6%) scale(1.06); }
+          100% { transform: translate(-4%, 4%) scale(0.96); }
+        }
+        @keyframes blob-drift-b {
+          0%   { transform: translate(0%, 0%) scale(1); }
+          50%  { transform: translate(-5%, 5%) scale(1.08); }
+          100% { transform: translate(5%, -3%) scale(0.97); }
+        }
+      `}</style>
 
       {/* 
           Dashboard Container with Action Gate 
@@ -403,8 +447,24 @@ export default function App() {
               />
             </div>
             <div className="flex flex-col">
-              <h1 className="text-sm md:text-lg font-heading font-bold tracking-tight bg-clip-text text-transparent bg-[linear-gradient(135deg,#26A17B,#00D1FF)] uppercase truncate max-w-[150px] md:max-w-none">
-                OmniAgent
+              <h1 className="text-sm md:text-lg font-heading font-bold tracking-tight uppercase truncate max-w-[150px] md:max-w-none">
+                <span className="relative inline-block">
+                  <span className="bg-clip-text text-transparent bg-[linear-gradient(135deg,#26A17B,#00D1FF)]">
+                    OmniAgent
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 bg-clip-text text-transparent"
+                    style={{
+                      backgroundImage: "linear-gradient(120deg, transparent 20%, rgba(255,255,255,0.4) 50%, transparent 80%)",
+                      backgroundSize: "250% 100%",
+                      WebkitBackgroundClip: "text",
+                      animation: "omni-shine 4s linear infinite",
+                    }}
+                  >
+                    OmniAgent
+                  </span>
+                </span>
               </h1>
               <div className="flex items-center gap-2">
                 <span className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-tether-teal"></span>
@@ -422,27 +482,24 @@ export default function App() {
             {chain && (
               <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 mr-2 shadow-glow-sm">
                 <div className={`w-5 h-5 rounded-full flex items-center justify-center border ${
-                  chain.id === 133 || chain.id === 177
+                  chain.id === 133
                     ? "bg-[#00D395]/10 border-[#00D395]/20"
                     : "bg-[#627EEA]/10 border-[#627EEA]/20"
                 }`}>
                   <img
-                    src={chain.id === 133 || chain.id === 177 ? "/coins/hsk.png" : "/coins/ethereum.png"}
+                    src={chain.id === 133 ? "/coins/hsk.png" : "/coins/ethereum.png"}
                     alt={chain.name}
                     className="w-3.5 h-3.5 object-contain"
-                    onError={(e) => {
-                      e.currentTarget.src = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png";
-                    }}
                   />
                 </div>
                 <div className="flex flex-col leading-none">
                   <span className={`text-[9px] font-bold uppercase ${
-                    chain.id === 133 || chain.id === 177 ? "text-[#00D395]" : "text-[#627EEA]"
+                    chain.id === 133 ? "text-[#00D395]" : "text-[#627EEA]"
                   }`}>
-                    {chain.name}
+                    {chain.id === 133 ? "HashKey" : "Sepolia"}
                   </span>
                   <span className="text-[7px] text-neutral-gray uppercase tracking-wider">
-                    {chain.testnet ? "Testnet" : "Mainnet"}
+                    Testnet
                   </span>
                 </div>
               </div>
@@ -539,6 +596,17 @@ export default function App() {
           `}
           >
             <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-6 pr-1">
+              {chain?.id === 133 && (
+                <BentoCard
+                  title="HashKey Vault"
+                  icon={Shield}
+                  className="min-h-[400px] shrink-0"
+                  data-tour="hashkey-vault"
+                >
+                  <HashKeyVaultDashboard />
+                </BentoCard>
+              )}
+
               <BentoCard
                 title="Robot Fleet Operations"
                 icon={BotIcon}
@@ -553,18 +621,9 @@ export default function App() {
                 icon={BrainCircuitIcon}
                 className="flex-1 min-h-[300px]"
               >
-                <div className="h-full overflow-y-auto custom-scrollbar pr-2">
+                <div className="h-full min-h-0 overflow-y-auto custom-scrollbar pr-2">
                   <AgentBrain stats={stats} />
                 </div>
-              </BentoCard>
-
-              <BentoCard
-                title="HashKey Vault"
-                icon={WalletIcon}
-                className="min-h-[400px] shrink-0"
-                data-tour="hashkey-vault"
-              >
-                <HashKeyVaultDashboard />
               </BentoCard>
             </div>
           </div>
@@ -572,7 +631,7 @@ export default function App() {
 
         <footer className="h-10 md:h-12 flex-shrink-0 flex items-center justify-between mt-2 md:mt-4 px-2 opacity-40">
           <p className="text-[7px] md:text-[9px] font-heading tracking-[0.2em] md:tracking-[0.3em] text-neutral-gray uppercase truncate mr-4">
-            Economic Infrastructure Powered by Tether WDK
+            Compliant Autonomous DeFi on HashKey Chain
           </p>
           <div className="flex items-center gap-2 md:gap-4 text-[7px] md:text-[9px] font-mono whitespace-nowrap">
             <span className="hidden sm:inline">

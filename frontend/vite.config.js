@@ -33,7 +33,6 @@ export default defineConfig(({ mode }) => {
       target: ['es2022', 'chrome89', 'edge89', 'firefox89', 'safari15'],
     },
     optimizeDeps: {
-      exclude: ['@aztec/bb.js'],
       esbuildOptions: {
         loader: {
           ".js": "jsx",

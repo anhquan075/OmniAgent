@@ -30,7 +30,6 @@ export function AutonomousAgentCard({ onRunAgentCycle }: AutonomousAgentCardProp
     }
   };
 
-<<<<<<< HEAD
   // Parse NEXT_RUN_DECISION from response (top-level fields or summary text)
   const getDecision = () => {
     // First try top-level fields from API response
@@ -46,15 +45,6 @@ export function AutonomousAgentCard({ onRunAgentCycle }: AutonomousAgentCardProp
     const match = lastResult.summary.match(/NEXT_RUN_DECISION:\s*\{[^}]+\}/s);
     if (!match) return null;
     try {
-=======
-  // Parse NEXT_RUN_DECISION from summary
-  const parseDecision = (summary: string) => {
-    if (!summary) return null;
-    const match = summary.match(/NEXT_RUN_DECISION:\s*\{[^}]+\}/s);
-    if (!match) return null;
-    try {
-      // Extract JSON from the match
->>>>>>> 187ed73 (feat: add autonomous agent cycle demo with live decision-making display)
       const jsonStr = match[0].replace("NEXT_RUN_DECISION:", "").trim();
       return JSON.parse(jsonStr);
     } catch {
@@ -62,11 +52,7 @@ export function AutonomousAgentCard({ onRunAgentCycle }: AutonomousAgentCardProp
     }
   };
 
-<<<<<<< HEAD
   const decision = getDecision();
-=======
-  const decision = lastResult?.summary ? parseDecision(lastResult.summary) : null;
->>>>>>> 187ed73 (feat: add autonomous agent cycle demo with live decision-making display)
 
   return (
     <div className="card" style={{ border: "1px solid var(--accent)", background: "linear-gradient(135deg, rgba(59,130,246,0.05) 0%, rgba(139,92,246,0.05) 100%)" }}>

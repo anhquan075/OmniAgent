@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 import { Truck, Sparkles, Scan, Shield, Radar, Zap, Lock, Eye, Activity, ShieldAlert, Target, LucideIcon } from 'lucide-react';
+import { SpotlightCard } from '../ui/SpotlightCard';
 
 interface RobotCardProps {
   id: string;
@@ -30,28 +31,74 @@ const RobotCard: React.FC<RobotCardProps> = ({ id, type, icon, status, totalEarn
   const IconComponent = ICON_MAP[type] || ICON_MAP[iconStr] || (typeof icon !== 'string' ? icon : Truck);
 
   return (
-    <div className="rounded-lg bg-white/5 border border-white/10 p-3 transition-all hover:border-tether-teal/30 hover:bg-white/[0.07]">
-      <div className="flex items-center gap-2 mb-2 min-w-0">
-        <span className="text-xs font-heading font-medium text-white truncate flex items-center gap-1.5 flex-1 min-w-0">
-          <IconComponent className="w-4 h-4 text-tether-teal flex-shrink-0" />
-          <span className="truncate">{type}</span>
-        </span>
+    <SpotlightCard
+      spotlightColor={isWorking ? 'rgba(38, 161, 123, 0.15)' : 'rgba(255,255,255,0.05)'}
+      className={cn(
+        'rounded-lg border p-2.5 sm:p-3 transition-all duration-300',
+        isWorking
+          ? 'bg-white/5 border-tether-teal/20 hover:border-tether-teal/40'
+          : 'bg-white/[0.03] border-white/8 hover:border-white/15'
+      )}
+    >
+      {/* Top row: icon + status dot */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="relative flex-shrink-0">
+          {isWorking && (
+            <span className="absolute inset-0 rounded-full border border-tether-teal/50 animate-ping" />
+          )}
+          <div className={cn(
+            'w-6 h-6 rounded-full flex items-center justify-center',
+            isWorking ? 'bg-tether-teal/15 text-tether-teal' : 'bg-white/5 text-neutral-gray'
+          )}>
+            <IconComponent className="w-3 h-3" />
+          </div>
+        </div>
+
         <span className={cn(
-          "text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full border flex-shrink-0",
+          'text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border flex-shrink-0 flex items-center gap-1',
           isWorking
-            ? "bg-neon-green/10 text-neon-green border-neon-green/30"
-            : "bg-neutral-gray/10 text-neutral-gray border-neutral-gray/30"
+            ? 'bg-neon-green/10 text-neon-green border-neon-green/25'
+            : 'bg-neutral-gray/10 text-neutral-gray border-neutral-gray/20'
         )}>
-          {status}
+          <span className={cn('w-1 h-1 rounded-full flex-shrink-0', isWorking ? 'bg-neon-green animate-pulse' : 'bg-neutral-gray')} />
+          {isWorking ? 'On' : 'Off'}
         </span>
       </div>
-      <div className="text-base font-heading font-bold text-tether-teal leading-none">
-        {totalEarned} <span className="text-[10px] text-neutral-gray font-normal">USDT</span>
+
+      {/* Type name */}
+      <p className="text-[10px] font-heading font-medium text-white truncate mb-1">{type}</p>
+
+      {/* Earnings */}
+      <div className={cn(
+        'text-sm font-heading font-bold leading-none truncate',
+        isWorking ? 'text-tether-teal' : 'text-white/50'
+      )}>
+        {totalEarned}
+        <span className="text-[9px] text-neutral-gray font-normal ml-0.5">USDT</span>
       </div>
-      <div className="mt-2 text-[10px] text-neutral-gray font-mono tracking-wider">
-        ID: {id}
+
+      {/* Progress bar */}
+      <div className="mt-2 h-0.5 w-full rounded-full bg-white/5 overflow-hidden">
+        <div
+          className={cn(
+            'h-full rounded-full transition-all duration-1000',
+            isWorking ? 'bg-gradient-to-r from-tether-teal to-cyan-400' : 'bg-white/10'
+          )}
+          style={{ width: isWorking ? '100%' : '30%', animation: isWorking ? 'earnings-pulse 2s ease-in-out infinite alternate' : 'none' }}
+        />
       </div>
-    </div>
+
+      <div className="mt-1 text-[8px] text-neutral-gray/40 font-mono truncate">
+        {id}
+      </div>
+
+      <style>{`
+        @keyframes earnings-pulse {
+          0%   { opacity: 0.6; }
+          100% { opacity: 1; }
+        }
+      `}</style>
+    </SpotlightCard>
   );
 };
 

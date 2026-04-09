@@ -147,6 +147,7 @@ for (const tools of allMcpToolsArrays) {
       continue;
     }
 
+    const toolName = mcpTool.name;
     const execFn = async (params: Record<string, unknown>) => {
       const context: McpExecutionContext = {
         requestId: `agent-${Date.now()}`,
@@ -154,7 +155,7 @@ for (const tools of allMcpToolsArrays) {
         policyGuardEnabled: true,
         walletMode: 'agent'
       };
-      const result = await handler(params, context);
+      const result = await handler(toolName, params, context);
       if (!result.success) {
         throw new Error(result.error?.message || 'Tool execution failed');
       }

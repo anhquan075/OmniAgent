@@ -1074,7 +1074,7 @@ export default function MCPServerDemo({
                                     >
                                       {risk.label}
                                     </span>
-                                    <span className="text-[7px] sm:text-[8px] text-white/30 truncate hidden sm:block">
+                                    <span className="text-[7px] sm:text-[8px] text-white/30 truncate hidden xs:block">
                                       {tool.description}
                                     </span>
                                   </div>
@@ -1173,7 +1173,7 @@ export default function MCPServerDemo({
                     </button>
                   </div>
               </div>
-              <pre className="text-[8px] sm:text-[9px] font-mono text-green-400/80 overflow-x-auto max-h-[60px] sm:max-h-[80px] leading-relaxed whitespace-pre-wrap break-all">
+              <pre className="text-[8px] sm:text-[9px] font-mono text-green-400/80 overflow-x-auto max-h-[80px] sm:max-h-[120px] md:max-h-[160px] leading-relaxed whitespace-pre-wrap break-all">
                 {testResult}
               </pre>
             </div>

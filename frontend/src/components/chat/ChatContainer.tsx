@@ -204,39 +204,42 @@ export function ChatContainer({
   }, [messages, isAtBottom, isActuallyStreaming]);
 
   return (
-    <div className="flex flex-col h-full w-full rounded-2xl overflow-hidden bg-[#0B0E14]/80 backdrop-blur-xl shadow-2xl shadow-tether-teal/5 relative">
-      <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 border-b border-white/10 bg-black/20 relative z-10">
-        <div className="flex flex-col min-w-0">
-          <h2 className="font-heading text-tether-teal text-[10px] sm:text-xs md:text-sm font-semibold tracking-wider flex items-center gap-1.5 sm:gap-2 md:gap-3">
-            <div className="w-1.5 h-1.5 rounded-full bg-tether-teal shrink-0"></div>
+    <div className="flex flex-col w-full h-full max-h-full rounded-2xl overflow-hidden bg-[#0B0E14]/80 backdrop-blur-xl shadow-2xl shadow-tether-teal/5 relative">
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 border-b border-white/10 bg-black/20 relative z-10 gap-2 min-w-0 overflow-hidden">
+        {/* Left: title + metrics */}
+        <div className="flex flex-col min-w-0 flex-shrink-0">
+          <h2 className="font-heading text-tether-teal text-[10px] sm:text-xs font-semibold tracking-wider flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-tether-teal shrink-0" />
             <span className="truncate">Strategist Terminal</span>
           </h2>
-          <div className="flex items-center gap-2 sm:gap-3 mt-0.5 sm:mt-1 opacity-60">
-            <div className="flex items-center gap-1 text-[6px] sm:text-[7px] md:text-[8px] font-heading tracking-widest text-neutral-gray-light uppercase">
+          <div className="flex items-center gap-2 mt-0.5 opacity-60">
+            <span className="text-[7px] font-heading tracking-widest text-neutral-gray-light uppercase">
               <span className="text-cyber-blue">Lat:</span> 24ms
-            </div>
-            <div className="flex items-center gap-1 text-[6px] sm:text-[7px] md:text-[8px] font-heading tracking-widest text-neutral-gray-light uppercase">
+            </span>
+            <span className="text-[7px] font-heading tracking-widest text-neutral-gray-light uppercase">
               <span className="text-neon-green">TPS:</span> 1.4k
-            </div>
+            </span>
           </div>
         </div>
-        
-        <div className="flex items-center gap-2 sm:gap-4">
+
+        {/* Right: status cluster — overflow-hidden prevents blowout */}
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-hidden flex-shrink min-w-0">
+          {/* Agent progress — only show on lg+ to avoid crowding */}
           {currentAgentStatus && (
-            <div className="hidden sm:flex flex-col items-end mr-2 md:mr-4 min-w-[120px] md:min-w-[150px] max-w-[200px] md:max-w-[250px]">
-              <div className="flex items-center gap-1.5 md:gap-2 mb-1 overflow-hidden w-full justify-end">
-                <span className="text-[6px] md:text-[7px] font-heading text-tether-teal uppercase tracking-widest whitespace-nowrap">
+            <div className="hidden lg:flex flex-col items-end max-w-[160px] min-w-0">
+              <div className="flex items-center gap-1 mb-0.5 w-full justify-end overflow-hidden">
+                <span className="text-[6px] font-heading text-tether-teal uppercase tracking-widest whitespace-nowrap flex-shrink-0">
                   [{currentAgentStatus.status}]
                 </span>
-                <span className="text-[6px] md:text-[7px] text-gray-400 font-mono truncate max-w-[80px] md:max-w-[120px]">
+                <span className="text-[6px] text-gray-400 font-mono truncate">
                   {currentAgentStatus.thought || 'Processing...'}
                 </span>
-                <span className="text-[6px] md:text-[7px] font-mono text-cyber-cyan shrink-0">
-                  ({currentAgentStatus.progress}%)
+                <span className="text-[6px] font-mono text-cyber-cyan flex-shrink-0">
+                  {currentAgentStatus.progress}%
                 </span>
               </div>
               <div className="w-full h-0.5 bg-white/5 rounded-full overflow-hidden">
-                <motion.div 
+                <motion.div
                   className="h-full bg-tether-teal shadow-glow-sm"
                   initial={{ width: 0 }}
                   animate={{ width: `${currentAgentStatus.progress}%` }}
@@ -245,14 +248,16 @@ export function ChatContainer({
             </div>
           )}
 
-          <div className="hidden md:flex flex-col items-end mr-2">
-            <span className="text-[7px] font-heading text-neutral-gray uppercase tracking-widest">Autonomous Feed</span>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1 h-1 rounded-full bg-neon-green"></div>
-              <span className="text-[8px] md:text-[9px] font-mono text-gray-400">WDK: Connected</span>
+          {/* WDK status — xl+ only */}
+          <div className="hidden xl:flex flex-col items-end flex-shrink-0">
+            <span className="text-[7px] font-heading text-neutral-gray uppercase tracking-widest whitespace-nowrap">WDK Feed</span>
+            <div className="flex items-center gap-1">
+              <div className="w-1 h-1 rounded-full bg-neon-green flex-shrink-0" />
+              <span className="text-[7px] font-mono text-gray-400 whitespace-nowrap">Connected</span>
             </div>
           </div>
-          <div className="h-6 md:h-8 border-l border-white/10 hidden sm:block"></div>
+
+          <div className="h-6 border-l border-white/10 hidden sm:block flex-shrink-0" />
 
           <TooltipProvider>
             <Tooltip>
@@ -260,14 +265,16 @@ export function ChatContainer({
                 <button
                   onClick={() => setShowSmartWalletModal(true)}
                   className={cn(
-                    "flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all",
-                    sessionKeyActive 
-                      ? "bg-tether-teal/10 border-tether-teal/30 text-tether-teal hover:bg-tether-teal/20" 
+                    "flex items-center gap-1 px-1.5 py-1 rounded-lg border transition-all flex-shrink-0",
+                    sessionKeyActive
+                      ? "bg-tether-teal/10 border-tether-teal/30 text-tether-teal hover:bg-tether-teal/20"
                       : "bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10"
                   )}
                 >
-                  <Shield className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                  {sessionKeyActive && <span className="text-[8px] md:text-[9px] font-heading font-bold uppercase hidden sm:inline">Session Active</span>}
+                  <Shield className="w-3 h-3 flex-shrink-0" />
+                  {sessionKeyActive && (
+                    <span className="text-[8px] font-heading font-bold uppercase hidden sm:inline whitespace-nowrap">Active</span>
+                  )}
                 </button>
               </TooltipTrigger>
               <TooltipContent>
@@ -276,12 +283,12 @@ export function ChatContainer({
             </Tooltip>
           </TooltipProvider>
 
-          <div className="text-xs font-sans text-gray-400 flex items-center gap-1.5 md:gap-2">
-            <span className="relative flex h-1.5 w-1.5 md:h-2 md:w-2">
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 md:h-2 md:w-2 bg-green-500"></span>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
             </span>
-            <motion.span 
-              className="hidden sm:inline font-heading text-[8px] md:text-[10px] tracking-widest text-tether-teal"
+            <motion.span
+              className="hidden sm:inline font-heading text-[8px] tracking-widest text-tether-teal whitespace-nowrap"
               animate={!isActuallyStreaming ? { y: [0, -2, 0] } : {}}
               transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
             >
@@ -291,22 +298,22 @@ export function ChatContainer({
         </div>
       </div>
 
-      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 scroll-smooth scrollbar-none custom-scrollbar pb-24 sm:pb-28 md:pb-32">
+        <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 lg:p-6 space-y-3 sm:space-y-4 md:space-y-6 scroll-smooth scrollbar-none custom-scrollbar pb-4 sm:pb-6 md:pb-8">
         <ChatHistory messages={messages} isStreaming={isActuallyStreaming} addToolOutput={addToolOutput} />
         
         {isActuallyStreaming && (
-          <div className="mx-2 mt-4 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="flex items-center gap-2 text-gray-400 font-sans text-sm ml-2">
+          <div className="mx-1 sm:mx-2 mt-3 sm:mt-4 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="flex items-center gap-2 text-gray-400 ml-1 sm:ml-2">
               <div className="flex gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-tether-teal" />
                 <span className="w-1.5 h-1.5 rounded-full bg-tether-teal" />
                 <span className="w-1.5 h-1.5 rounded-full bg-tether-teal" />
               </div>
-              <span className="tracking-widest text-[9px] uppercase font-heading text-tether-teal/60 ml-2 animate-pulse">
+              <span className="tracking-widest text-[9px] uppercase font-heading text-tether-teal/60 ml-1 sm:ml-2 animate-pulse truncate">
                 {hasStartedText
                   ? "Strategist: Responding..."
-                  : (currentAgentStatus 
-                      ? `[${currentAgentStatus.status}] ${currentAgentStatus.thought || 'Processing...'} (progress: ${currentAgentStatus.progress}%)` 
+                  : (currentAgentStatus
+                      ? `[${currentAgentStatus.status}] ${currentAgentStatus.thought || 'Processing...'} (${currentAgentStatus.progress}%)`
                       : "Neural Link Active...")}
               </span>
             </div>
@@ -314,22 +321,22 @@ export function ChatContainer({
         )}
 
         {error && (
-          <div className="mx-2 mt-4 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 animate-in fade-in slide-in-from-top-2 duration-500">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-red-500/20 text-red-400">
-                <BrainCircuitIcon className="w-4 h-4" />
+          <div className="mx-1 sm:mx-2 mt-3 sm:mt-4 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-red-500/10 border border-red-500/20 animate-in fade-in slide-in-from-top-2 duration-500">
+            <div className="flex items-center gap-2 sm:gap-3 mb-2.5 sm:mb-3">
+              <div className="p-1.5 sm:p-2 rounded-lg bg-red-500/20 text-red-400 flex-shrink-0">
+                <BrainCircuitIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <span className="text-[10px] font-heading font-bold text-red-400 uppercase tracking-widest">Neural Link Severed</span>
-                <span className="text-[9px] text-red-400/60 font-mono">CODE: {error.name || 'UNKNOWN_ERR'}</span>
+                <span className="text-[9px] text-red-400/60 font-mono truncate">CODE: {error.name || 'UNKNOWN_ERR'}</span>
               </div>
             </div>
-            <p className="text-xs text-gray-300 mb-4 leading-relaxed">
-              {error.message || "An unexpected error occurred in the autonomous strategy bridge. Connection state unstable."}
+            <p className="text-[10px] sm:text-xs text-gray-300 mb-3 sm:mb-4 leading-relaxed">
+              {error.message || "An unexpected error occurred in the autonomous strategy bridge."}
             </p>
             <button
               onClick={() => regenerate()}
-              className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[10px] font-heading font-bold transition-all shadow-glow-sm flex items-center gap-2 uppercase tracking-widest"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[10px] font-heading font-bold transition-all shadow-glow-sm flex items-center gap-1.5 sm:gap-2 uppercase tracking-widest min-h-[36px]"
             >
               <ZapIcon className="w-3 h-3" />
               Reconnect & Retry
@@ -338,7 +345,7 @@ export function ChatContainer({
         )}
       </div>
 
-      <div className="p-2 sm:p-3 md:p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent border-t border-white/5">
+      <div className="sticky bottom-0 z-30 px-2 sm:px-3 md:px-4 py-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent border-t border-white/5">
         {showQuickStart && !quickStartDismissed && (
           <QuickStartCards
             onSelect={(prompt) => {

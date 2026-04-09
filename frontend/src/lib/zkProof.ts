@@ -1,37 +1,4 @@
-// Dynamic imports to avoid top-level await issues in dev server
-let NoirClass: typeof import("@noir-lang/noir_js").Noir | null = null;
-let UltraHonkBackendClass: typeof import("@aztec/bb.js").UltraHonkBackend | null = null;
-
-async function loadModules() {
-  if (!NoirClass || !UltraHonkBackendClass) {
-    const [noirMod, bbMod] = await Promise.all([
-      import("@noir-lang/noir_js"),
-      import("@aztec/bb.js"),
-    ]);
-    NoirClass = noirMod.Noir;
-    UltraHonkBackendClass = bbMod.UltraHonkBackend;
-  }
-}
-
-let noirInstance: InstanceType<typeof import("@noir-lang/noir_js").Noir> | null = null;
-let backendInstance: InstanceType<typeof import("@aztec/bb.js").UltraHonkBackend> | null = null;
-
-async function getCircuitJson(): Promise<object> {
-  const response = await fetch("/circuits/zk_vault_gate.json");
-  if (!response.ok) throw new Error("Failed to load circuit JSON");
-  return response.json();
-}
-
-export async function initNoir() {
-  if (noirInstance && backendInstance) {
-    return { noir: noirInstance, backend: backendInstance };
-  }
-  await loadModules();
-  const circuit = await getCircuitJson();
-  noirInstance = new NoirClass!(circuit as Parameters<InstanceType<typeof import("@noir-lang/noir_js").Noir>["witness"]>[0]);
-  backendInstance = new UltraHonkBackendClass!(circuit.bytecode);
-  return { noir: noirInstance, backend: backendInstance };
-}
+import { getApiUrl } from './api';
 
 export interface ProofInputs {
   currentYear: number;
@@ -51,39 +18,66 @@ export interface GeneratedProof {
   publicInputs: string[];
 }
 
-export async function generateProof(inputs: ProofInputs): Promise<GeneratedProof> {
-  const { noir, backend } = await initNoir();
+/**
+ * Generate ZK proof via backend API.
+ * This avoids @aztec/bb.js WASM loading issues in Vite dev mode.
+ */
+export async function generateProof(inputs: ProofInputs, signal?: AbortSignal): Promise<GeneratedProof> {
+  const apiUrl = getApiUrl('/api/zk-proof/generate');
+  
+  let res: Response;
+  try {
+    res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(inputs),
+      signal,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw err;
+    }
+    throw new Error(`Network error: ${err instanceof Error ? err.message : 'Failed to connect to proof generation service'}`);
+  }
 
-  const noirInputs: Record<string, unknown> = {
-    current_year: inputs.currentYear,
-    required_kyc_level: inputs.requiredKycLevel,
-    subject: inputs.subject,
-    agent_token_id: inputs.agentTokenId,
-    proof_valid_until: inputs.proofValidUntil,
-    nullifier: inputs.nullifier,
-    birth_year: inputs.birthYear,
-    country_code: inputs.countryCode,
-    kyc_level: inputs.kycLevel,
-    agent_holder: inputs.agentHolder,
-  };
+  if (!res.ok) {
+    let errorMessage = `Proof generation failed (HTTP ${res.status})`;
+    try {
+      const errData = await res.json();
+      if (errData?.error) {
+        errorMessage = errData.error;
+      }
+    } catch {
+      // Response might not be JSON
+    }
+    throw new Error(errorMessage);
+  }
 
-  const { witness } = await noir.execute(noirInputs);
-  const proof = await backend.generateProof(witness);
+  let data: { proof: string; publicInputs: string[] };
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error('Invalid response from proof generation service');
+  }
+
+  if (!data.proof) {
+    throw new Error('Proof generation returned empty result');
+  }
 
   return {
-    proof: proof.proof,
-    publicInputs: proof.publicInputs as string[],
+    proof: hexToProof(data.proof),
+    publicInputs: data.publicInputs || [],
   };
 }
 
 export function proofToHex(proof: Uint8Array): string {
-  return "0x" + Array.from(proof)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return '0x' + Array.from(proof)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 export function hexToProof(hex: string): Uint8Array {
-  const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
+  const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
   const bytes = new Uint8Array(clean.length / 2);
   for (let i = 0; i < clean.length; i += 2) {
     bytes[i / 2] = parseInt(clean.slice(i, i + 2), 16);

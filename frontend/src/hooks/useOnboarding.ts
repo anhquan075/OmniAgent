@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const NEVER_SHOW_KEY = 'omniagent_onboarding_never_show';
+const ONBOARDING_COMPLETED_KEY = 'omniagent_onboarding_completed';
 
 interface OnboardingState {
   shouldShow: boolean;
@@ -13,23 +13,24 @@ export function useOnboarding(): OnboardingState {
   const [shouldShow, setShouldShow] = useState(false);
 
   useEffect(() => {
-    const neverShow = localStorage.getItem(NEVER_SHOW_KEY);
-    if (!neverShow) {
+    const completed = sessionStorage.getItem(ONBOARDING_COMPLETED_KEY);
+    if (!completed) {
       setShouldShow(true);
     }
   }, []);
 
   const completeOnboarding = useCallback(() => {
+    sessionStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
     setShouldShow(false);
   }, []);
 
   const neverShowAgain = useCallback(() => {
-    localStorage.setItem(NEVER_SHOW_KEY, 'true');
+    sessionStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
     setShouldShow(false);
   }, []);
 
   const resetOnboarding = useCallback(() => {
-    localStorage.removeItem(NEVER_SHOW_KEY);
+    sessionStorage.removeItem(ONBOARDING_COMPLETED_KEY);
     setShouldShow(true);
   }, []);
 

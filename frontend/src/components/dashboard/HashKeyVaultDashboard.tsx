@@ -1,11 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseEther, formatEther, parseUnits, formatUnits } from 'viem';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/Card';
-import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
-import { Input } from '../ui/Input';
-import { Shield, Wallet, TrendingUp, Send, ArrowDownToLine, Bot, Fingerprint, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Shield, Wallet, Send, ArrowDownToLine, Bot, Fingerprint, AlertTriangle, CheckCircle2, Loader2, ExternalLink, ChevronRight, Lock, Unlock, Zap } from 'lucide-react';
 import { HASHKEY_TESTNET_PRESET } from '../../lib/contractAddresses';
 import { kycSbtAbi, hashkeyVaultAbi, agentNfaAbi, erc20Abi, zkIdentityGateAbi } from '../../lib/abi';
 import { generateProof, proofToHex } from '../../lib/zkProof';
@@ -14,10 +10,10 @@ const HASHKEY_TESTNET_CHAIN_ID = 133;
 
 type KycStatus = { isValid: boolean; level: number; loading: boolean };
 type VaultState = { totalAssets: string; apy: string; userShares: string; loading: boolean };
+type Tab = 'overview' | 'deposit' | 'withdraw' | 'agent' | 'zk';
 
 export const HashKeyVaultDashboard: React.FC = () => {
   const { address, isConnected, chain } = useAccount();
-  const { switchChain } = useSwitchChain();
   const isCorrectChain = chain?.id === HASHKEY_TESTNET_CHAIN_ID;
   const [kycStatus, setKycStatus] = useState<KycStatus>({ isValid: false, level: 0, loading: true });
   const [vaultState, setVaultState] = useState<VaultState>({ totalAssets: '0', apy: '0', userShares: '0', loading: true });
@@ -26,7 +22,7 @@ export const HashKeyVaultDashboard: React.FC = () => {
   const [zkDepositAmount, setZkDepositAmount] = useState('');
   const [zkProofGenerating, setZkProofGenerating] = useState(false);
   const [zkProofError, setZkProofError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw' | 'agent' | 'zk'>('deposit');
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [txStatus, setTxStatus] = useState<string | null>(null);
 
   const { data: kycInfo } = useReadContract({
@@ -150,6 +146,10 @@ export const HashKeyVaultDashboard: React.FC = () => {
     if (!address) return;
     setZkProofError(null);
     setZkProofGenerating(true);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
     try {
       const validUntil = Math.floor(Date.now() / 1000) + 86400 * 365;
       const nullifier = `0x${Array.from({ length: 64 }, (_, i) => ((i + 7) % 16).toString(16)).join('')}`;
@@ -166,29 +166,41 @@ export const HashKeyVaultDashboard: React.FC = () => {
         countryCode: 702,
         kycLevel: 3,
         agentHolder: subjectField,
-      });
+      }, controller.signal);
 
+      clearTimeout(timeoutId);
       setZkProofGenerating(false);
       setTxStatus('submitting-proof');
-      writeContract({
-        address: HASHKEY_TESTNET_PRESET.zkIdentityGateAddress as `0x${string}`,
-        abi: zkIdentityGateAbi,
-        functionName: 'submitProof',
-        args: [
-          proofToHex(proof) as `0x${string}`,
-          {
-            currentYear: 2026,
-            requiredKycLevel: 2,
-            subject: address,
-            agentTokenId: 1,
-            proofValidUntil: BigInt(validUntil),
-            nullifier: nullifier as `0x${string}`,
-          },
-        ],
-      });
+      
+      try {
+        writeContract({
+          address: HASHKEY_TESTNET_PRESET.zkIdentityGateAddress as `0x${string}`,
+          abi: zkIdentityGateAbi,
+          functionName: 'submitProof',
+          args: [
+            proofToHex(proof) as `0x${string}`,
+            {
+              currentYear: 2026,
+              requiredKycLevel: 2,
+              subject: address,
+              agentTokenId: 1,
+              proofValidUntil: BigInt(validUntil),
+              nullifier: nullifier as `0x${string}`,
+            },
+          ],
+        });
+      } catch (writeErr: any) {
+        setTxStatus(null);
+        setZkProofError(writeErr?.message ?? 'Transaction failed');
+      }
     } catch (err: any) {
+      clearTimeout(timeoutId);
       setZkProofGenerating(false);
-      setZkProofError(err?.message ?? 'Proof generation failed');
+      if (err?.name === 'AbortError') {
+        setZkProofError('Request timed out - please try again');
+      } else {
+        setZkProofError(err?.message ?? 'Proof generation failed');
+      }
     }
   }, [address, writeContract]);
 
@@ -203,273 +215,297 @@ export const HashKeyVaultDashboard: React.FC = () => {
     });
   }, [zkDepositAmount, address, writeContract]);
 
+  // --- Render: not connected ---
   if (!isConnected) {
     return (
-      <Card className="max-w-2xl mx-auto">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Wallet className="w-12 h-12 text-purple-400 mb-4" />
-          <p className="text-gray-400">Connect your wallet to access HashKey Vault</p>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-center justify-center py-6 text-center">
+        <Wallet className="w-8 h-8 text-tether-teal/50 mb-2" />
+        <p className="text-neutral-gray text-xs">Connect wallet to access vault</p>
+      </div>
     );
   }
 
-  if (!isCorrectChain) {
-    return (
-      <Card className="max-w-2xl mx-auto border-yellow-500/50 bg-yellow-500/5">
-        <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
-          <AlertTriangle className="w-12 h-12 text-yellow-400" />
-          <p className="text-gray-300 text-center">
-            HashKey Vault requires <span className="text-purple-400 font-semibold">HashKey Chain Testnet</span>
-          </p>
-          <p className="text-gray-500 text-sm">
-            Currently connected to {chain?.name ?? 'unknown network'}
-          </p>
-          <Button
-            onClick={() => switchChain({ chainId: HASHKEY_TESTNET_CHAIN_ID })}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            Switch to HashKey Testnet
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
+
 
   const canDeposit = kycStatus.level >= 1;
   const hasShares = vaultState.userShares !== '0';
 
+  // Pipeline step status
+  const steps = [
+    { label: 'KYC', done: kycStatus.isValid, icon: Fingerprint },
+    { label: 'ZK Proof', done: !!hasValidProof, icon: Shield },
+    { label: 'Vault', done: hasShares, icon: Lock },
+  ];
+
+  const inputClass = "w-full px-2.5 sm:px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-xs sm:text-sm placeholder:text-neutral-gray/50 focus:border-tether-teal/50 focus:outline-none focus:ring-1 focus:ring-tether-teal/20 transition-colors disabled:opacity-40 min-h-[40px] sm:min-h-0";
+  const btnPrimary = "w-full px-2.5 sm:px-3 py-2 rounded-lg bg-tether-teal/20 text-tether-teal border border-tether-teal/30 hover:bg-tether-teal/30 transition-colors text-[10px] sm:text-xs font-heading uppercase tracking-wider disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center gap-1.5 min-h-[40px] sm:min-h-0";
+  const btnOutline = "w-full px-2.5 sm:px-3 py-2 rounded-lg border border-white/10 text-neutral-gray-light hover:text-white hover:border-tether-teal/30 transition-colors text-[10px] sm:text-xs font-heading uppercase tracking-wider disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center gap-1.5 min-h-[40px] sm:min-h-0";
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Shield className="w-6 h-6 text-purple-400" />
-            HashKey Vault
-          </h2>
-          <p className="text-gray-400 text-sm">KYC-gated DeFi vault with AI agent management</p>
-        </div>
-        <div className="flex gap-2">
-          <Badge variant={kycStatus.isValid ? 'success' : 'warning'}>
-            <Fingerprint className="w-3 h-3 mr-1" />
-            KYC Lv{kycStatus.level}
-          </Badge>
-          <Badge variant="outline">{address?.slice(0, 6)}...{address?.slice(-4)}</Badge>
-        </div>
+    <div className="flex flex-col h-full max-h-full space-y-3 overflow-hidden">
+      {/* Pipeline Progress — shows judge the flow at a glance */}
+      <div className="flex items-center gap-1">
+        {steps.map((step, i) => (
+          <React.Fragment key={step.label}>
+            <button
+              onClick={() => setActiveTab(i === 2 ? 'deposit' : 'zk')}
+              className={`flex-1 min-w-0 flex items-center justify-center gap-1 px-1 py-1.5 rounded-md transition-all text-[9px] font-heading uppercase tracking-wide border cursor-pointer ${
+                step.done
+                  ? 'bg-tether-teal/15 text-tether-teal border-tether-teal/30'
+                  : 'bg-white/[0.03] text-neutral-gray border-white/5 hover:border-white/20'
+              }`}
+            >
+              {step.done
+                ? <CheckCircle2 className="w-3 h-3 flex-shrink-0" />
+                : <step.icon className="w-3 h-3 flex-shrink-0 opacity-50" />
+              }
+              <span className="truncate">{step.label}</span>
+            </button>
+            {i < steps.length - 1 && (
+              <ChevronRight className={`w-2.5 h-2.5 flex-shrink-0 ${
+                step.done ? 'text-tether-teal/60' : 'text-white/10'
+              }`} />
+            )}
+          </React.Fragment>
+        ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-xs text-gray-400">Total Assets</p>
-            <p className="text-xl font-bold text-white">${vaultState.totalAssets}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-xs text-gray-400">Current APY</p>
-            <p className="text-xl font-bold text-green-400">{vaultState.apy}%</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-xs text-gray-400">Your Shares</p>
-            <p className="text-xl font-bold text-white">{vaultState.userShares}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {!canDeposit && (
-        <Card className="border-yellow-500/50 bg-yellow-500/5">
-          <CardContent className="py-4 flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-yellow-400" />
-            <div>
-              <p className="text-yellow-400 font-medium">KYC Required</p>
-              <p className="text-gray-400 text-sm">Complete KYC verification to deposit. Your current level: {kycStatus.level}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="flex gap-2 border-b border-gray-700 pb-2">
+      {/* Stats Row */}
+      <div className="grid grid-cols-3 gap-1 sm:gap-1.5">
         {[
-          { id: 'deposit', label: 'Deposit', icon: Send },
-          { id: 'withdraw', label: 'Withdraw', icon: ArrowDownToLine },
-          { id: 'agent', label: 'Mint Agent', icon: Bot },
-          { id: 'zk', label: 'ZK Verify', icon: Fingerprint },
-        ].map(({ id, label, icon: Icon }) => (
+          { label: 'TVL', value: `$${Number(vaultState.totalAssets).toFixed(2)}` },
+          { label: 'APY', value: `${vaultState.apy}%`, accent: true },
+          { label: 'Shares', value: Number(vaultState.userShares).toFixed(2) },
+        ].map(({ label, value, accent }) => (
+          <div key={label} className="rounded-md bg-white/5 border border-white/5 px-1 sm:px-1.5 py-1.5 text-center overflow-hidden">
+            <p className="text-[7px] sm:text-[8px] text-neutral-gray uppercase tracking-wider font-heading">{label}</p>
+            <p className={`text-[11px] sm:text-xs md:text-sm font-bold leading-tight truncate ${accent ? 'text-tether-teal' : 'text-white'}`}>{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Tab Navigation — icons only on small, label on sm+ */}
+      <div className="flex gap-0.5 p-0.5 rounded-lg bg-white/5 border border-white/5 overflow-hidden">
+        {([
+          { id: 'overview' as Tab, label: 'Status', icon: Zap },
+          { id: 'zk' as Tab, label: 'ZK', icon: Fingerprint },
+          { id: 'deposit' as Tab, label: 'In', icon: Send },
+          { id: 'withdraw' as Tab, label: 'Out', icon: ArrowDownToLine },
+          { id: 'agent' as Tab, label: 'NFA', icon: Bot },
+        ]).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
-            onClick={() => setActiveTab(id as any)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            onClick={() => setActiveTab(id)}
+            title={label}
+            className={`flex-1 min-w-0 flex items-center justify-center gap-1 px-0.5 py-1.5 rounded-md text-[9px] font-heading uppercase tracking-wide transition-all ${
               activeTab === id
-                ? 'bg-purple-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                ? 'bg-tether-teal/20 text-tether-teal border border-tether-teal/30'
+                : 'text-neutral-gray hover:text-white hover:bg-white/5 border border-transparent'
             }`}
           >
-            <Icon className="w-4 h-4" />
-            {label}
+            <Icon className="w-3 h-3 flex-shrink-0" />
+            <span className="hidden xl:inline truncate">{label}</span>
           </button>
         ))}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">
-            {activeTab === 'deposit' && 'Deposit USDT'}
-            {activeTab === 'withdraw' && 'Withdraw USDT'}
-            {activeTab === 'agent' && 'Mint Agent NFA'}
-            {activeTab === 'zk' && 'ZK Identity Verification'}
-          </CardTitle>
-          <CardDescription>
-            {activeTab === 'deposit' && `Balance: ${userUsdtBalance ? formatUnits(userUsdtBalance as bigint, 6) : '0'} USDT`}
-            {activeTab === 'withdraw' && `Withdrawable: ${vaultState.userShares} shares`}
-            {activeTab === 'agent' && 'Create an AI agent NFT to manage your vault'}
-            {activeTab === 'zk' && 'Submit a ZK proof to verify your identity privately'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {activeTab === 'deposit' && (
-            <>
-              <Input
-                type="number"
-                placeholder="Amount in USDT"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-                disabled={!canDeposit}
-              />
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleApprove}
-                  disabled={!depositAmount || !canDeposit || isPending}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  {txStatus === 'approving' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Approve'}
-                </Button>
-                <Button
-                  onClick={handleDeposit}
-                  disabled={!depositAmount || !canDeposit || isPending}
-                  className="flex-1 bg-purple-600 hover:bg-purple-700"
-                >
-                  {txStatus === 'depositing' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Deposit'}
-                </Button>
-              </div>
-            </>
-          )}
+      {/* Tab Content */}
+      <div className="flex-1 overflow-y-auto rounded-lg bg-white/[0.03] border border-white/5 p-2.5 sm:p-3 md:p-4 space-y-2.5 sm:space-y-3 pb-4 sm:pb-6 md:pb-8">
 
-          {activeTab === 'withdraw' && (
-            <>
-              <Input
-                type="number"
-                placeholder="Amount in USDT"
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(e.target.value)}
-                disabled={!hasShares}
-              />
-              <Button
-                onClick={handleWithdraw}
-                disabled={!withdrawAmount || !hasShares || isPending}
-                className="w-full bg-purple-600 hover:bg-purple-700"
-              >
-                {txStatus === 'withdrawing' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Withdraw'}
-              </Button>
-            </>
-          )}
-
-          {activeTab === 'agent' && (
-            <div className="text-center space-y-4">
-              <Bot className="w-16 h-16 text-purple-400 mx-auto" />
-              <p className="text-gray-400">Mint an Agent NFT to enable autonomous vault management</p>
-              <Button
-                onClick={handleMintAgent}
-                disabled={isPending}
-                className="bg-purple-600 hover:bg-purple-700"
-              >
-                {txStatus === 'minting' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Mint Agent NFA'}
-              </Button>
-            </div>
-          )}
-
-          {activeTab === 'zk' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Fingerprint className="w-10 h-10 text-purple-400" />
-                <div>
-                  <p className="text-gray-300 text-sm">ZK Identity Proof</p>
-                  <p className="text-xs">
-                    {hasValidProof
-                      ? <span className="text-green-400 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Valid proof on-chain</span>
-                      : <span className="text-yellow-400">No valid proof — submit one below</span>
-                    }
-                  </p>
-                </div>
-              </div>
-              <div className="bg-gray-800 rounded-lg p-4 text-left text-sm">
-                <p className="text-purple-400 font-medium mb-2">Circuit verifies:</p>
-                <ul className="text-gray-300 space-y-1">
-                  <li>✓ Age ≥ 18 (no DOB revealed)</li>
-                  <li>✓ Not in sanctioned jurisdiction</li>
-                  <li>✓ KYC level meets threshold</li>
-                  <li>✓ Valid Agent NFA holder</li>
-                </ul>
-              </div>
-              <Button
-                onClick={handleSubmitProof}
-                disabled={isPending || !!hasValidProof || zkProofGenerating}
-                className="w-full bg-purple-600 hover:bg-purple-700"
-              >
-                {zkProofGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                {txStatus === 'submitting-proof' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                {hasValidProof ? 'Proof Already Submitted' : zkProofGenerating ? 'Generating ZK Proof...' : 'Generate & Submit ZK Proof'}
-              </Button>
-              {zkProofError && (
-                <p className="text-red-400 text-xs">{zkProofError}</p>
-              )}
-              {hasValidProof && (
-                <>
-                  <div className="border-t border-gray-700 pt-4">
-                    <p className="text-sm text-gray-400 mb-2">Deposit via ZK Gate (requires valid proof + Agent NFA)</p>
-                    <Input
-                      type="number"
-                      placeholder="Amount in USDT"
-                      value={zkDepositAmount}
-                      onChange={(e) => setZkDepositAmount(e.target.value)}
-                    />
-                    <Button
-                      onClick={handleZkDeposit}
-                      disabled={!zkDepositAmount || isPending}
-                      className="w-full mt-3 bg-green-600 hover:bg-green-700"
-                    >
-                      {txStatus === 'zk-depositing' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                      Deposit with ZK Proof
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {txStatus && hash && (
-            <div className={`flex items-center gap-2 p-3 rounded-lg ${
-              txStatus === 'confirmed' ? 'bg-green-500/10 text-green-400' : 'bg-blue-500/10 text-blue-400'
-            }`}>
-              {txStatus === 'confirmed' ? <CheckCircle2 className="w-4 h-4" /> : <Loader2 className="w-4 h-4 animate-spin" />}
-              <span className="text-sm">
-                {txStatus === 'confirmed' ? 'Transaction confirmed!' : `Transaction ${txStatus}...`}
+        {/* OVERVIEW — default landing, shows pipeline status */}
+        {activeTab === 'overview' && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] text-neutral-gray font-heading uppercase tracking-wider truncate">Pipeline</span>
+              <span className="text-[9px] font-mono text-neutral-gray flex-shrink-0 ml-2">
+                {address?.slice(0, 6)}...{address?.slice(-4)}
               </span>
-              <a
-                href={`https://testnet-explorer.hsk.xyz/tx/${hash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-auto text-xs underline"
-              >
-                View on explorer
-              </a>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            {[
+              {
+                step: 1, label: 'KYC', desc: 'SBT on HashKey',
+                done: kycStatus.isValid, detail: `Lv${kycStatus.level}`,
+                action: () => setActiveTab('zk'), icon: Fingerprint,
+              },
+              {
+                step: 2, label: 'ZK Proof', desc: 'Noir — prove privately',
+                done: !!hasValidProof, detail: hasValidProof ? 'Valid' : 'Needed',
+                action: () => setActiveTab('zk'), icon: Shield,
+              },
+              {
+                step: 3, label: 'Vault', desc: 'KYC-gated ERC-4626',
+                done: hasShares, detail: hasShares ? `${Number(vaultState.userShares).toFixed(1)}` : 'Empty',
+                action: () => setActiveTab('deposit'), icon: canDeposit ? Unlock : Lock,
+              },
+            ].map(({ step, label, desc, done, detail, action, icon: StepIcon }) => (
+              <button
+                key={step}
+                onClick={action}
+                className={`w-full flex items-center gap-2 p-2 rounded-lg border transition-all text-left group overflow-hidden ${
+                  done
+                    ? 'bg-tether-teal/5 border-tether-teal/20 hover:border-tether-teal/40'
+                    : 'bg-white/[0.02] border-white/5 hover:border-white/20'
+                }`}
+              >
+                <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center flex-shrink-0 ${
+                  done ? 'bg-tether-teal/15' : 'bg-white/5'
+                }`}>
+                  {done
+                    ? <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-tether-teal" />
+                    : <StepIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-neutral-gray/60" />
+                  }
+                </div>
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className={`text-[10px] sm:text-[11px] font-semibold truncate ${done ? 'text-white' : 'text-neutral-gray-light'}`}>
+                      {label}
+                    </span>
+                    <span className={`text-[8px] px-1 py-0.5 rounded font-heading uppercase tracking-wide flex-shrink-0 ${
+                      done ? 'bg-tether-teal/10 text-tether-teal' : 'bg-white/5 text-neutral-gray'
+                    }`}>{detail}</span>
+                  </div>
+                  <p className="text-[8px] sm:text-[9px] text-neutral-gray truncate">{desc}</p>
+                </div>
+                <ChevronRight className="w-3 h-3 text-neutral-gray/30 group-hover:text-neutral-gray/60 transition-colors flex-shrink-0" />
+              </button>
+            ))}
+            <a
+              href={`https://testnet-explorer.hsk.xyz/address/${HASHKEY_TESTNET_PRESET.vaultAddress}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1 text-[8px] text-neutral-gray hover:text-tether-teal transition-colors pt-1"
+            >
+              <span className="truncate">HashKey Explorer</span>
+              <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+            </a>
+          </div>
+        )}
+
+        {/* ZK VERIFY */}
+        {activeTab === 'zk' && (
+          <div className="space-y-2.5 overflow-hidden">
+            <div className="flex items-center gap-2">
+              <div className={`p-1.5 rounded-md border flex-shrink-0 ${hasValidProof ? 'bg-tether-teal/10 border-tether-teal/20' : 'bg-purple-500/10 border-purple-500/20'}`}>
+                <Fingerprint className={`w-5 h-5 ${hasValidProof ? 'text-tether-teal' : 'text-purple-400'}`} />
+              </div>
+              <div className="min-w-0 overflow-hidden">
+                <p className="text-neutral-gray-light text-[11px] font-semibold truncate">ZK Identity Proof</p>
+                <p className="text-[9px] truncate">
+                  {hasValidProof
+                    ? <span className="text-tether-teal">Verified on-chain</span>
+                    : <span className="text-amber-400">Submit to unlock vault</span>
+                  }
+                </p>
+              </div>
+            </div>
+            <div className="rounded-md bg-white/[0.03] border border-white/5 p-2">
+              <p className="text-purple-400/80 font-heading text-[8px] uppercase tracking-wider mb-1">Noir circuit verifies:</p>
+              <div className="grid grid-cols-2 gap-x-1.5 gap-y-0.5 text-[9px] text-neutral-gray-light">
+                {['Age 18+', 'Jurisdiction', 'KYC level', 'NFA holder'].map(item => (
+                  <div key={item} className="flex items-center gap-1 min-w-0">
+                    <CheckCircle2 className="w-2.5 h-2.5 text-tether-teal/60 flex-shrink-0" />
+                    <span className="truncate">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={handleSubmitProof}
+              disabled={isPending || !!hasValidProof || zkProofGenerating}
+              className="w-full px-2 py-2 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30 transition-colors text-[9px] sm:text-[10px] font-heading uppercase tracking-wide disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center gap-1.5"
+            >
+              {(zkProofGenerating || txStatus === 'submitting-proof') && <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" />}
+              <span className="truncate">
+                {hasValidProof ? 'Proof Verified' : zkProofGenerating ? 'Generating...' : 'Submit ZK Proof'}
+              </span>
+            </button>
+            {zkProofError && <p className="text-red-400 text-[9px] break-words">{zkProofError}</p>}
+            {hasValidProof && (
+              <div className="border-t border-white/5 pt-2.5 space-y-2">
+                <p className="text-[9px] text-neutral-gray font-heading uppercase tracking-wider">ZK-Gated Deposit</p>
+                <input type="number" placeholder="USDT amount" value={zkDepositAmount} onChange={(e) => setZkDepositAmount(e.target.value)} className={inputClass} />
+                <button onClick={handleZkDeposit} disabled={!zkDepositAmount || isPending} className={btnPrimary}>
+                  {txStatus === 'zk-depositing' && <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" />}
+                  <span className="truncate">Deposit via ZK</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* DEPOSIT */}
+        {activeTab === 'deposit' && (
+          <div className="space-y-2.5 overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] text-neutral-gray font-heading uppercase tracking-wider">Deposit</span>
+              <span className="text-[9px] text-neutral-gray font-mono truncate ml-2">
+                {userUsdtBalance ? formatUnits(userUsdtBalance as bigint, 6) : '0'} USDT
+              </span>
+            </div>
+            {!canDeposit && (
+              <div className="flex items-center gap-1.5 p-2 rounded-md bg-amber-400/5 border border-amber-400/20 text-[9px]">
+                <AlertTriangle className="w-3 h-3 text-amber-400 flex-shrink-0" />
+                <span className="text-amber-400 truncate">KYC required</span>
+                <button onClick={() => setActiveTab('zk')} className="ml-auto text-tether-teal hover:underline flex-shrink-0">Verify</button>
+              </div>
+            )}
+            <input type="number" placeholder="Amount" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} disabled={!canDeposit} className={inputClass} />
+            <div className="grid grid-cols-2 gap-1.5">
+              <button onClick={handleApprove} disabled={!depositAmount || !canDeposit || isPending} className={btnOutline}>
+                {txStatus === 'approving' ? <Loader2 className="w-3 h-3 animate-spin" /> : <span className="truncate">Approve</span>}
+              </button>
+              <button onClick={handleDeposit} disabled={!depositAmount || !canDeposit || isPending} className={btnPrimary}>
+                {txStatus === 'depositing' ? <Loader2 className="w-3 h-3 animate-spin" /> : <span className="truncate">Deposit</span>}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'withdraw' && (
+          <div className="space-y-2.5 overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] text-neutral-gray font-heading uppercase tracking-wider">Withdraw</span>
+              <span className="text-[9px] text-neutral-gray font-mono truncate ml-2">{Number(vaultState.userShares).toFixed(2)} shares</span>
+            </div>
+            <input type="number" placeholder="Amount" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} disabled={!hasShares} className={inputClass} />
+            <button onClick={handleWithdraw} disabled={!withdrawAmount || !hasShares || isPending} className={btnPrimary}>
+              {txStatus === 'withdrawing' ? <Loader2 className="w-3 h-3 animate-spin" /> : <span className="truncate">Withdraw</span>}
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'agent' && (
+          <div className="text-center space-y-2.5 py-1 overflow-hidden">
+            <Bot className="w-8 h-8 text-tether-teal/40 mx-auto" />
+            <div>
+              <p className="text-neutral-gray-light text-[11px] font-semibold">Agent NFA</p>
+              <p className="text-neutral-gray text-[9px]">On-chain agent identity</p>
+            </div>
+            <button onClick={handleMintAgent} disabled={isPending} className={btnPrimary}>
+              {txStatus === 'minting' ? <Loader2 className="w-3 h-3 animate-spin" /> : <span className="truncate">Mint Agent NFA</span>}
+            </button>
+          </div>
+        )}
+
+        {txStatus && hash && (
+          <div className={`flex items-center gap-1.5 p-2 rounded-md text-[9px] overflow-hidden ${
+            txStatus === 'confirmed'
+              ? 'bg-tether-teal/10 text-tether-teal border border-tether-teal/20'
+              : 'bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/20'
+          }`}>
+            {txStatus === 'confirmed' ? <CheckCircle2 className="w-3 h-3 flex-shrink-0" /> : <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" />}
+            <span className="truncate">{txStatus === 'confirmed' ? 'Confirmed' : `${txStatus}...`}</span>
+            <a
+              href={`https://testnet-explorer.hsk.xyz/tx/${hash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-auto flex items-center gap-0.5 hover:underline flex-shrink-0"
+            >
+              <ExternalLink className="w-2.5 h-2.5" />
+            </a>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

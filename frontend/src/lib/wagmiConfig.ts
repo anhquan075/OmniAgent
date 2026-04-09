@@ -1,12 +1,12 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { mainnet, sepolia } from 'wagmi/chains';
+import { sepolia } from 'wagmi/chains';
 import { createStorage } from 'wagmi';
 import { mock } from 'wagmi/connectors';
 import type { Chain } from 'wagmi/chains';
 
 const TEST_ACCOUNTS = ['0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'] as const;
 
-export const hashkeyTestnet: Chain = {
+export const hashkeyTestnet: Chain & { iconUrl?: string } = {
   id: 133,
   name: 'HashKey Chain Testnet',
   nativeCurrency: { decimals: 18, name: 'HashKey Token', symbol: 'HSK' },
@@ -18,6 +18,7 @@ export const hashkeyTestnet: Chain = {
     default: { name: 'HashKey Explorer', url: 'https://testnet-explorer.hsk.xyz' },
   },
   testnet: true,
+  iconUrl: '/coins/hsk.png',
 };
 
 export const hashkeyMainnet: Chain = {
@@ -42,10 +43,6 @@ export function getInitialChain(): Chain {
   const network = import.meta.env.VITE_DEFAULT_NETWORK || 'hashkey';
 
   switch (network.toLowerCase()) {
-    case 'mainnet':
-    case 'ethereum':
-    case 'eth':
-      return mainnet;
     case 'sepolia':
       return sepolia;
     case 'hashkey':
@@ -61,7 +58,7 @@ export function getInitialChain(): Chain {
  * @returns {Array} Array of supported chain objects
  */
 function getSupportedChains(): Chain[] {
-  return [hashkeyTestnet, sepolia, mainnet];
+  return [hashkeyTestnet, sepolia];
 }
 
 export const wagmiConfig = getDefaultConfig({

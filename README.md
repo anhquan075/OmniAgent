@@ -1,4 +1,4 @@
-# OmniAgent - The ZK-Verified Autonomous Capital Allocator Fleet
+# OmniAgent — Compliant Autonomous DeFi on HashKey Chain
 
 <div align="center">
   <img src="frontend/public/imgs/mascot-owl-no-bg.png" alt="OmniAgent Mascot" width="200" />
@@ -6,31 +6,77 @@
 
 <div align="center">
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
-[![WDK](https://img.shields.io/badge/Tether_WDK-Verified-blue?style=for-the-badge&logo=tether)](https://docs.wdk.tether.io)
-[![X402](https://img.shields.io/badge/X402-Payment-yellowgreen?style=for-the-badge)](https://x402.org/)
-[![ZK Verified](https://img.shields.io/badge/ZK-Risk_Verified-purple?style=for-the-badge)](#zk-risk-verification)
-[![OpenClaw](https://img.shields.io/badge/OpenClaw-Compatible-success?style=for-the-badge)](#agent-framework)
+[![HashKey Chain](https://img.shields.io/badge/HashKey_Chain-Testnet_133-00D395?style=for-the-badge)](https://testnet-explorer.hsk.xyz)
+[![ZK Verified](https://img.shields.io/badge/ZK-Noir_Circuits-purple?style=for-the-badge)](#zk-identity-gate)
+[![AI Agent](https://img.shields.io/badge/AI-Council_of_Experts-blue?style=for-the-badge)](#ai-autonomous-agent)
+[![License](https://img.shields.io/badge/License-Apache_2.0-gray?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
 
 </div>
 
-> **"Where robots manage robots' money — verified by math, not vibes."**
-
-OmniAgent is an autonomous, non-custodial yield routing stack — a **technical flagship** for the Agent Wallets track. It introduces a new paradigm: an autonomous AI capital allocator managing a **fleet of robot sub-agents** that coordinate yield strategies, hire each other for market intelligence via X402 micropayments, and verify risk decisions with zero-knowledge proofs — all while maintaining on-chain policy enforcement.
+> ZK identity gating + AI yield agent + agent-to-agent payments — built on HashKey Chain.
 
 ---
 
+## What It Does (30-second version)
+
+1. **Users prove KYC eligibility via ZK proof** — Noir circuits verify age, jurisdiction, and KYC level without exposing personal data
+2. **AI Council of Experts autonomously manages vault yield** — 3 specialist analysts vote, PolicyGuard enforces immutable on-chain rules
+3. **Agent fleet coordinates via X402 micropayments** — robots hire each other for market intelligence, settle in USDT on HashKey Chain
+4. **All execution constrained by on-chain governance** — 4-layer pipeline: hard rules → anomaly detection → AI → human review
+
+---
+
+## Architecture
+
+```mermaid
+graph TB
+    subgraph "HashKey Chain (ID: 133)"
+        ZKGate[ZKIdentityGate<br/>Noir ZK Proofs]
+        Vault[HashKey Vault<br/>ERC-4626 + KYC Gate]
+        Policy[PolicyGuard<br/>Immutable Rules]
+        NFA[AgentNFA<br/>On-chain Agent Identity]
+        Oracle[ZKRiskOracle<br/>Risk Verification]
+    end
+
+    subgraph "AI Engine"
+        Council[Council of Experts]
+        Aave[Aave Analyst]
+        Market[Market Volatility Analyst]
+        ZKRisk[ZK Risk Analyst]
+        Council --> Aave & Market & ZKRisk
+    end
+
+    subgraph "Agent Fleet (PayFi)"
+        Fleet[6 Robot Agents]
+        X402[X402 Micropayments]
+        Fleet --> X402
+    end
+
+    User([User]) -->|ZK Proof| ZKGate
+    ZKGate -->|Verified| Vault
+    Council -->|Decision| NFA
+    NFA -->|Execute via| Policy
+    Policy -->|Validated| Vault
+    Oracle -->|Risk Score| Council
+    X402 -->|USDT Settlement| Vault
+```
+
 ## Live Demo
 
-**🚀 Try it now:** https://omni-wdk.vercel.app/
+**Try it now:** https://omni-wdk.vercel.app/
 
-The demo showcases:
-- **Autonomous AI Agent** — Click "Run Agent Cycle" to watch the agent make real decisions
-- **88+ MCP Tools** — Full WDK integration with vault, lending, bridging, swaps
-- **X402 Agent Economy** — Peer-to-peer payments between agents
-- **4-Layer Governance** — Hard rules → Anomaly → AI → Human review
+**Deployed Contracts (HashKey Testnet):**
 
-The agent demonstrates **"when and why"** decision-making — it analyzes risk, evaluates opportunities, and determines when to run its next cycle based on confidence scores.
+| Contract | Address | Purpose |
+|----------|---------|---------|
+| HashKey Vault | [`0x605b...7318`](https://testnet-explorer.hsk.xyz/address/0x605b6b8C83d8b0EA8867BEda4099DE4F042F7318) | KYC-gated ERC-4626 yield vault |
+| ZKIdentityGate | [`0x82f3...843E`](https://testnet-explorer.hsk.xyz/address/0x82f3c7967Fe2A0ae8C9C3caCA79b8c5C1805843E) | ZK proof verification gate |
+| ZKVerifier | [`0xBf90...8276`](https://testnet-explorer.hsk.xyz/address/0xBf90d38B9128FB70C91F0D1CB9908c5F5eE28276) | Groth16 proof verifier |
+| AgentNFA | [`0xdFf5...5153A`](https://testnet-explorer.hsk.xyz/address/0xdFf5A296102818507313639E646C15cC53c5153A) | Non-fungible agent token |
+| PolicyGuard | [`0x1E99...35fcD`](https://testnet-explorer.hsk.xyz/address/0x1E997a52FEd011C74d5a8579a74DEf1BaC035fcD) | On-chain policy enforcement |
+| ZKRiskOracle | [`0x4aB2...57Ec7`](https://testnet-explorer.hsk.xyz/address/0x4aB2C183dAa811F5a2a26C3A3E6dF1d34F157Ec7) | ZK-verified risk decisions |
+
+**Key Numbers:** 48 smart contracts | 92 MCP tools | 5 chains | 60+ tests | 6 robot agents
 
 ---
 

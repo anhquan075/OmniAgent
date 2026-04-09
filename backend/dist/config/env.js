@@ -143,6 +143,9 @@ const envSchema = zod_1.z.object({
     // ERC-4337 on HashKey (if EntryPoint is deployed)
     HASHKEY_ERC4337_ENTRYPOINT: zod_1.z.string().optional(),
     HASHKEY_ERC4337_BUNDLER_URL: zod_1.z.string().optional(),
+    // Tool pruning flags (disabled by default for hackathon demo)
+    ENABLE_CROSS_CHAIN: zod_1.z.string().default('false'),
+    ENABLE_X402: zod_1.z.string().default('false'),
 });
 const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {

@@ -146,10 +146,12 @@ Instructions:
 - Provide a routing decision with confidence level
 - Keep reasoning brief (1-2 sentences)
 
-Respond with JSON: {"intent": "...", "confidence": 0.0-1.0, "recommendedModel": "...", "reasoning": "..."}`,
+Respond with ONLY valid JSON, no markdown formatting:
+{"intent": "...", "confidence": 0.0-1.0, "recommendedModel": "...", "reasoning": "..."}`,
       });
 
-      const decision = JSON.parse(result.text) as RouterDecision;
+      const jsonStr = result.text.replace(/^```json\s*/, '').replace(/```$/, '').trim();
+      const decision = JSON.parse(jsonStr) as RouterDecision;
       
       logger.info({
         query: query.slice(0, 100),

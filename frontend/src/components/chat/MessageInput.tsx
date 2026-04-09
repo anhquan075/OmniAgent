@@ -98,7 +98,7 @@ export function MessageInput({ input, handleInputChange, handleSubmit, status, s
   const effectiveStatus = isActuallyStreaming ? status : 'ready';
 
   return (
-    <div className="relative w-full max-w-full mx-auto">
+    <div className="relative w-full px-0">
       <CommandPalette 
         isOpen={isPaletteOpen} 
         onSelect={selectCommand} 
@@ -124,7 +124,7 @@ export function MessageInput({ input, handleInputChange, handleSubmit, status, s
             onKeyDown={handleKeyDown}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-            placeholder={isActuallyStreaming ? "Waiting for response..." : "Command the AFOS Strategist or use / for slash commands..."}
+            placeholder={isActuallyStreaming ? "Waiting for response..." : "Command the Strategist… or type / for commands"}
             disabled={isActuallyStreaming}
             className={cn(
               "bg-transparent border-none focus-visible:ring-0 min-h-[44px] py-2.5 px-1 text-sm font-sans placeholder:text-neutral-gray/50 resize-none",
@@ -133,11 +133,11 @@ export function MessageInput({ input, handleInputChange, handleSubmit, status, s
           />
         </PromptInputBody>
 
-        <div className="flex items-center gap-2 self-center pr-1">
+        <div className="flex items-center gap-1.5 sm:gap-2 self-center pr-1 flex-shrink-0">
           {showActiveLink && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-tether-teal/5 border border-tether-teal/10">
-              <div className="w-1 h-1 rounded-full bg-tether-teal animate-pulse"></div>
-              <span className="text-[8px] font-heading font-black text-tether-teal uppercase tracking-widest">Link Active</span>
+            <div className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-tether-teal/5 border border-tether-teal/10">
+              <div className="w-1 h-1 rounded-full bg-tether-teal animate-pulse flex-shrink-0" />
+              <span className="text-[8px] font-heading font-black text-tether-teal uppercase tracking-widest whitespace-nowrap hidden sm:inline">Link Active</span>
             </div>
           )}
           

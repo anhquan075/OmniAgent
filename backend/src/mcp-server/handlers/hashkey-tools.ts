@@ -406,14 +406,18 @@ export async function handleHashKeyTool(name: string, params: Record<string, unk
           kycContract.isHuman(address)
         ]);
 
-        const levelNames = ['NONE', 'BASIC', 'ADVANCED', 'PREMIUM', 'ULTIMATE'];
+        const KYC_LEVEL_NAMES = ['NONE', 'BASIC', 'ADVANCED', 'PREMIUM', 'ULTIMATE'];
+
+function getKycLevelName(level: number): string {
+  return KYC_LEVEL_NAMES[level] ?? `LEVEL_${level}`;
+}
 
         return {
           success: true,
           data: {
             isHuman: isHumanResult[0],
             kycLevel: Number(kycInfo[1]),
-            kycLevelName: levelNames[Number(kycInfo[1])] || 'NONE',
+            kycLevelName: getKycLevelName(Number(kycInfo[1])),
             ensName: kycInfo[0]
           }
         };

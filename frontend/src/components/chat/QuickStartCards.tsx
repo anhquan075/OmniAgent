@@ -100,7 +100,7 @@ export function QuickStartCards({ onSelect, disabled }: QuickStartCardsProps) {
         </h3>
       </div>
 
-      <div className="grid grid-cols-4 gap-1 overflow-hidden">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 overflow-hidden">
         {quickStartCards.map((card, index) => (
           <motion.button
             key={card.id}
@@ -113,12 +113,12 @@ export function QuickStartCards({ onSelect, disabled }: QuickStartCardsProps) {
               group relative p-1.5 rounded-lg border border-white/5
               bg-gradient-to-br ${card.color}
               hover:border-tether-teal/30 hover:shadow-lg hover:shadow-tether-teal/10
-              transition-all duration-300 text-left min-h-[52px]
+              transition-all duration-300 text-left min-h-[48px] sm:min-h-[52px]
               disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]
             `}
           >
             <div className="flex items-center gap-1 mb-0.5">
-              <card.icon className="w-2.5 h-2.5 text-tether-teal/60 group-hover:text-tether-teal" />
+              <card.icon className="w-2.5 h-2.5 text-tether-teal/60 group-hover:text-tether-teal flex-shrink-0" />
               <h4 className="text-[8px] font-heading font-semibold text-white/90 tracking-wider truncate">
                 {card.title}
               </h4>

@@ -13,6 +13,7 @@ import x402Route from './api/routes/x402';
 import mcpRoute from './api/routes/mcp';
 import toolsRoute from './api/routes/tools';
 import faucetRoute from './api/routes/faucet';
+import zkProofRoute from './api/routes/zk-proof';
 import { createSecurityMiddleware } from './api/middleware/security';
 import { AgentService } from './agent/services/AgentService';
 import { startAutonomousLoop } from './agent/AutonomousLoop';
@@ -98,6 +99,7 @@ app.route('/api/x402', x402Route);
 app.route('/api/mcp', mcpRoute);
 app.route('/api/tools', toolsRoute);
 app.route('/api/faucet', faucetRoute);
+app.route('/api/zk-proof', zkProofRoute);
 
 const port = Number(env.PORT);
 
