@@ -41,7 +41,7 @@ export const HashKeyVaultDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [txStatus, setTxStatus] = useState<string | null>(null);
 
-  const { data: totalAssets, error: totalAssetsError } = useReadContract({
+  const { data: totalAssets } = useReadContract({
     address: HASHKEY_TESTNET_PRESET.vaultAddress as `0x${string}`,
     abi: hashkeyVaultAbi,
     functionName: 'totalAssets',
@@ -161,9 +161,7 @@ export const HashKeyVaultDashboard: React.FC = () => {
         userAssets: userAssetsValue ? formatUnits(userAssetsValue as bigint, 6) : '0',
         loading: false,
       }));
-    } else if (totalAssetsError) {
-      console.warn('totalAssets fetch error:', totalAssetsError);
-    }
+    
   }, [totalAssets, currentApy, userShares, userAssetsValue, totalAssetsError]);
 
   useEffect(() => {
