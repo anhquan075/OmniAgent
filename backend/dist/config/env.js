@@ -132,6 +132,7 @@ const envSchema = zod_1.z.object({
     HASHKEY_VAULT_ADDRESS: zod_1.z.string().optional(),
     HASHKEY_USDT_ADDRESS: zod_1.z.string().optional(),
     HASHKEY_KYC_SBT_ADDRESS: zod_1.z.string().optional(),
+    CUSTOM_KYC_SBT_ADDRESS: zod_1.z.string().optional(),
     HASHKEY_SAFE_ADDRESS: zod_1.z.string().optional(),
     HASHKEY_STAKING_CONTRACT: zod_1.z.string().optional(),
     HASHKEY_DEPLOYER_PK: zod_1.z.string().optional(),
@@ -143,6 +144,9 @@ const envSchema = zod_1.z.object({
     // ERC-4337 on HashKey (if EntryPoint is deployed)
     HASHKEY_ERC4337_ENTRYPOINT: zod_1.z.string().optional(),
     HASHKEY_ERC4337_BUNDLER_URL: zod_1.z.string().optional(),
+    HASHKEY_VAULT_GATE_ADDRESS: zod_1.z.string().optional(),
+    HASHKEY_ZK_VERIFIER_ADDRESS: zod_1.z.string().optional(),
+    ZK_PROVER_URL: zod_1.z.string().default('http://localhost:7070'),
     // Tool pruning flags (disabled by default for hackathon demo)
     ENABLE_CROSS_CHAIN: zod_1.z.string().default('false'),
     ENABLE_X402: zod_1.z.string().default('false'),

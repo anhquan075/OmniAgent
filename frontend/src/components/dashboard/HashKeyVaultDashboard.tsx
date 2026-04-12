@@ -161,7 +161,7 @@ export const HashKeyVaultDashboard: React.FC = () => {
         userAssets: userAssetsValue ? formatUnits(userAssetsValue as bigint, 6) : '0',
         loading: false,
       }));
-    
+    }
   }, [totalAssets, currentApy, userShares, userAssetsValue]);
 
   useEffect(() => {

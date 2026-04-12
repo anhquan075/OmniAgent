@@ -112,6 +112,7 @@ const envSchema = z.object({
   HASHKEY_VAULT_ADDRESS: z.string().optional(),
   HASHKEY_USDT_ADDRESS: z.string().optional(),
   HASHKEY_KYC_SBT_ADDRESS: z.string().optional(),
+  CUSTOM_KYC_SBT_ADDRESS: z.string().optional(),
   HASHKEY_SAFE_ADDRESS: z.string().optional(),
   HASHKEY_STAKING_CONTRACT: z.string().optional(),
   HASHKEY_DEPLOYER_PK: z.string().optional(),
@@ -123,6 +124,10 @@ const envSchema = z.object({
   // ERC-4337 on HashKey (if EntryPoint is deployed)
   HASHKEY_ERC4337_ENTRYPOINT: z.string().optional(),
   HASHKEY_ERC4337_BUNDLER_URL: z.string().optional(),
+  HASHKEY_VAULT_GATE_ADDRESS: z.string().optional(),
+  HASHKEY_ZK_VERIFIER_ADDRESS: z.string().optional(),
+
+  ZK_PROVER_URL: z.string().default('http://localhost:7070'),
 
   // Tool pruning flags (disabled by default for hackathon demo)
   ENABLE_CROSS_CHAIN: z.string().default('false'),

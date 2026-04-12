@@ -41,11 +41,41 @@ export const engineAbi = [
 ];
 
 export const erc20Abi = [
-  "function approve(address spender,uint256 amount) returns (bool)",
-  "function allowance(address owner,address spender) view returns (uint256)",
-  "function decimals() view returns (uint8)",
-  "function balanceOf(address account) view returns (uint256)",
-];
+  {
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' }
+    ],
+    name: 'approve',
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'nonpayable',
+    type: 'function'
+  },
+  {
+    inputs: [
+      { name: 'owner', type: 'address' },
+      { name: 'spender', type: 'address' }
+    ],
+    name: 'allowance',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [],
+    name: 'decimals',
+    outputs: [{ name: '', type: 'uint8' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [{ name: 'account', type: 'address' }],
+    name: 'balanceOf',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function'
+  },
+] as const;
 
 export const policyAbi = [
   "function guardedVolatilityBps() view returns (uint256)",
@@ -190,16 +220,103 @@ export const agentNfaAbi = [
 ];
 
 export const zkIdentityGateAbi = [
-  "function verifier() view returns (address)",
-  "function vault() view returns (address)",
-  "function agentNFA() view returns (address)",
-  "function nonces(address) view returns (uint256)",
-  "function nullifierUsed(bytes32) view returns (bool)",
-  "function proofOf(address) view returns (tuple(uint64 validUntil, uint32 agentTokenId, bytes32 nullifier, uint64 verifiedAt))",
-  "function hasValidProof(address subject) view returns (bool)",
-  "function submitProof(bytes proof, tuple(uint16 currentYear, uint8 requiredKycLevel, address subject, uint32 agentTokenId, uint64 proofValidUntil, bytes32 nullifier) publicInputs)",
-  "function submitProofWithPermit(bytes proof, tuple(uint16 currentYear, uint8 requiredKycLevel, address subject, uint32 agentTokenId, uint64 proofValidUntil, bytes32 nullifier) publicInputs, uint256 deadline, bytes signature)",
-  "function depositWithProof(uint256 assets, address receiver) returns (uint256 shares)",
-  "event ProofAccepted(address indexed subject, uint32 indexed agentTokenId, bytes32 indexed nullifier, uint64 validUntil, address relayer)",
-  "event GatedDeposit(address indexed caller, address indexed receiver, uint256 assets, uint256 shares)",
-];
+  {
+    "inputs": [],
+    "name": "verifier",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "vaultGate",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "vault",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "agentNFA",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }],
+    "name": "nullifierUsed",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "name": "proofOf",
+    "outputs": [
+      { "internalType": "uint64", "name": "validUntil", "type": "uint64" },
+      { "internalType": "uint32", "name": "agentTokenId", "type": "uint32" },
+      { "internalType": "bytes32", "name": "nullifier", "type": "bytes32" },
+      { "internalType": "uint64", "name": "verifiedAt", "type": "uint64" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "address", "name": "subject", "type": "address" }],
+    "name": "hasValidProof",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes", "name": "proof", "type": "bytes" },
+      { "internalType": "address", "name": "subject", "type": "address" },
+      { "internalType": "uint32", "name": "agentTokenId", "type": "uint32" },
+      { "internalType": "bytes32", "name": "nullifier", "type": "bytes32" },
+      { "internalType": "uint64", "name": "validUntil", "type": "uint64" }
+    ],
+    "name": "submitProof",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "assets", "type": "uint256" },
+      { "internalType": "address", "name": "receiver", "type": "address" }
+    ],
+    "name": "depositWithProof",
+    "outputs": [{ "internalType": "uint256", "name": "shares", "type": "uint256" }],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "subject", "type": "address" },
+      { "indexed": true, "internalType": "uint32", "name": "agentTokenId", "type": "uint32" },
+      { "indexed": true, "internalType": "bytes32", "name": "nullifier", "type": "bytes32" },
+      { "indexed": false, "internalType": "uint64", "name": "validUntil", "type": "uint64" }
+    ],
+    "name": "ProofAccepted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "caller", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "receiver", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "assets", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "shares", "type": "uint256" }
+    ],
+    "name": "GatedDeposit",
+    "type": "event"
+  }
+] as const;

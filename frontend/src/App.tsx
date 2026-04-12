@@ -30,8 +30,10 @@ import MCPServerDemo from "./components/dashboard/MCPServerDemo";
 import { ConnectionModal } from "./components/shared/ConnectionModal";
 import { GuestSplash } from "./components/shared/GuestSplash";
 import { FaucetStatus } from "./components/shared/FaucetStatus";
+import { HashKeyFaucetButton } from "./components/shared/HashKeyFaucetButton";
 import HashKeyVaultDashboard from "./components/dashboard/HashKeyVaultDashboard";
 import { ShinyText } from "./components/ui/ShinyText";
+import { isDevModeHashKeyEnabled } from "./lib/wagmiConfig";
 interface BentoCardProps {
   title: string;
   icon: React.ElementType;
@@ -69,7 +71,7 @@ const BentoCard = ({
       ref={cardRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className={`rounded-2xl p-4 sm:p-5 md:p-6 flex flex-col gap-3 sm:gap-4 shadow-2xl transition-all duration-500 group bg-space-black/60 backdrop-blur-xl border border-white/10 hover:border-tether-teal/30 hover:shadow-[0_0_20px_rgba(38,161,123,0.1)] relative overflow-hidden ${className}`}
+      className={`rounded-2xl p-2 sm:p-3 md:p-4 flex flex-col gap-2 sm:gap-3 shadow-2xl transition-all duration-500 group bg-space-black/60 backdrop-blur-xl border border-white/10 hover:border-tether-teal/30 hover:shadow-[0_0_20px_rgba(38,161,123,0.1)] relative overflow-visible ${className}`}
       style={{ "--sx": "50%", "--sy": "50%", "--so": "0" } as React.CSSProperties}
     >
       {/* Corner glow */}
@@ -477,26 +479,31 @@ export default function App() {
           <div className="flex items-center gap-2 md:gap-4">
             <div className="h-8 border-l border-white/10 mx-1 md:mx-2 hidden lg:block"></div>
 
-            <FaucetStatus />
+            {/* Show HashKey faucet on HashKey Chain, Sepolia faucet on Sepolia */}
+            {chain?.id === 133 || isDevModeHashKeyEnabled() ? (
+              <HashKeyFaucetButton />
+            ) : (
+              <FaucetStatus />
+            )}
 
             {chain && (
               <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 mr-2 shadow-glow-sm">
                 <div className={`w-5 h-5 rounded-full flex items-center justify-center border ${
-                  chain.id === 133
+                  chain.id === 133 || isDevModeHashKeyEnabled()
                     ? "bg-[#00D395]/10 border-[#00D395]/20"
                     : "bg-[#627EEA]/10 border-[#627EEA]/20"
                 }`}>
                   <img
-                    src={chain.id === 133 ? "/coins/hsk.png" : "/coins/ethereum.png"}
+                    src={chain.id === 133 || isDevModeHashKeyEnabled() ? "/coins/hsk.png" : "/coins/ethereum.png"}
                     alt={chain.name}
                     className="w-3.5 h-3.5 object-contain"
                   />
                 </div>
                 <div className="flex flex-col leading-none">
                   <span className={`text-[9px] font-bold uppercase ${
-                    chain.id === 133 ? "text-[#00D395]" : "text-[#627EEA]"
+                    chain.id === 133 || isDevModeHashKeyEnabled() ? "text-[#00D395]" : "text-[#627EEA]"
                   }`}>
-                    {chain.id === 133 ? "HashKey" : "Sepolia"}
+                    {chain.id === 133 || isDevModeHashKeyEnabled() ? "HashKey" : "Sepolia"}
                   </span>
                   <span className="text-[7px] text-neutral-gray uppercase tracking-wider">
                     Testnet
@@ -595,8 +602,8 @@ export default function App() {
             xl:relative xl:inset-auto xl:flex xl:flex-[2.5] 2xl:flex-[2] xl:flex-col xl:gap-4 2xl:gap-6 xl:min-w-0 xl:min-h-0 xl:bg-transparent xl:overflow-hidden xl:pl-1 xl:p-0
           `}
           >
-            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col gap-6 pr-1">
-              {chain?.id === 133 && (
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar flex flex-col gap-6 pr-1">
+              {(chain?.id === 133 || isDevModeHashKeyEnabled()) && (
                 <BentoCard
                   title="HashKey Vault"
                   icon={Shield}
@@ -619,11 +626,9 @@ export default function App() {
               <BentoCard
                 title="Agent Live Strategy"
                 icon={BrainCircuitIcon}
-                className="flex-1 min-h-[300px]"
+                className="h-auto"
               >
-                <div className="h-full min-h-0 overflow-y-auto custom-scrollbar pr-2">
-                  <AgentBrain stats={stats} />
-                </div>
+                <AgentBrain stats={stats} />
               </BentoCard>
             </div>
           </div>

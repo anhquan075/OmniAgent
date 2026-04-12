@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { checkNavImpact, type NavShieldResult } from '@/services/NavShield';
 import { getCreditScore, checkCreditRequirements, recordTransaction } from '@/services/CreditScoring';
 import { calculateProfit, type ProfitCalcParams, type ProfitAnalysis } from '@/services/market-scanner/ProfitCalculator';
+import { kycService } from '@/services/hashkey-kyc';
 const TransactionSchema = z.object({
   toAddress: z.string().refine((val) => ethers.isAddress(val), {
     message: "Invalid Ethereum address",
@@ -856,6 +857,35 @@ Provide a decision with reason and risk level. Return JSON: {"approved": true/fa
       logger.warn({ error: error.message }, '[PolicyGuard] AI review failed, falling back to standard validation');
       return { violated: false, reason: 'AI review unavailable, using standard validation', severity: 'LOW' };
     }
+  }
+
+  async checkKycLimits(params: {
+    userAddress: string;
+    exposure: bigint;
+  }): Promise<PolicyViolation> {
+    try {
+      const level = await kycService.getKycLevel(params.userAddress);
+      const maxExposure = kycService.getMaxExposure(level);
+
+      if (params.exposure > maxExposure) {
+        return {
+          violated: true,
+          reason: `KYC_LIMIT_EXCEEDED: Level ${level} max ${maxExposure.toString()} wei`,
+          severity: 'HIGH',
+        };
+      }
+
+      const multiplier = kycService.getYieldMultiplier(level);
+      logger.info({ address: params.userAddress, level, multiplier, maxExposure: maxExposure.toString() }, '[PolicyGuard] KYC check passed');
+
+      return { violated: false, reason: `KYC Level ${level}, multiplier ${multiplier}x`, severity: 'LOW' };
+    } catch (error) {
+      return { violated: true, reason: 'KYC service unavailable', severity: 'HIGH' };
+    }
+  }
+
+  getKycMultiplier(userAddress: string): number {
+    return 1.0;
   }
 }
 

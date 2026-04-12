@@ -25,28 +25,28 @@ interface MCPTool {
   params?: { name: string; placeholder: string; required: boolean }[];
 }
 
-const WDK_COLOR = "#2DD4BF";
-const X402_COLOR = "#F59E0B";
-const ERC4337_COLOR = "#6366F1";
+const WDK_COLOR = "var(--color-cyber-cyan)";
+const X402_COLOR = "var(--color-xaut-gold)";
+const ERC4337_COLOR = "var(--color-cyber-purple)";
 
 const RISK_CONFIG = {
   low: {
     label: "LOW",
-    color: "#22C55E",
-    bg: "bg-green-500/10",
-    border: "border-green-500/20",
+    color: "var(--color-neon-green)",
+    bg: "bg-neon-green/10",
+    border: "border-neon-green/20",
   },
   medium: {
     label: "MED",
-    color: "#EAB308",
-    bg: "bg-yellow-500/10",
-    border: "border-yellow-500/20",
+    color: "var(--color-xaut-gold)",
+    bg: "bg-xaut-gold/10",
+    border: "border-xaut-gold/20",
   },
   high: {
     label: "HIGH",
-    color: "#EF4444",
-    bg: "bg-red-500/10",
-    border: "border-red-500/20",
+    color: "var(--color-xaut-brass)",
+    bg: "bg-xaut-brass/10",
+    border: "border-xaut-brass/20",
   },
 };
 
@@ -80,7 +80,7 @@ const toolCategories: {
     id: "sepolia",
     name: "Ethereum / Sepolia",
     icon: ZapIcon,
-    color: "#627EEA",
+    color: "var(--color-cyber-purple)",
     tools: [
       {
         name: "sepolia_createWallet",
@@ -249,7 +249,7 @@ const toolCategories: {
     id: "vault",
     name: "WDK Vault",
     icon: LayersIcon,
-    color: "#8B5CF6",
+    color: "var(--color-cyber-purple)",
     tools: [
       {
         name: "wdk_mint_test_token",
@@ -321,7 +321,7 @@ const toolCategories: {
     id: "engine",
     name: "WDK Engine",
     icon: ZapIcon,
-    color: "#EC4899",
+    color: "var(--color-tether-teal)",
     tools: [
       {
         name: "wdk_engine_executeCycle",
@@ -350,7 +350,7 @@ const toolCategories: {
     id: "aave",
     name: "Aave Lending",
     icon: CoinsIcon,
-    color: "#10B981",
+    color: "var(--color-neon-green)",
     tools: [
       {
         name: "wdk_aave_supply",
@@ -544,7 +544,7 @@ const toolCategories: {
     id: "market",
     name: "Market Scanner",
     icon: TrendingUpIcon,
-    color: "#10B981",
+    color: "var(--color-neon-green)",
     tools: [
       {
         name: "market_get_price_matrix",
@@ -607,7 +607,7 @@ const toolCategories: {
     id: "bridge",
     name: "Cross-Chain Bridge",
     icon: LayersIcon,
-    color: "#3B82F6",
+    color: "var(--color-cyber-blue)",
     tools: [
       {
         name: "wdk_bridge_usdt0",
@@ -661,7 +661,7 @@ const toolCategories: {
     id: "hashkey",
     name: "HashKey Chain",
     icon: ZapIcon,
-    color: "#00D4FF",
+    color: "var(--color-cyber-cyan)",
     tools: [
       {
         name: "hashkey_createWallet",
@@ -772,7 +772,7 @@ const toolCategories: {
     id: "staking",
     name: "Agent Staking",
     icon: CoinsIcon,
-    color: "#2DD4BF",
+    color: "var(--color-cyber-cyan)",
     tools: [
       {
         name: "stake_to_agent",
@@ -1018,11 +1018,11 @@ export default function MCPServerDemo({
                 return (
                   <div
                     key={category.id}
-                    className="rounded-lg bg-white/[0.02] border border-white/[0.06] overflow-hidden"
+                    className="rounded-lg glass border border-white/[0.06] overflow-hidden"
                   >
                     <button
                       onClick={() => toggleCategory(category.id)}
-                      className="w-full flex items-center gap-1.5 sm:gap-2 p-2 sm:p-2.5 hover:bg-white/[0.03] transition-colors cursor-pointer"
+                      className="w-full flex items-center gap-1.5 sm:gap-2 p-2 sm:p-2.5 hover:glass transition-colors cursor-pointer"
                     >
                       <Icon
                         className="w-3 h-3 sm:w-4 sm:h-4"
@@ -1051,7 +1051,7 @@ export default function MCPServerDemo({
                           return (
                             <div
                               key={tool.name}
-                              className="p-2 sm:p-2.5 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition-all"
+                              className="p-2 sm:p-2.5 border-b border-white/5 last:border-b-0 hover:glass transition-all"
                             >
                               <div className="flex items-start justify-between gap-1.5 sm:gap-2">
                                 <div className="flex-1 min-w-0">
@@ -1124,7 +1124,7 @@ export default function MCPServerDemo({
                                                   e.target.value,
                                               }))
                                             }
-                                            className="w-full px-1.5 sm:px-2 py-1 sm:py-1.5 text-[9px] sm:text-[10px] font-mono bg-black/30 border border-white/10 rounded text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none min-h-[44px] sm:min-h-0"
+                                            className="w-full px-1.5 sm:px-2 py-1 sm:py-1.5 text-[9px] sm:text-[10px] font-mono glass border border-white/10 rounded text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none min-h-[44px] sm:min-h-0"
                                           />
                                         ))}
                                         <button
@@ -1149,7 +1149,7 @@ export default function MCPServerDemo({
             </div>
 
             {testResult && (
-              <div className="p-1.5 sm:p-2.5 rounded-lg bg-black/60 border border-white/10 flex-shrink-0">
+              <div className="p-1.5 sm:p-2.5 rounded-lg glass-dark border border-white/10 flex-shrink-0">
                 <div className="flex items-center justify-between mb-1 sm:mb-2">
                   <span className="text-[8px] sm:text-[9px] text-neutral-gray font-mono">
                     Response

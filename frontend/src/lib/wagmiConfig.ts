@@ -35,6 +35,10 @@ export const hashkeyMainnet: Chain = {
   testnet: false,
 };
 
+export function isDevModeHashKeyEnabled(): boolean {
+  return import.meta.env.VITE_DEV_MODE_HASHKEY === 'true';
+}
+
 /**
  * Get the initial chain based on VITE_DEFAULT_NETWORK environment variable
  * @returns {Object} The chain object (hashkeyTestnet, sepolia, or mainnet)

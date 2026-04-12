@@ -4,6 +4,7 @@ import { x402Client, wrapFetchWithPayment } from '@x402/fetch';
 import { registerExactEvmScheme } from '@x402/evm/exact/client';
 import { ClientEvmSigner } from '@x402/evm';
 import { env } from '@/config/env';
+import { addPaymentRecord } from '@/api/routes/robot-fleet';
 
 interface PendingTx {
   hash: string;
@@ -130,6 +131,25 @@ export class RobotFleetPaymentHandler {
           nonce,
           amount,
           to: toAddress,
+          timestamp: Date.now()
+        });
+
+        console.log('X402_PAYMENT', {
+          fromAgent: address,
+          toAgent: toAddress,
+          amount: amount.toString(),
+          reason: 'zk_risk_intel',
+          kycLevel: 0,
+          txHash: tx.hash
+        });
+
+        addPaymentRecord({
+          fromAgent: address,
+          toAgent: toAddress,
+          amount: amount.toString(),
+          reason: 'zk_risk_intel',
+          kycLevel: 0,
+          txHash: tx.hash,
           timestamp: Date.now()
         });
 

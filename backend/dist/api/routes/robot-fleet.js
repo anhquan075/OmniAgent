@@ -1,12 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.addPaymentRecord = addPaymentRecord;
 const hono_1 = require("hono");
 const streaming_1 = require("hono/streaming");
 const RobotFleetService_1 = require("../../services/RobotFleetService");
 const logger_1 = require("../../utils/logger");
 const robotFleet = new hono_1.Hono();
-const fleetEmitter = RobotFleetService_1.robotFleetService.getEmitter();
 robotFleet.get('/events', async (c) => {
+    const fleetEmitter = RobotFleetService_1.robotFleetService.getEmitter();
     logger_1.logger.info('[RobotFleet] Client connected to fleet SSE stream');
     c.header('Content-Type', 'text/event-stream');
     c.header('Cache-Control', 'no-cache, no-transform');
@@ -90,5 +91,18 @@ robotFleet.get('/status', async (c) => {
             message: error.message
         }, 500);
     }
+});
+const paymentHistory = [];
+function addPaymentRecord(record) {
+    paymentHistory.unshift(record);
+    if (paymentHistory.length > 50)
+        paymentHistory.pop();
+}
+robotFleet.get('/payments', async (c) => {
+    const limit = parseInt(c.req.query('limit') || '10');
+    return c.json({
+        payments: paymentHistory.slice(0, limit),
+        total: paymentHistory.length
+    });
 });
 exports.default = robotFleet;
