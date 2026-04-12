@@ -162,7 +162,7 @@ export const HashKeyVaultDashboard: React.FC = () => {
         loading: false,
       }));
     
-  }, [totalAssets, currentApy, userShares, userAssetsValue, totalAssetsError]);
+  }, [totalAssets, currentApy, userShares, userAssetsValue]);
 
   useEffect(() => {
     if (!address) return;
