@@ -76,7 +76,7 @@ graph TB
 | PolicyGuard | [`0x1E99...35fcD`](https://testnet-explorer.hsk.xyz/address/0x1E997a52FEd011C74d5a8579a74DEf1BaC035fcD) | On-chain policy enforcement |
 | ZKRiskOracle | [`0x4aB2...57Ec7`](https://testnet-explorer.hsk.xyz/address/0x4aB2C183dAa811F5a2a26C3A3E6dF1d34F157Ec7) | ZK-verified risk decisions |
 
-**Key Numbers:** 48 smart contracts | 92 MCP tools | 5 chains | 60+ tests | 6 robot agents
+**Key Numbers:** 86 smart contracts | 13 MCP handler files | 5 chains | 60+ tests | 6 robot agents
 
 ---
 
