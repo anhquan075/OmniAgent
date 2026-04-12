@@ -154,7 +154,7 @@ function spawnFleet(): void {
       id: robotConfig.id,
       type: robotConfig.type,
       icon: robotConfig.icon || '',
-      status: 'Idle',
+      status: 'Working',
       totalEarned: '0.0000',
       taskCount: 0,
       chain: robotConfig.chain ?? 'sepolia'
@@ -535,6 +535,8 @@ export async function startSimulator(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  const shouldStart = process.env.ROBOT_FLEET_ENABLED === 'true';
+  logger.info({ shouldStart, env: process.env.ROBOT_FLEET_ENABLED }, '[RobotFleet] Main check');
   await startSimulator();
 
   process.on('SIGINT', () => {

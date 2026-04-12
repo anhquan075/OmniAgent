@@ -14,6 +14,8 @@ import mcpRoute from './api/routes/mcp';
 import toolsRoute from './api/routes/tools';
 import faucetRoute from './api/routes/faucet';
 import zkProofRoute from './api/routes/zk-proof';
+
+
 import { createSecurityMiddleware } from './api/middleware/security';
 import { AgentService } from './agent/services/AgentService';
 import { startAutonomousLoop } from './agent/AutonomousLoop';

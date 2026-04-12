@@ -5,9 +5,8 @@ import { logger } from '@/utils/logger';
 
 const robotFleet = new Hono();
 
-const fleetEmitter = robotFleetService.getEmitter();
-
 robotFleet.get('/events', async (c) => {
+  const fleetEmitter = robotFleetService.getEmitter();
   logger.info('[RobotFleet] Client connected to fleet SSE stream');
 
   c.header('Content-Type', 'text/event-stream');
@@ -98,6 +97,31 @@ robotFleet.get('/status', async (c) => {
       message: error.message 
     }, 500);
   }
+});
+
+interface PaymentRecord {
+  fromAgent: string;
+  toAgent: string;
+  amount: string;
+  reason: string;
+  kycLevel: number;
+  txHash: string;
+  timestamp: number;
+}
+
+const paymentHistory: PaymentRecord[] = [];
+
+export function addPaymentRecord(record: PaymentRecord) {
+  paymentHistory.unshift(record);
+  if (paymentHistory.length > 50) paymentHistory.pop();
+}
+
+robotFleet.get('/payments', async (c) => {
+  const limit = parseInt(c.req.query('limit') || '10');
+  return c.json({
+    payments: paymentHistory.slice(0, limit),
+    total: paymentHistory.length
+  });
 });
 
 export default robotFleet;
