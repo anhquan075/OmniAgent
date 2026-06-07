@@ -12,6 +12,9 @@ Deploy OmniAgent as three Railway services from the same repository.
 
 Railway config files are service-scoped. In each Railway service, set the config file path explicitly in service settings.
 Each service uses Dockerfile builds; keep the service Root Directory aligned with the table so `dockerfilePath: "Dockerfile"` resolves correctly.
+The Config File Path is repository-root relative, so use `/backend/railway.json`, `/frontend/railway.json`, or `/twak-bridge/railway.json`.
+The `dockerfilePath` inside each config is service-root relative after Railway applies Root Directory, so it should stay `Dockerfile`.
+Do not leave a service Root Directory at `/` with these configs; that would make `COPY package.json ...` and `COPY pyproject.toml ...` look in the wrong directory for the backend/frontend/bridge build contexts.
 
 ## Backend Variables
 
