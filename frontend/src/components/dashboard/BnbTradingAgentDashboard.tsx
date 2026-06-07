@@ -1,5 +1,6 @@
 import {
   BrainCircuitIcon,
+  RefreshCwIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AgentReasoningPanel from './agent-reasoning-panel';
@@ -13,11 +14,10 @@ import { TradeProofTimeline } from './trade-proof-timeline';
 import {
   FocusAnalysis,
   ModelStack,
-  QuantModeRibbon,
   QuantTerminalHeader,
   SignalTile,
 } from './quant-terminal-widgets';
-import { DecisionSummary } from './quant-terminal-market-panels';
+import { DecisionSummary, MarketChartPanel, ResearchMatrix } from './quant-terminal-market-panels';
 import { apiFetch } from '../../lib/api';
 type Payload = Record<string, any>;
 const AUTO_REFRESH_MS = 30_000;
@@ -28,6 +28,8 @@ const SIGNER_STATUS_KEY = ['twa', 'kStatus'].join('');
 export function BnbTradingAgentDashboard() {
   const [state, setState] = useState<Payload>({});
   const [loading, setLoading] = useState(false);
+  const [cmcOverviewRunning, setCmcOverviewRunning] = useState(false);
+  const [cmcOverviewError, setCmcOverviewError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState('waiting');
   const loadSnapshot = useCallback(async (overrides: Payload = {}) => {
@@ -37,7 +39,18 @@ export function BnbTradingAgentDashboard() {
       const response = await apiFetch('/api/dashboard/snapshot?limit=10');
       if (!response.ok) throw new Error(`dashboard ${response.status}`);
       const snapshot = await response.json() as Payload;
-      setState({ ...snapshot, ...overrides });
+      setState(current => {
+        const next = { ...snapshot, ...overrides };
+        if (overrides.marketOverview) return next;
+
+        const currentOverview = current.marketOverview;
+        const snapshotOverview = snapshot.marketOverview;
+        const currentTimestamp = Date.parse(asText(currentOverview?.timestamp, ''));
+        const snapshotTimestamp = Date.parse(asText(snapshotOverview?.timestamp, ''));
+        const currentIsNewer = Number.isFinite(currentTimestamp) && (!Number.isFinite(snapshotTimestamp) || currentTimestamp > snapshotTimestamp);
+        const snapshotIsMissingRecordedReport = Boolean(currentOverview?.ready) && !snapshotOverview?.ready;
+        return currentIsNewer || snapshotIsMissingRecordedReport ? { ...next, marketOverview: currentOverview } : next;
+      });
       setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (err) {
       setError(err instanceof Error && err.message === 'Failed to fetch' ? 'Backend dashboard unavailable' : err instanceof Error ? err.message : 'Unable to refresh cockpit');
@@ -46,6 +59,27 @@ export function BnbTradingAgentDashboard() {
       setLoading(false);
     }
   }, []);
+
+  const runCmcMarketOverview = useCallback(async () => {
+    setCmcOverviewRunning(true);
+    setCmcOverviewError(null);
+    try {
+      const response = await apiFetch('/api/dashboard/cmc-daily-market-overview', { method: 'POST' });
+      const result = await response.json().catch(() => ({})) as Payload;
+      if (!response.ok) throw new Error(`cmc_daily_market_overview ${response.status}`);
+      if (result.ready === false) {
+        const code = asText(result.error_code ?? result.errorCode, 'cmc_daily_market_overview_failed');
+        const reason = asText(result.reason, 'CMC Skill Hub returned an error.');
+        setCmcOverviewError(`${code}: ${reason}`);
+      }
+      setState(current => ({ ...current, marketOverview: result }));
+      void loadSnapshot({ marketOverview: result });
+    } catch (err) {
+      setCmcOverviewError(err instanceof Error ? err.message : 'Unable to run cmc_daily_market_overview');
+    } finally {
+      setCmcOverviewRunning(false);
+    }
+  }, [loadSnapshot]);
 
   useEffect(() => {
     void loadSnapshot();
@@ -89,9 +123,18 @@ export function BnbTradingAgentDashboard() {
           <span>{autonomousLoopEnabled ? 'loop enabled' : 'loop disabled'}</span>
           <span>{walletLabel}</span>
         </div>
+        <button
+          type="button"
+          className="quant-icon-button"
+          onClick={() => void loadSnapshot()}
+          disabled={loading}
+          aria-label="Refresh dashboard snapshot"
+          title="Refresh dashboard snapshot"
+        >
+          <RefreshCwIcon className="h-4 w-4" />
+        </button>
       </section>
       {error ? <p className="quant-error">{error}</p> : null}
-      <QuantModeRibbon autonomousLoopEnabled={autonomousLoopEnabled} liveExecution={liveExecution} />
       <div className="quant-signal-strip">
         <SignalTile label="ML probability" value={state.cycle?.strategyDecision?.decision?.confidence ? `${Math.round(state.cycle.strategyDecision.decision.confidence * 100)}%` : 'waiting'} hint="directional edge" />
         <SignalTile label="causal effect" value={state.cycle?.strategyDecision?.source === 'openrouter' ? 'model' : 'observe'} hint="medium" />
@@ -101,6 +144,7 @@ export function BnbTradingAgentDashboard() {
       </div>
       <LoopProofRail state={state} />
       <div className="quant-main-grid">
+        <MarketChartPanel state={state} />
         <div className="quant-center-rail">
           <FocusAnalysis state={state} />
           <ModelStack state={state} />
@@ -110,6 +154,7 @@ export function BnbTradingAgentDashboard() {
             <p>{liveExecution ? 'Live execution is gated by proof and signer readiness.' : 'Frontend is observation-only; execution is controlled by backend policy.'}</p>
           </section>
         </div>
+        <ResearchMatrix state={state} runningMarketOverview={cmcOverviewRunning} marketOverviewError={cmcOverviewError} onRunMarketOverview={runCmcMarketOverview} />
       </div>
       <div className="quant-bottom-grid">
         <section className="quant-workrail">

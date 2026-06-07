@@ -1,10 +1,7 @@
 import {
   ActivityIcon,
-  CandlestickChartIcon,
-  CircleDotIcon,
   GaugeIcon,
   Layers3Icon,
-  LineChartIcon,
   RadioTowerIcon,
   ShieldCheckIcon,
   SigmaIcon,
@@ -39,22 +36,6 @@ export function QuantTerminalHeader({ state, mode, liveExecution }: { state: Pay
         <span>{liveExecution ? "Live armed" : mode}</span>
       </div>
     </header>
-  );
-}
-
-export function QuantModeRibbon({ autonomousLoopEnabled, liveExecution }: { autonomousLoopEnabled: boolean; liveExecution: boolean }) {
-  const chips = ["Mainnet", "Autonomous", "Observed", "Receipts"];
-  return (
-    <nav className="quant-ribbon" aria-label="Trading mode">
-      {chips.map(item => (
-        <span key={item} className={item === "Mainnet" ? "is-active" : ""}>{item}</span>
-      ))}
-      <b>1m</b><b className="is-active">5m</b><b>15m</b><b>1h</b>
-      <em><CandlestickChartIcon className="h-3.5 w-3.5" /> Market Intel</em>
-      <em><LineChartIcon className="h-3.5 w-3.5" /> Heikin Signal</em>
-      <em><CircleDotIcon className="h-3.5 w-3.5" /> {autonomousLoopEnabled ? "Backend loop" : "Loop waiting"}</em>
-      <em><ShieldCheckIcon className="h-3.5 w-3.5" /> {liveExecution ? "Trade gate ready" : "Watch only"}</em>
-    </nav>
   );
 }
 

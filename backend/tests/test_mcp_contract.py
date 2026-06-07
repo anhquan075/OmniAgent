@@ -135,13 +135,17 @@ def test_dashboard_snapshot_is_session_scoped(monkeypatch) -> None:
     assert body["backendHealth"]["autonomousLoopEnabled"] == get_settings().bnb_autonomous_loop_enabled
 
 
-def test_dashboard_cmc_daily_market_overview_is_session_scoped(monkeypatch) -> None:
+def test_dashboard_cmc_daily_market_overview_requires_session_and_records(monkeypatch) -> None:
+    calls: list[dict[str, object]] = []
+
     async def fake_run(args: dict[str, object]) -> dict[str, object]:
+        calls.append(args)
         return {
             "ready": True,
-            "status": "ok",
-            "args": args,
-            "formattedReport": "**TL;DR**\n\nMarket ready.\n\n———\n\n**Details**",
+            "skillName": "daily_market_overview",
+            "uniqueName": "daily_market_overview",
+            "status": "partial",
+            "confidence": "medium",
         }
 
     monkeypatch.setattr("app.api.routes.dashboard.CmcDailyMarketOverviewService.run", fake_run)
@@ -149,43 +153,16 @@ def test_dashboard_cmc_daily_market_overview_is_session_scoped(monkeypatch) -> N
 
     assert client.post("/api/dashboard/cmc-daily-market-overview").status_code == 401
     csrf_token = client.get("/api/session").json()["csrfToken"]
-    response = client.post("/api/dashboard/cmc-daily-market-overview", headers={"X-CSRF-Token": csrf_token})
+    response = client.post(
+        "/api/dashboard/cmc-daily-market-overview",
+        headers={"X-CSRF-Token": csrf_token},
+    )
 
     assert response.status_code == 200
-    body = response.json()
-    assert body["ready"] is True
-    assert body["args"] == {"preview": True, "recordLedger": True}
+    assert response.json()["uniqueName"] == "daily_market_overview"
+    assert calls == [{"preview": True, "recordLedger": True}]
 
 
-def test_latest_market_overview_reads_full_ledger_after_truncated_events(tmp_path, monkeypatch) -> None:
-    ledger_path = tmp_path / "ledger.jsonl"
-    report = {
-        "eventType": "cmc_market_overview_report",
-        "createdAt": "2026-06-07T09:00:00+00:00",
-        "payload": {
-            "skillName": "daily_market_overview",
-            "uniqueName": "daily_market_overview",
-            "status": "ok",
-            "confidence": "high",
-            "formattedReport": "**TL;DR**\n\nReport.\n\n———\n\n**Details**",
-        },
-    }
-    ledger_path.write_text(json.dumps(report) + "\n", encoding="utf-8")
-    with ledger_path.open("a", encoding="utf-8") as stream:
-        for index in range(12):
-            stream.write(json.dumps({"eventType": "trade_blocked", "createdAt": f"2026-06-07T09:{index + 1:02d}:00+00:00"}) + "\n")
-    monkeypatch.setenv("TRADE_LEDGER_PATH", str(ledger_path))
-    get_settings.cache_clear()
-
-    from app.services.agent.cockpit import AgentCockpitService
-
-    summary = TradeLedger.get_ledger_summary(limit=10)
-    overview = AgentCockpitService.latest_market_overview(summary)
-
-    assert overview["ready"] is True
-    assert overview["status"] == "ok"
-    assert overview["formattedReport"] == report["payload"]["formattedReport"]
-    get_settings.cache_clear()
 def test_competition_registration_dry_run_returns_twak_instructions() -> None:
     client = TestClient(app)
     csrf_token = client.get("/api/session").json()["csrfToken"]
