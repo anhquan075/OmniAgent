@@ -1,6 +1,6 @@
 # BNB Hack Live Trading Runbook
 
-Use this runbook for the BNB Hack live trading window on BSC mainnet.
+Use this runbook for the BNB Hack live trading window on BSC mainnet. For system architecture and safety model details, see [ARCHITECTURE.md](./ARCHITECTURE.md). For local setup and environment variables, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## 1. Pre-Window Checks
 

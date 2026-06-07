@@ -103,6 +103,7 @@ Both scripts refuse to submit unless `bnb_live_preflight` returns `readyForLiveT
 | [docs/bnb-hack-submission.md](docs/bnb-hack-submission.md) | Competition submission: sponsor usage, safety model, live proof evidence |
 | [docs/bnb-hack-live-trading-runbook.md](docs/bnb-hack-live-trading-runbook.md) | Step-by-step runbook for the live trading window |
 | [docs/bnb-agent-skill.md](docs/bnb-agent-skill.md) | ERC-8004 on-chain identity registration via BNB AI Agent SDK |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | How to set up locally, run tests, and contribute |
 
 ---
 
