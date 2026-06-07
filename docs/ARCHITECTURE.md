@@ -174,6 +174,8 @@ graph TB
 
 The core 5-stage pipeline executed by `AutonomousTradingAgent.run_autonomous_cycle()`.
 
+Each stage is a hard gate: if SENSE returns no CMC signal, the cycle stops before STRATEGY runs. If RISK rejects, SIGN never executes.
+
 ```mermaid
 sequenceDiagram
     participant LoopSvc as AutonomousLoopService
@@ -243,6 +245,8 @@ sequenceDiagram
 
 How the frontend (or any client) invokes an agent capability through the MCP JSON-RPC surface.
 
+The allowlist check at the registry layer means only the 24 configured tools can be called — any other tool name returns a -32601 error before reaching a service.
+
 ```mermaid
 sequenceDiagram
     participant Client as Frontend / External Client
@@ -288,6 +292,8 @@ sequenceDiagram
 ## 6. Trade Execution
 
 Detailed sequence within `TradeExecutionService.execute_trade()` — from simulation pre-check through TWAK dispatch to receipt confirmation.
+
+Notice the 11-check simulation pre-check that runs before any TWAK call: if any blocker is present, the trade is logged as blocked and the function returns without touching the wallet.
 
 ```mermaid
 sequenceDiagram
@@ -345,6 +351,8 @@ sequenceDiagram
 
 How the frontend cockpit maintains near-real-time state.
 
+The four parallel data fetches (preflight, ledger, proof score, work order) run concurrently on every poll, so the dashboard always shows a consistent snapshot of the agent's current state.
+
 ```mermaid
 sequenceDiagram
     participant FE as Frontend (React)
@@ -390,6 +398,8 @@ sequenceDiagram
 ## 8. Strategy Decision Flow
 
 How the agent decides whether to trade, hold, or reduce position size.
+
+The key constraint: if the deterministic engine returns hold, the LLM is never consulted. If both engines approve, the final position size is the minimum of the two amounts, never the larger.
 
 ```mermaid
 flowchart TD
@@ -446,6 +456,8 @@ flowchart TD
 
 Every trade intent progresses through a 7-state finite state machine.
 
+The FSM creates an audit trail: every state transition is logged to the append-only ledger, so the full history of a trade intent is recoverable even if the process crashes mid-cycle.
+
 ```mermaid
 stateDiagram-v2
     [*] --> intent_created: Trade intent generated
@@ -498,6 +510,8 @@ stateDiagram-v2
 
 Eight guardrail checks that MUST all pass before any trade is approved.
 
+The system fails closed: a missing signal source, an exceeded drawdown limit, or an active emergency pause all produce the same result, rejection with a logged reason.
+
 ```mermaid
 flowchart LR
     INPUT([TradePolicyInput]) --> G1
@@ -544,6 +558,8 @@ flowchart LR
 ## 11. Live Preflight
 
 9 readiness checks that must pass before `BNB_TRADING_ENABLED=true` can be safely set.
+
+The two-tier design separates configuration readiness (8 checks) from live execution readiness (flags + funded route). You can confirm the system is correctly configured before ever enabling live trading.
 
 ```mermaid
 flowchart TD
@@ -596,6 +612,8 @@ flowchart TD
 
 8-point verification score measuring trade evidence completeness.
 
+The score is explanatory, not a gate. Hard blockers (preflight failures, receipt failures, emergency pause) block execution regardless of the numeric score.
+
 ```mermaid
 flowchart LR
     subgraph checks["8 Proof Checks"]
@@ -635,6 +653,8 @@ flowchart LR
 ---
 
 ## 13. Data Model
+
+The ledger is the system's memory: every event — trade attempts, blocks, receipts, pauses — is appended with a `tradeIntentId` that links related events across the full lifecycle of a trade.
 
 ### Trade Ledger Event Schema
 
@@ -713,6 +733,8 @@ erDiagram
 ## 14. Service Dependency Graph
 
 How the 23 services in `ServiceContainer` relate to each other at runtime.
+
+The graph shows that `AutonomousTradingAgent` is the only service that touches both the strategy layer and the execution layer, all other services have a single responsibility.
 
 ```mermaid
 graph TD
