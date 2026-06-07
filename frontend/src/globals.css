@@ -530,8 +530,8 @@ body {
 }
 
 .robot-cockpit {
-  --robot-shell: rgba(13, 17, 19, 0.86);
-  --robot-line: rgba(235, 226, 199, 0.11);
+  --robot-shell: rgba(13, 17, 19, 0.94);
+  --robot-line: rgba(235, 226, 199, 0.17);
   --robot-cyan: rgba(76, 219, 205, 0.86);
 }
 
@@ -838,6 +838,7 @@ body {
 }
 
 .quant-terminal {
+  color: rgba(246, 244, 235, 0.92);
   font-variant-numeric: tabular-nums;
   animation: quant-terminal-enter 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   transition: filter 240ms ease, opacity 240ms ease;
@@ -855,12 +856,14 @@ body {
 .quant-summary,
 .quant-workrail,
 .quant-side-stack > * {
-  border: 1px solid rgba(230, 224, 204, 0.105);
+  border: 1px solid rgba(230, 224, 204, 0.16);
   border-radius: 0.45rem;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.018)),
-    rgba(11, 14, 18, 0.86);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.068), rgba(255, 255, 255, 0.026)),
+    rgba(11, 14, 18, 0.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 10px 30px rgba(0, 0, 0, 0.16);
   animation: quant-panel-rise 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
 }
@@ -907,7 +910,7 @@ body {
   font-size: 0.58rem;
   font-weight: 800;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.38);
+  color: rgba(255, 255, 255, 0.52);
 }
 
 .quant-operator-copy strong {
@@ -923,7 +926,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: rgba(255, 255, 255, 0.52);
+  color: rgba(255, 255, 255, 0.68);
   font-size: 0.72rem;
 }
 
@@ -941,8 +944,8 @@ body {
   gap: 0.36rem;
   overflow: hidden;
   border-radius: 0.32rem;
-  border: 1px solid rgba(255, 255, 255, 0.075);
-  background: rgba(255, 255, 255, 0.032);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.052);
   padding: 0.42rem 0.52rem;
   transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
 }
@@ -958,13 +961,13 @@ body {
 }
 
 .quant-operator-metrics small {
-  color: rgba(255, 255, 255, 0.38);
+  color: rgba(255, 255, 255, 0.52);
   font-size: 0.54rem;
   font-weight: 780;
 }
 
 .quant-operator-metrics b {
-  color: rgba(255, 255, 255, 0.76);
+  color: rgba(255, 255, 255, 0.88);
   font-size: 0.64rem;
   font-weight: 840;
   text-align: right;
@@ -1022,7 +1025,7 @@ body {
   font-size: 0.58rem;
   font-weight: 750;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.38);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .quant-brand h1 {
@@ -1068,14 +1071,16 @@ body {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: stretch;
   gap: 0.42rem;
-  border: 1px solid rgba(230, 224, 204, 0.105);
+  border: 1px solid rgba(230, 224, 204, 0.16);
   border-radius: 0.45rem;
   background:
-    linear-gradient(90deg, rgba(76, 219, 205, 0.085), transparent 38%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018)),
-    rgba(11, 14, 18, 0.88);
+    linear-gradient(90deg, rgba(76, 219, 205, 0.12), transparent 38%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.024)),
+    rgba(11, 14, 18, 0.94);
   padding: 0.42rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 10px 30px rgba(0, 0, 0, 0.16);
 }
 
 .loop-proof-title {
@@ -1107,8 +1112,8 @@ body {
   min-height: 3.05rem;
   overflow: hidden;
   border-radius: 0.34rem;
-  border: 1px solid rgba(255, 255, 255, 0.075);
-  background: rgba(255, 255, 255, 0.028);
+  border: 1px solid rgba(255, 255, 255, 0.115);
+  background: rgba(255, 255, 255, 0.046);
   padding: 0.42rem 0.5rem;
   transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
 }
@@ -1137,7 +1142,7 @@ body {
 .loop-proof-step.is-risk.is-ready::after { background: rgba(77, 219, 190, 0.94); }
 
 .loop-proof-index {
-  color: rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.42);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.56rem;
 }
@@ -1171,7 +1176,7 @@ body {
 
 .loop-proof-step p {
   margin: 0;
-  color: rgba(255, 255, 255, 0.42);
+  color: rgba(255, 255, 255, 0.58);
   font-size: 0.56rem;
   font-weight: 780;
   text-transform: uppercase;
@@ -1183,7 +1188,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: rgba(255, 255, 255, 0.76);
+  color: rgba(255, 255, 255, 0.88);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.64rem;
   font-weight: 720;
@@ -1201,7 +1206,7 @@ body {
   min-width: 0;
   overflow: hidden;
   border-right: 1px solid rgba(255, 255, 255, 0.075);
-  padding: 0.45rem 0.62rem;
+  padding: 0.5rem 0.66rem;
   transition: background 180ms ease, transform 180ms ease;
 }
 
@@ -1239,23 +1244,23 @@ body {
   white-space: nowrap;
   font-size: 0.58rem;
   font-style: normal;
-  color: rgba(255, 255, 255, 0.34);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .quant-main-grid {
   display: grid;
+  flex: 0 0 auto;
   min-height: 0;
-  flex: 1;
   grid-template-columns: minmax(0, 1fr);
   gap: 0.5rem;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .quant-center-rail,
 .quant-side-stack,
 .quant-workrail {
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .quant-section-title {
@@ -1274,12 +1279,13 @@ body {
 }
 
 .quant-center-rail {
-  overflow: auto;
+  overflow: visible;
 }
 
 .quant-center-rail {
   grid-template-columns: minmax(0, 1.08fr) minmax(260px, 0.92fr) minmax(220px, 0.72fr);
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: none;
+  align-items: stretch;
 }
 
 .quant-focus,
@@ -1287,8 +1293,14 @@ body {
 .quant-summary,
 .quant-workrail {
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
   padding: 0.65rem;
+}
+
+.quant-focus,
+.quant-stack,
+.quant-auto-status {
+  min-height: clamp(8.2rem, 15vh, 11rem);
 }
 
 .quant-focus:hover,
@@ -1334,7 +1346,7 @@ body {
 .quant-focus p,
 .quant-summary p {
   margin-top: 0.55rem;
-  color: rgba(255, 255, 255, 0.52);
+  color: rgba(255, 255, 255, 0.66);
   font-size: 0.76rem;
   line-height: 1.45;
 }
@@ -1350,9 +1362,9 @@ body {
   display: grid;
   gap: 0.12rem;
   min-width: 0;
-  border: 1px solid rgba(255, 255, 255, 0.075);
+  border: 1px solid rgba(255, 255, 255, 0.115);
   border-radius: 0.32rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.048);
   padding: 0.38rem 0.42rem;
 }
 
@@ -1367,7 +1379,7 @@ body {
 }
 
 .quant-decision-meta small {
-  color: rgba(255, 255, 255, 0.34);
+  color: rgba(255, 255, 255, 0.5);
   font-size: 0.5rem;
   font-weight: 760;
 }
@@ -1414,6 +1426,15 @@ body {
 
 .quant-mini-bar.is-good b { background: rgba(77, 219, 190, 0.88); }
 .quant-mini-bar.is-bad b { background: rgba(255, 94, 118, 0.88); }
+.quant-mini-bar.is-waiting {
+  color: rgba(255, 255, 255, 0.48);
+}
+.quant-mini-bar.is-waiting b {
+  background: transparent;
+}
+.quant-mini-bar.is-waiting strong {
+  color: rgba(255, 255, 255, 0.52);
+}
 
 .quant-stack-row {
   display: grid;
@@ -1422,7 +1443,7 @@ body {
   gap: 0.45rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   padding: 0.3rem 0;
-  color: rgba(255, 255, 255, 0.48);
+  color: rgba(255, 255, 255, 0.6);
   transition: color 180ms ease, transform 180ms ease;
 }
 
@@ -1432,23 +1453,22 @@ body {
 }
 
 .quant-stack-row strong {
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.88);
   font-size: 0.62rem;
   text-transform: uppercase;
 }
 
 .quant-bottom-grid {
   display: grid;
-  min-height: 13rem;
-  max-height: 17rem;
+  min-height: 0;
   grid-template-columns: minmax(0, 1.08fr) minmax(232px, 0.62fr) minmax(300px, 0.86fr);
   gap: 0.5rem;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .quant-workrail,
 .quant-side-stack {
-  overflow: auto;
+  overflow: visible;
   scrollbar-width: thin;
   scrollbar-color: rgba(240, 185, 11, 0.32) transparent;
 }
@@ -1458,7 +1478,7 @@ body {
 }
 
 .quant-side-stack-reasoning {
-  grid-template-rows: minmax(0, 1fr) auto minmax(3.9rem, 0.42fr);
+  grid-template-rows: auto auto auto;
 }
 
 .quant-side-stack-reasoning > * {
@@ -1524,6 +1544,80 @@ body {
   border: 1px solid rgba(245, 158, 11, 0.24);
   background: rgba(245, 158, 11, 0.1);
   color: rgba(253, 230, 138, 0.95);
+}
+
+.quant-offline-brief {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.72fr) minmax(260px, 1.1fr) minmax(360px, 1.3fr);
+  align-items: center;
+  gap: 0.58rem;
+  border-color: rgba(245, 158, 11, 0.34);
+  background:
+    linear-gradient(90deg, rgba(245, 158, 11, 0.16), transparent 42%),
+    rgba(245, 158, 11, 0.074);
+  color: rgba(255, 247, 214, 0.94);
+}
+
+.quant-offline-brief > div:first-child {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 840;
+  text-transform: uppercase;
+}
+
+.quant-offline-brief > div:first-child svg {
+  flex: 0 0 auto;
+  color: rgba(253, 230, 138, 0.95);
+}
+
+.quant-offline-brief p {
+  margin: 0;
+  min-width: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.quant-offline-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 0.72fr));
+  gap: 0.36rem;
+  min-width: 0;
+}
+
+.quant-offline-meta span {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.105);
+  border-radius: 0.3rem;
+  background: rgba(0, 0, 0, 0.16);
+  padding: 0.32rem 0.42rem;
+}
+
+.quant-offline-meta small,
+.quant-offline-meta b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-transform: uppercase;
+}
+
+.quant-offline-meta small {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.5rem;
+  font-weight: 760;
+}
+
+.quant-offline-meta b {
+  color: rgba(253, 230, 138, 0.95);
+  font-size: 0.58rem;
+  font-weight: 820;
 }
 
 .quant-footer {
@@ -2236,6 +2330,8 @@ body {
   .quant-side-stack,
   .quant-side-stack-reasoning,
   .robot-readiness-grid,
+  .quant-offline-brief,
+  .quant-offline-meta,
   .proof-check-grid {
     grid-template-columns: 1fr;
   }

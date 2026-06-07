@@ -7,13 +7,13 @@ export function LivePreflightPanel({ preflight }: { preflight?: Payload }) {
   const blockers = Array.isArray(preflight?.blockers) ? preflight.blockers : [];
   const ready = hasPreflight && Boolean(preflight?.readyForLiveTrade);
   const enableReady = hasPreflight && Boolean(preflight?.readyToEnableLive);
-  const status = !hasPreflight ? "Waiting" : ready ? "Live-ready" : enableReady ? "Enable-ready" : "Blocked";
+  const status = !hasPreflight ? "Waiting" : ready ? "Ready" : enableReady ? "Can enable" : "Blocked";
   const visibleBlockers = !hasPreflight
-    ? [{ name: "preflight snapshot", ok: false }]
+    ? [{ name: "safety snapshot", ok: false }]
     : blockers.length
       ? blockers.slice(0, 4)
-      : [{ name: "all gates", ok: true }];
-  const firstBlocker = !hasPreflight ? "waiting for snapshot" : blockers[0]?.name ? String(blockers[0].name) : ready ? "none" : "waiting for proof";
+      : [{ name: "all checks", ok: true }];
+  const firstBlocker = !hasPreflight ? "waiting for safety snapshot" : blockers[0]?.name ? String(blockers[0].name) : ready ? "none" : "waiting for proof";
   const panelTone = !hasPreflight ? "is-waiting" : ready ? "is-ready" : "is-blocked";
 
   return (
@@ -21,7 +21,7 @@ export function LivePreflightPanel({ preflight }: { preflight?: Payload }) {
       <div className="live-preflight-head">
         <span>
           {ready ? <ShieldCheckIcon className="h-3.5 w-3.5" /> : <AlertTriangleIcon className="h-3.5 w-3.5" />}
-          Live preflight
+          Live safety check
         </span>
         <strong>{status}</strong>
       </div>
