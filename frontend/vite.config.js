@@ -7,6 +7,9 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
     plugins: [react(), tailwindcss()],
+    preview: {
+      allowedHosts: true,
+    },
     target: ['es2022', 'chrome89', 'edge89', 'firefox89', 'safari15'],
     server: {
       proxy: {
