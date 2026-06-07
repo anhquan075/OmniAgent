@@ -10,7 +10,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],
     ['list'],
@@ -27,19 +27,12 @@ export default defineConfig({
     },
     storageState: undefined,
   },
-  webServer: {
-    command: 'VITE_PLAYWRIGHT=true VITE_API_URL=http://localhost:3001 VITE_DEFAULT_NETWORK=testnet pnpm run dev',
-    url: 'http://localhost:5173',
-    timeout: 120000,
-    reuseExistingServer: false, // Always restart to pick up env vars
-    cwd: resolve(__dirname, '.'),
-  },
   timeout: 60000,
   expect: {
     timeout: 10000,
   },
   webServer: {
-    command: 'VITE_PLAYWRIGHT=true VITE_API_URL=http://localhost:3001 VITE_DEFAULT_NETWORK=testnet pnpm run dev',
+    command: 'VITE_PLAYWRIGHT=true VITE_API_URL=http://localhost:8000 VITE_DEFAULT_NETWORK=bsc pnpm run dev',
     url: 'http://localhost:5173',
     timeout: 120000,
     reuseExistingServer: true,

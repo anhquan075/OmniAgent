@@ -1,0 +1,19 @@
+packages:
+  - "."
+
+overrides:
+  zod: ^4.3.6
+
+onlyBuiltDependencies:
+  - bufferutil
+  - esbuild
+  - keccak
+  - msw
+  - utf-8-validate
+
+allowBuilds:
+  bufferutil: true
+  esbuild: true
+  keccak: true
+  msw: true
+  utf-8-validate: true

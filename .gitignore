@@ -10,6 +10,12 @@ frontend/node_modules/
 frontend/.env
 frontend/.env.*
 !frontend/.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend_fastapi/.env
+backend_fastapi/.env.*
+!backend_fastapi/.env.example
 
 # Hardhat / Solidity artifacts
 artifacts/
@@ -26,6 +32,18 @@ frontend/.next/
 frontend/out/
 frontend/dist/
 frontend/.turbo/
+backend/.venv/
+backend_fastapi/.venv/
+backend/.pytest_cache/
+backend_fastapi/.pytest_cache/
+backend/.ruff_cache/
+backend_fastapi/.ruff_cache/
+backend/**/__pycache__/
+backend_fastapi/**/__pycache__/
+backend/**/*.pyc
+backend_fastapi/**/*.pyc
+backend/data/*.jsonl
+backend_fastapi/data/*.jsonl
 
 # Logs
 logs/

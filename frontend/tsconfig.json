@@ -32,6 +32,26 @@
     "allowJs": true,
     "checkJs": false
   },
-  "include": ["src", "components", "lib", "hooks"],
+  "include": [
+    "src/vite-env.d.ts",
+    "src/main.tsx",
+    "src/App.tsx",
+    "src/components/dashboard/BnbTradingAgentDashboard.tsx",
+    "src/components/dashboard/DashboardCard.tsx",
+    "src/components/dashboard/agent-reasoning-panel.tsx",
+    "src/components/dashboard/chain-tx-log.tsx",
+    "src/components/dashboard/competition-readiness-strip.tsx",
+    "src/components/dashboard/hackathon-shell-header.tsx",
+    "src/components/dashboard/live-preflight-panel.tsx",
+    "src/components/dashboard/mcp-result-utils.ts",
+    "src/components/dashboard/proof-link-strip.tsx",
+    "src/components/dashboard/robot-cockpit-primitives.tsx",
+    "src/components/dashboard/trade-proof-timeline.tsx",
+    "src/components/shared/ErrorBoundary.tsx",
+    "src/lib/api.ts",
+    "src/lib/mcp.ts",
+    "src/lib/utils.ts",
+    "src/__tests__/mcp-result-utils.test.ts"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
