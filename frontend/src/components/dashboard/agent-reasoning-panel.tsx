@@ -47,31 +47,32 @@ export function AgentReasoningPanel({
     { label: "signer", value: server.walletBound ? "bound" : text(server.state, "dry"), ok: server.walletBound === true },
     { label: "action", value: decision({ offline, paused, riskPass: risk.guardrailsPass === true, canExecute: simulation.canExecute === true }), ok: !offline && !paused && simulation.canExecute === true },
   ];
+  const readyCount = rows.filter(item => item.ok).length;
   const tools = cycle.toolsUsed ?? state.toolsUsed ?? ["agent_snapshot"];
 
   return (
     <section className="robot-core-panel agent-reasoning-panel flex min-h-0 flex-col overflow-hidden p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+      <div className="agent-reasoning-head">
+        <h3>
           <BrainCircuitIcon className="h-4 w-4 text-cyan-200/80" />
           Agent Reasoning
         </h3>
-        <ActivityIcon className="h-4 w-4 text-bnb-gold" />
+        <span>{readyCount}/{rows.length} gates</span>
       </div>
       <div className="reasoning-gate-grid">
         {rows.map(item => (
-          <div key={item.label} className="grid grid-cols-[64px_1fr] items-center gap-2 rounded-md border border-white/10 bg-white/[0.035] px-2 py-1.5">
-            <span className="text-[10px] uppercase text-white/36">{item.label}</span>
-            <strong className={`truncate text-sm ${item.ok ? "text-cyan-100" : "text-white/58"}`}>{item.value}</strong>
+          <div key={item.label} className={`reasoning-gate ${item.ok ? "is-ready" : ""}`}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
           </div>
         ))}
       </div>
       {trace.length ? (
-        <div className="mt-2 min-h-0 overflow-hidden border-t border-white/10 pt-2">
-          <p className="mb-1 text-[10px] uppercase text-white/32">{strategy?.advisor?.ready ? "model trace" : "strategy trace"}</p>
+        <div className="reasoning-trace-block">
+          <p>{strategy?.advisor?.ready ? "model trace" : "strategy trace"}</p>
           <div className="space-y-1">
             {trace.slice(0, 3).map((item: string) => (
-              <p key={item} className="reasoning-trace-line rounded-sm bg-white/[0.025] px-1.5 py-1 text-[10px] text-white/46">
+              <p key={item} className="reasoning-trace-line">
                 {safeVisibleText(item)}
               </p>
             ))}
@@ -79,11 +80,11 @@ export function AgentReasoningPanel({
         </div>
       ) : null}
       {marketProof ? <MarketSignalProof signal={marketProof} /> : null}
-      <div className="mt-2 min-h-0 overflow-hidden border-t border-white/10 pt-2">
-        <p className="mb-1 text-[10px] uppercase text-white/32">MCP tools used</p>
-        <div className="flex flex-wrap gap-1">
+      <div className="reasoning-tools-block">
+        <p>MCP tools used</p>
+        <div>
           {tools.slice(0, 5).map((tool: string) => (
-            <span key={tool} className="rounded-sm border border-bnb-gold/18 bg-bnb-gold/[0.055] px-1.5 py-0.5 font-mono text-[9px] text-bnb-gold/90">
+            <span key={tool} className="reasoning-tool-chip">
               {toolDisplayName(tool)}
             </span>
           ))}
