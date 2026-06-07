@@ -17,6 +17,7 @@ import RecoveryCandidatePanel from './recovery-candidate-panel';
 import { Metric } from './robot-cockpit-primitives';
 import TradeProofScorePanel from './trade-proof-score-panel';
 import { TradeProofTimeline } from './trade-proof-timeline';
+import { apiFetch } from '../../lib/api';
 import { callMcpTool } from '../../lib/mcp';
 
 type Payload = Record<string, any>;
@@ -41,15 +42,20 @@ export function BnbTradingAgentDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [snapshotResult, preflightResult, proofBundleResult] = await Promise.allSettled([
+      const [snapshotResult, preflightResult, proofBundleResult, healthResult] = await Promise.allSettled([
         runTool('bnb_agent_cockpit_snapshot', { limit: 10 }),
         runTool('bnb_live_preflight', { skipFundedCycle: true }),
         runTool('bnb_live_proof_bundle', { limit: 8 }),
+        apiFetch('/api/health').then(async (response) => {
+          if (!response.ok) throw new Error(`health ${response.status}`);
+          return response.json() as Promise<Payload>;
+        }),
       ]);
       if (snapshotResult.status === 'rejected') throw snapshotResult.reason;
       const livePreflight = preflightResult.status === 'fulfilled' ? preflightResult.value : { status: 'unavailable', blockers: [{ name: 'preflight', reason: String(preflightResult.reason) }] };
       const liveProofBundle = proofBundleResult.status === 'fulfilled' ? proofBundleResult.value : { status: 'unavailable', blockers: [{ name: 'proof_bundle', reason: String(proofBundleResult.reason) }] };
-      setState({ ...snapshotResult.value, livePreflight, liveProofBundle, ...overrides });
+      const backendHealth = healthResult.status === 'fulfilled' ? healthResult.value : { status: 'unavailable', reason: String(healthResult.reason) };
+      setState({ ...snapshotResult.value, backendHealth, livePreflight, liveProofBundle, ...overrides });
       setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (err) {
       setError(err instanceof Error && err.message === 'Failed to fetch' ? 'MCP API unavailable' : err instanceof Error ? err.message : 'Unable to refresh cockpit');
@@ -126,11 +132,15 @@ export function BnbTradingAgentDashboard() {
   const paidStatus = state.paidStatus ?? {};
   const x402Value = paidStatus.ready ? 'ready' : paidStatus.x402Configured ? 'verify' : 'gap';
   const liveExecution = Boolean(state.livePreflight?.readyForLiveTrade);
+  const backendHealth = state.backendHealth ?? {};
+  const autonomousLoopEnabled = Boolean(backendHealth.autonomousLoopEnabled);
+  const loopValue = autonomousLoopEnabled ? 'auto' : 'manual';
+  const loopMode = autonomousLoopEnabled ? 'Backend loop active' : 'Manual override';
   const txLogEvents = state.liveProofBundle?.txEvents?.length ? state.liveProofBundle.txEvents : ledgerEvents;
 
   return (
-    <div className="robot-cockpit grid h-full min-h-0 gap-3 overflow-hidden xl:grid-cols-[1.05fr_1.35fr_0.9fr]">
-      <section className="robot-core-panel flex min-h-0 flex-col overflow-hidden p-3">
+    <div className="robot-cockpit grid gap-3 md:h-full md:min-h-0 md:overflow-hidden xl:grid-cols-[1.05fr_1.35fr_0.9fr]">
+      <section className="robot-core-panel flex flex-col overflow-visible p-3 md:min-h-0 md:overflow-hidden">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-cyan-300/18 bg-cyan-300/[0.06] px-2.5 py-1 text-[10px] font-semibold uppercase text-cyan-100/80">
@@ -145,8 +155,9 @@ export function BnbTradingAgentDashboard() {
 
         <div className="grid grid-cols-3 gap-2">
           <Metric label="TWAK" value={twakValidated ? 'valid' : server.walletBound ? 'check' : asText(server.state, 'dry')} />
-          <Metric label="SDK" value={sdk.ready ? 'ready' : sdk.installed ? 'installed' : 'gap'} />
+          <Metric label="loop" value={loopValue} />
           <Metric label="trades" value={asText(state.ledger?.dailyCompliance?.progress ?? state.ledger?.dailyCompliance?.tradeCount ?? 0, '0')} />
+          <Metric label="SDK" value={sdk.ready ? 'ready' : sdk.installed ? 'installed' : 'gap'} />
           <Metric label="x402" value={x402Value} />
           <Metric label="PnL" value={`${asText(state.ledger?.pnl?.totalReturnPct, '0')}%`} />
         </div>
@@ -164,9 +175,15 @@ export function BnbTradingAgentDashboard() {
         </div>
 
         <div className="mt-3 grid gap-2">
+          <div className="rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-2">
+            <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase text-white/42">
+              <span>backend automation</span>
+              <span className={autonomousLoopEnabled ? 'text-emerald-200' : 'text-amber-100'}>{loopMode}</span>
+            </div>
+          </div>
           <button type="button" onClick={runPipeline} disabled={pipelineRunning} className="robot-primary-action">
             {pipelineRunning ? <Loader2Icon className="h-4 w-4 animate-spin" /> : <PlayCircleIcon className="h-4 w-4" />}
-            {liveExecution ? 'Run live cycle' : 'Run dry cycle'}
+            {liveExecution ? 'Run live override' : 'Run dry override'}
           </button>
           <button type="button" onClick={togglePause} className="robot-secondary-action">
             <PauseCircleIcon className="h-4 w-4" />
@@ -175,10 +192,10 @@ export function BnbTradingAgentDashboard() {
         </div>
 
         {error ? <p className="mt-2 rounded-md border border-amber-300/20 bg-amber-300/10 px-2 py-1.5 text-xs text-amber-100">{error}</p> : null}
-        <p className="mt-auto pt-3 font-mono text-[10px] uppercase text-white/32">snapshot {lastUpdated} / 3 MCP reads</p>
+        <p className="mt-auto pt-3 font-mono text-[10px] uppercase text-white/32">snapshot {lastUpdated} / 3 MCP reads + health</p>
       </section>
 
-      <section className="robot-core-panel flex min-h-0 flex-col overflow-hidden p-3">
+      <section className="robot-core-panel flex flex-col overflow-visible p-3 md:min-h-0 md:overflow-hidden">
         <div className="mb-2 flex items-center justify-between">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-white"><BrainCircuitIcon className="h-4 w-4 text-bnb-gold" /> Work order rail</h3>
           <span className="rounded-sm border border-white/10 px-2 py-1 font-mono text-[10px] uppercase text-white/42">{lifecycle?.state ?? workOrders[0]?.state ?? 'idle'}</span>
@@ -187,7 +204,7 @@ export function BnbTradingAgentDashboard() {
         <TradeProofTimeline workOrders={workOrders} recovery={recovery} ledgerEvents={ledgerEvents} running={pipelineRunning || loading} />
       </section>
 
-      <div className="grid min-h-0 grid-rows-[0.72fr_0.82fr_0.95fr_1.05fr] gap-3 overflow-hidden">
+      <div className="grid gap-3 md:min-h-0 md:grid-rows-[0.72fr_0.82fr_0.95fr_1.05fr] md:overflow-hidden">
         <RecoveryCandidatePanel candidates={recovery} />
         <ProofReportSummary bundle={state.liveProofBundle} />
         <AgentReasoningPanel state={state} offline={offline} paused={paused} />
