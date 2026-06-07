@@ -17,7 +17,7 @@ const text = (value: unknown, fallback = "waiting") => (
   value === undefined || value === null || value === "" ? fallback : String(value)
 );
 
-export function LoopProofRail({ state }: { state: Payload }) {
+export function LoopProofRail({ state, offline = false }: { state: Payload; offline?: boolean }) {
   const proof = state.liveProofBundle ?? {};
   const marketSignal = state.livePreflight?.[MARKET_SIGNAL_KEY]
     ?? state.cycle?.[MARKET_SIGNAL_KEY]
@@ -42,14 +42,14 @@ export function LoopProofRail({ state }: { state: Payload }) {
     {
       icon: RadioTowerIcon,
       label: "Market signal",
-      value: marketSignal?.ready ? safeVisibleText(text(marketSignal.toolName, "live tool")) : hasPriceFeed ? "price feed only" : "waiting",
+      value: marketSignal?.ready ? safeVisibleText(text(marketSignal.toolName, "live tool")) : hasPriceFeed ? "price feed only" : offline ? "backend offline" : "waiting",
       ok: marketSignal?.ready === true,
       accent: "market",
     },
     {
       icon: ActivityIcon,
       label: "Strategy",
-      value: decision.action ? `${decision.action} ${Math.round(Number(decision.confidence ?? 0) * 100)}%` : "observe",
+      value: decision.action ? `${decision.action} ${Math.round(Number(decision.confidence ?? 0) * 100)}%` : "read-only",
       ok: hasStrategyDecision,
       accent: "strategy",
     },
@@ -63,14 +63,14 @@ export function LoopProofRail({ state }: { state: Payload }) {
     {
       icon: WalletCardsIcon,
       label: "Wallet-native signer",
-      value: signer.ready ? "ready" : safeVisibleText(text(signer.state, "waiting")),
+      value: signer.ready ? "ready" : offline ? "not checked" : safeVisibleText(text(signer.state, "waiting")),
       ok: signer.ready === true,
       accent: "wallet",
     },
     {
       icon: BadgeCheckIcon,
       label: "BSC proof",
-      value: hasTx ? "proof linked" : "proof pending",
+      value: hasTx ? "proof linked" : offline ? "not checked" : "proof pending",
       ok: hasTx,
       accent: "chain",
     },

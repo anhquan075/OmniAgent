@@ -1,4 +1,5 @@
 import { ActivityIcon, BrainCircuitIcon } from "lucide-react";
+import AgentVerdictSummary from "./agent-verdict-summary";
 
 type Payload = Record<string, any>;
 const SIGNER_SERVER_KEY = ["twa", "kServer"].join("");
@@ -59,6 +60,7 @@ export function AgentReasoningPanel({
         </h3>
         <span>{readyCount}/{rows.length} gates</span>
       </div>
+      <AgentVerdictSummary offline={offline} paused={paused} canExecute={simulation.canExecute === true} riskPass={risk.guardrailsPass === true} readyCount={readyCount} total={rows.length} />
       <div className="reasoning-gate-grid">
         {rows.map(item => (
           <div key={item.label} className={`reasoning-gate ${item.ok ? "is-ready" : ""}`}>

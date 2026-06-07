@@ -32,6 +32,8 @@ test.describe('BNB trading dashboard', () => {
     /Live preflight/i,
     /preflight snapshot/i,
     /waiting-for-policy-intent/i,
+    /market waiting/i,
+    /Agent loop idle/i,
   ];
 
   test('shows BSC trading evidence on the first screen', async ({ page }) => {
@@ -47,6 +49,10 @@ test.describe('BNB trading dashboard', () => {
     await expect(page.getByText('Market signal').first()).toBeVisible();
     await expect(page.getByText('Wallet-native signer').first()).toBeVisible();
     await expect(page.getByText('Signal confidence').first()).toBeVisible();
+    await expect(page.getByText(/read-only/i).first()).toBeVisible();
+    await expect(page.getByText('backend offline').first()).toBeVisible();
+    await expect(page.getByText('API session unavailable').first()).toBeVisible();
+    await expect(page.locator('.quant-status-band')).toBeVisible();
     await expect(page.getByText('Data coverage').first()).toBeVisible();
     await expect(page.getByText('Execution gate').first()).toBeVisible();
     await expect(page.getByText('24h move').first()).toBeVisible();
@@ -57,6 +63,14 @@ test.describe('BNB trading dashboard', () => {
     await expect(page.getByText('Live safety check').first()).toBeVisible();
     await expect(page.getByText('Recovery candidates').first()).toBeVisible();
     await expect(page.getByText('Decision summary').first()).toBeVisible();
+    const primaryVerdict = page.getByRole('region', { name: 'Primary decision verdict' });
+    await expect(primaryVerdict).toBeVisible();
+    const primaryVerdictBox = await primaryVerdict.boundingBox();
+    const readinessBandBox = await page.locator('.quant-operator-band').boundingBox();
+    const offlineBriefBox = await page.locator('.quant-offline-brief').boundingBox();
+    expect(primaryVerdictBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(readinessBandBox?.y ?? 0);
+    expect(primaryVerdictBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(offlineBriefBox?.y ?? 0);
+    await expect(page.locator('.reasoning-verdict-summary')).toContainText('No trade can be sent');
     for (const label of removedRibbonLabels) {
       await expect(page.getByText(label, { exact: true })).toHaveCount(0);
     }
@@ -65,6 +79,7 @@ test.describe('BNB trading dashboard', () => {
       await expect(page.getByText(pattern)).toHaveCount(0);
     }
     await expect(page.getByText('Backend agent loop').first()).toBeVisible();
+    await expect(page.getByText('Why this verdict').first()).toBeVisible();
     await expect(page.getByText('Agent Reasoning').first()).toBeVisible();
     await expect(page.getByText('Tools used').first()).toBeVisible();
     await expect(page.getByText('Blockchain Proof Log').first()).toBeVisible();
