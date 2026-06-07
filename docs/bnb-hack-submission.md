@@ -242,4 +242,4 @@ Live trading runbook: `docs/bnb-hack-live-trading-runbook.md`
 ---
 
 For full technical architecture, C4 diagrams, sequence flows, FSM states, and ADR decisions,
-see [docs/ARCHITECTURE.md](./ARCHITECTURE.md).
+see [docs/ARCHITECTURE.md](./ARCHITECTURE.md) and [docs/problem-and-approach.md](./problem-and-approach.md).

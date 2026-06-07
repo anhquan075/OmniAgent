@@ -37,7 +37,7 @@ cryptographic trail that can be independently verified.
 
 ## Our Approach
 
-The autonomous trading cycle runs exactly five named stages, defined in [`../backend/app/services/agent/autonomous_cycle.py:26-60`](../backend/app/services/agent/autonomous_cycle.py).
+The autonomous trading cycle runs exactly five named stages, defined in `autonomous_cycle.py:26-60`.
 
 **SENSE** is where the agent gathers context. It calls the CoinMarketCap Agent Hub via MCP
 JSON-RPC to retrieve a live market signal, fetches a price snapshot for the target token, and
@@ -71,7 +71,7 @@ mismatch at any point blocks the proof from being marked valid.
 
 The most important design decision in OmniAgent is that the LLM advisor is structurally
 incapable of making the agent more aggressive. This isn't a prompt instruction. It's enforced in
-[`../backend/app/services/agent/strategy_decision.py:138-157`](../backend/app/services/agent/strategy_decision.py):
+`strategy_decision.py:138-157`:
 when the deterministic engine returns hold, the function returns immediately without consulting
 the LLM at all. When the LLM is consulted, the final position size is `min(deterministic_amount,
 llm_amount)`, never the larger of the two.
@@ -100,7 +100,7 @@ deployment fails closed, not open.
 ## Verifiable by Design
 
 Every trade OmniAgent executes produces a structured proof bundle. The proof scorecard evaluates
-eight named checks defined in [`../backend/app/services/trading/proof_score.py:5-14`](../backend/app/services/trading/proof_score.py):
+eight named checks defined in `proof_score.py:5-14`:
 
 - `cmcSignalVerified` — the CMC Agent Hub signal was called and returned a valid response
 - `cmcPriceFresh` — the CMC price snapshot was recent
