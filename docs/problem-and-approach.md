@@ -37,34 +37,29 @@ cryptographic trail that can be independently verified.
 
 ## Our Approach
 
-The autonomous trading cycle runs exactly five named stages, defined in
-[`../backend/app/services/agent/autonomous_cycle.py:26-60`](../backend/app/services/agent/autonomous_cycle.py).
+The autonomous trading cycle runs exactly five named stages, defined in [`../backend/app/services/agent/autonomous_cycle.py:26-60`](../backend/app/services/agent/autonomous_cycle.py).
 
 **SENSE** is where the agent gathers context. It calls the CoinMarketCap Agent Hub via MCP
 JSON-RPC to retrieve a live market signal, fetches a price snapshot for the target token, and
 checks whether the CMC signal tool is configured and responding. Nothing moves forward without a
-verified signal from CMC. This isn't a soft preference; the live preflight gate enforces it as a
-hard blocker, as defined in
-[`../backend/app/services/trading/live_preflight.py:72-85`](../backend/app/services/trading/live_preflight.py).
+verified signal from CMC. The live preflight gate enforces this as a hard blocker — if no CMC
+signal tool is configured, `readyForLiveTrade` is false.
 
 **STRATEGY** is where the agent decides what to do. A deterministic engine evaluates the CMC
 signal, a Heikin-Ashi chart pattern across the last three candles, current drawdown, and
-confidence thresholds. The minimum confidence to approve a trade is 0.62, set in
-[`../backend/app/core/settings.py:51`](../backend/app/core/settings.py). If the deterministic
+confidence thresholds. The minimum confidence to approve a trade is 0.62. If the deterministic
 engine says hold, the cycle stops there. If it approves a trade, an optional LLM advisor
 (DeepSeek v4 Pro via OpenRouter) reviews the same data and can only reduce the position size or
 confirm a hold. It cannot escalate. This constraint is enforced in code, not in a prompt.
 
 **QUOTE** is where the agent prices the trade. It calls `getAmountsOut` on the PancakeSwap V2
 router via a raw `eth_call` to get a live quote for the exact token path. The router address is
-pinned to `0x10ED43C718714eb63d5aA57B78B54704E256024E` in
-[`../backend/app/core/settings.py:65`](../backend/app/core/settings.py). No quote, no trade.
+pinned to `0x10ED43C718714eb63d5aA57B78B54704E256024E`. No quote, no trade.
 
 **RISK** is where the agent checks whether the trade is within policy. This includes drawdown
 limits, daily trade count, slippage bounds, wallet balance, and competition registration status.
-The maximum trade size is $25 USD and the maximum drawdown is 30%, both configured in
-[`../backend/app/core/settings.py:55-58`](../backend/app/core/settings.py). Risk checks are
-deterministic and cannot be overridden by the LLM.
+The maximum trade size is $25 USD and the maximum drawdown is 30%. Risk checks are deterministic
+and cannot be overridden by the LLM.
 
 **SIGN** is where the trade is submitted. The Trust Wallet Agent Kit REST bridge signs and
 broadcasts the transaction. The agent writes the tx hash before polling for receipt confirmation,
@@ -88,17 +83,14 @@ OmniAgent gets the benefit of natural language reasoning (better rationale, cont
 commentary) without exposing the execution path to LLM failure modes.
 
 The drawdown gates add a second layer. When the current drawdown reaches 50% of the configured
-maximum, the deterministic strategy halves the maximum trade amount automatically, as defined in
-[`../backend/app/services/agent/strategy_decision.py:117-119`](../backend/app/services/agent/strategy_decision.py).
-At 100% of the maximum drawdown, trading stops entirely. These thresholds are not advisory; they
-block execution.
+maximum, the deterministic strategy halves the maximum trade amount automatically. At 100% of the
+maximum drawdown, trading stops entirely. These thresholds are not advisory; they block execution.
 
-Before any live trade can be submitted, the agent runs a 9-check preflight gate defined in
-[`../backend/app/services/trading/live_preflight.py:100-127`](../backend/app/services/trading/live_preflight.py).
-The checks cover wallet readiness, TWAK bridge connectivity, BNB Agent SDK status, competition
-registration, capital availability, CMC Agent Hub connectivity, CMC price freshness, CMC signal
-tool verification, and live flag configuration. Every check must pass. There's no partial-pass
-mode. If any check fails, `readyForLiveTrade` is false and the trade is blocked.
+Before any live trade can be submitted, the agent runs a 9-check preflight gate. The checks cover
+wallet readiness, TWAK bridge connectivity, BNB Agent SDK status, competition registration,
+capital availability, CMC Agent Hub connectivity, CMC price freshness, CMC signal tool
+verification, and live flag configuration. Every check must pass. There's no partial-pass mode.
+If any check fails, `readyForLiveTrade` is false and the trade is blocked.
 
 Live trading is also disabled by default. The environment variable `BNB_TRADING_ENABLED=true`
 must be explicitly set before any real transaction can be submitted. This means a misconfigured
@@ -108,8 +100,7 @@ deployment fails closed, not open.
 ## Verifiable by Design
 
 Every trade OmniAgent executes produces a structured proof bundle. The proof scorecard evaluates
-eight named checks defined in
-[`../backend/app/services/trading/proof_score.py:5-14`](../backend/app/services/trading/proof_score.py):
+eight named checks defined in [`../backend/app/services/trading/proof_score.py:5-14`](../backend/app/services/trading/proof_score.py):
 
 - `cmcSignalVerified` — the CMC Agent Hub signal was called and returned a valid response
 - `cmcPriceFresh` — the CMC price snapshot was recent
@@ -125,8 +116,7 @@ numeric score. A trade with seven of eight checks passing but a missing receipt 
 blocked. This distinction matters: it prevents a partially-complete proof from being mistaken for
 a valid one.
 
-The trade lifecycle is tracked through a seven-state finite state machine defined in
-[`../backend/app/services/trading/trade_work_order.py:9-17`](../backend/app/services/trading/trade_work_order.py):
+The trade lifecycle is tracked through a seven-state finite state machine:
 `intent_created` → `signal_verified` → `risk_checked` → `route_built` → `twak_submitted` →
 `receipt_confirmed` → `settled`. Each state transition is recorded in the append-only trade
 ledger at `backend/data/trade-ledger.jsonl`. The ledger is the authoritative record of what the
@@ -142,11 +132,9 @@ blocks all subsequent risk checks until explicitly cleared.
 OmniAgent is built on four sponsor integrations, each doing a specific job.
 
 **CoinMarketCap Agent Hub** provides the market signal that starts every cycle. The client
-communicates via MCP JSON-RPC to `https://mcp.coinmarketcap.com/mcp`, as implemented in
-[`../backend/app/services/cmc/agent_hub.py:26-45`](../backend/app/services/cmc/agent_hub.py).
-The live proof used the `trending_crypto_narratives` tool, verified at
-`2026-06-07T05:02:48.162519+00:00`. Without a valid CMC signal, the preflight gate blocks the
-trade entirely.
+communicates via MCP JSON-RPC to `https://mcp.coinmarketcap.com/mcp`. The live proof used the
+`trending_crypto_narratives` tool, verified at `2026-06-07T05:02:48.162519+00:00`. Without a
+valid CMC signal, the preflight gate blocks the trade entirely.
 
 **Trust Wallet Agent Kit** is the sole execution layer. The agent never holds a raw private key
 in the application process. TWAK's REST bridge at `localhost:8787` handles signing and
@@ -154,11 +142,9 @@ broadcasting. The agent submits swap calldata and receives a signed transaction 
 separation means the execution key is never exposed to the application runtime.
 
 **BNB AI Agent SDK** handles on-chain identity. The agent registers itself using ERC-8004 via
-`ERC8004Agent.register_agent()`, as implemented in
-[`../backend/app/services/agent/identity.py:86-128`](../backend/app/services/agent/identity.py).
-The agent URI declares three supported trust modes: `self-custody`, `twak-local-signing`, and
-`x402`. The competition registration proof is stored in the ledger and checked by the preflight
-gate before every live trade.
+`ERC8004Agent.register_agent()`. The agent URI declares three supported trust modes:
+`self-custody`, `twak-local-signing`, and `x402`. The competition registration proof is stored
+in the ledger and checked by the preflight gate before every live trade.
 
 **PancakeSwap V2** is the execution venue. Swap calldata is ABI-encoded locally for three
 function signatures (`swapExactETHForTokens`, `swapExactTokensForETH`,

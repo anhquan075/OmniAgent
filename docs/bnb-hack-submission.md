@@ -19,16 +19,15 @@ is submitted.
 ### Signal Sources
 
 Every cycle starts with a mandatory CMC Agent Hub MCP call. The client sends `initialize` and
-`tools/list` requests to `https://mcp.coinmarketcap.com/mcp` (`settings.py:87`), then calls a
-configured signal tool — in the live proof run, `trending_crypto_narratives`. Without a verified
-CMC signal, the preflight gate blocks the trade entirely (`live_preflight.py:72-85`). This isn't
-a soft preference; it's a hard blocker.
+`tools/list` requests to `https://mcp.coinmarketcap.com/mcp`, then calls a configured signal
+tool — in the live proof run, `trending_crypto_narratives`. Without a verified CMC signal, the
+preflight gate blocks the trade entirely (`live_preflight.py:72-85`). This isn't a soft
+preference; it's a hard blocker.
 
 The second signal source is a Heikin-Ashi chart computed from 5-minute OHLC candles. The service
-requires at least 3 candles (`heikin_ashi_signal.py:9-10`) and produces one of three outputs:
-`BUY`, `SELL`, or `WAIT` (`heikin_ashi_signal.py:23-27`). Heikin-Ashi smooths out candle noise
-by averaging open/close values across periods, which makes trend reversals and continuations
-easier to read than raw candlestick patterns.
+requires at least 3 candles and produces one of three outputs: `BUY`, `SELL`, or `WAIT`.
+Heikin-Ashi smooths out candle noise by averaging open/close values across periods, which makes
+trend reversals and continuations easier to read than raw candlestick patterns.
 
 ### Decision Logic
 
@@ -40,9 +39,8 @@ The five-stage pipeline runs in sequence (`autonomous_cycle.py:26-60`):
 4. **RISK** — checks daily trade count, drawdown limits, and the 9-check live preflight gate
 5. **SIGN** — submits swap calldata to TWAK, polls for BSC receipt, records proof bundle
 
-The deterministic engine requires a minimum confidence of 0.62 to approve a trade
-(`settings.py:51`). Below that threshold, the action is forced to `hold`
-(`strategy_decision.py:113`).
+The deterministic engine requires a minimum confidence of 0.62 to approve a trade. Below that
+threshold, the action is forced to `hold`.
 
 ### The LLM Constraint
 
@@ -50,22 +48,20 @@ The LLM advisor's role is explicitly bounded in code, not in a prompt. In
 `strategy_decision.py:138-157`:
 
 - If the deterministic engine returns `hold`, the function returns immediately. The LLM is never
-  consulted (`strategy_decision.py:141-142`).
+  consulted.
 - If the LLM is consulted and it says `hold`, or its confidence is below 0.62, the result is
-  `hold` (`strategy_decision.py:151-152`).
+  `hold`.
 - If both engines approve a trade, the final position size is
-  `min(deterministic_amount, llm_amount)` — never the larger of the two
-  (`strategy_decision.py:153`).
+  `min(deterministic_amount, llm_amount)` — never the larger of the two.
 
 This means the LLM can only make the agent more conservative. It cannot override a deterministic
 hold or increase a position size.
 
 ### Position Sizing
 
-The default maximum trade size is $25 USD (`settings.py:55`). When drawdown reaches 50% of the
-configured maximum (30%), the deterministic strategy halves the maximum trade amount automatically
-(`strategy_decision.py:117-119`). At 100% of the maximum drawdown, trading stops entirely.
-Slippage is capped at 100 bps (`settings.py:56`).
+The default maximum trade size is $25 USD. When drawdown reaches 50% of the configured maximum
+(30%), the deterministic strategy halves the maximum trade amount automatically. At 100% of the
+maximum drawdown, trading stops entirely. Slippage is capped at 100 bps.
 
 ---
 
@@ -104,18 +100,17 @@ After execution, the proof scorecard evaluates:
 | `receiptProofValid` | BSC receipt was confirmed and proof is valid |
 | `pnlDrawdownCompliant` | Agent is not in emergency pause |
 
-The score is explanatory only. Hard blockers decide readiness, not the number
-(`proof_score.py:47`). A trade with 7 of 8 checks passing but a missing receipt proof is still
-blocked.
+The score is explanatory only. Hard blockers decide readiness, not the number. A trade with 7 of
+8 checks passing but a missing receipt proof is still blocked.
 
 ### Additional Guardrails
 
-- Token universe is restricted to `BNB, USDT, USDC, CAKE, TWT` (`settings.py:71`)
-- PancakeSwap V2 router is pinned to `0x10ED43C718714eb63d5aA57B78B54704E256024E` (`settings.py:65`)
+- Token universe is restricted to `BNB, USDT, USDC, CAKE, TWT`
+- PancakeSwap V2 router is pinned to `0x10ED43C718714eb63d5aA57B78B54704E256024E`
 - Duplicate proof digests are detected and blocked — the same tx hash can't inflate trade counts
 - Emergency pause persists in the ledger and blocks all subsequent risk checks until cleared
-- Trade ledger is append-only JSONL at `backend/data/trade-ledger.jsonl` (`settings.py:102`)
-- Maximum 12 daily trades (`settings.py:58`)
+- Trade ledger is append-only JSONL at `backend/data/trade-ledger.jsonl`
+- Maximum 12 daily trades
 
 ---
 
@@ -124,11 +119,11 @@ blocked.
 ### CoinMarketCap Agent Hub
 
 CMC Agent Hub is a mandatory signal gate. The client communicates via MCP JSON-RPC to
-`https://mcp.coinmarketcap.com/mcp` (`settings.py:87`), sending `initialize` and `tools/list`
-requests before calling the configured signal tool (`agent_hub.py:26-45`). The CMC Skill Hub
-at `https://mcp.coinmarketcap.com/skill-hub/stream` (`settings.py:88`) is available for
-`find_skill` and `execute_skill` calls (`skill_hub.py:43-63`). The x402 payment rail tracks
-three paid resource IDs: `cmc_agent_hub`, `cmc_skill_hub`, and `twak_x402` (`x402.py:9`).
+`https://mcp.coinmarketcap.com/mcp`, sending `initialize` and `tools/list` requests before
+calling the configured signal tool (`agent_hub.py:26-45`). The CMC Skill Hub at
+`https://mcp.coinmarketcap.com/skill-hub/stream` is available for `find_skill` and
+`execute_skill` calls. The x402 payment rail tracks three paid resource IDs: `cmc_agent_hub`,
+`cmc_skill_hub`, and `twak_x402`.
 
 Without a valid CMC Agent Hub signal, `readyForLiveTrade` is false. This is enforced at the
 preflight gate, not in a prompt.
@@ -138,11 +133,10 @@ preflight gate, not in a prompt.
 ### Trust Wallet Agent Kit
 
 TWAK is the sole execution layer. The agent never holds a raw private key in the application
-process. The REST bridge at `localhost:8787` (`twak/rest.py:42-44`) handles signing and
-broadcasting via Bearer token auth (`twak/rest.py:45`). The agent submits ABI-encoded swap
-calldata for one of three PancakeSwap function signatures (`pancake.py:137-141`) and receives a
-signed transaction back. The TWAK wallet address is validated against the configured agent wallet
-before every live trade — a mismatch blocks execution.
+process. The REST bridge at `localhost:8787` handles signing and broadcasting via Bearer token
+auth. The agent submits ABI-encoded swap calldata for one of three PancakeSwap function
+signatures and receives a signed transaction back. The TWAK wallet address is validated against
+the configured agent wallet before every live trade — a mismatch blocks execution.
 
 The live proof trade was submitted through TWAK REST and confirmed on BSC mainnet at block
 102780454 with `proof.valid=true`.
@@ -152,29 +146,26 @@ The live proof trade was submitted through TWAK REST and confirmed on BSC mainne
 ### BNB AI Agent SDK
 
 The agent registers its on-chain identity using ERC-8004 via `ERC8004Agent.register_agent()`
-from the `bnbagent` SDK (`identity.py:86-128`). The agent URI is generated by
-`AgentURIGenerator` and declares three supported trust modes: `self-custody`,
-`twak-local-signing`, and `x402` (`identity.py:98`). The competition registration proof is
-stored in the ledger and checked by the preflight gate before every live trade.
+from the `bnbagent` SDK. The agent URI is generated by `AgentURIGenerator` and declares three
+supported trust modes: `self-custody`, `twak-local-signing`, and `x402`. The competition
+registration proof is stored in the ledger and checked by the preflight gate before every live
+trade.
 
 **Special prize target**: Best Use of BNB AI Agent SDK ($2K)
 
 ### PancakeSwap V2
 
 Swap calldata is ABI-encoded locally for three function signatures: `swapExactETHForTokens`,
-`swapExactTokensForETH`, and `swapExactTokensForTokens` (`pancake.py:137-141`). Route quotes
-are fetched by calling `getAmountsOut` on the router contract via raw `eth_call`
-(`pancake.py:150-174`). The router address is pinned to
-`0x10ED43C718714eb63d5aA57B78B54704E256024E` (`settings.py:65`) and cannot be overridden at
-runtime.
+`swapExactTokensForETH`, and `swapExactTokensForTokens`. Route quotes are fetched by calling
+`getAmountsOut` on the router contract via raw `eth_call`. The router address is pinned to
+`0x10ED43C718714eb63d5aA57B78B54704E256024E` and cannot be overridden at runtime.
 
 ### BNB Chain
 
 All network config is pinned to BSC mainnet, chain ID `56`. The competition contract is at
-`0x212c61b9b72c95d95bf29cf032f5e5635629aed5` (`settings.py:64`). The autonomous loop runs on a
-300-second interval (`settings.py:43`). The trade ledger records every state transition with
-timestamps, and the BSC explorer links in the proof bundle point to independently verifiable
-on-chain evidence.
+`0x212c61b9b72c95d95bf29cf032f5e5635629aed5`. The autonomous loop runs on a 300-second
+interval. The trade ledger records every state transition with timestamps, and the BSC explorer
+links in the proof bundle point to independently verifiable on-chain evidence.
 
 ---
 

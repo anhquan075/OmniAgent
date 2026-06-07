@@ -47,7 +47,7 @@ Each autonomous cycle runs five stages (`autonomous_cycle.py:26-60`):
 4. **RISK** — checks daily trade count, drawdown limits ($25 max trade, 30% max drawdown), and the 9-check live preflight gate
 5. **SIGN** — submits the swap calldata to TWAK at `localhost:8787`, waits for a BSC tx hash, and records a proof bundle
 
-The proof layer produces an 8-check scorecard (`proof_score.py:5-14`) and a 7-state trade work order FSM. The score is explanatory only — hard blockers decide readiness, not the number.
+The proof layer produces an 8-check scorecard and a 7-state trade work order FSM. The score is explanatory only — hard blockers decide readiness, not the number.
 
 ---
 
