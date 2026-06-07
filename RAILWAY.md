@@ -28,7 +28,18 @@ TWAK_AGENT_WALLET=0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25
 ROBOT_FLEET_AGENT_WALLET=0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25
 BNB_TRADING_ENABLED=false
 ALLOW_AGENT_RUN=false
+BNB_AUTONOMOUS_LOOP_ENABLED=true
+BNB_AUTONOMOUS_LOOP_EXECUTE=false
+BNB_AUTONOMOUS_LOOP_INTERVAL_SEC=300
+BNB_AUTONOMOUS_LOOP_INITIAL_DELAY_SEC=5
+BNB_AUTONOMOUS_LOOP_SYMBOL=CAKE
+BNB_AUTONOMOUS_LOOP_SIDE=buy
+BNB_AUTONOMOUS_LOOP_AMOUNT_USD=25
+BNB_AUTONOMOUS_LOOP_SLIPPAGE_BPS=50
 ```
+
+`BNB_AUTONOMOUS_LOOP_ENABLED=true` starts the backend loop automatically on service startup.
+Keep `BNB_AUTONOMOUS_LOOP_EXECUTE=false` for proof/smoke mode. Set it to `true` only when `BNB_TRADING_ENABLED=true`, `ALLOW_AGENT_RUN=true`, CMC signal proof, TWAK bridge, capital, registration, and emergency-pause recovery are all verified.
 
 Also set the private CMC, TWAK, SDK, and x402 secrets from `backend/.env.example`.
 

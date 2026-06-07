@@ -37,6 +37,14 @@ class Settings(BaseSettings):
         "bnb_live_proof_bundle,bnb_competition_register,bnb_emergency_pause"
     )
     agent_runtime_adapter: str = "fastapi-bnb-agent"
+    bnb_autonomous_loop_enabled: bool = False
+    bnb_autonomous_loop_execute: bool = False
+    bnb_autonomous_loop_interval_sec: int = 300
+    bnb_autonomous_loop_initial_delay_sec: int = 5
+    bnb_autonomous_loop_symbol: str = "CAKE"
+    bnb_autonomous_loop_side: str = "buy"
+    bnb_autonomous_loop_amount_usd: float = 25.0
+    bnb_autonomous_loop_slippage_bps: int = 50
     bnb_trading_enabled: bool = False
     allow_agent_run: bool = False
     bnb_max_trade_usd: float = 25.0
