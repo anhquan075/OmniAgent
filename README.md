@@ -137,7 +137,7 @@ rtk uv --project backend run python backend/scripts/check-bnb-mainnet-readiness.
 Demo references:
 
 - `docs/bnb-agent-skill.md`
-- `docs/bnb-hack-submission-runbook.md`
+- `docs/bnb-hack-submission.md`
 - `docs/bnb-hack-live-trading-runbook.md`
 
 ## Plans
