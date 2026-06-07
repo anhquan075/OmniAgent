@@ -66,18 +66,20 @@ Do not expose a public Railway domain for this service. The backend should reach
 Set this on the frontend service:
 
 ```bash
-VITE_API_URL=https://<backend-public-domain>.up.railway.app
+BACKEND_INTERNAL_URL=http://${{backend.RAILWAY_PRIVATE_DOMAIN}}:${{backend.PORT}}
 ```
 
-`VITE_API_URL` is baked into the Vite build, so redeploy the frontend after changing it.
+The frontend serves browser traffic and proxies `/api/*` to `BACKEND_INTERNAL_URL` server-side.
+Do not set a public backend URL in `VITE_API_URL` for production; browser assets should not contain the backend origin.
+In Railway, remove the backend public domain after the frontend proxy health checks pass so users cannot bypass the frontend origin.
 
 ## Post-Deploy Checks
 
 ```bash
-curl https://<backend-public-domain>.up.railway.app/api/health
+curl https://<frontend-public-domain>.up.railway.app/api/health
 ```
 
-Then call these MCP tools from the deployed backend:
+Then call these MCP tools through the deployed frontend origin:
 
 - `bnb_get_wallet`
 - `bnb_trust_wallet_status`
