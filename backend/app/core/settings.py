@@ -31,7 +31,8 @@ class Settings(BaseSettings):
         "bnb_agent_sdk_register_identity,"
         "bnb_paid_resource_status,bnb_record_paid_signal_access,"
         "cmc_agent_hub_status,cmc_agent_hub_recommend_signal_tools,cmc_agent_hub_call_tool,"
-        "cmc_skill_hub_status,cmc_skill_hub_find_skill,cmc_skill_hub_execute_skill,cmc_get_price_snapshot,"
+        "cmc_skill_hub_status,cmc_skill_hub_find_skill,cmc_skill_hub_execute_skill,cmc_daily_market_overview,"
+        "cmc_get_price_snapshot,"
         "bnb_trade_ledger_summary,bnb_quote_trade,bnb_risk_check,"
         "bnb_simulate_trade,bnb_execute_trade,bnb_run_autonomous_cycle,bnb_live_preflight,bnb_get_trade_status,"
         "bnb_live_proof_bundle,bnb_competition_register,bnb_emergency_pause"
@@ -45,6 +46,10 @@ class Settings(BaseSettings):
     bnb_autonomous_loop_side: str = "buy"
     bnb_autonomous_loop_amount_usd: float = 25.0
     bnb_autonomous_loop_slippage_bps: int = 50
+    bnb_strategy_advisor_enabled: bool = True
+    bnb_strategy_require_llm_for_live: bool = False
+    bnb_strategy_min_confidence: float = 0.62
+    bnb_strategy_max_position_pct: float = 0.35
     bnb_trading_enabled: bool = False
     allow_agent_run: bool = False
     bnb_max_trade_usd: float = 25.0
@@ -84,6 +89,12 @@ class Settings(BaseSettings):
     cmc_skill_hub_tool_timeout_sec: int = 300
     cmc_agent_hub_signal_tool: str | None = None
     cmc_agent_hub_signal_args: str | None = None
+    openrouter_api_key: str | None = None
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_model: str = "deepseek/deepseek-v4-pro"
+    openrouter_fallback_model: str = "deepseek/deepseek-v4-flash"
+    openrouter_site_url: str | None = None
+    openrouter_app_name: str = "OmniAgent BNB Trading Agent"
     x402_facilitator_url: str | None = None
     x402_network: str = "eip155:56"
     x402_payment_verifier_url: str | None = None

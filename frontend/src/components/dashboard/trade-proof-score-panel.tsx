@@ -1,23 +1,42 @@
-import { AlertTriangleIcon, CheckCircle2Icon, ShieldAlertIcon } from "lucide-react";
-import type { TradeProofScore } from "../../lib/mcp";
+import { AlertTriangleIcon, CheckCircle2Icon, CircleDashedIcon, ShieldAlertIcon } from "lucide-react";
+import type { TradeProofScore } from "../../lib/dashboard-types";
 
 const labelFor = (key: string) => key.replace(/([A-Z])/g, " $1").replace(/^./, char => char.toUpperCase());
 
 export function TradeProofScorePanel({ score }: { score?: TradeProofScore }) {
+  const hasScore = Boolean(score);
   const blockers = Array.isArray(score?.hardBlockers) ? score.hardBlockers : [];
   const checks = score?.checks ?? {};
-  const hardBlocked = Boolean(score?.hardBlocked || blockers.length);
+  const hardBlocked = hasScore && Boolean(score?.hardBlocked || blockers.length);
+  const checkEntries = Object.entries(checks).slice(0, 8);
+  const passedChecks = checkEntries.filter(([, ok]) => ok).length;
+  const scorePct = score?.maxScore ? Math.max(0, Math.min(100, Math.round((score.score / score.maxScore) * 100))) : 0;
+  const panelTone = !hasScore
+    ? "border-white/12 bg-white/[0.035]"
+    : hardBlocked
+      ? "border-red-300/24 bg-red-300/[0.055]"
+      : "border-neon-green/25 bg-neon-green/[0.04]";
 
   return (
-    <div className={`rounded-md border p-2 ${hardBlocked ? "border-red-300/24 bg-red-300/[0.055]" : "border-neon-green/25 bg-neon-green/[0.04]"}`}>
+    <div className={`rounded-md border p-2 ${panelTone}`}>
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase text-white/58">
-          {hardBlocked ? <ShieldAlertIcon className="h-3.5 w-3.5 text-red-200" /> : <CheckCircle2Icon className="h-3.5 w-3.5 text-neon-green" />}
+          {!hasScore ? <CircleDashedIcon className="h-3.5 w-3.5 text-white/42" /> : hardBlocked ? <ShieldAlertIcon className="h-3.5 w-3.5 text-red-200" /> : <CheckCircle2Icon className="h-3.5 w-3.5 text-neon-green" />}
           Proof score
         </span>
-        <strong className={`font-mono text-[10px] uppercase ${hardBlocked ? "text-red-100" : "text-neon-green"}`}>
+        <strong className={`font-mono text-[10px] uppercase ${!hasScore ? "text-white/46" : hardBlocked ? "text-red-100" : "text-neon-green"}`}>
           {score ? `${score.score}/${score.maxScore}` : "waiting"}
         </strong>
+      </div>
+
+      <div className="proof-score-meter mb-2" aria-label={`Proof score ${scorePct}%`}>
+        <span style={{ width: `${scorePct}%` }} />
+      </div>
+
+      <div className="proof-score-summary mb-2">
+        <span>{hasScore ? `${blockers.length} blockers` : "waiting"}</span>
+        <span>{passedChecks}/{checkEntries.length || 8} gates</span>
+        <span>{!hasScore ? "no score" : hardBlocked ? "hard stop" : "explainable"}</span>
       </div>
 
       <div className="mb-2 rounded-sm border border-white/10 bg-black/18 p-1.5">
@@ -25,7 +44,9 @@ export function TradeProofScorePanel({ score }: { score?: TradeProofScore }) {
           <AlertTriangleIcon className="h-3 w-3" />
           Hard blockers first
         </div>
-        {blockers.length ? (
+        {!hasScore ? (
+          <p className="text-[11px] text-white/46">Waiting for the current proof bundle.</p>
+        ) : blockers.length ? (
           <div className="flex flex-wrap gap-1">
             {blockers.slice(0, 4).map(blocker => (
               <span key={blocker} className="rounded-sm border border-red-200/20 bg-red-300/10 px-1.5 py-0.5 font-mono text-[9px] text-red-100">
@@ -39,7 +60,7 @@ export function TradeProofScorePanel({ score }: { score?: TradeProofScore }) {
       </div>
 
       <div className="grid grid-cols-2 gap-1">
-        {Object.entries(checks).slice(0, 8).map(([key, ok]) => (
+        {checkEntries.map(([key, ok]) => (
           <div key={key} className="flex min-w-0 items-center justify-between gap-1 rounded-sm bg-white/[0.035] px-1.5 py-1">
             <span className="truncate text-[9px] text-white/40">{labelFor(key)}</span>
             <strong className={`font-mono text-[9px] ${ok ? "text-neon-green" : "text-white/34"}`}>{ok ? "yes" : "no"}</strong>

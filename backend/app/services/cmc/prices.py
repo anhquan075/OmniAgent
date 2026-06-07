@@ -58,11 +58,19 @@ class CmcPriceService:
             raw = data.get(symbol)
             item = raw[0] if isinstance(raw, list) and raw else raw
             quote = ((item or {}).get("quote") or {}).get("USD") or {}
-            prices[symbol] = {
+            row = {
                 "symbol": symbol,
                 "priceUsd": quote.get("price"),
                 "percentChange24h": quote.get("percent_change_24h"),
             }
+            optional_fields = {
+                "percentChange1h": quote.get("percent_change_1h"),
+                "percentChange7d": quote.get("percent_change_7d"),
+                "volume24h": quote.get("volume_24h"),
+                "marketCap": quote.get("market_cap"),
+                "lastUpdated": quote.get("last_updated"),
+            }
+            prices[symbol] = {**row, **{key: value for key, value in optional_fields.items() if value is not None}}
         snapshot = {
             "source": "coinmarketcap",
             "configured": True,

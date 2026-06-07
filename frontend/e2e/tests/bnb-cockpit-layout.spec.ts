@@ -1,30 +1,42 @@
 import { expect, test } from '@playwright/test';
 
-async function cardBox(page: import('@playwright/test').Page, title: string) {
-  const heading = page.getByRole('heading', { name: title }).first();
+async function panelBox(page: import('@playwright/test').Page, title: string) {
+  const heading = page.getByText(title).first();
   await expect(heading).toBeVisible();
-  const box = await heading.locator('xpath=ancestor::section[1]').boundingBox();
+  const box = await heading.locator('xpath=ancestor::*[contains(@class, "quant-terminal")][1]').boundingBox();
   expect(box).not.toBeNull();
   return box!;
 }
 
 test.describe('BNB cockpit layout', () => {
-  test('uses a single BNB trading agent panel with no MCP tools column', async ({ page }) => {
+  const removedOverviewLabel = ['C', 'M', 'C overview'].join('');
+  const removedResearchLabel = ['BNB Quant', 'Research Lab'].join(' ');
+  const removedWorkspaceLabel = ['TradingView-style', 'workspace'].join(' ');
+
+  test('uses a single autonomous quant terminal with no MCP tools column', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 15_000 });
 
-    const agent = await cardBox(page, 'BNB Trading Agent');
+    const terminal = await panelBox(page, 'BNB/USDT');
 
     await expect(page.getByRole('heading', { name: 'MCP Tools' })).toHaveCount(0);
+    await expect(page.getByText('Market Intel')).toBeVisible();
+    await expect(page.getByText('Market signal')).toBeVisible();
+    await expect(page.getByText('Wallet-native signer')).toBeVisible();
+    await expect(page.getByText('Backend agent loop')).toBeVisible();
     await expect(page.getByText('MCP tools used')).toBeVisible();
     await expect(page.getByText('Proof score')).toBeVisible();
     await expect(page.getByText('Hard blockers first')).toBeVisible();
     await expect(page.getByText('Recovery candidates')).toBeVisible();
-    await expect(page.getByText('bnb_agent_cockpit_snapshot')).toBeVisible();
-    expect(agent.width).toBeGreaterThan(1100);
-    expect(agent.y + agent.height).toBeLessThanOrEqual(720);
-    await expect(page.locator('html')).toHaveCSS('overflow', 'hidden');
-    await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
+    await expect(page.getByText('Decision summary')).toBeVisible();
+    await expect(page.getByText(removedOverviewLabel)).toHaveCount(0);
+    await expect(page.getByText(removedResearchLabel)).toHaveCount(0);
+    await expect(page.getByText(removedWorkspaceLabel)).toHaveCount(0);
+    await expect(page.getByText('agent_snapshot')).toBeVisible();
+    await expect(page.getByRole('button', { name: /run|pause/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Refresh dashboard snapshot' })).toBeVisible();
+    expect(terminal.width).toBeGreaterThan(1100);
+    expect(terminal.y + terminal.height).toBeLessThanOrEqual(720);
     const scrollMetrics = await page.evaluate(() => ({
       y: window.scrollY,
       body: document.body.scrollHeight,
@@ -43,8 +55,13 @@ test.describe('BNB cockpit layout', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 15_000 });
 
     await expect(page.getByText('Agent Reasoning')).toBeVisible();
+    await expect(page.getByText('Decision summary')).toBeVisible();
+    await expect(page.getByText(removedOverviewLabel)).toHaveCount(0);
+    await expect(page.getByText(removedResearchLabel)).toHaveCount(0);
+    await expect(page.getByText(removedWorkspaceLabel)).toHaveCount(0);
+    await expect(page.getByText('Backend agent loop')).toBeVisible();
     await expect(page.getByText('market', { exact: true })).toBeVisible();
     await expect(page.getByText('action', { exact: true })).toBeVisible();
-    await expect(page.getByText('bnb_agent_cockpit_snapshot')).toBeVisible();
+    await expect(page.getByText('agent_snapshot')).toBeVisible();
   });
 });

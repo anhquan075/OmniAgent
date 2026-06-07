@@ -6,6 +6,8 @@ import json
 
 from app.core.settings import get_settings
 from app.main import app
+from app.services.agent.heikin_ashi_signal import HeikinAshiSignalService
+from app.services.agent.strategy_decision import TradingStrategyDecisionService
 from app.services.cmc.signal_config import CmcSignalConfigService
 from app.services.shared.ledger import TradeLedger
 from app.services.trading.execution import TradeExecutionService
@@ -31,6 +33,16 @@ def parsed_tool_result(response_body: dict[str, object]) -> dict[str, object]:
 
     text = response_body["result"]["content"][0]["text"]  # type: ignore[index]
     return json.loads(text)
+
+
+def downtrend_chart() -> list[dict[str, object]]:
+    return [
+        {"time": "2026-06-07T09:10:00+00:00", "open": 610, "high": 611, "low": 604, "price": 605},
+        {"time": "2026-06-07T09:15:00+00:00", "open": 605, "high": 606, "low": 598, "price": 599},
+        {"time": "2026-06-07T09:20:00+00:00", "open": 599, "high": 600, "low": 592, "price": 593},
+        {"time": "2026-06-07T09:25:00+00:00", "open": 593, "high": 594, "low": 586, "price": 587},
+        {"time": "2026-06-07T09:30:00+00:00", "open": 587, "high": 588, "low": 580, "price": 581},
+    ]
 
 
 def seed_competition_registration(ledger_path) -> None:
@@ -90,6 +102,90 @@ def test_mcp_session_and_cockpit_snapshot() -> None:
     assert "\"_meta\"" in text
 
 
+def test_dashboard_snapshot_is_session_scoped(monkeypatch) -> None:
+    async def fake_cockpit(limit: int = 10) -> dict[str, object]:
+        return {
+            "network": "bsc",
+            "wallet": {"walletAddress": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"},
+            "toolsUsed": ["bnb_agent_cockpit_snapshot"],
+            "limit": limit,
+        }
+
+    async def fake_preflight(args: dict[str, object]) -> dict[str, object]:
+        return {"readyForLiveTrade": True, "args": args}
+
+    async def fake_proof_bundle(args: dict[str, object]) -> dict[str, object]:
+        return {"status": "ready_for_live_trade", "args": args}
+
+    monkeypatch.setattr("app.api.routes.dashboard.AgentCockpitService.get_cockpit_snapshot", fake_cockpit)
+    monkeypatch.setattr("app.api.routes.dashboard.LivePreflightService.get_live_preflight", fake_preflight)
+    monkeypatch.setattr("app.api.routes.dashboard.ProofBundleService.get_live_proof_bundle", fake_proof_bundle)
+    client = TestClient(app)
+
+    assert client.get("/api/dashboard/snapshot").status_code == 401
+    assert client.get("/api/session").status_code == 200
+    response = client.get("/api/dashboard/snapshot?limit=3")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["network"] == "bsc"
+    assert body["limit"] == 3
+    assert body["livePreflight"]["readyForLiveTrade"] is True
+    assert body["liveProofBundle"]["status"] == "ready_for_live_trade"
+    assert body["backendHealth"]["autonomousLoopEnabled"] == get_settings().bnb_autonomous_loop_enabled
+
+
+def test_dashboard_cmc_daily_market_overview_is_session_scoped(monkeypatch) -> None:
+    async def fake_run(args: dict[str, object]) -> dict[str, object]:
+        return {
+            "ready": True,
+            "status": "ok",
+            "args": args,
+            "formattedReport": "**TL;DR**\n\nMarket ready.\n\n———\n\n**Details**",
+        }
+
+    monkeypatch.setattr("app.api.routes.dashboard.CmcDailyMarketOverviewService.run", fake_run)
+    client = TestClient(app)
+
+    assert client.post("/api/dashboard/cmc-daily-market-overview").status_code == 401
+    csrf_token = client.get("/api/session").json()["csrfToken"]
+    response = client.post("/api/dashboard/cmc-daily-market-overview", headers={"X-CSRF-Token": csrf_token})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ready"] is True
+    assert body["args"] == {"preview": True, "recordLedger": True}
+
+
+def test_latest_market_overview_reads_full_ledger_after_truncated_events(tmp_path, monkeypatch) -> None:
+    ledger_path = tmp_path / "ledger.jsonl"
+    report = {
+        "eventType": "cmc_market_overview_report",
+        "createdAt": "2026-06-07T09:00:00+00:00",
+        "payload": {
+            "skillName": "daily_market_overview",
+            "uniqueName": "daily_market_overview",
+            "status": "ok",
+            "confidence": "high",
+            "formattedReport": "**TL;DR**\n\nReport.\n\n———\n\n**Details**",
+        },
+    }
+    ledger_path.write_text(json.dumps(report) + "\n", encoding="utf-8")
+    with ledger_path.open("a", encoding="utf-8") as stream:
+        for index in range(12):
+            stream.write(json.dumps({"eventType": "trade_blocked", "createdAt": f"2026-06-07T09:{index + 1:02d}:00+00:00"}) + "\n")
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(ledger_path))
+    get_settings.cache_clear()
+
+    from app.services.agent.cockpit import AgentCockpitService
+
+    summary = TradeLedger.get_ledger_summary(limit=10)
+    overview = AgentCockpitService.latest_market_overview(summary)
+
+    assert overview["ready"] is True
+    assert overview["status"] == "ok"
+    assert overview["formattedReport"] == report["payload"]["formattedReport"]
+    get_settings.cache_clear()
 def test_competition_registration_dry_run_returns_twak_instructions() -> None:
     client = TestClient(app)
     csrf_token = client.get("/api/session").json()["csrfToken"]
@@ -959,6 +1055,35 @@ def test_cmc_skill_hub_execute_skill_uses_300_second_timeout(monkeypatch) -> Non
         },
         300,
     )
+    get_settings.cache_clear()
+
+
+def test_cmc_daily_market_overview_tool_is_allowlisted_and_runs(monkeypatch) -> None:
+    async def fake_run(args: dict[str, object]) -> dict[str, object]:
+        return {
+            "ready": True,
+            "skillName": "daily_market_overview",
+            "parameters": args,
+            "formattedReport": "**TL;DR**\n\nMarket report ready.\n\n———\n\n**Details**",
+        }
+
+    monkeypatch.setattr("app.services.adapters.runtime.CmcDailyMarketOverviewService.run", fake_run)
+    get_settings.cache_clear()
+    client = TestClient(app)
+    csrf_token = client.get("/api/session").json()["csrfToken"]
+
+    listed = client.post(
+        "/api/mcp",
+        headers={"X-CSRF-Token": csrf_token},
+        json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
+    )
+    tool_names = [tool["name"] for tool in listed.json()["result"]["tools"]]
+    assert "cmc_daily_market_overview" in tool_names
+
+    result = parsed_tool_result(call_mcp(client, csrf_token, "cmc_daily_market_overview", {"preview": True}))
+    assert result["ready"] is True
+    assert result["skillName"] == "daily_market_overview"
+    assert result["parameters"] == {"preview": True}
     get_settings.cache_clear()
 
 
@@ -1903,9 +2028,84 @@ def test_autonomous_cycle_runs_backend_quote_risk_simulation(monkeypatch, tmp_pa
     assert result["cmcSnapshot"]["configured"] is True
     assert result["quote"]["quoteSource"] == "router"
     assert result["risk"]["approved"] is True
+    assert result["strategyDecision"]["decision"]["action"] == "buy"
     assert result["execution"]["simulation"]["canExecute"] is False
     assert "bnb_quote_trade" in result["toolsUsed"]
+    assert "bnb_strategy_decision" in result["toolsUsed"]
     assert result["ledgerEvent"]["eventType"] == "autonomous_cycle_completed"
+    get_settings.cache_clear()
+
+
+def test_autonomous_cycle_holds_on_bad_momentum(monkeypatch, tmp_path) -> None:
+    async def fake_price_snapshot(symbols: list[str] | None = None) -> dict[str, object]:
+        return {
+            "source": "coinmarketcap",
+            "configured": True,
+            "reachable": True,
+            "symbols": {
+                symbol: {
+                    "symbol": symbol,
+                    "priceUsd": 1,
+                    "percentChange1h": -2,
+                    "percentChange24h": -9,
+                    "percentChange7d": -15,
+                } for symbol in (symbols or [])
+            },
+        }
+
+    monkeypatch.setattr("app.services.cmc.prices.CmcPriceService.get_price_snapshot", fake_price_snapshot)
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    monkeypatch.setenv("ROBOT_FLEET_AGENT_WALLET", "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25")
+    get_settings.cache_clear()
+    client = TestClient(app)
+    csrf_token = client.get("/api/session").json()["csrfToken"]
+    result = parsed_tool_result(call_mcp(
+        client,
+        csrf_token,
+        "bnb_run_autonomous_cycle",
+        {"symbol": "CAKE", "side": "buy", "amountUsd": 10, "slippageBps": 20, "signalSource": "cmc"},
+    ))
+    assert result["status"] == "blocked"
+    assert result["strategyDecision"]["decision"]["action"] == "hold"
+    assert "falling_knife_momentum" in result["strategyDecision"]["decision"]["rationale"]
+    assert result["quote"] == {}
+    assert "bnb_quote_trade" not in result["toolsUsed"]
+    get_settings.cache_clear()
+
+
+def test_heikin_ashi_signal_detects_downtrend() -> None:
+    result = HeikinAshiSignalService.evaluate(downtrend_chart(), period="5m", source="unit")
+    assert result["ready"] is True
+    assert result["type"] == "sell"
+    assert result["label"] == "SELL"
+    assert result["period"] == "5m"
+
+
+def test_strategy_holds_buy_against_heikin_ashi_sell_signal(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    monkeypatch.setenv("BNB_STRATEGY_ADVISOR_ENABLED", "false")
+    get_settings.cache_clear()
+    result = asyncio.run(TradingStrategyDecisionService.evaluate(
+        symbol="BNB",
+        side="buy",
+        amount_usd=10,
+        slippage_bps=20,
+        cmc_snapshot={
+            "source": "coinmarketcap",
+            "configured": True,
+            "reachable": True,
+            "symbols": {"BNB": {"symbol": "BNB", "priceUsd": 600}},
+        },
+        cmc_agent_hub_signal={
+            "ready": True,
+            "toolName": "market.chart.signal",
+            "parsedContent": {"chart": downtrend_chart()},
+        },
+        execute=False,
+    ))
+    assert result["decision"]["action"] == "hold"
+    assert "heikin_ashi_5m_sell_signal" in result["decision"]["rationale"]
+    assert result["deterministic"]["decision"]["dataQuality"] == "medium"
     get_settings.cache_clear()
 
 

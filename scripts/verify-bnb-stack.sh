@@ -16,4 +16,7 @@ echo "== frontend build =="
 echo "== BNB readiness dry check =="
 (cd backend && rtk uv run python scripts/check-bnb-mainnet-readiness.py)
 
+echo "== CMC Skill Hub daily overview smoke =="
+(cd backend && rtk uv run python scripts/smoke-cmc-skill-hub.py)
+
 echo "BNB stack verified in dry-run mode."

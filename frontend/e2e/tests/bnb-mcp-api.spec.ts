@@ -17,6 +17,7 @@ test.describe('BNB MCP API', () => {
     expect(toolNames).toContain('bnb_live_proof_bundle');
     expect(toolNames).toContain('bnb_competition_register');
     expect(toolNames).toContain('cmc_get_price_snapshot');
+    expect(toolNames).toContain('cmc_daily_market_overview');
     expect(toolNames).toContain('bnb_run_autonomous_cycle');
     expect(toolNames).toContain('bnb_paid_resource_status');
     expect(toolNames.every((name: string) => name.startsWith('bnb_') || name.startsWith('cmc_'))).toBe(true);

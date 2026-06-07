@@ -70,6 +70,7 @@ The frontend-visible MCP allowlist is intentionally narrow:
 - `cmc_skill_hub_status`
 - `cmc_skill_hub_find_skill`
 - `cmc_skill_hub_execute_skill`
+- `cmc_daily_market_overview`
 - `cmc_get_price_snapshot`
 - `bnb_trade_ledger_summary`
 - `bnb_quote_trade`
@@ -82,7 +83,7 @@ The frontend-visible MCP allowlist is intentionally narrow:
 - `bnb_competition_register`
 - `bnb_emergency_pause`
 
-`bnb_execute_trade` is guarded by live mode, a CMC-backed risk check, TWAK REST wallet validation, router quote validation, daily/drawdown limits, and BSC receipt proof. The one-click dashboard action uses `bnb_run_autonomous_cycle` and stays dry-run unless live flags are explicitly enabled.
+`bnb_execute_trade` is guarded by live mode, a CMC-backed risk check, TWAK REST wallet validation, router quote validation, daily/drawdown limits, and BSC receipt proof. The one-click dashboard action uses `bnb_run_autonomous_cycle` and stays dry-run unless live flags are explicitly enabled. The autonomous cycle now runs a strategy decision stage before quote/risk/execution; it uses deterministic CMC momentum, a 5m Heikin Ashi-style BUY/SELL/WAIT tactical chart signal when OHLC points are available, drawdown gates, and the optional backend-only OpenRouter advisor (`deepseek/deepseek-v4-pro` by default).
 
 ## Frontend
 
@@ -117,7 +118,7 @@ rtk uv --project backend run python backend/scripts/run-bnb-live-loop.py \
 
 `backend/scripts/run-bnb-live-cycle.py` submits one guarded trade. `backend/scripts/run-bnb-live-loop.py` repeats that same guarded path for competition operation, re-running live preflight before every cycle and stopping on the first blocker or missing tx hash. Both refuse to submit a transaction unless `bnb_live_preflight` returns `readyForLiveTrade=true`. After TWAK signs and submits, each cycle requires a BSC tx hash and checks `bnb_get_trade_status` for receipt/proof status.
 
-`backend/scripts/prove-cmc-agent-hub-live.py` proves the CMC Agent Hub MCP status, signal tool recommendation or pinned call, live price snapshot, and `bnb_live_preflight` CMC signal while execution is still dry-run. `backend/scripts/smoke-cmc-skill-hub.py --execute-preview` verifies backend Skill Hub MCP by running `find_skill(query="btc price")` and previewing `execute_skill(unique_name="btc_cross_asset_correlation", parameters={"preview": true})` through FastAPI. `backend/scripts/configure-bnb-live-env.py --enable-live` refuses to turn on live flags unless a CMC key is already present in the final backend env. If `CMC_AGENT_HUB_SIGNAL_TOOL` is absent, preflight and autonomous cycles auto-discover a signal-like Agent Hub tool from live MCP `tools/list`.
+`backend/scripts/prove-cmc-agent-hub-live.py` proves the CMC Agent Hub MCP status, signal tool recommendation or pinned call, live price snapshot, and `bnb_live_preflight` CMC signal while execution is still dry-run. `backend/scripts/smoke-cmc-skill-hub.py --execute-preview` verifies backend Skill Hub MCP by running `find_skill(query="daily_market_overview")`, validating the hosted schema, and previewing `cmc_daily_market_overview` through FastAPI. The high-level report tool calls hosted `find_skill` once, validates params, calls `execute_skill` once, and returns exact `error_code`/`reason` on failure. `backend/scripts/configure-bnb-live-env.py --enable-live` refuses to turn on live flags unless a CMC key is already present in the final backend env. If `CMC_AGENT_HUB_SIGNAL_TOOL` is absent, preflight and autonomous cycles auto-discover a signal-like Agent Hub tool from live MCP `tools/list`.
 
 ## BNB Hack Demo
 
