@@ -12,11 +12,8 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
-
 RUN pnpm run build
 
 EXPOSE 4173
 
-CMD ["sh", "-c", "pnpm exec vite preview --host 0.0.0.0 --port ${PORT:-4173}"]
+CMD ["node", "server.mjs"]

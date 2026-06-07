@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "check:active-surface": "python3 ../scripts/check-active-bnb-surface.py",
-    "preview": "vite preview",
+    "preview": "node server.mjs",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
@@ -33,7 +33,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.3.4",
     "typescript": "^5.9.3",
-    "vite": "^6.0.7",
-    "vitest": "^4.1.0"
+    "vite": "^6.4.3",
+    "vitest": "^4.1.8"
   }
 }
