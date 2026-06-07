@@ -1,5 +1,5 @@
 import { RotateCcwIcon, ShieldCheckIcon } from "lucide-react";
-import type { RecoveryCandidate } from "../../lib/mcp";
+import type { RecoveryCandidate } from "../../lib/dashboard-types";
 
 export function RecoveryCandidatePanel({ candidates = [] }: { candidates?: RecoveryCandidate[] }) {
   return (
@@ -25,10 +25,11 @@ export function RecoveryCandidatePanel({ candidates = [] }: { candidates?: Recov
             <p className="mt-1 line-clamp-2 text-[10px] text-white/46">{candidate.reason}</p>
           </div>
         )) : (
-          <div className="grid min-h-20 place-items-center rounded-md border border-white/10 bg-white/[0.03] text-center">
+          <div className="grid min-h-16 place-items-center rounded-md border border-white/10 bg-white/[0.03] text-center">
             <div>
               <ShieldCheckIcon className="mx-auto mb-1 h-4 w-4 text-neon-green" />
               <p className="text-[11px] text-white/48">No recovery repair required.</p>
+              <p className="mt-0.5 text-[10px] uppercase text-white/30">proof path clean</p>
             </div>
           </div>
         )}

@@ -2,12 +2,11 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from app.core.settings import get_settings
+from app.services.agent.autonomous_cycle_response import AutonomousCycleResponse
+from app.services.agent.autonomous_cycle_sensing import AutonomousCycleSensing
 from app.services.trading.execution import TradeExecutionService
-from app.services.cmc.prices import CmcPriceService
-from app.services.cmc.agent_hub import CmcAgentHubClient
-from app.services.cmc.agent_hub_tools import CmcAgentHubToolClient
 from app.services.cmc.signal_config import CmcSignalConfigService
-from app.services.shared.ledger import TradeLedger
+from app.services.agent.strategy_decision import TradingStrategyDecisionService
 from app.services.trading.pancake import PancakeRouterService
 from app.services.trading.risk import RiskCheckService
 from app.services.wallet.agent_wallet import AgentWalletService
@@ -22,12 +21,6 @@ class AutonomousTradingAgent:
         execute = bool(args.get("execute"))
         record_ledger = bool(args.get("recordLedger", True))
         wallet = AgentWalletService.get_wallet_data()
-        cmc_signal_tool, cmc_signal_args, cmc_signal_reason, cmc_signal_resolution = await CmcSignalConfigService.resolved_cmc_signal_config(
-            args,
-            symbol=symbol,
-            side=side,
-            amount_usd=amount_usd,
-        )
         trade_intent_id = str(args.get("tradeIntentId") or f"intent-{uuid4().hex[:12]}")
         started_at = datetime.now(timezone.utc).isoformat()
         stages: list[dict[str, object]] = [
@@ -38,49 +31,55 @@ class AutonomousTradingAgent:
                 "note": f"{signal_source} signal selected",
             },
         ]
-        cmc_agent_hub = await CmcAgentHubClient.get_cmc_agent_hub_status()
-        cmc_snapshot = await CmcPriceService.get_price_snapshot([symbol, "BNB"])
-        cmc_ready = (
-            bool(cmc_agent_hub.get("ready"))
-            and bool(cmc_snapshot.get("configured"))
-            and cmc_snapshot.get("reachable") is not False
+        sensing = await AutonomousCycleSensing.collect(
+            args=args,
+            symbol=symbol,
+            side=side,
+            amount_usd=amount_usd,
+            signal_source=signal_source,
+            execute=execute,
+            stages=stages,
         )
-        stages[0] = {
-            "stage": "sense",
-            "state": "completed" if cmc_ready else "blocked",
-            "tool": "cmc_agent_hub_status",
-            "note": "cmc_agent_hub_ready" if cmc_agent_hub.get("ready") else str(
-                cmc_agent_hub.get("reason") or "cmc_agent_hub_unavailable"
-            ),
-        }
+        cmc_signal_tool = sensing["cmcSignalTool"]
+        cmc_agent_hub = sensing["cmcAgentHub"]
+        cmc_snapshot = sensing["cmcSnapshot"]
+        cmc_agent_hub_signal = sensing["cmcAgentHubSignal"]
+        strategy = await TradingStrategyDecisionService.evaluate(
+            symbol=symbol,
+            side=side,
+            amount_usd=amount_usd,
+            slippage_bps=slippage_bps,
+            cmc_snapshot=cmc_snapshot,
+            cmc_agent_hub_signal=cmc_agent_hub_signal,
+            execute=execute,
+        )
+        strategy_decision = strategy.get("decision") if isinstance(strategy.get("decision"), dict) else {}
+        strategy_action = str(strategy_decision.get("action") or "hold").lower()
         stages.append({
-            "stage": "sense_price",
-            "state": "completed" if cmc_ready else "blocked",
-            "tool": "cmc_get_price_snapshot",
-            "note": "cmc_live_signal" if cmc_ready else str(cmc_snapshot.get("reason") or "cmc_unavailable"),
+            "stage": "strategy",
+            "state": "approved" if strategy_action in {"buy", "sell"} else "blocked",
+            "tool": "openrouter_strategy_advisor" if strategy.get("source") == "openrouter" else "deterministic_strategy_policy",
+            "note": str(strategy_decision.get("rationale") or "strategy_decision_missing"),
         })
-        cmc_agent_hub_signal: dict[str, object] | None = None
-        if cmc_signal_tool:
-            cmc_agent_hub_signal = await CmcAgentHubToolClient.call_cmc_agent_hub_tool({
-                "toolName": cmc_signal_tool,
-                "arguments": cmc_signal_args,
-            })
-            cmc_agent_hub_signal = {**cmc_agent_hub_signal, "resolution": cmc_signal_resolution}
-            stages.append({
-                "stage": "sense_agent_hub",
-                "state": "completed" if cmc_agent_hub_signal.get("ready") else "blocked",
-                "tool": "cmc_agent_hub_call_tool",
-                "note": "cmc_agent_hub_tool_ready" if cmc_agent_hub_signal.get("ready") else str(
-                    cmc_agent_hub_signal.get("reason") or "cmc_agent_hub_tool_unavailable"
-                ),
-            })
-        elif execute:
-            stages.append({
-                "stage": "sense_agent_hub",
-                "state": "blocked",
-                "tool": "cmc_agent_hub_call_tool",
-                "note": cmc_signal_reason or "cmc_agent_hub_tool_required_for_live_execution",
-            })
+        if strategy_action == "hold":
+            return AutonomousCycleResponse.hold(
+                trade_intent_id=trade_intent_id,
+                started_at=started_at,
+                symbol=symbol,
+                side=side,
+                amount_usd=amount_usd,
+                slippage_bps=slippage_bps,
+                execute=execute,
+                record_ledger=record_ledger,
+                stages=stages,
+                cmc_agent_hub=cmc_agent_hub,
+                cmc_agent_hub_signal=cmc_agent_hub_signal,
+                cmc_snapshot=cmc_snapshot,
+                strategy=strategy,
+            )
+        side = strategy_action
+        amount_usd = min(amount_usd, float(strategy_decision.get("maxAmountUsd") or amount_usd))
+        slippage_bps = min(slippage_bps, int(strategy_decision.get("slippageBps") or slippage_bps))
         price_usd = AutonomousTradingAgent.price_usd_from_snapshot(cmc_snapshot, symbol)
         quote: dict[str, object] = {}
         if side == "sell" and price_usd is None:
@@ -128,6 +127,7 @@ class AutonomousTradingAgent:
             "quote": quote,
             "transaction": quote.get("transaction"),
             "cmcAgentHubSignal": cmc_agent_hub_signal,
+            "strategyDecision": strategy,
             "recipient": args.get("recipient") or wallet.get("walletAddress"),
         }
         live_cmc_blocker = CmcSignalConfigService.live_cmc_tool_blocker(
@@ -152,45 +152,24 @@ class AutonomousTradingAgent:
             "tool": "bnb_execute_trade" if execute else "bnb_simulate_trade",
             "note": execution.get("reason") or simulation.get("reason") or "ready_for_twak",
         })
-        event = {
-            "eventType": "autonomous_cycle_completed",
-            "tradeIntentId": trade_intent_id,
-            "createdAt": datetime.now(timezone.utc).isoformat(),
-            "payload": {
-                "symbol": symbol,
-                "side": side,
-                "amountUsd": amount_usd,
-                "execute": execute,
-                "stages": stages,
-                "status": execution.get("status") or ("ready" if can_execute else "blocked"),
-            },
-        }
-        if record_ledger:
-            event = TradeLedger.append_event(event)
-        return {
-            "network": "bsc",
-            "tradeIntentId": trade_intent_id,
-            "startedAt": started_at,
-            "completedAt": event["createdAt"],
-            "mode": "execute" if execute else "dry_run",
-            "status": execution.get("status") or ("ready" if can_execute else "blocked"),
-            "toolsUsed": [
-                "cmc_agent_hub_status",
-                "cmc_get_price_snapshot",
-                *(["cmc_agent_hub_call_tool"] if cmc_agent_hub_signal else []),
-                "bnb_quote_trade",
-                "bnb_risk_check",
-                "bnb_execute_trade" if execute else "bnb_simulate_trade",
-            ],
-            "stages": stages,
-            "cmcAgentHub": cmc_agent_hub,
-            "cmcAgentHubSignal": cmc_agent_hub_signal,
-            "cmcSnapshot": cmc_snapshot,
-            "quote": quote,
-            "risk": risk,
-            "execution": execution,
-            **({"ledgerEvent": event} if record_ledger else {}),
-        }
+        return AutonomousCycleResponse.completed(
+            trade_intent_id=trade_intent_id,
+            started_at=started_at,
+            symbol=symbol,
+            side=side,
+            amount_usd=amount_usd,
+            execute=execute,
+            stages=stages,
+            cmc_agent_hub=cmc_agent_hub,
+            cmc_agent_hub_signal=cmc_agent_hub_signal,
+            cmc_snapshot=cmc_snapshot,
+            strategy=strategy,
+            quote=quote,
+            risk=risk,
+            execution=execution,
+            can_execute=can_execute,
+            record_ledger=record_ledger,
+        )
 
     @staticmethod
     def price_usd_from_snapshot(snapshot: dict[str, object], symbol: str) -> object:

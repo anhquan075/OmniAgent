@@ -15,7 +15,11 @@ echo "== backend compile =="
 (cd backend && rtk uv run python -m compileall -q app tests scripts)
 
 echo "== frontend tests and build =="
-(cd frontend && rtk pnpm exec vitest run)
+if rg --files frontend | rg -q '(^|/)([^/]+\\.)?(test|spec)\\.[cm]?[jt]sx?$|__tests__/'; then
+  (cd frontend && rtk pnpm exec vitest run)
+else
+  echo "No frontend unit tests found; skipping vitest."
+fi
 (cd frontend && rtk pnpm run build)
 
 if [[ "${RUN_PLAYWRIGHT:-false}" == "true" ]]; then

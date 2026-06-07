@@ -11,6 +11,7 @@ CONFIG_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "configure-bnb
 LIVE_CYCLE_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "run-bnb-live-cycle.py"
 LIVE_LOOP_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "run-bnb-live-loop.py"
 CMC_PROOF_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "prove-cmc-agent-hub-live.py"
+CMC_SKILL_SMOKE_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "smoke-cmc-skill-hub.py"
 RECORD_REGISTRATION_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "record-bnb-competition-registration.py"
 SCRIPTS_DIR = SCRIPT.parent
 
@@ -138,6 +139,26 @@ def test_cmc_proof_script_requires_prices() -> None:
 def test_cmc_proof_script_preflight_args_uses_auto_discovery() -> None:
     module = load_script_module(CMC_PROOF_SCRIPT, "prove_cmc_agent_hub_live")
     assert module.preflight_args("", {"symbol": "BNB"}) == {}
+
+
+def test_cmc_skill_smoke_defaults_to_daily_market_overview() -> None:
+    module = load_script_module(CMC_SKILL_SMOKE_SCRIPT, "smoke_cmc_skill_hub")
+    parser = module.build_parser()
+    args = parser.parse_args([])
+    assert args.query == "daily_market_overview"
+    assert args.skill == "daily_market_overview"
+
+
+def test_cmc_skill_smoke_extracts_unique_names() -> None:
+    module = load_script_module(CMC_SKILL_SMOKE_SCRIPT, "smoke_cmc_skill_hub_unique")
+    assert module.candidate_unique_name({"uniqueName": "daily_market_overview"}) == "daily_market_overview"
+    assert module.candidate_unique_name({"unique_name": "daily_market_overview"}) == "daily_market_overview"
+
+
+def test_cmc_skill_smoke_reads_nested_candidates() -> None:
+    module = load_script_module(CMC_SKILL_SMOKE_SCRIPT, "smoke_cmc_skill_hub_candidates")
+    candidates = module.skill_candidates({"parsedContent": [{"candidates": [{"uniqueName": "daily_market_overview"}]}]})
+    assert candidates == [{"uniqueName": "daily_market_overview"}]
 
 
 def test_record_registration_script_writes_valid_ledger_event(monkeypatch, tmp_path) -> None:

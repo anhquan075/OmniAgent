@@ -36,10 +36,18 @@ BNB_AUTONOMOUS_LOOP_SYMBOL=CAKE
 BNB_AUTONOMOUS_LOOP_SIDE=buy
 BNB_AUTONOMOUS_LOOP_AMOUNT_USD=25
 BNB_AUTONOMOUS_LOOP_SLIPPAGE_BPS=50
+BNB_STRATEGY_ADVISOR_ENABLED=true
+BNB_STRATEGY_REQUIRE_LLM_FOR_LIVE=false
+BNB_STRATEGY_MIN_CONFIDENCE=0.62
+BNB_STRATEGY_MAX_POSITION_PCT=0.35
+OPENROUTER_API_KEY=<backend-only-openrouter-key>
+OPENROUTER_MODEL=deepseek/deepseek-v4-pro
 ```
 
 `BNB_AUTONOMOUS_LOOP_ENABLED=true` starts the backend loop automatically on service startup.
 Keep `BNB_AUTONOMOUS_LOOP_EXECUTE=false` for proof/smoke mode. Set it to `true` only when `BNB_TRADING_ENABLED=true`, `ALLOW_AGENT_RUN=true`, CMC signal proof, TWAK bridge, capital, registration, and emergency-pause recovery are all verified.
+`OPENROUTER_API_KEY` must be set only on the backend service. The browser should never receive OpenRouter or CMC keys.
+`deepseek/deepseek-v4-pro` is the current recommended cheap/reasoning model; use `deepseek/deepseek-v4-flash` only when cost is more important than strategy quality.
 
 Also set the private CMC, TWAK, SDK, and x402 secrets from `backend/.env.example`.
 
