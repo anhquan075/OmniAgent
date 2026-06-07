@@ -1,6 +1,5 @@
 import {
   BrainCircuitIcon,
-  RefreshCwIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AgentReasoningPanel from './agent-reasoning-panel';
@@ -18,7 +17,7 @@ import {
   QuantTerminalHeader,
   SignalTile,
 } from './quant-terminal-widgets';
-import { DecisionSummary, MarketChartPanel, ResearchMatrix } from './quant-terminal-market-panels';
+import { DecisionSummary } from './quant-terminal-market-panels';
 import { apiFetch } from '../../lib/api';
 type Payload = Record<string, any>;
 const AUTO_REFRESH_MS = 30_000;
@@ -90,23 +89,18 @@ export function BnbTradingAgentDashboard() {
           <span>{autonomousLoopEnabled ? 'loop enabled' : 'loop disabled'}</span>
           <span>{walletLabel}</span>
         </div>
-        <button type="button" className="quant-refresh-button" onClick={() => void loadSnapshot()} disabled={loading} aria-label="Refresh dashboard snapshot">
-          <RefreshCwIcon className="h-3.5 w-3.5" />
-          Refresh
-        </button>
       </section>
       {error ? <p className="quant-error">{error}</p> : null}
       <QuantModeRibbon autonomousLoopEnabled={autonomousLoopEnabled} liveExecution={liveExecution} />
       <div className="quant-signal-strip">
         <SignalTile label="ML probability" value={state.cycle?.strategyDecision?.decision?.confidence ? `${Math.round(state.cycle.strategyDecision.decision.confidence * 100)}%` : 'waiting'} hint="directional edge" />
         <SignalTile label="causal effect" value={state.cycle?.strategyDecision?.source === 'openrouter' ? 'model' : 'observe'} hint="medium" />
-        <SignalTile label="data quality" value={state.prices?.configured ? '100%' : 'waiting'} hint="CMC price feed" />
+        <SignalTile label="data quality" value={state.prices?.configured ? '100%' : 'waiting'} hint="market signal" />
         <SignalTile label="order flow" value={state.livePreflight?.readyForLiveTrade ? 'ready' : 'guarded'} hint={loopMode} />
         <SignalTile label="realized PnL" value={`${asText(state.ledger?.pnl?.totalReturnPct, '0')}%`} hint="live ledger" />
       </div>
       <LoopProofRail state={state} />
       <div className="quant-main-grid">
-        <MarketChartPanel state={state} />
         <div className="quant-center-rail">
           <FocusAnalysis state={state} />
           <ModelStack state={state} />
@@ -116,7 +110,6 @@ export function BnbTradingAgentDashboard() {
             <p>{liveExecution ? 'Live execution is gated by proof and signer readiness.' : 'Frontend is observation-only; execution is controlled by backend policy.'}</p>
           </section>
         </div>
-        <ResearchMatrix state={state} />
       </div>
       <div className="quant-bottom-grid">
         <section className="quant-workrail">

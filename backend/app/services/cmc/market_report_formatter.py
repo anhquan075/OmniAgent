@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-MAX_REPORT_CHARS = 2500
+MAX_REPORT_CHARS = 2400
 
 
 class CmcMarketReportFormatter:
@@ -64,20 +64,47 @@ class CmcMarketReportFormatter:
 
     @staticmethod
     def anomalies(evidence: dict[str, Any]) -> list[str]:
-        value = evidence.get("notable_anomalies") or evidence.get("anomalies") or evidence.get("flags")
+        value = (
+            evidence.get("notable_anomalies")
+            or evidence.get("anomalies")
+            or evidence.get("flags")
+            or evidence.get("risk_flags")
+            or evidence.get("primary_conflicts")
+        )
         return CmcMarketReportFormatter.values(value)[:3] or ["No notable anomaly values were provided by the skill."]
 
     @staticmethod
     def macro_sentence(result: dict[str, object], lanes: dict[str, object]) -> str:
-        macro = result.get("macroNews") or lanes.get("macro_news") or lanes.get("macro")
-        values = CmcMarketReportFormatter.values(macro)
+        values = CmcMarketReportFormatter.macro_values(result, lanes)
         return CmcMarketReportFormatter.plain(values[0]) if values else "No macro news lane was provided by the skill."
 
     @staticmethod
     def macro_bullets(result: dict[str, object], lanes: dict[str, object]) -> list[str]:
-        macro = result.get("macroNews") or lanes.get("macro_news") or lanes.get("macro")
-        values = CmcMarketReportFormatter.values(macro)
+        values = CmcMarketReportFormatter.macro_values(result, lanes)
         return values[1:4] or ["No macro watch items were provided by the skill."]
+
+    @staticmethod
+    def macro_values(result: dict[str, object], lanes: dict[str, object]) -> list[str]:
+        macro = result.get("macroNews") or lanes.get("macro_news") or lanes.get("macro")
+        if not isinstance(macro, dict):
+            return CmcMarketReportFormatter.values(macro)
+
+        values: list[str] = []
+        market_view = macro.get("market_view")
+        if isinstance(market_view, dict):
+            sentence = market_view.get("takeaway") or market_view.get("bias_effect") or market_view.get("risk_channel")
+            if sentence:
+                values.append(str(sentence))
+        elif macro.get("trader_read"):
+            values.append(str(macro["trader_read"]))
+        elif macro.get("verdict"):
+            values.append(str(macro["verdict"]))
+
+        for key in ("key_event_summary", "watchlist"):
+            items = macro.get(key)
+            if isinstance(items, list):
+                values.extend(str(item) for item in items if str(item).strip())
+        return values or CmcMarketReportFormatter.values(macro)
 
     @staticmethod
     def topic_blocks(lanes: dict[str, object]) -> list[tuple[str, list[str]]]:
@@ -105,7 +132,19 @@ class CmcMarketReportFormatter:
         if isinstance(value, list):
             return [CmcMarketReportFormatter.describe(item) for item in value if CmcMarketReportFormatter.describe(item)]
         if isinstance(value, dict):
-            return [f"{key}: {CmcMarketReportFormatter.describe(item)}" for key, item in value.items()]
+            values: list[str] = []
+            for key, item in value.items():
+                if isinstance(item, list):
+                    values.extend(
+                        f"{key}: {CmcMarketReportFormatter.describe(entry)}"
+                        for entry in item
+                        if CmcMarketReportFormatter.describe(entry)
+                    )
+                    continue
+                described = CmcMarketReportFormatter.describe(item)
+                if described:
+                    values.append(f"{key}: {described}")
+            return values
         return []
 
     @staticmethod

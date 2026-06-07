@@ -47,6 +47,58 @@ def test_daily_market_overview_executes_find_validate_execute_once(monkeypatch) 
     ]
 
 
+def test_daily_market_overview_unwraps_hosted_evidence_pack(monkeypatch) -> None:
+    async def fake_find(_: dict[str, object]) -> dict[str, object]:
+        return {
+            "ready": True,
+            "parsedContent": [{
+                "uniqueName": "daily_market_overview",
+                "inputSchema": {"type": "object", "required": ["preview"]},
+            }],
+        }
+
+    async def fake_execute(_: dict[str, object]) -> dict[str, object]:
+        return {
+            "ready": True,
+            "parsedContent": [{
+                "result": {
+                    "type": "evidence_pack",
+                    "skill_id": "daily_market_overview",
+                    "data": {
+                        "status": "partial",
+                        "confidence": "medium",
+                        "summary": "The daily market overview produced a partial market read.",
+                        "risk_flags": ["high volatility token risk"],
+                        "macro_deep_read": {
+                            "macro_news": {
+                                "market_view": {"takeaway": "Risk-off sentiment is weighing on crypto."},
+                                "key_event_summary": ["Jobs data pushed rate worries higher."],
+                                "watchlist": ["Fed policy signals"],
+                            },
+                            "etf_demand": {"key_metrics": ["Latest BTC ETF flow (2026-06-05) $-325.70M"]},
+                            "cross_asset": {"conflicts": ["Cross-asset read is mixed or crypto-specific."]},
+                        },
+                        "watchlist": [{"symbol": "SIREN", "score": 85.67}],
+                    },
+                },
+                "executionMeta": {"executionTimeMs": "53381"},
+            }],
+        }
+
+    monkeypatch.setattr("app.services.cmc.daily_market_overview.CmcSkillHubClient.find_cmc_skill", fake_find)
+    monkeypatch.setattr("app.services.cmc.daily_market_overview.CmcSkillHubClient.execute_cmc_skill", fake_execute)
+
+    result = asyncio.run(CmcDailyMarketOverviewService.run({"preview": True}))
+
+    assert result["ready"] is True
+    assert result["status"] == "partial"
+    assert result["confidence"] == "medium"
+    assert result["macroNews"]
+    assert "Risk-off sentiment is weighing on crypto." in result["formattedReport"]
+    assert "Jobs data pushed rate worries higher." in result["formattedReport"]
+    assert "Latest BTC ETF flow (2026-06-05) $-325.70M" in result["formattedReport"]
+
+
 def test_daily_market_overview_stops_when_required_param_missing(monkeypatch) -> None:
     calls: list[str] = []
 

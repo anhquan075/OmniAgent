@@ -33,7 +33,8 @@ test.describe('BNB trading dashboard', () => {
     await expect(page.getByText('Agent Reasoning').first()).toBeVisible();
     await expect(page.getByText('MCP tools used').first()).toBeVisible();
     await expect(page.getByText('Blockchain Tx Hash Log').first()).toBeVisible();
-    await expect(page.getByRole('button', { name: /run|pause/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /pause|run trade|run agent|execute/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Run CMC' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Refresh dashboard snapshot' })).toBeVisible();
   });
 });
