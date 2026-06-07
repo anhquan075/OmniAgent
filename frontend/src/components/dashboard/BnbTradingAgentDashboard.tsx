@@ -1,6 +1,5 @@
 import {
   BrainCircuitIcon,
-  RefreshCwIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AgentReasoningPanel from './agent-reasoning-panel';
@@ -17,21 +16,24 @@ import {
   QuantTerminalHeader,
   SignalTile,
 } from './quant-terminal-widgets';
-import { DecisionSummary, MarketChartPanel, ResearchMatrix } from './quant-terminal-market-panels';
+import { DecisionSummary } from './quant-terminal-market-panels';
 import { apiFetch } from '../../lib/api';
+
 type Payload = Record<string, any>;
+
 const AUTO_REFRESH_MS = 30_000;
+const SIGNER_STATUS_KEY = ['twa', 'kStatus'].join('');
+
 const asText = (value: unknown, fallback = 'pending') => (
   value === undefined || value === null || value === '' ? fallback : String(value)
 );
-const SIGNER_STATUS_KEY = ['twa', 'kStatus'].join('');
+
 export function BnbTradingAgentDashboard() {
   const [state, setState] = useState<Payload>({});
   const [loading, setLoading] = useState(false);
-  const [cmcOverviewRunning, setCmcOverviewRunning] = useState(false);
-  const [cmcOverviewError, setCmcOverviewError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState('waiting');
+
   const loadSnapshot = useCallback(async (overrides: Payload = {}) => {
     setLoading(true);
     setError(null);
@@ -39,18 +41,7 @@ export function BnbTradingAgentDashboard() {
       const response = await apiFetch('/api/dashboard/snapshot?limit=10');
       if (!response.ok) throw new Error(`dashboard ${response.status}`);
       const snapshot = await response.json() as Payload;
-      setState(current => {
-        const next = { ...snapshot, ...overrides };
-        if (overrides.marketOverview) return next;
-
-        const currentOverview = current.marketOverview;
-        const snapshotOverview = snapshot.marketOverview;
-        const currentTimestamp = Date.parse(asText(currentOverview?.timestamp, ''));
-        const snapshotTimestamp = Date.parse(asText(snapshotOverview?.timestamp, ''));
-        const currentIsNewer = Number.isFinite(currentTimestamp) && (!Number.isFinite(snapshotTimestamp) || currentTimestamp > snapshotTimestamp);
-        const snapshotIsMissingRecordedReport = Boolean(currentOverview?.ready) && !snapshotOverview?.ready;
-        return currentIsNewer || snapshotIsMissingRecordedReport ? { ...next, marketOverview: currentOverview } : next;
-      });
+      setState({ ...snapshot, ...overrides });
       setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (err) {
       setError(err instanceof Error && err.message === 'Failed to fetch' ? 'Backend dashboard unavailable' : err instanceof Error ? err.message : 'Unable to refresh cockpit');
@@ -60,32 +51,12 @@ export function BnbTradingAgentDashboard() {
     }
   }, []);
 
-  const runCmcMarketOverview = useCallback(async () => {
-    setCmcOverviewRunning(true);
-    setCmcOverviewError(null);
-    try {
-      const response = await apiFetch('/api/dashboard/cmc-daily-market-overview', { method: 'POST' });
-      const result = await response.json().catch(() => ({})) as Payload;
-      if (!response.ok) throw new Error(`cmc_daily_market_overview ${response.status}`);
-      if (result.ready === false) {
-        const code = asText(result.error_code ?? result.errorCode, 'cmc_daily_market_overview_failed');
-        const reason = asText(result.reason, 'CMC Skill Hub returned an error.');
-        setCmcOverviewError(`${code}: ${reason}`);
-      }
-      setState(current => ({ ...current, marketOverview: result }));
-      void loadSnapshot({ marketOverview: result });
-    } catch (err) {
-      setCmcOverviewError(err instanceof Error ? err.message : 'Unable to run cmc_daily_market_overview');
-    } finally {
-      setCmcOverviewRunning(false);
-    }
-  }, [loadSnapshot]);
-
   useEffect(() => {
     void loadSnapshot();
     const timer = window.setInterval(() => void loadSnapshot(), AUTO_REFRESH_MS);
     return () => window.clearInterval(timer);
   }, [loadSnapshot]);
+
   const ledgerEvents = useMemo(() => state.ledger?.events ?? [], [state.ledger]);
   const lifecycle = state.liveProofBundle?.workOrderLifecycle ?? state.workOrders?.lifecycle;
   const proofScore = state.liveProofBundle?.proofScore ?? state.workOrders?.proofScore;
@@ -104,35 +75,32 @@ export function BnbTradingAgentDashboard() {
   const mode = offline ? 'Offline' : paused ? 'Paused' : signerValidated ? 'Armed' : 'Guarded';
   const liveExecution = Boolean(state.livePreflight?.readyForLiveTrade);
   const backendHealth = state.backendHealth ?? {};
-  const autonomousLoopEnabled = Boolean(backendHealth.autonomousLoopEnabled);
-  const loopMode = autonomousLoopEnabled ? 'Backend loop active' : 'Backend loop waiting';
+  const agentLoopEnabled = Boolean(backendHealth.autonomousLoopEnabled);
+  const loopMode = agentLoopEnabled ? 'Agent loop active' : 'Agent loop idle';
   const txLogEvents = state.liveProofBundle?.txEvents?.length ? state.liveProofBundle.txEvents : ledgerEvents;
-  const walletLabel = wallet.walletAddress ? String(wallet.walletAddress) : 'wallet pending';
+  const walletAddress = wallet.walletAddress ? String(wallet.walletAddress) : '';
+  const walletLabel = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'pending';
+  const proofLabel = proofScore?.score !== undefined && proofScore?.total !== undefined ? `${proofScore.score}/${proofScore.total}` : 'checking';
+  const readinessCopy = liveExecution
+    ? 'Ready for a backend-controlled trade when policy allows it.'
+    : paused
+      ? 'Paused by policy; the cockpit stays in observation mode.'
+      : 'Watching market, wallet, proof, and policy gates before action.';
 
   return (
     <div className={`robot-cockpit quant-terminal flex min-h-0 flex-col gap-2 ${loading ? 'is-refreshing' : ''}`}>
       <QuantTerminalHeader state={state} mode={mode} liveExecution={liveExecution} />
       <section className="quant-operator-band">
         <div className="quant-operator-copy">
-          <span>Operator status</span>
+          <span>Readiness</span>
           <strong>{mode}</strong>
-          <p>{liveExecution ? 'All live gates are ready for a backend-controlled trade.' : 'Observation-only until market, signer, proof, and policy gates align.'}</p>
+          <p>{readinessCopy}</p>
         </div>
-        <div className="quant-operator-metrics">
-          <span>{state.prices?.configured ? 'market feed online' : 'market feed waiting'}</span>
-          <span>{autonomousLoopEnabled ? 'loop enabled' : 'loop disabled'}</span>
-          <span>{walletLabel}</span>
+        <div className="quant-operator-metrics" aria-label="Dashboard readiness">
+          <span><small>Market</small><b>{state.prices?.configured ? 'online' : 'waiting'}</b></span>
+          <span><small>Proof</small><b>{proofLabel}</b></span>
+          <span><small>Wallet</small><b>{walletLabel}</b></span>
         </div>
-        <button
-          type="button"
-          className="quant-icon-button"
-          onClick={() => void loadSnapshot()}
-          disabled={loading}
-          aria-label="Refresh dashboard snapshot"
-          title="Refresh dashboard snapshot"
-        >
-          <RefreshCwIcon className="h-4 w-4" />
-        </button>
       </section>
       {error ? <p className="quant-error">{error}</p> : null}
       <div className="quant-signal-strip">
@@ -144,17 +112,15 @@ export function BnbTradingAgentDashboard() {
       </div>
       <LoopProofRail state={state} />
       <div className="quant-main-grid">
-        <MarketChartPanel state={state} />
         <div className="quant-center-rail">
           <FocusAnalysis state={state} />
           <ModelStack state={state} />
           <section className="quant-actions quant-auto-status">
             <span>Backend agent loop</span>
-            <strong>{autonomousLoopEnabled ? 'automatic' : 'waiting'}</strong>
+            <strong>{agentLoopEnabled ? 'automatic' : 'idle'}</strong>
             <p>{liveExecution ? 'Live execution is gated by proof and signer readiness.' : 'Frontend is observation-only; execution is controlled by backend policy.'}</p>
           </section>
         </div>
-        <ResearchMatrix state={state} runningMarketOverview={cmcOverviewRunning} marketOverviewError={cmcOverviewError} onRunMarketOverview={runCmcMarketOverview} />
       </div>
       <div className="quant-bottom-grid">
         <section className="quant-workrail">
@@ -166,12 +132,12 @@ export function BnbTradingAgentDashboard() {
           <TradeProofScorePanel score={proofScore} />
           <TradeProofTimeline workOrders={workOrders} recovery={recovery} ledgerEvents={ledgerEvents} running={loading} />
         </section>
-        <div className="quant-side-stack">
+        <div className="quant-side-stack quant-side-stack-readiness">
           <CompetitionReadinessStrip state={state} />
           <LivePreflightPanel preflight={state.livePreflight} />
           <RecoveryCandidatePanel candidates={recovery} />
         </div>
-        <div className="quant-side-stack">
+        <div className="quant-side-stack quant-side-stack-reasoning">
           <AgentReasoningPanel state={state} offline={offline} paused={paused} />
           <DecisionSummary state={state} />
           <ChainTxLog events={txLogEvents} />
