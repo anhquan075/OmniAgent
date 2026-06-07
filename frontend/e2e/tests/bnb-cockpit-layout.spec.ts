@@ -33,7 +33,8 @@ test.describe('BNB cockpit layout', () => {
     await expect(page.getByText(removedResearchLabel)).toHaveCount(0);
     await expect(page.getByText(removedWorkspaceLabel)).toHaveCount(0);
     await expect(page.getByText('agent_snapshot')).toBeVisible();
-    await expect(page.getByRole('button', { name: /run|pause/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /pause|run trade|run agent|execute/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Run CMC' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Refresh dashboard snapshot' })).toBeVisible();
     expect(terminal.width).toBeGreaterThan(1100);
     expect(terminal.y + terminal.height).toBeLessThanOrEqual(720);

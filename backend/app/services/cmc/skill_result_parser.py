@@ -55,7 +55,7 @@ class CmcSkillResultParser:
     @staticmethod
     def normalize_execution(payload: dict[str, object]) -> dict[str, object]:
         execution = CmcSkillResultParser.first_execution_payload(payload)
-        evidence = execution.get("evidence_pack") if isinstance(execution.get("evidence_pack"), dict) else execution
+        evidence = CmcSkillResultParser.evidence_payload(execution)
         status = evidence.get("status") or execution.get("status") or payload.get("status") or "unknown"
         confidence = evidence.get("confidence") or execution.get("confidence") or payload.get("confidence") or "unknown"
         return {
@@ -68,6 +68,30 @@ class CmcSkillResultParser:
         }
 
     @staticmethod
+    def evidence_payload(execution: dict[str, Any]) -> dict[str, Any]:
+        direct = execution.get("evidence_pack")
+        if isinstance(direct, dict):
+            return direct
+
+        result = execution.get("result")
+        if isinstance(result, dict):
+            data = result.get("data")
+            if isinstance(data, dict):
+                metadata = {
+                    key: value
+                    for key, value in result.items()
+                    if key not in {"data"} and not isinstance(value, (dict, list))
+                }
+                return {**data, **metadata}
+            return result
+
+        data = execution.get("data")
+        if isinstance(data, dict):
+            return data
+
+        return execution
+
+    @staticmethod
     def extract_lane(payload: dict[str, Any], key: str) -> object:
         value = payload.get(key)
         if value is not None:
@@ -75,6 +99,11 @@ class CmcSkillResultParser:
         lanes = payload.get("lanes")
         if isinstance(lanes, dict):
             return lanes.get(key)
+        macro_deep_read = payload.get("macro_deep_read")
+        if isinstance(macro_deep_read, dict):
+            value = macro_deep_read.get(key)
+            if value is not None:
+                return value
         return None
 
     @staticmethod
@@ -82,6 +111,17 @@ class CmcSkillResultParser:
         lanes = payload.get("lanes")
         if isinstance(lanes, dict):
             return lanes
+        macro_deep_read = payload.get("macro_deep_read")
+        if isinstance(macro_deep_read, dict):
+            flattened = {
+                key: value
+                for key, value in macro_deep_read.items()
+                if key != "macro_news" and isinstance(value, (dict, list))
+            }
+            candidates = payload.get("watchlist") or payload.get("trader_readouts")
+            if isinstance(candidates, list):
+                flattened["candidates"] = candidates
+            return flattened
         return {
             key: value
             for key, value in payload.items()

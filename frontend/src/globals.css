@@ -1161,6 +1161,54 @@ body {
   line-height: 1.38;
 }
 
+.cmc-overview-card .cmc-overview-error {
+  margin-top: 0.35rem;
+  color: rgba(255, 128, 128, 0.82);
+  -webkit-line-clamp: 2;
+}
+
+.cmc-overview-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  margin: 0.48rem 0 0.5rem;
+}
+
+.cmc-overview-actions button {
+  min-height: 2rem;
+  border: 1px solid rgba(240, 185, 11, 0.35);
+  border-radius: 0.35rem;
+  background: rgba(240, 185, 11, 0.12);
+  padding: 0 0.62rem;
+  color: rgba(255, 245, 210, 0.94);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.cmc-overview-actions button:hover:not(:disabled) {
+  border-color: rgba(240, 185, 11, 0.72);
+  background: rgba(240, 185, 11, 0.18);
+}
+
+.cmc-overview-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.cmc-overview-actions span {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .cmc-overview-meta {
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   padding-top: 0.38rem;
