@@ -32,7 +32,8 @@ ALLOW_AGENT_RUN=false
 
 Also set the private CMC, TWAK, SDK, and x402 secrets from `backend/.env.example`.
 
-Attach a Railway volume mounted at `/data` so `TRADE_LEDGER_PATH` survives redeploys.
+Recommended: attach a Railway volume mounted at `/data` so `TRADE_LEDGER_PATH` survives redeploys.
+Without the volume, the backend can still deploy and write the ledger inside the container filesystem, but that file is ephemeral and can be lost on redeploy.
 
 ## TWAK Bridge Variables
 
