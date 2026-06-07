@@ -60,7 +60,6 @@ class AgentCockpitService:
             twak_status=twak_status,
             competition=competition_status,
         )
-        market_overview = AgentCockpitService.latest_market_overview(ledger)
         tools_used = [
             "bnb_agent_cockpit_snapshot",
             "cmc_agent_hub_status",
@@ -72,15 +71,12 @@ class AgentCockpitService:
             "bnb_agent_sdk_register_identity",
             "bnb_paid_resource_status",
         ]
-        if market_overview["ready"]:
-            tools_used.insert(3, "cmc_daily_market_overview")
         return {
             "network": "bsc",
             "wallet": wallet,
             "twakStatus": twak_status,
             "sdkStatus": sdk_status,
             "paidStatus": paid_status,
-            "marketOverview": market_overview,
             "prices": prices,
             "ledger": ledger,
             "passport": {
@@ -153,31 +149,6 @@ class AgentCockpitService:
             "registryAddress": payload.get("registryAddress"),
             "transactionHash": payload.get("transactionHash") or (registered_event or {}).get("txHash") if isinstance(registered_event, dict) else None,
             "explorerUrl": payload.get("explorerUrl"),
-        }
-
-    @staticmethod
-    def latest_market_overview(ledger: dict[str, object]) -> dict[str, object]:
-        report_event = TradeLedger.latest_trade_event("cmc_market_overview_report")
-        if not report_event:
-            events = ledger.get("events") or []
-            report_event = next(
-                (
-                    event for event in events
-                    if isinstance(event, dict) and event.get("eventType") == "cmc_market_overview_report"
-                ),
-                None,
-            )
-        payload = report_event.get("payload") if isinstance(report_event, dict) else {}
-        payload = payload if isinstance(payload, dict) else {}
-        return {
-            "ready": bool(report_event),
-            "status": payload.get("status") or "not_run",
-            "confidence": payload.get("confidence") or "unknown",
-            "timestamp": (report_event or {}).get("createdAt") if isinstance(report_event, dict) else None,
-            "skillName": payload.get("skillName") or "daily_market_overview",
-            "uniqueName": payload.get("uniqueName"),
-            "formattedReport": payload.get("formattedReport"),
-            "reason": None if report_event else "Run cmc_daily_market_overview to generate a report.",
         }
 
     @staticmethod

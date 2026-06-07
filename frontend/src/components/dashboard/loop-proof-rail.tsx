@@ -77,10 +77,10 @@ export function LoopProofRail({ state }: { state: Payload }) {
   ];
 
   return (
-    <section className="loop-proof-rail" aria-label="Autonomous trading proof loop">
+    <section className="loop-proof-rail" aria-label="Proof loop">
       <div className="loop-proof-title">
         <RouteIcon className="h-4 w-4" />
-        <span>Autonomous proof loop</span>
+        <span>Proof loop</span>
       </div>
       <div className="loop-proof-steps">
         {steps.map((step, index) => (
