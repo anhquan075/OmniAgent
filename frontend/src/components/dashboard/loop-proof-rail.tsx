@@ -70,7 +70,7 @@ export function LoopProofRail({ state }: { state: Payload }) {
     {
       icon: BadgeCheckIcon,
       label: "BSC proof",
-      value: hasTx ? "receipt linked" : "pending receipt",
+      value: hasTx ? "proof linked" : "proof pending",
       ok: hasTx,
       accent: "chain",
     },
@@ -108,7 +108,7 @@ function safeVisibleText(value: string) {
   const walletBrand = ["Trust", " Wallet"].join("");
   const signerBrand = ["T", "W", "A", "K"].join("");
   return value
-    .replace(new RegExp(marketBrand, "gi"), "market intelligence")
+    .replace(new RegExp(marketBrand, "gi"), "market signal")
     .replace(new RegExp(`\\b${marketShort}\\b`, "g"), "market")
     .replace(new RegExp(`${walletBrand} Agent Kit`, "gi"), "wallet-native signer")
     .replace(new RegExp(walletBrand, "gi"), "wallet-native")

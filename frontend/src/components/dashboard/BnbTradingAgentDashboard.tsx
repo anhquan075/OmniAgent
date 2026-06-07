@@ -1,4 +1,5 @@
 import {
+  AlertTriangleIcon,
   BrainCircuitIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -102,13 +103,26 @@ export function BnbTradingAgentDashboard() {
           <span><small>Wallet</small><b>{walletLabel}</b></span>
         </div>
       </section>
-      {error ? <p className="quant-error">{error}</p> : null}
+      {error ? (
+        <section className="quant-error quant-offline-brief" aria-live="polite">
+          <div>
+            <AlertTriangleIcon className="h-4 w-4" aria-hidden="true" />
+            <span>API session unavailable</span>
+          </div>
+          <p>Read-only cockpit. Live market, wallet, and proof checks stay guarded until the backend session recovers.</p>
+          <div className="quant-offline-meta" aria-label="Offline details">
+            <span><small>Cause</small><b>{error}</b></span>
+            <span><small>Mode</small><b>observe only</b></span>
+            <span><small>Refresh</small><b>{Math.round(AUTO_REFRESH_MS / 1000)}s</b></span>
+          </div>
+        </section>
+      ) : null}
       <div className="quant-signal-strip">
-        <SignalTile label="ML probability" value={state.cycle?.strategyDecision?.decision?.confidence ? `${Math.round(state.cycle.strategyDecision.decision.confidence * 100)}%` : 'waiting'} hint="directional edge" />
-        <SignalTile label="causal effect" value={state.cycle?.strategyDecision?.source === 'openrouter' ? 'model' : 'observe'} hint="medium" />
-        <SignalTile label="data quality" value={state.prices?.configured ? '100%' : 'waiting'} hint="market signal" />
-        <SignalTile label="order flow" value={state.livePreflight?.readyForLiveTrade ? 'ready' : 'guarded'} hint={loopMode} />
-        <SignalTile label="realized PnL" value={`${asText(state.ledger?.pnl?.totalReturnPct, '0')}%`} hint="live ledger" />
+        <SignalTile label="Signal confidence" value={state.cycle?.strategyDecision?.decision?.confidence ? `${Math.round(state.cycle.strategyDecision.decision.confidence * 100)}%` : 'waiting'} hint="trade conviction" />
+        <SignalTile label="Decision source" value={state.cycle?.strategyDecision?.source === 'openrouter' ? 'model' : 'observe'} hint="current mode" />
+        <SignalTile label="Data coverage" value={state.prices?.configured ? '100%' : 'waiting'} hint="market feed" />
+        <SignalTile label="Execution gate" value={state.livePreflight?.readyForLiveTrade ? 'ready' : 'guarded'} hint={loopMode} />
+        <SignalTile label="Ledger result" value={`${asText(state.ledger?.pnl?.totalReturnPct, '0')}%`} hint="portfolio change" />
       </div>
       <LoopProofRail state={state} />
       <div className="quant-main-grid">
@@ -126,8 +140,8 @@ export function BnbTradingAgentDashboard() {
         <section className="quant-workrail">
           <div className="quant-section-title">
             <BrainCircuitIcon className="h-4 w-4 text-bnb-gold" />
-            Work order rail
-            <span>{lifecycle?.state ?? workOrders[0]?.state ?? 'idle'}</span>
+            Trade plan
+            <span>{asText(lifecycle?.state ?? workOrders[0]?.state, 'idle').replace(/[-_]+/g, ' ')}</span>
           </div>
           <TradeProofScorePanel score={proofScore} />
           <TradeProofTimeline workOrders={workOrders} recovery={recovery} ledgerEvents={ledgerEvents} running={loading} />

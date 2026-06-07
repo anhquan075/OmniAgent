@@ -81,7 +81,7 @@ export function AgentReasoningPanel({
       ) : null}
       {marketProof ? <MarketSignalProof signal={marketProof} /> : null}
       <div className="reasoning-tools-block">
-        <p>MCP tools used</p>
+        <p>Tools used</p>
         <div>
           {tools.slice(0, 5).map((tool: string) => (
             <span key={tool} className="reasoning-tool-chip">
@@ -99,7 +99,7 @@ function MarketSignalProof({ signal }: { signal: Payload }) {
   return (
     <div className="mt-2 overflow-hidden rounded-md border border-cyan-200/12 bg-cyan-200/[0.035] p-2">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <p className="text-[10px] uppercase text-cyan-100/52">Market intelligence MCP</p>
+        <p className="text-[10px] uppercase text-cyan-100/52">Signal MCP</p>
         <span className={`rounded-sm border px-1.5 py-0.5 font-mono text-[9px] uppercase ${signal.ready ? "border-cyan-200/22 text-cyan-100" : "border-white/10 text-white/42"}`}>
           {signal.ready ? signalLabel(signal) : "blocked"}
         </span>
@@ -139,20 +139,20 @@ function toolDisplayName(value: unknown) {
   const raw = String(value ?? "");
   const normalized = raw.toLowerCase();
   const signerShort = ["t", "w", "a", "k"].join("");
-  if (!raw) return "agent_tool";
+  if (!raw) return "agent tool";
   if (normalized.includes(MARKET_SHORT) || normalized.includes(MARKET_BRAND)) {
     if (normalized.includes("price")) return "market price";
     if (normalized.includes("overview") || normalized.includes("report")) return "market brief";
-    return "market intelligence";
+    return "market signal";
   }
   if (normalized.includes(signerShort)) return "wallet-native signer";
   if (normalized.includes("trust")) return "wallet-native signer";
   if (normalized.includes("wallet")) return "wallet signer";
-  if (normalized.includes("proof")) return "proof_bundle";
-  if (normalized.includes("preflight")) return "live_preflight";
-  if (normalized.includes("cockpit") || normalized.includes("snapshot")) return "agent_snapshot";
-  if (normalized.includes("trade")) return "chain_trade";
-  return safeVisibleText(raw.replace(/^bnb_/, "chain_"));
+  if (normalized.includes("proof")) return "proof bundle";
+  if (normalized.includes("preflight")) return "live preflight";
+  if (normalized.includes("cockpit") || normalized.includes("snapshot")) return "agent snapshot";
+  if (normalized.includes("trade")) return "chain trade";
+  return safeVisibleText(raw.replace(/^bnb_/, "chain_").replace(/_/g, " "));
 }
 
 function safeVisibleText(value: string) {
@@ -161,7 +161,7 @@ function safeVisibleText(value: string) {
   const walletBrand = ["Trust", " Wallet"].join("");
   const signerBrand = ["T", "W", "A", "K"].join("");
   return value
-    .replace(new RegExp(marketBrand, "gi"), "market intelligence")
+    .replace(new RegExp(marketBrand, "gi"), "market signal")
     .replace(new RegExp(`\\b${marketShort}\\b`, "g"), "market")
     .replace(new RegExp(`${walletBrand} Agent Kit`, "gi"), "wallet-native signer")
     .replace(new RegExp(walletBrand, "gi"), "wallet-native")

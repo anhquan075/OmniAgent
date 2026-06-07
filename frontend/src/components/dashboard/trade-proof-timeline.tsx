@@ -17,6 +17,15 @@ const text = (value: unknown, fallback = "pending") => (
   value === undefined || value === null || value === "" ? fallback : String(value)
 );
 
+function humanizeState(value: unknown, fallback = "waiting") {
+  const raw = text(value, fallback);
+  return raw
+    .replace(/^waiting-for-policy-intent$/i, "waiting for policy approval")
+    .replace(/^policy-intent$/i, "policy approval")
+    .replace(/^pending$/i, "waiting")
+    .replace(/[-_]+/g, " ");
+}
+
 const txHashOf = (event: any) => event?.txHash ?? event?.payload?.txHash ?? event?.payload?.proof?.txHash;
 const short = (value: string) => `${value.slice(0, 8)}...${value.slice(-6)}`;
 
@@ -33,12 +42,12 @@ export function TradeProofTimeline({ workOrders, recovery, ledgerEvents, running
       <div className="mb-2 grid gap-2 rounded-md border border-white/10 bg-black/20 p-2">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase text-white/38">Current Work Order</p>
+            <p className="text-[10px] font-semibold uppercase text-white/38">Current trade plan</p>
             <p className="truncate font-mono text-[12px] text-bnb-gold">
-              {order ? order.id : "waiting-for-policy-intent"}
+              {order ? humanizeState(order.id, "waiting for policy approval") : "waiting for policy approval"}
             </p>
           </div>
-          <StateBadge state={text(order?.state, "pending")} />
+          <StateBadge state={humanizeState(order?.state, "waiting")} />
         </div>
         <div className="grid grid-cols-3 gap-1.5">
           <MiniStat label="Pair" value={`${text(order?.symbol, "BSC")} / ${text(order?.side, "hold")}`} />
@@ -60,7 +69,7 @@ export function TradeProofTimeline({ workOrders, recovery, ledgerEvents, running
         </div>
       ) : (
         <div className="rounded-md border border-dashed border-white/12 p-3 text-[12px] text-white/42">
-          No strategy work order has been recorded yet.
+          No trade plan has been recorded yet.
         </div>
       )}
 
@@ -170,5 +179,5 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 }
 
 function StateBadge({ state }: { state: string }) {
-  return <span className="rounded-sm border border-white/10 bg-white/[0.035] px-1.5 py-1 font-mono text-[10px] uppercase text-white/50">{state}</span>;
+  return <span className="rounded-sm border border-white/10 bg-white/[0.035] px-1.5 py-1 font-mono text-[10px] uppercase text-white/50">{humanizeState(state)}</span>;
 }

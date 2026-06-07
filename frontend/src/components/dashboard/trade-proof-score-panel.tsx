@@ -36,7 +36,7 @@ export function TradeProofScorePanel({ score }: { score?: TradeProofScore }) {
       <div className="proof-blocker-box">
         <div>
           <AlertTriangleIcon className="h-3 w-3" />
-          Hard blockers first
+          Blocking checks
         </div>
         {!hasScore ? (
           <p>Waiting for the current proof bundle.</p>
@@ -60,7 +60,7 @@ export function TradeProofScorePanel({ score }: { score?: TradeProofScore }) {
         ))}
       </div>
 
-      <p className="proof-score-note">Score explains evidence only; hard blockers still control live readiness.</p>
+      <p className="proof-score-note">Score explains evidence only; blocking checks still control live readiness.</p>
     </section>
   );
 }

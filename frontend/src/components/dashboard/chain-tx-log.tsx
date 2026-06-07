@@ -21,9 +21,9 @@ export function ChainTxLog({ events }: { events: McpPayload[] }) {
       <div className="chain-tx-head">
         <div>
           <span>On-chain audit</span>
-          <h3>Blockchain Tx Hash Log</h3>
+          <h3>Blockchain Proof Log</h3>
         </div>
-        <b>{txEvents.length ? `${txEvents.length} receipts` : "BSC"}</b>
+        <b>{txEvents.length ? `${txEvents.length} proofs` : "BSC"}</b>
       </div>
       <div className="chain-tx-list">
         {visibleEvents.length ? visibleEvents.map((event, index) => {
@@ -43,8 +43,8 @@ export function ChainTxLog({ events }: { events: McpPayload[] }) {
           );
         }) : (
           <div className="chain-tx-empty">
-            <strong>Awaiting receipts</strong>
-            <p>Signed swaps and registration hashes will appear here after the backend records live BSC proofs.</p>
+            <strong>Awaiting chain proof</strong>
+            <p>Signed swaps and registration hashes will appear here after the backend records live BSC proof.</p>
           </div>
         )}
       </div>

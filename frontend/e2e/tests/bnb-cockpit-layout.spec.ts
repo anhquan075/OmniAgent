@@ -23,6 +23,24 @@ test.describe('BNB cockpit layout', () => {
     ['Loop', 'waiting'].join(' '),
   ];
   const removedLoopPattern = new RegExp(['loop', 'waiting'].join(' '), 'i');
+  const removedCopyPatterns = [
+    /\breceipts?\b/i,
+    /market intelligence/i,
+    /ML probability/i,
+    /causal effect/i,
+    /realized PnL/i,
+    /MCP tools used/i,
+    /agent_snapshot/i,
+    /Tx Hash Log/i,
+    /\bmomentum\b/i,
+    /volume z/i,
+    /Work order rail/i,
+    /Current Work Order/i,
+    /Hard blockers first/i,
+    /Live preflight/i,
+    /preflight snapshot/i,
+    /waiting-for-policy-intent/i,
+  ];
 
   test('uses a single autonomous quant terminal with no MCP tools column', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
@@ -32,22 +50,28 @@ test.describe('BNB cockpit layout', () => {
 
     await expect(page.getByRole('heading', { name: 'MCP Tools' })).toHaveCount(0);
     await expect(page.getByText('Market signal').first()).toBeVisible();
+    await expect(page.getByText('24h move').first()).toBeVisible();
+    await expect(page.getByText('24h volume').first()).toBeVisible();
     await expect(page.getByText('Wallet-native signer')).toBeVisible();
     await expect(page.getByText('Backend agent loop')).toBeVisible();
-    await expect(page.getByText('MCP tools used')).toBeVisible();
+    await expect(page.getByText('Tools used')).toBeVisible();
     await expect(page.getByText('Proof score')).toBeVisible();
-    await expect(page.getByText('Hard blockers first')).toBeVisible();
+    await expect(page.locator('.quant-section-title').filter({ hasText: 'Trade plan' })).toBeVisible();
+    await expect(page.getByText('Blocking checks', { exact: true })).toBeVisible();
+    await expect(page.getByText('Live safety check')).toBeVisible();
     await expect(page.getByText('Recovery candidates')).toBeVisible();
     await expect(page.getByText('Decision summary')).toBeVisible();
     for (const label of removedRibbonLabels) {
       await expect(page.getByText(label, { exact: true })).toHaveCount(0);
     }
     await expect(page.getByText(removedLoopPattern)).toHaveCount(0);
-    await expect(page.getByText('agent_snapshot')).toBeVisible();
+    for (const pattern of removedCopyPatterns) {
+      await expect(page.getByText(pattern)).toHaveCount(0);
+    }
+    await expect(page.getByText('agent snapshot')).toBeVisible();
     await expect(page.getByRole('button', { name: /pause|run trade|run agent|execute/i })).toHaveCount(0);
     await expect(page.getByRole('button')).toHaveCount(0);
     expect(terminal.width).toBeGreaterThan(1100);
-    expect(terminal.y + terminal.height).toBeLessThanOrEqual(720);
     const scrollMetrics = await page.evaluate(() => ({
       y: window.scrollY,
       body: document.body.scrollHeight,
@@ -55,10 +79,11 @@ test.describe('BNB cockpit layout', () => {
       viewport: window.innerHeight,
     }));
     expect(scrollMetrics.y).toBe(0);
-    expect(scrollMetrics.body).toBeLessThanOrEqual(scrollMetrics.viewport + 1);
-    expect(scrollMetrics.doc).toBeLessThanOrEqual(scrollMetrics.viewport + 1);
+    expect(scrollMetrics.body).toBeGreaterThanOrEqual(scrollMetrics.viewport);
+    expect(scrollMetrics.doc).toBeGreaterThanOrEqual(scrollMetrics.viewport);
     await page.mouse.wheel(0, 900);
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await expect(page.getByText('Blockchain Proof Log')).toBeVisible();
   });
 
   test('keeps the reasoning trace visible on the first screen', async ({ page }) => {
@@ -68,10 +93,13 @@ test.describe('BNB cockpit layout', () => {
     await expect(page.getByText('Agent Reasoning')).toBeVisible();
     await expect(page.getByText('Decision summary')).toBeVisible();
     await expect(page.getByText(removedLoopPattern)).toHaveCount(0);
+    for (const pattern of removedCopyPatterns) {
+      await expect(page.getByText(pattern)).toHaveCount(0);
+    }
     await expect(page.getByText('Backend agent loop')).toBeVisible();
     await expect(page.getByRole('button')).toHaveCount(0);
     await expect(page.getByText('market', { exact: true })).toBeVisible();
     await expect(page.getByText('action', { exact: true })).toBeVisible();
-    await expect(page.getByText('agent_snapshot')).toBeVisible();
+    await expect(page.getByText('agent snapshot')).toBeVisible();
   });
 });
