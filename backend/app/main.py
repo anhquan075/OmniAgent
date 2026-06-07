@@ -1,15 +1,28 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.main import api_router
 from app.core.logging import configure_logging
 from app.core.settings import get_settings
+from app.services.agent.autonomous_loop import AutonomousLoopService
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    await AutonomousLoopService.start(app)
+    try:
+        yield
+    finally:
+        await AutonomousLoopService.stop(app)
 
 
 def create_app() -> FastAPI:
     configure_logging()
     settings = get_settings()
-    app = FastAPI(title="OmniAgent BNB FastAPI", version="0.1.0")
+    app = FastAPI(title="OmniAgent BNB FastAPI", version="0.1.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.origins,
@@ -27,6 +40,7 @@ def create_app() -> FastAPI:
             "service": "omniagent-fastapi",
             "network": "bsc",
             "tradingEnabled": settings.bnb_trading_enabled,
+            "autonomousLoopEnabled": settings.bnb_autonomous_loop_enabled,
         }
 
     return app
