@@ -159,9 +159,16 @@ The system ran a complete live cycle on BSC mainnet on June 7, 2026. Here's the 
 The competition registration was confirmed on-chain:
 
 ```
+wallet: 0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25
+contract: 0x212c61b9b72c95d95bf29cf032f5e5635629aed5
 tx: 0xc9e4e4ca69156d20da4f8b5f343ee1354dfac72c40363d8e6d32b51f712c3cf4
+block: 102615129
+status: success
 https://bscscan.com/tx/0xc9e4e4ca69156d20da4f8b5f343ee1354dfac72c40363d8e6d32b51f712c3cf4
 ```
+
+The receipt sender is the same TWAK/agent wallet, and the registration event emitted by the
+competition contract indexes that wallet address.
 
 The first TWAK-signed trade was confirmed at block 102780454:
 

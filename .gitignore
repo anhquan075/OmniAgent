@@ -95,3 +95,4 @@ serena/
 
 # Deprecated
 scripts/wdk/
+.claude/auto-context.md

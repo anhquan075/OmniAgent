@@ -258,6 +258,39 @@ def test_competition_register_already_registered_reports_missing_ledger_proof(mo
     get_settings.cache_clear()
 
 
+def test_competition_readiness_exposes_wallet_registration_proof(monkeypatch, tmp_path) -> None:
+    from app.services.agent.cockpit import AgentCockpitService
+
+    ledger_path = tmp_path / "ledger.jsonl"
+    seed_competition_registration(ledger_path)
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(ledger_path))
+    monkeypatch.setenv("ROBOT_FLEET_AGENT_WALLET", "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25")
+    get_settings.cache_clear()
+
+    result = AgentCockpitService.build_competition_readiness(
+        {"walletAddress": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"},
+        TradeLedger.get_ledger_summary(limit=10),
+        {"status": "ready"},
+        {"registered": True},
+    )
+
+    assert result["registered"] is True
+    assert result["registrationTxHash"] == "0x" + "c" * 64
+    assert result["registrationProof"] == {
+        "source": "trade-ledger",
+        "eventType": "competition_registered",
+        "txHash": "0x" + "c" * 64,
+        "explorerUrl": "https://bscscan.com/tx/" + "0x" + "c" * 64,
+        "walletAddress": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
+        "competitionContractAddress": "0x212c61b9b72c95d95bf29cf032f5e5635629aed5",
+        "chainId": 56,
+        "createdAt": result["registrationProof"]["createdAt"],
+        "recordedAt": None,
+        "receiptProof": None,
+    }
+    get_settings.cache_clear()
+
+
 def test_agent_sdk_status_reports_uv_installed_package() -> None:
     client = TestClient(app)
     csrf_token = client.get("/api/session").json()["csrfToken"]
