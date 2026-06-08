@@ -156,6 +156,7 @@ test.describe('BNB cockpit layout', () => {
     expect(summary?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(tradePlan?.y ?? 0);
     expect(summary?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(readiness?.y ?? 0);
     expect(tradePlan?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(readiness?.y ?? 0);
+    expect(readiness?.height ?? Number.POSITIVE_INFINITY).toBeLessThan(500);
     expect(readiness?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(reasoning?.y ?? 0);
     expect(readiness?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(chainLog?.y ?? 0);
 

@@ -2632,9 +2632,69 @@ body {
   .quant-side-stack,
   .quant-side-stack-reasoning,
   .quant-context-panel,
-  .robot-readiness-grid,
   .proof-check-grid {
     grid-template-columns: 1fr;
+  }
+
+  .quant-side-stack-readiness {
+    gap: 0.42rem;
+  }
+
+  .quant-side-stack-readiness > * {
+    padding: 0.5rem;
+  }
+
+  .quant-side-stack-readiness .robot-readiness-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.26rem;
+  }
+
+  .quant-side-stack-readiness .robot-readiness-panel,
+  .quant-side-stack-readiness .live-preflight-panel,
+  .quant-side-stack-readiness .recovery-panel {
+    gap: 0.34rem;
+  }
+
+  .quant-side-stack-readiness .robot-readiness-cell {
+    gap: 0.26rem;
+    padding: 0.32rem 0.38rem;
+  }
+
+  .quant-side-stack-readiness .robot-proof-link {
+    min-height: 1.55rem;
+  }
+
+  .quant-side-stack-readiness .preflight-summary {
+    grid-template-columns: minmax(4.1rem, 0.42fr) minmax(0, 1fr);
+  }
+
+  .quant-side-stack-readiness .preflight-chip-list {
+    min-height: 1.1rem;
+  }
+
+  .quant-side-stack-readiness .recovery-empty {
+    grid-template-columns: auto minmax(0, 1fr);
+    min-height: 3.35rem;
+    place-items: center start;
+    gap: 0.1rem 0.42rem;
+    padding: 0.48rem;
+    text-align: left;
+  }
+
+  .quant-side-stack-readiness .recovery-empty svg {
+    grid-row: 1 / span 2;
+  }
+
+  .quant-side-stack-readiness .recovery-empty strong,
+  .quant-side-stack-readiness .recovery-empty p {
+    margin: 0;
+  }
+
+  .quant-side-stack-readiness .recovery-empty p {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .quant-context-panel {
