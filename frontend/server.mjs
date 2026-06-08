@@ -4,9 +4,7 @@ import { extname, join, normalize, resolve } from "node:path";
 
 const port = Number(process.env.PORT || 4173);
 const distDir = resolve("dist");
-const backendUrl = normalizeBackendUrl(
-  process.env.BACKEND_INTERNAL_URL || process.env.BACKEND_URL || "http://127.0.0.1:8000",
-);
+const backendUrl = normalizeBackendUrl(process.env.BACKEND_INTERNAL_URL || process.env.BACKEND_URL || "");
 
 const mimeTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -36,7 +34,11 @@ const hopByHopHeaders = new Set([
 ]);
 
 function normalizeBackendUrl(value) {
-  return value.endsWith("/") ? value.slice(0, -1) : value;
+  if (!value) {
+    throw new Error("BACKEND_URL or BACKEND_INTERNAL_URL must be set for the frontend API proxy.");
+  }
+  const withScheme = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+  return withScheme.endsWith("/") ? withScheme.slice(0, -1) : withScheme;
 }
 
 function setSecurityHeaders(res) {
