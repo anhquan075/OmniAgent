@@ -159,12 +159,14 @@ class AgentCockpitService:
         competition_status: dict[str, object] | None = None,
     ) -> dict[str, object]:
         registered_event = CompetitionRegistrationService.stored_registration_proof(str(wallet.get("walletAddress") or ""))
+        registration_proof = AgentCockpitService.build_registration_proof_summary(registered_event)
         trade_count = ((ledger.get("dailyCompliance") or {}).get("tradeCount")) or 0
         return {
             "track": "Track 1 Autonomous Trading Agents",
             "contractAddress": wallet.get("competitionContractAddress"),
             "registered": bool(registered_event),
             "registrationTxHash": (registered_event or {}).get("txHash") if isinstance(registered_event, dict) else None,
+            "registrationProof": registration_proof,
             "registrationStatus": competition_status,
             "minimumTrades": 7,
             "tradeCount": trade_count,
@@ -173,6 +175,26 @@ class AgentCockpitService:
             "inScopeAssetCheck": capital.get("status"),
             "capital": capital,
             "registrationActions": ["twak compete register", "competition_register"],
+        }
+
+    @staticmethod
+    def build_registration_proof_summary(event: dict[str, object] | None) -> dict[str, object] | None:
+        if not isinstance(event, dict):
+            return None
+        payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+        tx_hash = str(event.get("txHash") or payload.get("txHash") or "")
+        explorer_url = payload.get("explorerUrl")
+        return {
+            "source": "trade-ledger",
+            "eventType": event.get("eventType"),
+            "txHash": tx_hash,
+            "explorerUrl": explorer_url or f"https://bscscan.com/tx/{tx_hash}",
+            "walletAddress": payload.get("walletAddress"),
+            "competitionContractAddress": payload.get("competitionContractAddress"),
+            "chainId": payload.get("chainId"),
+            "createdAt": event.get("createdAt"),
+            "recordedAt": payload.get("timestamp"),
+            "receiptProof": payload.get("receiptProof"),
         }
 
     @staticmethod

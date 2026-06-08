@@ -2,7 +2,7 @@
 
 OmniAgent is a BSC mainnet autonomous trading agent built for [BNB Hack Track 1: Autonomous Trading Agents](https://dorahacks.io/hackathon/bnbhack-twt-cmc/detail). It reads live market signals from the CoinMarketCap Agent Hub, runs them through a deterministic strategy reinforced by an optional LLM advisor, and executes guarded swaps on PancakeSwap V2 through the Trust Wallet Agent Kit — all without human intervention. The goal wasn't to build the most profitable bot. It was to build one that could be trusted to run unsupervised, produce verifiable evidence of every decision, and fail safely when something goes wrong. See [docs/problem-and-approach.md](docs/problem-and-approach.md) for the full reasoning behind the design.
 
-**Live proof**: competition registration tx [`0xc9e4e4...`](https://bscscan.com/tx/0xc9e4e4ca69156d20da4f8b5f343ee1354dfac72c40363d8e6d32b51f712c3cf4), first TWAK-signed trade tx [`0x6a1ab4...`](https://bscscan.com/tx/0x6a1ab4dd0275f0e51756bdb6b18c7805b0e022a95c8c8f70707b09cf839063f9) (block 102780454, `proof.valid=true`).
+**Live proof**: wallet `0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25` registered with the BNB Hack contract in tx [`0xc9e4e4...`](https://bscscan.com/tx/0xc9e4e4ca69156d20da4f8b5f343ee1354dfac72c40363d8e6d32b51f712c3cf4) (block 102615129), then submitted the first TWAK-signed trade tx [`0x6a1ab4...`](https://bscscan.com/tx/0x6a1ab4dd0275f0e51756bdb6b18c7805b0e022a95c8c8f70707b09cf839063f9) (block 102780454, `proof.valid=true`).
 
 > **Live trading is disabled by default.** Set `BNB_TRADING_ENABLED=true` to enable real BSC transactions (`settings.py:53`).
 

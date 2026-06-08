@@ -177,9 +177,23 @@ The system ran a complete live cycle on BSC mainnet on June 7, 2026. Agent walle
 **Competition registration** — confirmed on-chain:
 
 ```
-tx:  0xc9e4e4ca69156d20da4f8b5f343ee1354dfac72c40363d8e6d32b51f712c3cf4
-url: https://bscscan.com/tx/0xc9e4e4ca69156d20da4f8b5f343ee1354dfac72c40363d8e6d32b51f712c3cf4
+wallet:    0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25
+contract:  0x212c61b9b72c95d95bf29cf032f5e5635629aed5
+tx:        0xc9e4e4ca69156d20da4f8b5f343ee1354dfac72c40363d8e6d32b51f712c3cf4
+block:     102615129
+timestamp: 2026-06-06T08:21:55Z
+status:    success
+event:     0x2d3734a8e47ac8316e500ac231c90a6e1848ca2285f40d07eaa52005e4b3a0e9
+url:       https://bscscan.com/tx/0xc9e4e4ca69156d20da4f8b5f343ee1354dfac72c40363d8e6d32b51f712c3cf4
 ```
+
+The BSC receipt shows `from=0x047fccc4b2c0058ecfcf331ca7590f227886fd25`,
+`to=0x212c61b9b72c95d95bf29cf032f5e5635629aed5`, `status=0x1`, and an event
+log emitted by the competition contract with the wallet address indexed in topic 1. The same
+transaction is stored in `backend/data/trade-ledger.jsonl` as a `competition_registered` event,
+so the backend preflight and frontend cockpit can prove the actual TWAK wallet is registered.
+The tracked machine-readable proof is
+[`proofs/bnb-hack-wallet-registration-proof.json`](../proofs/bnb-hack-wallet-registration-proof.json).
 
 **First TWAK-signed trade** — confirmed at block 102780454:
 
