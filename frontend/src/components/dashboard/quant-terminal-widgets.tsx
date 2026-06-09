@@ -20,7 +20,7 @@ export function QuantTerminalHeader({ state, mode, liveExecution, offline }: { s
   const hasLivePrice = Number.isFinite(Number(bnb.priceUsd)) && Number(bnb.priceUsd) > 0;
   const priceLabel = offline ? "offline" : price(bnb.priceUsd);
   const moveLabel = offline ? "no feed" : pct(bnb.percentChange24h);
-  const regimeLabel = offline ? "read-only" : strategy?.action === "hold" ? "risk managed" : "signal aligned";
+  const regimeLabel = offline ? "reconnecting" : strategy?.action === "hold" ? "risk managed" : "signal aligned";
   const feedLabel = offline ? "offline" : hasLivePrice ? "market live" : "market sync";
 
   return (
@@ -59,6 +59,7 @@ export function DecisionContextPanel({ state, offline, loopStatusLabel, liveExec
   const decision = state.cycle?.strategyDecision?.decision ?? {};
   const proof = state.liveProofBundle ?? {};
   const signer = state[["twa", "kStatus"].join("")] ?? {};
+  const loopDryRun = state.backendHealth?.autonomousLoop?.execute === false;
   const hasDecision = Boolean(decision.action);
   const marketReady = Boolean(state.prices?.configured);
   const policyReady = Boolean(state.livePreflight?.readyForLiveTrade ?? state.policyStatus?.approved);
@@ -72,10 +73,12 @@ export function DecisionContextPanel({ state, offline, loopStatusLabel, liveExec
   const rationale = offline
     ? "The backend session is offline, so market data, wallet checks, and proof checks are treated as unavailable."
     : "The agent is live and continuously checks market, wallet, policy, and proof evidence before suggesting action.";
-  const loopCopy = liveExecution
-    ? "Live execution is gated by proof and signer readiness."
+  const loopCopy = loopDryRun
+    ? "Loop is active in dry-run mode; on-chain execution is not enabled."
+    : liveExecution
+      ? "Live execution is gated by proof and signer readiness."
     : offline
-      ? "Read-only while the backend session is offline; no action can be sent from this view."
+      ? "Reconnecting to the backend session; no action can be sent from this view."
       : "Execution remains controlled by backend policy.";
 
   return (

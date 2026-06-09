@@ -108,7 +108,11 @@ export function BnbTradingAgentDashboard() {
   const signalConfidenceLabel = state.cycle?.strategyDecision?.decision?.confidence ? `${Math.round(state.cycle.strategyDecision.decision.confidence * 100)}%` : offline ? 'offline' : 'scanning';
   const strategySourceLabel = offline ? 'offline' : state.cycle?.strategyDecision?.source === 'openrouter' ? 'model' : state.cycle?.strategyDecision?.source ? 'policy' : agentLoopEnabled ? 'policy' : 'scanning';
   const dataCoverageLabel = state.prices?.configured ? '100%' : offline ? 'offline' : 'syncing';
-  const loopStatusLabel = offline ? 'read-only' : agentLoopEnabled ? asText(autonomousLoop.phase, 'monitoring') : asText(autonomousLoop.state, 'active');
+  const loopStatusLabel = offline
+    ? 'reconnecting'
+    : agentLoopEnabled && autonomousLoop.execute === false
+      ? asText(autonomousLoop.mode, 'dry_run').replace(/_/g, ' ')
+      : agentLoopEnabled ? asText(autonomousLoop.phase, 'monitoring') : asText(autonomousLoop.state, 'active');
   const readinessCopy = liveExecution
     ? 'Ready for a backend-controlled trade when policy allows it.'
     : 'Agent loop is live 24/7 and continuously monitors market, wallet, proof, and policy gates.';
@@ -147,7 +151,7 @@ export function BnbTradingAgentDashboard() {
                 <p>Live market, wallet, and proof checks stay guarded until the backend session recovers.</p>
                 <div className="quant-offline-meta" aria-label="Offline details">
                   <span><small>Cause</small><b>{error}</b></span>
-                  <span><small>Mode</small><b>read-only</b></span>
+                  <span><small>Mode</small><b>reconnect</b></span>
                   <span><small>Refresh</small><b>{Math.round(AUTO_REFRESH_MS / 1000)}s</b></span>
                 </div>
               </div>
