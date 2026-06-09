@@ -3838,7 +3838,11 @@ body:has(.robot-cockpit.quant-terminal) {
   .quant-side-stack-reasoning,
   .quant-context-panel,
   .proof-check-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quant-context-panel {
+    grid-template-columns: minmax(0, 1fr) minmax(7.4rem, 0.46fr);
   }
 
   .quant-side-stack-readiness {
@@ -3958,14 +3962,14 @@ body:has(.robot-cockpit.quant-terminal) {
     width: 0.9rem;
   }
 
-  .quant-context-checks,
-  .quant-context-loop {
+  .quant-context-checks {
     display: none;
   }
 
   .quant-context-loop {
     grid-column: auto;
     gap: 0.24rem;
+    min-height: 0;
     padding: 0.48rem;
   }
 
@@ -3974,7 +3978,7 @@ body:has(.robot-cockpit.quant-terminal) {
   }
 
   .quant-context-loop p {
-    display: -webkit-box;
+    display: none;
     overflow: hidden;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
@@ -4263,7 +4267,6 @@ body:has(.robot-cockpit.quant-terminal) {
   .quant-context-lead h2,
   .quant-context-lead p,
   .quant-context-checks,
-  .quant-context-loop,
   .quant-workrail .proof-check-grid,
   .quant-workrail .proof-score-note,
   .quant-side-stack-readiness,
@@ -4337,8 +4340,8 @@ body:has(.robot-cockpit.quant-terminal) {
   }
 
   .quant-context-panel {
-    grid-template-columns: 1fr;
-    gap: 0;
+    grid-template-columns: minmax(0, 1fr) minmax(7rem, 0.36fr);
+    gap: 0.24rem;
     height: 100%;
     min-height: 0;
     overflow: hidden !important;
@@ -4360,6 +4363,23 @@ body:has(.robot-cockpit.quant-terminal) {
   .quant-context-bars .quant-mini-bar {
     min-height: 1.38rem;
     padding: 0.16rem 0.24rem;
+  }
+
+  .quant-context-loop {
+    display: grid !important;
+    align-content: center;
+    gap: 0.1rem;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0.28rem 0.34rem;
+  }
+
+  .quant-context-loop strong {
+    font-size: 0.76rem;
+  }
+
+  .quant-context-loop p {
+    display: none;
   }
 
   .loop-proof-rail {
