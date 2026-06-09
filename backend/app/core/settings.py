@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     mcp_allowed_tools: str = (
         "bnb_agent_cockpit_snapshot,bnb_get_wallet,bnb_trust_wallet_status,bnb_agent_sdk_status,"
         "bnb_agent_sdk_register_identity,"
+        "bnb_agent_runtime_snapshot,bnb_ledger_memory,bnb_strategy_research,bnb_backtest_report,"
         "bnb_paid_resource_status,bnb_record_paid_signal_access,"
         "cmc_agent_hub_status,cmc_agent_hub_recommend_signal_tools,cmc_agent_hub_call_tool,"
         "cmc_skill_hub_status,cmc_skill_hub_find_skill,cmc_skill_hub_execute_skill,cmc_daily_market_overview,"

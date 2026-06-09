@@ -4,9 +4,12 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AgentReasoningPanel from './agent-reasoning-panel';
+import BacktestRiskReportPanel from './backtest-risk-report-panel';
+import BnbAgentRuntimePanel from './bnb-agent-runtime-panel';
 import ChainTxLog from './chain-tx-log';
 import CompetitionReadinessStrip from './competition-readiness-strip';
 import ExecutedTradeHistory from './executed-trade-history';
+import LedgerMemoryPanel from './ledger-memory-panel';
 import LivePreflightPanel from './live-preflight-panel';
 import LoopProofRail from './loop-proof-rail';
 import RecoveryCandidatePanel from './recovery-candidate-panel';
@@ -103,7 +106,8 @@ export function BnbTradingAgentDashboard() {
   const walletAddress = wallet.walletAddress ? String(wallet.walletAddress) : '';
   const pnl = registrationPnlView(state.ledger);
   const walletLabel = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : offline ? 'offline' : 'syncing';
-  const proofLabel = proofScore?.score !== undefined && proofScore?.total !== undefined ? `${proofScore.score}/${proofScore.total}` : offline ? 'offline' : 'checking';
+  const proofTotal = proofScore?.total ?? proofScore?.maxScore;
+  const proofLabel = proofScore?.score !== undefined && proofTotal !== undefined ? `${proofScore.score}/${proofTotal}` : offline ? 'offline' : 'checking';
   const marketLabel = state.prices?.configured ? 'online' : offline ? 'offline' : 'syncing';
   const signalConfidenceLabel = state.cycle?.strategyDecision?.decision?.confidence ? `${Math.round(state.cycle.strategyDecision.decision.confidence * 100)}%` : offline ? 'offline' : 'scanning';
   const strategySourceLabel = offline ? 'offline' : state.cycle?.strategyDecision?.source === 'openrouter' ? 'model' : state.cycle?.strategyDecision?.source ? 'policy' : agentLoopEnabled ? 'policy' : 'scanning';
@@ -161,6 +165,8 @@ export function BnbTradingAgentDashboard() {
       </div>
       <div className="quant-main-grid">
         <DecisionContextPanel state={state} offline={offline} loopStatusLabel={loopStatusLabel} liveExecution={liveExecution} />
+        <BnbAgentRuntimePanel runtime={state.bnbAgentRuntime} />
+        <BacktestRiskReportPanel report={state.backtestRiskReport} />
       </div>
       <LoopProofRail state={state} offline={offline} />
       <div className="quant-bottom-grid">
@@ -172,6 +178,7 @@ export function BnbTradingAgentDashboard() {
           </div>
           <TradeProofScorePanel score={proofScore} />
           <TradeProofTimeline workOrders={workOrders} recovery={recovery} ledgerEvents={ledgerEvents} running={loading || agentLoopEnabled} />
+          <LedgerMemoryPanel memory={state.ledgerMemory} />
         </section>
         <div className="quant-side-stack quant-side-stack-readiness">
           <CompetitionReadinessStrip state={state} />
