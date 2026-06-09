@@ -1,5 +1,8 @@
+import json
+
 import pytest
 
+from app.core.logging import configure_logging
 from app.core.settings import get_settings
 from app.services.agent.autonomous_loop import AutonomousLoopService
 
@@ -51,4 +54,35 @@ async def test_autonomous_loop_run_once_invokes_agent(monkeypatch) -> None:
     assert result["tradeIntentId"] == "intent-auto"
     assert calls[0]["symbol"] == "CAKE"
     assert calls[0]["execute"] is False
+    get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_autonomous_loop_run_once_logs_json_schedule(monkeypatch, capsys) -> None:
+    tx_hash = "0x" + "1" * 64
+
+    async def fake_cycle(args: dict[str, object]) -> dict[str, object]:
+        return {
+            "tradeIntentId": "intent-auto",
+            "status": "submitted",
+            "mode": "execute",
+            "execution": {"txHash": tx_hash},
+        }
+
+    monkeypatch.setattr(
+        "app.services.agent.autonomous_loop.AutonomousTradingAgent.run_autonomous_cycle",
+        fake_cycle,
+    )
+    monkeypatch.setenv("OMNIAGENT_LOG_JSON", "true")
+    monkeypatch.setenv("BNB_AUTONOMOUS_LOOP_EXECUTE", "true")
+    get_settings.cache_clear()
+    configure_logging()
+
+    await AutonomousLoopService.run_once(get_settings(), cycle_started_at="2026-06-09T00:00:00+00:00")
+
+    records = [json.loads(line)["record"] for line in capsys.readouterr().err.splitlines() if line.strip()]
+    events = {record["extra"].get("event"): record for record in records}
+    assert events["autonomous_loop_cycle_started"]["extra"]["execute"] is True
+    assert events["autonomous_loop_cycle_completed"]["extra"]["tradeIntentId"] == "intent-auto"
+    assert events["autonomous_loop_cycle_completed"]["extra"]["txHash"] == tx_hash
     get_settings.cache_clear()

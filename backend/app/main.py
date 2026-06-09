@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.main import api_router
 from app.core.logging import configure_logging
+from app.core.security_middleware import RequestSecurityMiddleware
 from app.core.settings import get_settings
 from app.services.agent.autonomous_loop import AutonomousLoopService
 
@@ -30,6 +31,7 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["Content-Type", "X-CSRF-Token"],
     )
+    app.add_middleware(RequestSecurityMiddleware)
     app.include_router(api_router, prefix="/api")
 
     @app.get("/health")
@@ -41,6 +43,7 @@ def create_app() -> FastAPI:
             "network": "bsc",
             "tradingEnabled": settings.bnb_trading_enabled,
             "autonomousLoopEnabled": settings.bnb_autonomous_loop_enabled,
+            "autonomousLoop": AutonomousLoopService.get_status(app),
         }
 
     return app

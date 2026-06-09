@@ -991,6 +991,8 @@ Full settings hierarchy from `backend/app/core/settings.py`:
 | Group | Key | Default | Purpose |
 |---|---|---|---|
 | **Server** | `PORT` | 8000 | FastAPI listen port |
+| | `OMNIAGENT_LOG_JSON` | true | Emit Loguru logs as JSON lines |
+| | `OMNIAGENT_LOG_LEVEL` | INFO | Backend log level |
 | **Trading** | `bnb_trading_enabled` | false | Master kill switch |
 | | `allow_agent_run` | false | Secondary gate |
 | | `bnb_max_trade_usd` | 25.0 | Per-trade cap |
@@ -1005,6 +1007,7 @@ Full settings hierarchy from `backend/app/core/settings.py`:
 | **Loop** | `bnb_autonomous_loop_enabled` | false | Enable autonomous loop |
 | | `bnb_autonomous_loop_execute` | false | Live execution in loop |
 | | `bnb_autonomous_loop_interval_sec` | 300 | Cycle interval (5 min) |
+| | `bnb_autonomous_loop_initial_delay_sec` | 5 | Delay before the first automatic cycle after startup |
 | | `bnb_autonomous_loop_symbol` | CAKE | Default trading symbol |
 | **Chain** | `bnb_chain_id` | 56 | BSC mainnet |
 | | `bnb_rpc_url` | bsc-dataseed.bnbchain.org | RPC endpoint |

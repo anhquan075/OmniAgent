@@ -22,6 +22,15 @@ class Settings(BaseSettings):
     port: int = Field(default=8000, alias="PORT")
     api_session_secret: str = Field(default="local-development-session-secret-change-me")
     api_session_ttl_ms: int = 1_800_000
+    api_security_enabled: bool = True
+    api_security_headers_enabled: bool = True
+    api_rate_limit_enabled: bool = True
+    api_rate_limit_requests: int = 600
+    api_mcp_rate_limit_requests: int = 240
+    api_session_rate_limit_requests: int = 180
+    api_rate_limit_window_sec: int = 60
+    api_max_body_bytes: int = 1_048_576
+    api_trusted_hosts: str = "localhost,127.0.0.1,testserver"
     allowed_frontend_origins: str = (
         "http://localhost:5173,http://127.0.0.1:5173,"
         "http://localhost:3000,http://127.0.0.1:3000"
@@ -104,6 +113,10 @@ class Settings(BaseSettings):
     @property
     def origins(self) -> list[str]:
         return [item.strip() for item in self.allowed_frontend_origins.split(",") if item.strip()]
+
+    @property
+    def trusted_hosts(self) -> set[str]:
+        return {item.strip().lower() for item in self.api_trusted_hosts.split(",") if item.strip()}
 
     @property
     def allowed_tools(self) -> set[str]:
