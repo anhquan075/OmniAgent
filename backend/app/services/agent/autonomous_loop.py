@@ -8,6 +8,7 @@ from app.core.logging import get_logger
 from app.core.settings import Settings
 from app.core.settings import get_settings
 from app.services.agent.autonomous_cycle import AutonomousTradingAgent
+from app.services.agent.autonomous_cycle_summary import AutonomousCycleSummary
 
 logger = get_logger(__name__)
 
@@ -15,6 +16,7 @@ logger = get_logger(__name__)
 class AutonomousLoopService:
     task_state_key = "bnb_autonomous_loop_task"
     status_state_key = "bnb_autonomous_loop_status"
+    latest_cycle_state_key = "bnb_autonomous_loop_latest_cycle"
 
     @classmethod
     async def start(cls, app: FastAPI) -> None:
@@ -82,6 +84,7 @@ class AutonomousLoopService:
                 logger.exception("autonomous_loop_cycle_failed", **status)
             else:
                 next_run_at = cls.iso_after(interval)
+                cls.set_latest_cycle(app, AutonomousCycleSummary.from_result(result))
                 status = cls.status_payload(
                     settings,
                     state="active",
@@ -156,6 +159,16 @@ class AutonomousLoopService:
     def set_status(app: FastAPI | None, status: dict[str, object]) -> None:
         if app is not None:
             setattr(app.state, AutonomousLoopService.status_state_key, status)
+
+    @staticmethod
+    def set_latest_cycle(app: FastAPI | None, cycle: dict[str, object]) -> None:
+        if app is not None:
+            setattr(app.state, AutonomousLoopService.latest_cycle_state_key, cycle)
+
+    @staticmethod
+    def get_latest_cycle(app: FastAPI) -> dict[str, object]:
+        cycle = getattr(app.state, AutonomousLoopService.latest_cycle_state_key, None)
+        return cycle if isinstance(cycle, dict) else {}
 
     @staticmethod
     def get_status(app: FastAPI) -> dict[str, object]:

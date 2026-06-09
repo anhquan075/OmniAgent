@@ -4,6 +4,7 @@ import pytest
 
 from app.core.logging import configure_logging
 from app.core.settings import get_settings
+from app.services.agent.autonomous_cycle_summary import AutonomousCycleSummary
 from app.services.agent.autonomous_loop import AutonomousLoopService
 
 
@@ -27,6 +28,24 @@ def test_autonomous_loop_payload_uses_settings(monkeypatch) -> None:
         "recordLedger": True,
     }
     get_settings.cache_clear()
+
+
+def test_autonomous_cycle_summary_keeps_strategy_for_dashboard() -> None:
+    summary = AutonomousCycleSummary.from_result({
+        "tradeIntentId": "intent-auto",
+        "status": "ready",
+        "mode": "dry_run",
+        "symbol": "CAKE",
+        "side": "buy",
+        "strategyDecision": {"source": "deterministic", "decision": {"action": "buy", "confidence": 0.71}},
+        "risk": {"approved": True},
+        "stages": [{"stage": "strategy", "state": "approved"}],
+        "ignoredLargeField": {"raw": "not exposed"},
+    })
+
+    assert summary["tradeIntentId"] == "intent-auto"
+    assert summary["strategyDecision"] == {"source": "deterministic", "decision": {"action": "buy", "confidence": 0.71}}
+    assert "ignoredLargeField" not in summary
 
 
 @pytest.mark.asyncio

@@ -28,7 +28,9 @@ async def dashboard_snapshot(request: Request, limit: int = 10) -> dict[str, obj
         raise HTTPException(status_code=503, detail=f"Dashboard snapshot unavailable: {cockpit}")
 
     settings = get_settings()
+    autonomous_loop = AutonomousLoopService.get_status(request.app)
     snapshot = dict(cockpit)
+    snapshot["cycle"] = AutonomousLoopService.get_latest_cycle(request.app)
     snapshot["livePreflight"] = (
         unavailable("preflight", preflight) if isinstance(preflight, Exception) else preflight
     )
@@ -41,7 +43,7 @@ async def dashboard_snapshot(request: Request, limit: int = 10) -> dict[str, obj
         "network": "bsc",
         "tradingEnabled": settings.bnb_trading_enabled,
         "autonomousLoopEnabled": settings.bnb_autonomous_loop_enabled,
-        "autonomousLoop": AutonomousLoopService.get_status(request.app),
+        "autonomousLoop": autonomous_loop,
     }
     return snapshot
 
