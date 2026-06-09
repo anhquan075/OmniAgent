@@ -1931,10 +1931,12 @@ body:has(.robot-cockpit.quant-terminal) {
 }
 
 .quant-workrail {
+  align-self: start;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
   gap: 0.46rem;
+  max-height: 100%;
   padding: 0;
 }
 
@@ -1948,7 +1950,7 @@ body:has(.robot-cockpit.quant-terminal) {
 
 .quant-workrail > .trade-plan-panel {
   min-height: 0;
-  overflow: auto;
+  overflow: visible;
   padding: 0 0.65rem 0.65rem;
 }
 
@@ -4424,6 +4426,10 @@ body:has(.robot-cockpit.quant-terminal) {
 }
 
 @media (max-width: 720px) {
+  .quant-workrail {
+    overflow-y: auto !important;
+  }
+
   .quant-workrail > .trade-plan-panel {
     padding: 0 0.48rem 0.48rem;
   }
@@ -4457,6 +4463,7 @@ body:has(.robot-cockpit.quant-terminal) {
   .quant-workrail {
     grid-template-columns: minmax(0, 1fr) !important;
     grid-template-rows: auto auto auto !important;
+    overflow-y: auto !important;
   }
 
   .quant-workrail > .trade-plan-panel {
