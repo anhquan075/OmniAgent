@@ -1,4 +1,5 @@
-import { BadgeCheckIcon, BoxesIcon, KeyRoundIcon, ShieldCheckIcon } from "lucide-react";
+import { BadgeCheckIcon, KeyRoundIcon, ShieldCheckIcon } from "lucide-react";
+import BrandMark from "./brand-mark";
 
 type Payload = Record<string, any>;
 
@@ -13,18 +14,24 @@ const short = (value: unknown) => {
 
 export function BnbAgentRuntimePanel({ runtime }: { runtime?: Payload }) {
   const sdk = runtime?.sdkStatus ?? {};
+  const sdkRuntime = runtime?.sdkRuntime ?? {};
   const profile = runtime?.agentProfile ?? {};
   const registration = runtime?.identityRegistration ?? {};
   const capabilities = Array.isArray(profile.capabilities) ? profile.capabilities : [];
+  const initializedModules = Array.isArray(sdkRuntime.modulesInitialized) ? sdkRuntime.modulesInitialized : [];
+  const moduleText = initializedModules.length ? initializedModules.join("+") : "syncing";
+  const facadeLive = Boolean(sdkRuntime.facadeInitialized);
   const ready = Boolean(sdk.ready);
 
   return (
     <section className={`runtime-card bnb-runtime-panel ${ready ? "is-ready" : "is-guarded"}`} aria-label="BNB Agent runtime">
       <div className="runtime-card-head">
-        <span><BoxesIcon className="h-4 w-4" /> BNB Agent Runtime</span>
-        <b>{ready ? "SDK ready" : "SDK guarded"}</b>
+        <span><BrandMark kind="bnb" /> BNB Agent Runtime</span>
+        <b>{facadeLive ? "Core live" : ready ? "SDK ready" : "SDK guarded"}</b>
       </div>
       <div className="runtime-split">
+        <RuntimeStat label="Facade" value={text(sdkRuntime.facade, "BNBAgent")} good={facadeLive} />
+        <RuntimeStat label="Modules" value={moduleText} good={initializedModules.includes("erc8004")} />
         <RuntimeStat label="SDK role" value={text(runtime?.sdkRole, "runtime_core")} />
         <RuntimeStat label="Executor" value={text(runtime?.executor, "twak")} good />
         <RuntimeStat label="SDK trades" value={runtime?.sdkExecutesTrades === false ? "no" : "guarded"} />
@@ -38,7 +45,7 @@ export function BnbAgentRuntimePanel({ runtime }: { runtime?: Payload }) {
         <p>{text(profile.agentUriPreview, "Agent URI is generated when SDK profile inputs are ready.")}</p>
       </div>
       <div className="runtime-capability-list">
-        {capabilities.slice(0, 4).map((item: Payload) => (
+        {capabilities.slice(0, 6).map((item: Payload) => (
           <span key={text(item.name)} className={item.ready ? "is-ready" : ""}>
             <ShieldCheckIcon className="h-3.5 w-3.5" />
             {text(item.name).replace(/_/g, " ")}
@@ -47,7 +54,11 @@ export function BnbAgentRuntimePanel({ runtime }: { runtime?: Payload }) {
       </div>
       <p className="runtime-note">
         <BadgeCheckIcon className="h-3.5 w-3.5" />
-        {registration.ready ? "Identity registration is operator-gated and ready." : text(registration.reason, "TWAK signs trades; SDK stays runtime-only.")}
+        {facadeLive
+          ? "Official BNBAgent facade is the runtime core; TWAK remains the on-chain executor."
+          : registration.ready
+            ? "Identity registration is operator-gated and ready."
+            : text(registration.reason, "TWAK signs trades; SDK stays runtime-only.")}
       </p>
     </section>
   );

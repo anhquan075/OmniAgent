@@ -1093,6 +1093,33 @@ body:has(.robot-cockpit.quant-terminal) {
   transition: filter 240ms ease, opacity 240ms ease;
 }
 
+.brand-mark {
+  display: inline-grid;
+  flex: 0 0 auto;
+  height: 1.15rem;
+  width: 1.15rem;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 0.3rem;
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(240, 185, 11, 0.92);
+}
+
+.brand-mark svg {
+  height: 0.82rem;
+  width: 0.82rem;
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.brand-mark-cmc {
+  color: rgba(76, 219, 205, 0.95);
+}
+
+.brand-mark-trust {
+  color: rgba(91, 140, 255, 0.96);
+}
+
 .robot-cockpit.quant-terminal {
   display: grid !important;
   grid-template-rows: minmax(2.8rem, auto) minmax(9rem, max-content) minmax(7rem, 0.78fr) minmax(3rem, auto) minmax(0, 1.56fr);
@@ -1434,7 +1461,7 @@ body:has(.robot-cockpit.quant-terminal) {
 .loop-proof-step {
   position: relative;
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.42rem;
   min-height: 3.05rem;
@@ -1444,6 +1471,24 @@ body:has(.robot-cockpit.quant-terminal) {
   background: rgba(255, 255, 255, 0.046);
   padding: 0.42rem 0.5rem;
   transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.loop-proof-link {
+  display: inline-grid;
+  height: 1.35rem;
+  width: 1.35rem;
+  place-items: center;
+  border: 1px solid rgba(240, 185, 11, 0.18);
+  border-radius: 0.24rem;
+  background: rgba(0, 0, 0, 0.18);
+  color: rgba(240, 185, 11, 0.86);
+}
+
+.loop-proof-link:hover,
+.loop-proof-link:focus-visible {
+  border-color: rgba(240, 185, 11, 0.38);
+  color: rgba(254, 240, 138, 0.96);
+  outline: none;
 }
 
 .loop-proof-step:hover {
@@ -1500,6 +1545,16 @@ body:has(.robot-cockpit.quant-terminal) {
 .loop-proof-step.is-chain.is-ready .loop-proof-icon {
   border-color: rgba(240, 185, 11, 0.32);
   color: rgba(240, 185, 11, 0.98);
+}
+
+.loop-proof-icon .brand-mark,
+.loop-proof-title .brand-mark {
+  border: 0;
+  background: transparent;
+}
+
+.loop-proof-step:not(.is-ready) .loop-proof-icon .brand-mark {
+  color: rgba(255, 255, 255, 0.42);
 }
 
 .loop-proof-step p {
@@ -1585,7 +1640,7 @@ body:has(.robot-cockpit.quant-terminal) {
   display: grid;
   flex: 0 0 auto;
   min-height: 0;
-  grid-template-columns: minmax(360px, 1.12fr) minmax(240px, 0.48fr) minmax(260px, 0.54fr);
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.48fr) minmax(0, 0.54fr);
   gap: 0.5rem;
   overflow: hidden;
 }
@@ -1782,7 +1837,7 @@ body:has(.robot-cockpit.quant-terminal) {
 
 .quant-context-panel {
   display: grid;
-  grid-template-columns: minmax(280px, 0.9fr) minmax(280px, 0.86fr) minmax(220px, 0.62fr);
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.86fr) minmax(0, 0.62fr);
   gap: 0.7rem;
   min-height: clamp(9rem, 16vh, 12rem);
   padding: 0.62rem 0.72rem;
@@ -1823,6 +1878,8 @@ body:has(.robot-cockpit.quant-terminal) {
   display: grid;
   align-content: center;
   gap: 0.46rem;
+  min-width: 0;
+  overflow: hidden;
   border: 1px solid rgba(76, 219, 205, 0.12);
   border-radius: 0.38rem;
   background:
@@ -1839,11 +1896,15 @@ body:has(.robot-cockpit.quant-terminal) {
 }
 
 .quant-context-loop strong {
+  min-width: 0;
+  overflow: hidden;
   color: rgba(255, 255, 255, 0.92);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 1rem;
   line-height: 1.1;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .quant-context-loop p {
@@ -1932,10 +1993,10 @@ body:has(.robot-cockpit.quant-terminal) {
 }
 
 .quant-workrail {
-  align-self: start;
+  align-self: stretch;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto auto minmax(6.5rem, 0.42fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 0.46rem;
   max-height: 100%;
   padding: 0;
@@ -2327,8 +2388,8 @@ body:has(.robot-cockpit.quant-terminal) {
   }
 
   .quant-side-stack-reasoning .reasoning-tools-block > div {
-    flex-wrap: nowrap;
-    overflow: hidden;
+    flex-wrap: wrap;
+    overflow: visible;
   }
 
   .quant-side-stack-reasoning .reasoning-tool-chip {
@@ -2347,7 +2408,7 @@ body:has(.robot-cockpit.quant-terminal) {
 
 @media (min-width: 1181px) {
   .quant-side-stack-reasoning {
-    grid-template-rows: minmax(15.5rem, 0.78fr) minmax(21rem, 1.22fr);
+    grid-template-rows: minmax(19rem, 0.98fr) minmax(20rem, 1.02fr);
   }
 
   .quant-side-stack-reasoning .agent-reasoning-panel {
@@ -2433,7 +2494,7 @@ body:has(.robot-cockpit.quant-terminal) {
   }
 
   .quant-side-stack-reasoning {
-    grid-template-rows: minmax(16rem, 0.82fr) minmax(23rem, 1.18fr);
+    grid-template-rows: minmax(19rem, 0.98fr) minmax(20rem, 1.02fr);
   }
 
   .quant-execution-stack {
@@ -2778,6 +2839,11 @@ body:has(.robot-cockpit.quant-terminal) {
 }
 
 .ledger-memory-panel {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  align-content: stretch;
+  min-height: 0;
+  height: 100%;
   margin: 0 0.65rem 0.65rem;
   border-color: rgba(77, 219, 190, 0.14);
 }
@@ -2817,12 +2883,19 @@ body:has(.robot-cockpit.quant-terminal) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.36rem;
+  min-height: 0;
+}
+
+.memory-columns.is-guarded {
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
 }
 
 .memory-list {
   display: grid;
+  align-content: start;
   gap: 0.24rem;
   min-width: 0;
+  min-height: 0;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 0.34rem;
   background: rgba(255, 255, 255, 0.026);
@@ -2860,16 +2933,28 @@ body:has(.robot-cockpit.quant-terminal) {
   color: rgba(253, 230, 138, 0.78);
 }
 
+.memory-list.is-neutral span {
+  color: rgba(255, 255, 255, 0.58);
+}
+
 .memory-episodes {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 0.28rem;
   min-width: 0;
+  min-height: 0;
 }
 
 .memory-episodes > div {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
   gap: 0.28rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.1rem;
+  scrollbar-color: rgba(77, 219, 190, 0.32) transparent;
+  scrollbar-width: thin;
 }
 
 .memory-episodes span {
@@ -2919,13 +3004,21 @@ body:has(.robot-cockpit.quant-terminal) {
   display: grid;
   gap: 0.18rem;
   min-width: 0;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 0.34rem;
   background: rgba(255, 255, 255, 0.028);
   padding: 0.38rem 0.42rem;
 }
 
-.reasoning-advisory-card div {
+.reasoning-advisory-card summary {
+  display: grid;
+  gap: 0.28rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.reasoning-advisory-card summary > div {
   display: flex;
   min-width: 0;
   align-items: center;
@@ -2933,9 +3026,9 @@ body:has(.robot-cockpit.quant-terminal) {
   gap: 0.36rem;
 }
 
-.reasoning-advisory-card span,
-.reasoning-advisory-card b,
-.reasoning-advisory-card strong {
+.reasoning-advisory-card summary span,
+.reasoning-advisory-card summary b,
+.reasoning-advisory-card summary strong {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2944,22 +3037,22 @@ body:has(.robot-cockpit.quant-terminal) {
   text-transform: uppercase;
 }
 
-.reasoning-advisory-card span {
+.reasoning-advisory-card summary span {
   color: rgba(255, 255, 255, 0.4);
   font-size: 0.48rem;
 }
 
-.reasoning-advisory-card b {
+.reasoning-advisory-card summary b {
   color: rgba(240, 185, 11, 0.86);
   font-size: 0.5rem;
 }
 
-.reasoning-advisory-card strong {
+.reasoning-advisory-card summary strong {
   color: rgba(255, 255, 255, 0.76);
   font-size: 0.58rem;
 }
 
-.reasoning-advisory-card p {
+.reasoning-advisory-card summary p {
   display: -webkit-box;
   margin: 0;
   overflow: hidden;
@@ -3199,18 +3292,48 @@ body:has(.robot-cockpit.quant-terminal) {
   gap: 0.3rem;
 }
 
-.proof-check-grid > div {
+.proof-check-grid > div,
+.proof-check-detail {
   display: flex;
   min-width: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.32rem;
+  flex-direction: column;
   border-radius: 0.28rem;
   background: rgba(255, 255, 255, 0.034);
-  padding: 0.32rem 0.42rem;
 }
 
-.proof-check-grid > div.is-ready {
+.proof-check-detail summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.32rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.32rem 0.42rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.proof-check-detail summary::-webkit-details-marker,
+.reasoning-advisory-card summary::-webkit-details-marker,
+.reasoning-tool-detail summary::-webkit-details-marker {
+  display: none;
+}
+
+.proof-check-detail summary::after,
+.reasoning-advisory-card summary::after {
+  content: "";
+  grid-column: 1 / -1;
+  height: 1px;
+  background: transparent;
+}
+
+.proof-check-detail[open] summary::after,
+.reasoning-advisory-card[open] summary::after {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.proof-check-grid > div.is-ready,
+.proof-check-detail.is-ready {
   background: rgba(77, 219, 190, 0.052);
 }
 
@@ -3241,6 +3364,89 @@ body:has(.robot-cockpit.quant-terminal) {
   color: rgba(255, 255, 255, 0.38);
   font-size: 0.62rem;
   line-height: 1.35;
+}
+
+.live-evidence-drawer {
+  display: grid;
+  gap: 0.42rem;
+  min-width: 0;
+  padding: 0.44rem;
+}
+
+.live-evidence-drawer p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.62rem;
+  line-height: 1.38;
+}
+
+.live-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.26rem;
+}
+
+.live-evidence-grid span {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 0.24rem;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 0.28rem 0.34rem;
+}
+
+.live-evidence-grid small,
+.live-evidence-grid b {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-transform: uppercase;
+}
+
+.live-evidence-grid small {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 0.48rem;
+}
+
+.live-evidence-grid b {
+  margin-top: 0.08rem;
+  color: rgba(207, 250, 244, 0.84);
+  font-size: 0.54rem;
+  font-weight: 760;
+}
+
+.live-evidence-links {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.26rem;
+}
+
+.live-evidence-links a {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.24rem;
+  overflow: hidden;
+  border: 1px solid rgba(240, 185, 11, 0.18);
+  border-radius: 0.24rem;
+  background: rgba(240, 185, 11, 0.055);
+  padding: 0.2rem 0.34rem;
+  color: rgba(240, 185, 11, 0.9);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.52rem;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.live-evidence-links a:hover,
+.live-evidence-links a:focus-visible {
+  border-color: rgba(240, 185, 11, 0.36);
+  color: rgba(254, 240, 138, 0.98);
+  outline: none;
 }
 
 .preflight-summary {
@@ -3403,10 +3609,48 @@ body:has(.robot-cockpit.quant-terminal) {
   color: rgba(207, 250, 244, 0.92);
 }
 
-.reasoning-trace-block,
-.reasoning-tools-block {
+.market-signal-proof {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.market-signal-proof p,
+.market-signal-proof span {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.market-signal-proof-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+}
+
+.market-signal-proof-title .brand-mark {
+  height: 1rem;
+  width: 1rem;
+  border-radius: 0.24rem;
+}
+
+.market-signal-proof-title .brand-mark svg {
+  height: 0.72rem;
+  width: 0.72rem;
+}
+
+.reasoning-trace-block {
   min-height: 0;
   overflow: hidden;
+  border-top: 1px solid rgba(255, 255, 255, 0.085);
+  margin-top: 0.6rem;
+  padding-top: 0.55rem;
+}
+
+.reasoning-tools-block {
+  min-height: 0;
+  overflow: visible;
   border-top: 1px solid rgba(255, 255, 255, 0.085);
   margin-top: 0.6rem;
   padding-top: 0.55rem;
@@ -3437,10 +3681,21 @@ body:has(.robot-cockpit.quant-terminal) {
 .reasoning-tools-block > div {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.28rem;
+  align-items: flex-start;
+  gap: 0.36rem;
+}
+
+.reasoning-tool-detail {
+  max-width: 100%;
+  min-width: min(100%, 11rem);
+  border-radius: 0.3rem;
 }
 
 .reasoning-tool-chip {
+  display: inline-flex;
+  min-width: 0;
+  cursor: pointer;
+  list-style: none;
   max-width: 100%;
   overflow: hidden;
   border: 1px solid rgba(240, 185, 11, 0.18);
@@ -3781,7 +4036,7 @@ body:has(.robot-cockpit.quant-terminal) {
   }
 
   .quant-context-panel {
-    grid-template-columns: minmax(300px, 0.62fr) minmax(380px, 0.9fr) minmax(200px, 0.38fr);
+    grid-template-columns: minmax(0, 0.62fr) minmax(0, 0.9fr) minmax(0, 0.38fr);
     align-content: start;
     align-items: start;
     min-height: 0;
@@ -3890,8 +4145,8 @@ body:has(.robot-cockpit.quant-terminal) {
 
   .quant-side-stack-reasoning .reasoning-tools-block > div {
     display: flex !important;
-    flex-wrap: nowrap;
-    overflow: hidden;
+    flex-wrap: wrap;
+    overflow: visible;
   }
 
   .quant-side-stack-reasoning .reasoning-tools-block {
@@ -4009,7 +4264,7 @@ body:has(.robot-cockpit.quant-terminal) {
 
   .quant-workrail {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
     gap: 0.44rem;
     padding: 0;
   }
@@ -4121,7 +4376,7 @@ body:has(.robot-cockpit.quant-terminal) {
   }
 
   .quant-context-panel {
-    grid-template-columns: minmax(240px, 0.46fr) minmax(0, 1fr) minmax(170px, 0.34fr);
+    grid-template-columns: minmax(0, 0.46fr) minmax(0, 1fr) minmax(0, 0.34fr);
     align-content: start;
     align-items: stretch;
     gap: 0.36rem;
@@ -4241,7 +4496,7 @@ body:has(.robot-cockpit.quant-terminal) {
 
   .quant-workrail {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
     gap: 0.38rem;
     padding: 0;
   }
@@ -4565,7 +4820,7 @@ body:has(.robot-cockpit.quant-terminal) {
     order: 1;
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
     gap: 0.36rem;
     overflow: hidden;
     padding: 0;
@@ -4992,7 +5247,7 @@ body:has(.robot-cockpit.quant-terminal) {
 @media (max-width: 1180px) {
   .quant-workrail {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto minmax(0, 1fr);
   }
 
   .quant-workrail > .trade-plan-panel {
@@ -5057,7 +5312,7 @@ body:has(.robot-cockpit.quant-terminal) {
 @media (max-width: 960px) and (max-height: 560px) {
   .quant-workrail {
     grid-template-columns: minmax(0, 1fr) !important;
-    grid-template-rows: auto auto auto !important;
+    grid-template-rows: auto auto minmax(0, 1fr) !important;
     overflow-y: auto !important;
   }
 
@@ -5173,13 +5428,26 @@ body:has(.robot-cockpit.quant-terminal) {
 
   .memory-columns,
   .memory-episodes > div,
-  .reasoning-advisory-grid {
+  .reasoning-advisory-grid,
+  .live-evidence-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .runtime-split,
   .report-pnl-band {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .proof-check-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .loop-proof-step {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .loop-proof-index {
+    display: none;
   }
 }
 

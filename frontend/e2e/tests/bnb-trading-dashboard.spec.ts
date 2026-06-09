@@ -34,6 +34,8 @@ test.describe('BNB trading dashboard', () => {
     /waiting-for-policy-intent/i,
     /market waiting/i,
     /Agent loop idle/i,
+    /Intent created/i,
+    /live safety gate/i,
   ];
 
   test('shows BSC trading evidence on the first screen', async ({ page }) => {
@@ -92,30 +94,102 @@ test.describe('BNB trading dashboard', () => {
   });
 
   test('renders mocked runtime memory, advisory, and report panels', async ({ page }) => {
-    await page.route('**/api/session', async route => {
-      await route.fulfill({
-        json: { csrfToken: 'test-csrf' },
-        headers: { 'Set-Cookie': 'omniagent_session=test; Path=/; SameSite=Lax' },
-      });
-    });
-    await page.route('**/api/dashboard/trades?**', async route => {
-      await route.fulfill({ json: { status: 'ok', trades: [] } });
-    });
-    await page.route('**/api/dashboard/snapshot?**', async route => {
-      await route.fulfill({ json: mockedRuntimeSnapshot() });
-    });
+    await routeMockedRuntime(page);
 
     await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 15_000 });
 
     await expect(page.getByText('BNB Agent Runtime').first()).toBeVisible();
-    await expect(page.getByText('SDK READY').first()).toBeVisible();
+    await expect(page.getByText('Core live').first()).toBeVisible();
+    await expect(page.getByText('BNBAgent').first()).toBeVisible();
+    await expect(page.getByText('erc8004+erc8183').first()).toBeVisible();
     await expect(page.getByText('Replay Risk Report').first()).toBeVisible();
     await expect(page.getByText('Ledger Memory').first()).toBeVisible();
     await expect(page.locator('.reasoning-advisory-card')).toHaveCount(4);
+
+    const cmcProof = page.locator('.proof-check-detail').filter({ hasText: 'CMC Signal Verified' });
+    await expect(cmcProof).toHaveCount(1);
+    await cmcProof.locator('summary').click();
+    await expect(cmcProof).toHaveAttribute('open', '');
+    await expect(cmcProof).toContainText('CMC MCP endpoint');
+    await expect(cmcProof.locator('a[href="https://mcp.coinmarketcap.com/mcp"]')).toHaveCount(1);
+    await expect(page.locator('.loop-proof-link')).not.toHaveCount(0);
+
+    const bullCard = page.locator('.reasoning-advisory-card').filter({ hasText: 'bull' });
+    await expect(bullCard).toHaveCount(1);
+    await bullCard.locator('summary').click();
+    await expect(bullCard).toHaveAttribute('open', '');
+    await expect(bullCard).toContainText('Can execute');
+
+    const toolSummary = page.locator('.reasoning-tools-block summary.reasoning-tool-chip').filter({ hasText: 'trending crypto narratives' });
+    await expect(toolSummary).toHaveCount(1);
+    await toolSummary.click();
+    const openToolDetail = page.locator('.reasoning-tools-block details.reasoning-tool-detail[open]');
+    await expect(openToolDetail).toHaveCount(1);
+    await expect(openToolDetail).toContainText('Live CMC Agent Hub signal');
+  });
+
+  test('keeps Signal MCP and runtime cards from overlapping', async ({ page }) => {
+    await page.setViewportSize({ width: 1306, height: 1324 });
+    await routeMockedRuntime(page);
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 15_000 });
+
+    await expect(page.getByText('Signal MCP')).toBeVisible();
+    const metrics = await page.evaluate(() => {
+      const rect = (selector: string) => {
+        const el = document.querySelector(selector);
+        if (!el) return null;
+        const box = el.getBoundingClientRect();
+        return { top: box.top, right: box.right, bottom: box.bottom, left: box.left };
+      };
+      const overlap = (a: ReturnType<typeof rect>, b: ReturnType<typeof rect>) => {
+        if (!a || !b) return 0;
+        return Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left))
+          * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+      };
+      return {
+        contextLoopOutside: Math.max(0, (rect('.quant-context-loop')?.right ?? 0) - (rect('.quant-context-panel')?.right ?? 0)),
+        contextLoopRuntime: overlap(rect('.quant-context-loop'), rect('.bnb-runtime-panel')),
+        signalMcpExecution: overlap(rect('.market-signal-proof'), rect('.quant-execution-stack')),
+        reasoningExecution: overlap(rect('.agent-reasoning-panel'), rect('.quant-execution-stack')),
+        horizontalOverflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth),
+      };
+    });
+    expect(metrics.contextLoopOutside).toBeLessThanOrEqual(1);
+    expect(metrics.contextLoopRuntime).toBe(0);
+    expect(metrics.signalMcpExecution).toBe(0);
+    expect(metrics.reasoningExecution).toBe(0);
+    expect(metrics.horizontalOverflow).toBe(0);
   });
 });
 
+async function routeMockedRuntime(page: import('@playwright/test').Page) {
+  await page.route('**/api/session', async route => {
+    await route.fulfill({
+      json: { csrfToken: 'test-csrf' },
+      headers: { 'Set-Cookie': 'omniagent_session=test; Path=/; SameSite=Lax' },
+    });
+  });
+  await page.route('**/api/dashboard/trades?**', async route => {
+    await route.fulfill({ json: { status: 'ok', trades: [] } });
+  });
+  await page.route('**/api/dashboard/snapshot?**', async route => {
+    await route.fulfill({ json: mockedRuntimeSnapshot() });
+  });
+}
+
 function mockedRuntimeSnapshot() {
+  const txHash = '0xf74c8940be5d26767f97aa1bfac45653cb2d3ac89d41d250645479be97db8d52';
+  const cmcAgentHubSignal = {
+    ready: true,
+    serverVerified: true,
+    toolName: 'trending crypto narratives',
+    endpoint: 'https://mcp.coinmarketcap.com/mcp',
+    resolution: 'auto discovered',
+    timestamp: '2026-06-09T17:40:25.463822+00:00',
+    parsedContent: {
+      evidence: 'https://coinmarketcap.com/view/binance-ecosystem/',
+    },
+  };
   const proofScore = {
     score: 6,
     maxScore: 8,
@@ -148,19 +222,39 @@ function mockedRuntimeSnapshot() {
     prices: { configured: true, reachable: true, symbols: { BNB: { priceUsd: 587, percentChange24h: -2.8, volume24h: 1200000000 } } },
     ledger: { events: [], control: {}, dailyCompliance: { progress: '0/7' }, pnl: { totalReturnPct: 0, maxDrawdownPct: 0, registrationPeriod: { totalReturnPct: 0 } } },
     workOrders: { proofScore, workOrders: [] },
-    liveProofBundle: { proofScore, txEvents: [], recoveryCandidates: [] },
-    livePreflight: { readyForLiveTrade: false, blockers: [{ name: 'funded_route', reason: 'funded route missing' }] },
+    cycle: { cmcAgentHubSignal, toolsUsed: ['trending crypto narratives', 'chain trade'] },
+    liveProofBundle: {
+      proofScore,
+      latestReceiptStatus: { txHash, status: 'confirmed', proof: { valid: true } },
+      txEvents: [{ txHash }],
+      recoveryCandidates: [],
+    },
+    livePreflight: {
+      readyForLiveTrade: false,
+      cmcAgentHubSignal,
+      fundedStrategy: { symbol: 'BNB', side: 'buy', amountUsd: 25, slippageBps: 50 },
+      blockers: [{ name: 'funded_route', reason: 'funded route missing' }],
+    },
     backendHealth: { autonomousLoopEnabled: true, autonomousLoop: { enabled: true, execute: false, phase: 'monitoring' } },
     bnbAgentRuntime: {
       sdkRole: 'runtime_core',
       executor: 'twak',
       sdkExecutesTrades: false,
+      sdkRuntime: {
+        facade: 'BNBAgent',
+        facadeInitialized: true,
+        usesOfficialFacade: true,
+        modulesInitialized: ['erc8004', 'erc8183'],
+        commerceServer: { mounted: false, fundedJobPolling: false },
+      },
       sdkStatus: { ready: true, registryAddress: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432' },
       agentProfile: {
         walletAddress: '0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25',
         agentUriPreview: 'data:application/json;base64,test',
         capabilities: [
+          { name: 'bnbagent_facade', ready: true },
           { name: 'erc8004_identity', ready: true },
+          { name: 'erc8183_protocol', ready: true },
           { name: 'ledger_memory', ready: true },
           { name: 'cmc_signal', ready: true },
           { name: 'twak_execution', ready: true },

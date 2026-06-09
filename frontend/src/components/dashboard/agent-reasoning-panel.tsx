@@ -1,5 +1,6 @@
 import { BrainCircuitIcon } from "lucide-react";
 import AgentVerdictSummary from "./agent-verdict-summary";
+import BrandMark from "./brand-mark";
 import {
   blockerLabel,
   decision,
@@ -15,6 +16,8 @@ import {
   toolDisplayName,
   type Payload,
 } from "./agent-reasoning-utils";
+import LiveEvidenceDrawer from "./live-evidence-drawer";
+import { advisoryEvidence, toolEvidence } from "./live-evidence";
 
 export function AgentReasoningPanel({
   state,
@@ -55,7 +58,7 @@ export function AgentReasoningPanel({
   const actionReady = !offline && loopEnabled;
   const fallbackTrace = [
     `backend loop ${text(backendLoop.phase ?? backendLoop.state, loopEnabled ? "monitoring" : "syncing")}${loopDryRun ? " / dry run" : ""}`,
-    preflight.readyForLiveTrade ? "live preflight ready for backend policy gate" : `preflight guarded: ${blockerLabel(preflight.blockers)}`,
+    preflight.readyForLiveTrade ? "policy precheck ready for backend gate" : `policy precheck guarded: ${blockerLabel(preflight.blockers)}`,
     proofScore.hardBlockers?.length ? `proof blockers: ${proofScore.hardBlockers.slice(0, 3).join(", ")}` : "proof bundle watching BSC evidence",
   ];
   const trace = reasoning.length ? reasoning : strategyTrace.length ? strategyTrace : fallbackTrace;
@@ -68,10 +71,18 @@ export function AgentReasoningPanel({
     { label: "action", value: loopDryRun ? "dry run" : decision({ offline, paused, riskPass: policyReady, canExecute: simulation.canExecute === true || preflight.readyForLiveTrade === true }), ok: actionReady },
   ];
   const readyCount = rows.filter(item => item.ok).length;
-  const tools = cycle.toolsUsed ?? state.toolsUsed ?? [marketReady ? "market_signal" : "agent_snapshot", signerReady ? "twak_rest_bridge" : "signer_status", loopEnabled ? "autonomous_loop" : "policy_monitor"];
+  const tools = dedupeTools([
+    marketSignal?.toolName,
+    ...(cycle.toolsUsed ?? state.toolsUsed ?? []),
+    marketReady ? "market_signal" : "agent_snapshot",
+    signerReady ? "twak_rest_bridge" : "signer_status",
+    proofBundle.latestReceiptStatus ? "bsc_receipt_proof" : "proof_bundle",
+    loopEnabled ? "autonomous_loop" : "policy_monitor",
+    "agent_snapshot",
+  ]);
 
   return (
-    <section className="robot-core-panel agent-reasoning-panel flex min-h-0 flex-col overflow-hidden p-3">
+    <section className="robot-core-panel agent-reasoning-panel flex min-h-0 flex-col overflow-x-hidden overflow-y-auto p-3">
       <div className="agent-reasoning-head">
         <h3>
           <BrainCircuitIcon className="h-4 w-4 text-cyan-200/80" />
@@ -88,17 +99,21 @@ export function AgentReasoningPanel({
           </div>
         ))}
       </div>
+      {marketProof ? <MarketSignalProof signal={marketProof} /> : null}
       {advisoryPanels.length ? (
         <div className="reasoning-advisory-grid" aria-label="Advisory strategy research">
           {advisoryPanels.slice(0, 4).map((item: Payload) => (
-            <div key={text(item.role, "advisor")} className={`reasoning-advisory-card is-${text(item.role, "advisor")}`}>
-              <div>
-                <span>{text(item.role, "advisor").replace(/_/g, " ")}</span>
-                <b>{Math.round(Number(item.confidence ?? 0) * 100)}%</b>
-              </div>
-              <strong>{text(item.stance, "advisory")}</strong>
-              <p>{safeVisibleText(text((item.evidence ?? [])[0], "Advisory only; backend policy controls execution."))}</p>
-            </div>
+            <details key={text(item.role, "advisor")} className={`reasoning-advisory-card is-${text(item.role, "advisor")}`}>
+              <summary>
+                <div>
+                  <span>{text(item.role, "advisor").replace(/_/g, " ")}</span>
+                  <b>{Math.round(Number(item.confidence ?? 0) * 100)}%</b>
+                </div>
+                <strong>{text(item.stance, "advisory")}</strong>
+                <p>{safeVisibleText(text((item.evidence ?? [])[0], "Advisory only; backend policy controls execution."))}</p>
+              </summary>
+              <LiveEvidenceDrawer evidence={advisoryEvidence(item, state)} />
+            </details>
           ))}
         </div>
       ) : null}
@@ -114,14 +129,16 @@ export function AgentReasoningPanel({
           </div>
         </div>
       ) : null}
-      {marketProof ? <MarketSignalProof signal={marketProof} /> : null}
       <div className="reasoning-tools-block">
         <p>Tools used</p>
         <div>
-          {tools.slice(0, 5).map((tool: string) => (
-            <span key={tool} className="reasoning-tool-chip">
-              {toolDisplayName(tool)}
-            </span>
+          {tools.slice(0, 6).map((tool: string) => (
+            <details key={tool} className="reasoning-tool-detail">
+              <summary className="reasoning-tool-chip">
+                {toolDisplayName(tool)}
+              </summary>
+              <LiveEvidenceDrawer evidence={toolEvidence(tool, state)} />
+            </details>
           ))}
         </div>
       </div>
@@ -132,9 +149,12 @@ export function AgentReasoningPanel({
 function MarketSignalProof({ signal }: { signal: Payload }) {
   const toolCount = Number(signal.toolCount);
   return (
-    <div className="mt-2 overflow-hidden rounded-md border border-cyan-200/12 bg-cyan-200/[0.035] p-2">
+    <div className="market-signal-proof mt-2 overflow-hidden rounded-md border border-cyan-200/12 bg-cyan-200/[0.035] p-2">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <p className="text-[10px] uppercase text-cyan-100/52">Signal MCP</p>
+        <p className="market-signal-proof-title text-[10px] uppercase text-cyan-100/52">
+          <BrandMark kind="cmc" />
+          Signal MCP
+        </p>
         <span className={`rounded-sm border px-1.5 py-0.5 font-mono text-[9px] uppercase ${signal.ready ? "border-cyan-200/22 text-cyan-100" : "border-white/10 text-white/42"}`}>
           {signal.ready ? signalLabel(signal) : "syncing"}
         </span>
@@ -148,3 +168,15 @@ function MarketSignalProof({ signal }: { signal: Payload }) {
 }
 
 export default AgentReasoningPanel;
+
+function dedupeTools(values: unknown[]) {
+  const seen = new Set<string>();
+  return values
+    .flat()
+    .filter((item): item is string => typeof item === "string" && item.length > 0)
+    .filter((item) => {
+      if (seen.has(item)) return false;
+      seen.add(item);
+      return true;
+    });
+}

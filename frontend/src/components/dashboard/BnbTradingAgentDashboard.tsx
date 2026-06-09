@@ -14,7 +14,6 @@ import LivePreflightPanel from './live-preflight-panel';
 import LoopProofRail from './loop-proof-rail';
 import RecoveryCandidatePanel from './recovery-candidate-panel';
 import TradeProofScorePanel from './trade-proof-score-panel';
-import { TradeProofTimeline } from './trade-proof-timeline';
 import {
   DecisionContextPanel,
   QuantTerminalHeader,
@@ -176,8 +175,7 @@ export function BnbTradingAgentDashboard() {
             Trade plan
             <span>{asText(lifecycle?.state ?? workOrders[0]?.state, 'active').replace(/blocked|waiting|paused/gi, 'guarded').replace(/[-_]+/g, ' ')}</span>
           </div>
-          <TradeProofScorePanel score={proofScore} />
-          <TradeProofTimeline workOrders={workOrders} recovery={recovery} ledgerEvents={ledgerEvents} running={loading || agentLoopEnabled} />
+          <TradeProofScorePanel score={proofScore} state={state} />
           <LedgerMemoryPanel memory={state.ledgerMemory} />
         </section>
         <div className="quant-side-stack quant-side-stack-readiness">

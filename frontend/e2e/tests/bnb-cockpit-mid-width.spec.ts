@@ -12,8 +12,8 @@ test.describe('BNB cockpit mid-width layout', () => {
     await expect(page.getByText('Proof loop').first()).toBeVisible();
     await expect(page.locator('.loop-proof-step:visible')).toHaveCount(5);
     await expect(page.getByText('Trade plan').first()).toBeVisible();
-    await expect(page.locator('.quant-side-stack-readiness')).toBeHidden();
-    await expect(page.locator('.quant-side-stack-reasoning')).toBeHidden();
+    await expect(page.locator('.quant-side-stack-readiness')).toBeVisible();
+    await expect(page.locator('.quant-side-stack-reasoning')).toBeVisible();
 
     const metrics = await page.evaluate(() => {
       const selectors = [
@@ -34,13 +34,13 @@ test.describe('BNB cockpit mid-width layout', () => {
         viewportWidth: window.innerWidth,
         clipped: selectors.filter((selector) => {
           const el = document.querySelector(selector);
-          return el ? el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1 : false;
+          return el ? el.scrollWidth > el.clientWidth + 1 : false;
         }),
       };
     });
 
-    expect(metrics.bodyHeight).toBeLessThanOrEqual(metrics.viewportHeight + 1);
-    expect(metrics.docHeight).toBeLessThanOrEqual(metrics.viewportHeight + 1);
+    expect(metrics.bodyHeight).toBeGreaterThan(metrics.viewportHeight);
+    expect(metrics.docHeight).toBeGreaterThan(metrics.viewportHeight);
     expect(metrics.bodyWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
     expect(metrics.docWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
     expect(metrics.clipped).toEqual([]);

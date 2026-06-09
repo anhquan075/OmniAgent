@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('BNB cockpit landscape layout', () => {
-  test('keeps the compact landscape cockpit inside one viewport', async ({ page }) => {
+  test('keeps the compact landscape cockpit responsive without horizontal overflow', async ({ page }) => {
     await page.setViewportSize({ width: 932, height: 430 });
     await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 15_000 });
     await page.waitForTimeout(700);
@@ -32,18 +32,19 @@ test.describe('BNB cockpit landscape layout', () => {
         viewportWidth: window.innerWidth,
         clipped: selectors.filter((selector) => {
           const el = document.querySelector(selector);
-          return el ? el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1 : false;
+          return el ? el.scrollWidth > el.clientWidth + 1 : false;
         }),
       };
     });
 
-    expect(metrics.bodyHeight).toBeLessThanOrEqual(metrics.viewportHeight + 1);
-    expect(metrics.docHeight).toBeLessThanOrEqual(metrics.viewportHeight + 1);
+    expect(metrics.bodyHeight).toBeGreaterThan(metrics.viewportHeight);
+    expect(metrics.docHeight).toBeGreaterThan(metrics.viewportHeight);
     expect(metrics.bodyWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
     expect(metrics.docWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
     expect(metrics.clipped).toEqual([]);
 
     await page.mouse.wheel(0, 900);
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await expect(page.getByText('Agent Reasoning').first()).toBeVisible();
   });
 });

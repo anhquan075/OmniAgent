@@ -56,6 +56,29 @@ After submission, `_normalize_registration_result` (lines 130–139) extracts th
 
 ---
 
+## Runtime core boundary
+
+OmniAgent uses the official SDK as the visible runtime core in `BnbAgentSdkRuntimeService` ([`backend/app/services/agent/sdk_runtime.py`](../backend/app/services/agent/sdk_runtime.py)).
+
+The runtime probe initializes the SDK facade with:
+
+- `BNBAgent`
+- `BNBAgentConfig`
+- modules `["erc8004", "erc8183"]`
+- BSC mainnet contract metadata resolved from the SDK network config
+
+This gives the dashboard and MCP runtime snapshot concrete evidence that the SDK facade and module registry are alive. The probe deliberately does not load a private key, does not create an `EVMWalletProvider`, and does not mount the SDK's ERC-8183 FastAPI server. That keeps the SDK in the runtime identity/status/profile lane while TWAK remains the only on-chain trade executor and signer.
+
+The dashboard exposes this under `bnbAgentRuntime.sdkRuntime`, including:
+
+- `facade: "BNBAgent"`
+- `modulesInitialized`
+- `contracts`
+- `sdkExecutesTrades: false`
+- `commerceServer.mounted: false`
+
+---
+
 ## Registration gates
 
 The service won't submit a live transaction unless all of these are true (lines 51–63):
