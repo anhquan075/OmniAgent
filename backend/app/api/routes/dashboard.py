@@ -20,7 +20,7 @@ async def dashboard_snapshot(request: Request, limit: int = 10) -> dict[str, obj
     selected_limit = max(1, min(limit, 25))
     cockpit, preflight, proof_bundle = await asyncio.gather(
         AgentCockpitService.get_cockpit_snapshot(limit=selected_limit),
-        LivePreflightService.get_live_preflight({"skipFundedCycle": True}),
+        LivePreflightService.get_live_preflight({}),
         ProofBundleService.get_live_proof_bundle({"limit": selected_limit}),
         return_exceptions=True,
     )
