@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     api_session_rate_limit_requests: int = 180
     api_rate_limit_window_sec: int = 60
     api_max_body_bytes: int = 1_048_576
-    api_trusted_hosts: str = "localhost,127.0.0.1,testserver"
+    api_trusted_hosts: str = "localhost,127.0.0.1,testserver,healthcheck.railway.app"
     allowed_frontend_origins: str = (
         "http://localhost:5173,http://127.0.0.1:5173,"
         "http://localhost:3000,http://127.0.0.1:3000"
