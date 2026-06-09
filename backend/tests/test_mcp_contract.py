@@ -117,9 +117,13 @@ def test_dashboard_snapshot_is_session_scoped(monkeypatch) -> None:
     async def fake_proof_bundle(args: dict[str, object]) -> dict[str, object]:
         return {"status": "ready_for_live_trade", "args": args}
 
+    def fake_latest_cycle(_: object) -> dict[str, object]:
+        return {"strategyDecision": {"source": "deterministic", "decision": {"action": "buy", "confidence": 0.7}}}
+
     monkeypatch.setattr("app.api.routes.dashboard.AgentCockpitService.get_cockpit_snapshot", fake_cockpit)
     monkeypatch.setattr("app.api.routes.dashboard.LivePreflightService.get_live_preflight", fake_preflight)
     monkeypatch.setattr("app.api.routes.dashboard.ProofBundleService.get_live_proof_bundle", fake_proof_bundle)
+    monkeypatch.setattr("app.api.routes.dashboard.AutonomousLoopService.get_latest_cycle", fake_latest_cycle)
     client = TestClient(app)
 
     assert client.get("/api/dashboard/snapshot").status_code == 401
@@ -130,6 +134,7 @@ def test_dashboard_snapshot_is_session_scoped(monkeypatch) -> None:
     body = response.json()
     assert body["network"] == "bsc"
     assert body["limit"] == 3
+    assert body["cycle"]["strategyDecision"]["decision"]["action"] == "buy"
     assert body["livePreflight"]["readyForLiveTrade"] is True
     assert body["liveProofBundle"]["status"] == "ready_for_live_trade"
     assert body["backendHealth"]["autonomousLoopEnabled"] == get_settings().bnb_autonomous_loop_enabled

@@ -106,6 +106,7 @@ export function BnbTradingAgentDashboard() {
   const proofLabel = proofScore?.score !== undefined && proofScore?.total !== undefined ? `${proofScore.score}/${proofScore.total}` : offline ? 'offline' : 'checking';
   const marketLabel = state.prices?.configured ? 'online' : offline ? 'offline' : 'syncing';
   const signalConfidenceLabel = state.cycle?.strategyDecision?.decision?.confidence ? `${Math.round(state.cycle.strategyDecision.decision.confidence * 100)}%` : offline ? 'offline' : 'scanning';
+  const strategySourceLabel = offline ? 'offline' : state.cycle?.strategyDecision?.source === 'openrouter' ? 'model' : state.cycle?.strategyDecision?.source ? 'policy' : agentLoopEnabled ? 'policy' : 'scanning';
   const dataCoverageLabel = state.prices?.configured ? '100%' : offline ? 'offline' : 'syncing';
   const loopStatusLabel = offline ? 'read-only' : agentLoopEnabled ? asText(autonomousLoop.phase, 'monitoring') : asText(autonomousLoop.state, 'active');
   const readinessCopy = liveExecution
@@ -120,7 +121,7 @@ export function BnbTradingAgentDashboard() {
         <div className="quant-signal-stack">
           <div className="quant-signal-strip">
             <SignalTile label="Signal" value={signalConfidenceLabel} hint={offline ? 'backend session' : 'trade conviction'} />
-            <SignalTile label="Source" value={state.cycle?.strategyDecision?.source === 'openrouter' ? 'model' : 'read-only'} hint="current mode" />
+            <SignalTile label="Source" value={strategySourceLabel} hint="current mode" />
             <SignalTile label="Coverage" value={dataCoverageLabel} hint={offline ? 'backend session' : 'market feed'} />
             <SignalTile label="Gate" value={state.livePreflight?.readyForLiveTrade ? 'ready' : agentLoopEnabled ? 'live' : 'guarded'} hint={loopMode} />
             <SignalTile label={pnl.metricLabel} value={pnl.label} hint={pnl.hint} />

@@ -49,7 +49,7 @@ export function LoopProofRail({ state, offline = false }: { state: Payload; offl
     {
       icon: ActivityIcon,
       label: "Strategy",
-      value: decision.action ? `${decision.action} ${Math.round(Number(decision.confidence ?? 0) * 100)}%` : "read-only",
+      value: decision.action ? `${decision.action} ${Math.round(Number(decision.confidence ?? 0) * 100)}%` : offline ? "backend offline" : "monitoring",
       ok: hasStrategyDecision,
       accent: "strategy",
     },
