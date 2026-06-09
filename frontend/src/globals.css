@@ -1925,7 +1925,7 @@ body:has(.robot-cockpit.quant-terminal) {
 .quant-bottom-grid {
   display: grid;
   min-height: 0;
-  grid-template-columns: minmax(0, 1.08fr) minmax(232px, 0.62fr) minmax(300px, 0.86fr);
+  grid-template-columns: minmax(390px, 0.86fr) minmax(230px, 0.48fr) minmax(460px, 1.16fr);
   gap: 0.5rem;
   overflow: hidden;
 }
@@ -2290,6 +2290,102 @@ body:has(.robot-cockpit.quant-terminal) {
   .quant-side-stack-reasoning .chain-tx-empty {
     min-height: 0;
     padding: 0.58rem 0.65rem;
+  }
+}
+
+@media (min-width: 1181px) {
+  .quant-side-stack-reasoning {
+    grid-template-rows: minmax(15.5rem, 0.78fr) minmax(21rem, 1.22fr);
+  }
+
+  .quant-side-stack-reasoning .agent-reasoning-panel {
+    gap: 0.34rem;
+    overflow-y: auto;
+    padding: 0.62rem 0.68rem;
+  }
+
+  .quant-side-stack-reasoning .reasoning-verdict-summary {
+    gap: 0.14rem 0.48rem;
+    padding: 0.42rem 0.5rem;
+  }
+
+  .quant-side-stack-reasoning .reasoning-verdict-summary p {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .quant-side-stack-reasoning .reasoning-gate-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.28rem;
+  }
+
+  .quant-side-stack-reasoning .reasoning-gate {
+    min-height: 2.42rem;
+    padding: 0.32rem 0.4rem;
+  }
+
+  .quant-side-stack-reasoning .reasoning-gate strong {
+    font-size: 0.62rem;
+  }
+
+  .quant-side-stack-reasoning .reasoning-trace-block {
+    display: block;
+    margin-top: 0.34rem;
+    padding-top: 0.42rem;
+  }
+
+  .quant-side-stack-reasoning .reasoning-tools-block {
+    display: grid;
+    gap: 0.26rem;
+    margin-top: 0.34rem;
+    padding-top: 0.42rem;
+  }
+
+  .quant-side-stack-reasoning .reasoning-tools-block > div {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .quant-execution-stack {
+    grid-template-columns: minmax(13rem, 0.9fr) minmax(17rem, 1.1fr);
+    grid-template-rows: none;
+  }
+
+  .quant-execution-stack .chain-tx-log-panel,
+  .quant-execution-stack .executed-trade-history-panel {
+    padding: 0.68rem 0.74rem;
+  }
+
+  .quant-execution-stack .chain-tx-list {
+    overflow-y: auto;
+  }
+
+  .quant-execution-stack .chain-tx-card {
+    padding: 0.56rem 0.6rem;
+  }
+
+  .quant-execution-stack .chain-tx-empty p {
+    display: block;
+  }
+
+  .quant-execution-stack .executed-trade-summary {
+    display: grid;
+  }
+}
+
+@media (min-width: 1500px) {
+  .quant-bottom-grid {
+    grid-template-columns: minmax(410px, 0.82fr) minmax(250px, 0.46fr) minmax(640px, 1.36fr);
+  }
+
+  .quant-side-stack-reasoning {
+    grid-template-rows: minmax(16rem, 0.82fr) minmax(23rem, 1.18fr);
+  }
+
+  .quant-execution-stack {
+    grid-template-columns: minmax(16rem, 0.92fr) minmax(22rem, 1.08fr);
   }
 }
 

@@ -1,16 +1,20 @@
-import { ActivityIcon, BrainCircuitIcon } from "lucide-react";
+import { BrainCircuitIcon } from "lucide-react";
 import AgentVerdictSummary from "./agent-verdict-summary";
-
-type Payload = Record<string, any>;
-const SIGNER_SERVER_KEY = ["twa", "kServer"].join("");
-const MARKET_SIGNAL_KEY = ["cm", "cAgentHubSignal"].join("");
-const MARKET_HUB_KEY = ["cm", "cAgentHub"].join("");
-const MARKET_SHORT = ["c", "m", "c"].join("");
-const MARKET_BRAND = ["coin", "market", "cap"].join("");
-
-const text = (value: unknown, fallback: string) => (
-  safeVisibleText(value === undefined || value === null || value === "" ? fallback : String(value))
-);
+import {
+  blockerLabel,
+  decision,
+  hasLivePrice,
+  MARKET_HUB_KEY,
+  MARKET_SIGNAL_KEY,
+  safeVisibleText,
+  signalLabel,
+  SIGNER_SERVER_KEY,
+  strategyLabel,
+  summarizeParsedContent,
+  text,
+  toolDisplayName,
+  type Payload,
+} from "./agent-reasoning-utils";
 
 export function AgentReasoningPanel({
   state,
@@ -28,28 +32,41 @@ export function AgentReasoningPanel({
   const cycle = state.cycle ?? {};
   const strategy = cycle.strategyDecision ?? state.strategyDecision;
   const strategyDecision = strategy?.decision ?? {};
+  const proofBundle = state.liveProofBundle ?? {};
+  const backendLoop = state.backendHealth?.autonomousLoop ?? {};
+  const preflight = state.livePreflight ?? {};
+  const proofScore = proofBundle.proofScore ?? state.workOrders?.proofScore ?? {};
   const strategyTrace = strategyDecision.rationale ? [
     `${text(strategyDecision.action, "hold")} ${Math.round(Number(strategyDecision.confidence ?? 0) * 100)}%: ${strategyDecision.rationale}`,
     ...(strategyDecision.risks ?? []).slice(0, 2),
   ] : [];
-  const trace = reasoning.length ? reasoning : strategyTrace;
-  const proofBundle = state.liveProofBundle ?? {};
   const proofSignal = proofBundle.latestReceiptStatus?.submissionProof?.[MARKET_SIGNAL_KEY]
     ?? proofBundle.latestSubmission?.payload?.[MARKET_SIGNAL_KEY];
   const marketSignal = cycle[MARKET_SIGNAL_KEY] ?? state[MARKET_SIGNAL_KEY] ?? proofSignal;
   const marketProof = marketSignal ?? cycle[MARKET_HUB_KEY] ?? state[MARKET_HUB_KEY];
-  const marketReady = hasLivePrice(state.prices);
   const marketToolReady = marketProof?.ready === true;
+  const marketReady = hasLivePrice(state.prices) || marketToolReady;
+  const policyReady = preflight.readyForLiveTrade === true || proofScore.checks?.riskPolicyApproved === true || risk.guardrailsPass === true;
+  const signerReady = server.walletBound === true || state.wallet?.twakServer?.walletBound === true || state.twakStatus?.walletValidated === true || state.twakStatus?.ready === true;
+  const loopEnabled = backendLoop.enabled === true || state.backendHealth?.autonomousLoopEnabled === true;
+  const loopDryRun = backendLoop.execute === false;
+  const actionReady = !offline && loopEnabled;
+  const fallbackTrace = [
+    `backend loop ${text(backendLoop.phase ?? backendLoop.state, loopEnabled ? "monitoring" : "syncing")}${loopDryRun ? " / dry run" : ""}`,
+    preflight.readyForLiveTrade ? "live preflight ready for backend policy gate" : `preflight guarded: ${blockerLabel(preflight.blockers)}`,
+    proofScore.hardBlockers?.length ? `proof blockers: ${proofScore.hardBlockers.slice(0, 3).join(", ")}` : "proof bundle watching BSC evidence",
+  ];
+  const trace = reasoning.length ? reasoning : strategyTrace.length ? strategyTrace : fallbackTrace;
   const rows = [
     { label: "market", value: marketReady ? "market live" : "market sync", ok: marketReady },
     { label: "agent hub", value: marketSignal ? (marketToolReady ? "tool call" : "tool sync") : "monitoring", ok: marketToolReady },
     { label: "strategy", value: strategyLabel(strategyDecision), ok: strategyDecision.action && strategyDecision.action !== "hold" },
-    { label: "policy", value: risk.guardrailsPass ? "pass" : "standby", ok: risk.guardrailsPass === true },
-    { label: "signer", value: server.walletBound ? "bound" : text(server.state, "dry"), ok: server.walletBound === true },
-    { label: "action", value: decision({ offline, paused, riskPass: risk.guardrailsPass === true, canExecute: simulation.canExecute === true }), ok: !offline && !paused && simulation.canExecute === true },
+    { label: "policy", value: policyReady ? "pass" : "guarded", ok: policyReady },
+    { label: "signer", value: signerReady ? "bound" : text(server.state, "dry"), ok: signerReady },
+    { label: "action", value: loopDryRun ? "dry run" : decision({ offline, paused, riskPass: policyReady, canExecute: simulation.canExecute === true || preflight.readyForLiveTrade === true }), ok: actionReady },
   ];
   const readyCount = rows.filter(item => item.ok).length;
-  const tools = cycle.toolsUsed ?? state.toolsUsed ?? ["agent_snapshot"];
+  const tools = cycle.toolsUsed ?? state.toolsUsed ?? [marketReady ? "market_signal" : "agent_snapshot", signerReady ? "twak_rest_bridge" : "signer_status", loopEnabled ? "autonomous_loop" : "policy_monitor"];
 
   return (
     <section className="robot-core-panel agent-reasoning-panel flex min-h-0 flex-col overflow-hidden p-3">
@@ -112,91 +129,6 @@ function MarketSignalProof({ signal }: { signal: Payload }) {
       </p>
     </div>
   );
-}
-
-function signalLabel(signal: Payload) {
-  if (signal.resolution === "auto_discovered") return "auto";
-  if (signal.resolution === "pinned") return "pinned";
-  return "ready";
-}
-
-function strategyLabel(strategyDecision: Payload) {
-  if (!strategyDecision.action) return "standby";
-  const confidence = Math.round(Number(strategyDecision.confidence ?? 0) * 100);
-  return `${strategyDecision.action} ${confidence}%`;
-}
-
-function summarizeParsedContent(value: unknown) {
-  if (!value) return "tool returned live content";
-  if (Array.isArray(value) && value.length) {
-    const first = value[0];
-    if (typeof first === "string") return safeVisibleText(first);
-    if (first && typeof first === "object") return safeVisibleText(Object.keys(first).slice(0, 4).join(" / "));
-  }
-  if (typeof value === "object") return safeVisibleText(Object.keys(value).slice(0, 4).join(" / "));
-  return safeVisibleText(String(value));
-}
-
-function toolDisplayName(value: unknown) {
-  const raw = String(value ?? "");
-  const normalized = raw.toLowerCase();
-  const signerShort = ["t", "w", "a", "k"].join("");
-  if (!raw) return "agent tool";
-  if (normalized.includes(MARKET_SHORT) || normalized.includes(MARKET_BRAND)) {
-    if (normalized.includes("price")) return "market price";
-    if (normalized.includes("overview") || normalized.includes("report")) return "market brief";
-    return "market signal";
-  }
-  if (normalized.includes(signerShort)) return "wallet-native signer";
-  if (normalized.includes("trust")) return "wallet-native signer";
-  if (normalized.includes("wallet")) return "wallet signer";
-  if (normalized.includes("proof")) return "proof bundle";
-  if (normalized.includes("preflight")) return "live preflight";
-  if (normalized.includes("cockpit") || normalized.includes("snapshot")) return "agent snapshot";
-  if (normalized.includes("trade")) return "chain trade";
-  return safeVisibleText(raw.replace(/^bnb_/, "chain_").replace(/_/g, " "));
-}
-
-function safeVisibleText(value: string) {
-  const marketBrand = ["Coin", "Market", "Cap"].join("");
-  const marketShort = ["C", "M", "C"].join("");
-  const walletBrand = ["Trust", " Wallet"].join("");
-  const signerBrand = ["T", "W", "A", "K"].join("");
-  return value
-    .replace(new RegExp(marketBrand, "gi"), "market signal")
-    .replace(new RegExp(`\\b${marketShort}\\b`, "g"), "market")
-    .replace(new RegExp(`${walletBrand} Agent Kit`, "gi"), "wallet-native signer")
-    .replace(new RegExp(walletBrand, "gi"), "wallet-native")
-    .replace(new RegExp(`\\b${signerBrand}\\b`, "gi"), "signer")
-    .replace(new RegExp(`\\b${marketShort.toLowerCase()}_`, "gi"), "market_")
-    .replace(new RegExp(`\\b${signerBrand.toLowerCase()}_`, "gi"), "signer_")
-    .replace(/\bblocked\b/gi, "guarded")
-    .replace(/\bwaiting\b/gi, "monitoring")
-    .replace(/\bpaused\b/gi, "safety hold");
-}
-
-function hasLivePrice(prices: Payload | undefined) {
-  if (!prices?.configured || prices.reachable === false) return false;
-  const symbols = prices.symbols ?? {};
-  return Object.values(symbols).some((item: any) => Boolean(item?.priceUsd));
-}
-
-function decision({
-  offline,
-  paused,
-  riskPass,
-  canExecute,
-}: {
-  offline: boolean;
-  paused: boolean;
-  riskPass: boolean;
-  canExecute: boolean;
-}) {
-  if (offline) return "offline";
-  if (paused) return "safety hold";
-  if (canExecute) return "ready";
-  if (riskPass) return "guarded";
-  return "monitoring";
 }
 
 export default AgentReasoningPanel;

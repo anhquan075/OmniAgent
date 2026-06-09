@@ -14,7 +14,7 @@ const shortHash = (hash: string) => `${hash.slice(0, 10)}...${hash.slice(-8)}`;
 
 export function ChainTxLog({ events }: { events: McpPayload[] }) {
   const txEvents = events.filter((event) => txHashOf(event));
-  const visibleEvents = txEvents.slice(0, 4);
+  const visibleEvents = txEvents.slice(0, 6);
 
   return (
     <section className="chain-tx-log-panel">
