@@ -3,7 +3,10 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from loguru import logger
+
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 class TrustWalletRestClient:
     @staticmethod
@@ -26,7 +29,7 @@ class TrustWalletRestClient:
             response.raise_for_status()
             payload = response.json()
         actions = payload.get("actions") if isinstance(payload.get("actions"), list) else []
-        logger.info("twak rest actions baseUrl={} count={}", base_url, len(actions))
+        logger.info("twak_rest_actions", baseUrl=base_url, count=len(actions))
         return payload
 
     @staticmethod
@@ -48,10 +51,10 @@ class TrustWalletRestClient:
             payload = response.json()
         result = TrustWalletRestClient.unwrap_action_payload(payload)
         logger.info(
-            "twak rest action={} success={} tx={}",
-            action,
-            result.get("success"),
-            result.get("txHash") or result.get("hash"),
+            "twak_rest_action_completed",
+            action=action,
+            success=result.get("success"),
+            txHash=result.get("txHash") or result.get("hash"),
         )
         return result
 

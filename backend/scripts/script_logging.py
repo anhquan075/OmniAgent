@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-import sys
+import os
 
-from loguru import logger
+from app.core.logging import configure_logging, get_logger
 
 
 def configure_script_logging() -> None:
-    logger.remove()
-    logger.add(
-        sys.stderr,
-        colorize=True,
-        format="<green>{time:HH:mm:ss}</green> | <level>{level}</level> | {message}",
-    )
+    os.environ.setdefault("OMNIAGENT_LOG_JSON", "false")
+    os.environ.setdefault("OMNIAGENT_LOG_STREAM", "stderr")
+    configure_logging()
+
+
+def get_script_logger(name: str | None = None):
+    return get_logger(name)

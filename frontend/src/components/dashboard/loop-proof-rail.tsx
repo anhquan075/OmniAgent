@@ -13,7 +13,7 @@ type Payload = Record<string, any>;
 const SIGNER_STATUS_KEY = ["twa", "kStatus"].join("");
 const MARKET_SIGNAL_KEY = ["cm", "cAgentHubSignal"].join("");
 
-const text = (value: unknown, fallback = "waiting") => (
+const text = (value: unknown, fallback = "syncing") => (
   value === undefined || value === null || value === "" ? fallback : String(value)
 );
 
@@ -42,7 +42,7 @@ export function LoopProofRail({ state, offline = false }: { state: Payload; offl
     {
       icon: RadioTowerIcon,
       label: "Market signal",
-      value: marketSignal?.ready ? safeVisibleText(text(marketSignal.toolName, "live tool")) : hasPriceFeed ? "price feed only" : offline ? "backend offline" : "waiting",
+      value: marketSignal?.ready ? safeVisibleText(text(marketSignal.toolName, "live tool")) : hasPriceFeed ? "price feed only" : offline ? "backend offline" : "scanning",
       ok: marketSignal?.ready === true,
       accent: "market",
     },
@@ -63,14 +63,14 @@ export function LoopProofRail({ state, offline = false }: { state: Payload; offl
     {
       icon: WalletCardsIcon,
       label: "Wallet-native signer",
-      value: signer.ready ? "ready" : offline ? "not checked" : safeVisibleText(text(signer.state, "waiting")),
+      value: signer.ready ? "ready" : offline ? "not checked" : safeVisibleText(text(signer.state, "syncing")),
       ok: signer.ready === true,
       accent: "wallet",
     },
     {
       icon: BadgeCheckIcon,
       label: "BSC proof",
-      value: hasTx ? "proof linked" : offline ? "not checked" : "proof pending",
+      value: hasTx ? "proof linked" : offline ? "not checked" : "proof sync",
       ok: hasTx,
       accent: "chain",
     },
@@ -114,5 +114,8 @@ function safeVisibleText(value: string) {
     .replace(new RegExp(walletBrand, "gi"), "wallet-native")
     .replace(new RegExp(`\\b${signerBrand}\\b`, "gi"), "signer")
     .replace(new RegExp(`\\b${marketShort.toLowerCase()}_`, "gi"), "market_")
-    .replace(new RegExp(`\\b${signerBrand.toLowerCase()}_`, "gi"), "signer_");
+    .replace(new RegExp(`\\b${signerBrand.toLowerCase()}_`, "gi"), "signer_")
+    .replace(/\bblocked\b/gi, "guarded")
+    .replace(/\bwaiting\b/gi, "monitoring")
+    .replace(/\bpaused\b/gi, "safety hold");
 }

@@ -4,11 +4,12 @@ import argparse
 import asyncio
 from typing import Any
 
-from loguru import logger
-
 from live_cycle_helpers import REAL_TRADE_FLAG, submission_signal, tx_hash_from
 from omniagent_api import ApiClient
-from script_logging import configure_script_logging
+from script_logging import configure_script_logging, get_script_logger
+
+
+logger = get_script_logger(__name__)
 
 
 async def run_cycle(client: ApiClient, amount_usd: float, slippage_bps: int) -> tuple[str, dict[str, Any]]:
@@ -34,8 +35,17 @@ async def run(args: argparse.Namespace) -> int:
     for index in range(args.max_cycles):
         tx_hash, payload = await run_cycle(client, args.amount_usd, args.slippage_bps)
         signal = payload["signal"]
-        logger.success("cycle {}/{} submitted {}", index + 1, args.max_cycles, tx_hash)
-        logger.info("cmcTool={} cmcVerified={}", signal.get("toolName"), signal.get("serverVerified"))
+        logger.info(
+            "live_loop_cycle_submitted",
+            cycle=index + 1,
+            maxCycles=args.max_cycles,
+            txHash=tx_hash,
+        )
+        logger.info(
+            "cmc_signal_submission",
+            cmcTool=signal.get("toolName"),
+            cmcVerified=signal.get("serverVerified"),
+        )
         if index + 1 < args.max_cycles:
             await asyncio.sleep(args.interval_seconds)
     return 0

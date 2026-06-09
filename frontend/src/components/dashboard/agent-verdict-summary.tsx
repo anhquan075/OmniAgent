@@ -13,16 +13,16 @@ export function AgentVerdictSummary({
   readyCount: number;
   total: number;
 }) {
-  const title = offline ? "No trade can be sent" : paused ? "Trading is paused" : canExecute ? "Ready when policy allows" : "Hold until checks pass";
+  const title = offline ? "No trade can be sent" : paused ? "Agent live in safety hold" : canExecute ? "Ready when policy allows" : "Monitoring safety gates";
   const body = offline
     ? "The backend session is offline, so market data, wallet checks, and proof checks are treated as unavailable."
     : paused
-      ? "Policy pause is active, so the agent keeps the trade path closed."
+      ? "Policy control is active, so the agent stays online while the trade path remains closed."
       : canExecute
         ? "The required checks are aligned; execution remains backend controlled."
         : riskPass
           ? "Risk checks passed, but execution still needs the remaining proof and wallet gates."
-          : "The agent is holding because key market, policy, wallet, or proof gates are not ready.";
+          : "The agent is live and checking market, policy, wallet, and proof gates.";
 
   return (
     <div className="reasoning-verdict-summary" aria-label="Reasoning summary">

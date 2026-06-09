@@ -3,10 +3,11 @@ from __future__ import annotations
 import argparse
 import asyncio
 
-from loguru import logger
-
 from omniagent_api import ApiClient
-from script_logging import configure_script_logging
+from script_logging import configure_script_logging, get_script_logger
+
+
+logger = get_script_logger(__name__)
 
 
 async def run(args: argparse.Namespace) -> int:
@@ -18,7 +19,7 @@ async def run(args: argparse.Namespace) -> int:
     symbols = prices.get("symbols") if isinstance(prices.get("symbols"), dict) else {}
     if not any(isinstance(item, dict) and item.get("priceUsd") for item in symbols.values()):
         raise RuntimeError("CMC price snapshot returned no prices.")
-    logger.success("CMC Agent Hub status and price snapshot ok")
+    logger.info("cmc_agent_hub_smoke_ok")
     return 0
 
 

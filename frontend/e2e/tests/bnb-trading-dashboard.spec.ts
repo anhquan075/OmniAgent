@@ -44,22 +44,23 @@ test.describe('BNB trading dashboard', () => {
 
     const box = await dashboard.boundingBox();
     expect(box?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(700);
+    const signalStrip = page.locator('.quant-signal-strip');
 
-    await expect(page.getByText('wallet').first()).toBeVisible();
+    await expect(page.locator('.quant-operator-metrics').getByText('Wallet')).toBeVisible();
     await expect(page.getByText('Market signal').first()).toBeVisible();
     await expect(page.getByText('Wallet-native signer').first()).toBeVisible();
-    await expect(page.getByText('Signal confidence').first()).toBeVisible();
+    await expect(signalStrip.getByText('Signal')).toBeVisible();
     await expect(page.getByText(/read-only/i).first()).toBeVisible();
-    await expect(page.getByText('backend offline').first()).toBeVisible();
-    await expect(page.getByText('API session unavailable').first()).toBeVisible();
     await expect(page.locator('.quant-status-band')).toBeVisible();
-    await expect(page.getByText('Data coverage').first()).toBeVisible();
-    await expect(page.getByText('Execution gate').first()).toBeVisible();
+    await expect(page.locator('.quant-status-band')).toContainText(/Active|Live|Offline/i);
+    await expect(page.locator('.quant-status-band')).toContainText(/PnL/i);
+    await expect(signalStrip.getByText('Coverage')).toBeVisible();
+    await expect(signalStrip.getByText('Gate')).toBeVisible();
     await expect(page.getByText('24h move').first()).toBeVisible();
     await expect(page.getByText('24h volume').first()).toBeVisible();
     await expect(page.getByText('Trade plan').first()).toBeVisible();
     await expect(page.getByText('Proof score').first()).toBeVisible();
-    await expect(page.getByText('Blocking checks', { exact: true })).toBeVisible();
+    await expect(page.getByText('Safety checks', { exact: true })).toBeVisible();
     await expect(page.getByText('Live safety check').first()).toBeVisible();
     await expect(page.getByText('Recovery candidates').first()).toBeVisible();
     await expect(page.getByText('Decision summary').first()).toBeVisible();
@@ -67,10 +68,11 @@ test.describe('BNB trading dashboard', () => {
     await expect(primaryVerdict).toBeVisible();
     const primaryVerdictBox = await primaryVerdict.boundingBox();
     const readinessBandBox = await page.locator('.quant-operator-band').boundingBox();
-    const offlineBriefBox = await page.locator('.quant-offline-brief').boundingBox();
-    expect(primaryVerdictBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(readinessBandBox?.y ?? 0);
-    expect(primaryVerdictBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(offlineBriefBox?.y ?? 0);
-    await expect(page.locator('.reasoning-verdict-summary')).toContainText('No trade can be sent');
+    const signalStripBox = await page.locator('.quant-signal-strip').boundingBox();
+    expect(primaryVerdictBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual((signalStripBox?.y ?? 0) + 1);
+    expect(readinessBandBox?.y ?? 0).toBeGreaterThanOrEqual(((signalStripBox?.y ?? 0) + (signalStripBox?.height ?? 0)) - 2);
+    await expect(page.locator('.reasoning-verdict-summary')).toContainText(/No trade can be sent|Agent live in safety hold|Monitoring safety gates|Ready when policy allows/);
+    await expect(page.locator('body')).not.toContainText(/\b(blocked|waiting|paused)\b/i);
     for (const label of removedRibbonLabels) {
       await expect(page.getByText(label, { exact: true })).toHaveCount(0);
     }

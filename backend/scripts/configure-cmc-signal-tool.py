@@ -4,11 +4,12 @@ import argparse
 import asyncio
 from pathlib import Path
 
-from loguru import logger
-
 from live_env import DEFAULT_ENV, parse_env, write_env
 from omniagent_api import ApiClient
-from script_logging import configure_script_logging
+from script_logging import configure_script_logging, get_script_logger
+
+
+logger = get_script_logger(__name__)
 
 
 async def choose_tool(api_url: str) -> str:
@@ -24,7 +25,7 @@ async def run(args: argparse.Namespace) -> int:
     values = parse_env(args.env)
     values["CMC_AGENT_HUB_SIGNAL_TOOL"] = tool_name
     write_env(args.env, values)
-    logger.success("Pinned CMC Agent Hub signal tool: {}", tool_name)
+    logger.info("cmc_signal_tool_pinned", toolName=tool_name)
     return 0
 
 

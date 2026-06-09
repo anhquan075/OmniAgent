@@ -74,6 +74,53 @@ def test_ledger_confirmed_trade_count_dedupes_same_tx_different_digest(monkeypat
     assert summary["dailyCompliance"]["tradeCount"] == 1
 
 
+def test_ledger_reports_registration_period_pnl(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    get_settings.cache_clear()
+    registration_tx = "0x" + "3" * 64
+
+    TradeLedger.append_event({
+        "eventType": "pnl_updated",
+        "createdAt": "2026-06-06T23:50:00+00:00",
+        "payload": {"totalReturnPct": 2, "maxDrawdownPct": 1},
+    })
+    TradeLedger.append_event({
+        "eventType": "competition_registered",
+        "txHash": registration_tx,
+        "createdAt": "2026-06-07T00:00:00+00:00",
+        "payload": {"txHash": registration_tx},
+    })
+    TradeLedger.append_event({
+        "eventType": "pnl_updated",
+        "createdAt": "2026-06-08T00:00:00+00:00",
+        "payload": {"totalReturnPct": 5, "maxDrawdownPct": 3},
+    })
+    TradeLedger.append_event({
+        "eventType": "pnl_updated",
+        "createdAt": "2026-06-09T00:00:00+00:00",
+        "payload": {"totalReturnPct": 7.5, "maxDrawdownPct": 2},
+    })
+
+    pnl = TradeLedger.get_ledger_summary(limit=5)["pnl"]
+    period = pnl["registrationPeriod"]
+
+    assert pnl["totalReturnPct"] == 7.5
+    assert period["source"] == "competition_registered"
+    assert period["registrationTxHash"] == registration_tx
+    assert period["registrationStartAt"] == "2026-06-07T00:00:00+00:00"
+    assert period["totalReturnPct"] == 5.5
+    assert period["maxDrawdownPct"] == 3
+    assert int(period["days"]) >= 1
+
+
+def test_ledger_reports_empty_registration_period_without_proof() -> None:
+    period = TradeLedger.latest_pnl([])["registrationPeriod"]
+
+    assert period["source"] == "no_registration"
+    assert period["registrationStartAt"] is None
+    assert period["totalReturnPct"] == 0
+
+
 def test_risk_check_can_skip_ledger_record(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     get_settings.cache_clear()

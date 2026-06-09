@@ -993,6 +993,7 @@ Full settings hierarchy from `backend/app/core/settings.py`:
 | **Server** | `PORT` | 8000 | FastAPI listen port |
 | | `OMNIAGENT_LOG_JSON` | true | Emit Loguru logs as JSON lines |
 | | `OMNIAGENT_LOG_LEVEL` | INFO | Backend log level |
+| | `OMNIAGENT_LOG_STREAM` | stdout | Log stream; keep stdout on Railway to avoid false error labels |
 | **Trading** | `bnb_trading_enabled` | false | Master kill switch |
 | | `allow_agent_run` | false | Secondary gate |
 | | `bnb_max_trade_usd` | 25.0 | Per-trade cap |
