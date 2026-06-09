@@ -105,7 +105,7 @@ function StageStep({ step, index, active }: { step: any; index: number; active: 
   const tone = done ? "text-neon-green" : guarded ? "text-red-200" : "text-white/38";
 
   return (
-    <div className={`timeline-step-card grid grid-cols-[34px_1fr] items-center gap-2 py-1.5 ${active ? "is-active" : ""} ${done ? "is-done" : ""}`} style={{ animationDelay: `${index * 70}ms` }}>
+    <div className={`timeline-step-card grid grid-cols-[34px_1fr] items-center gap-2 py-1.5 ${active ? "is-active" : ""} ${done ? "is-done" : ""} ${guarded ? "is-guarded" : ""}`} style={{ animationDelay: `${index * 70}ms` }}>
       <div className={`stage-node grid h-8 w-8 place-items-center rounded-sm border bg-black/80 ${done ? "border-neon-green/35" : guarded ? "border-red-300/30" : active ? "border-bnb-gold/45" : "border-white/10"}`}>
         <Icon className={`h-4 w-4 ${tone}`} />
       </div>
@@ -188,5 +188,7 @@ function safeTimelineText(value: string) {
   return value
     .replace(/\bblocked\b/gi, "guarded")
     .replace(/\bwaiting\b/gi, "monitoring")
-    .replace(/\bpaused\b/gi, "safety hold");
+    .replace(/\bpaused\b/gi, "safety hold")
+    .replace(/\bemergency[-_ ]pause\b/gi, "live safety gate")
+    .replace(/\bfunded[-_ ]route\b/gi, "funded route check");
 }

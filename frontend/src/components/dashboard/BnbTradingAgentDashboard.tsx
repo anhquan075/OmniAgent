@@ -171,7 +171,7 @@ export function BnbTradingAgentDashboard() {
             <span>{asText(lifecycle?.state ?? workOrders[0]?.state, 'active').replace(/blocked|waiting|paused/gi, 'guarded').replace(/[-_]+/g, ' ')}</span>
           </div>
           <TradeProofScorePanel score={proofScore} />
-          <TradeProofTimeline workOrders={workOrders} recovery={recovery} ledgerEvents={ledgerEvents} running={loading} />
+          <TradeProofTimeline workOrders={workOrders} recovery={recovery} ledgerEvents={ledgerEvents} running={loading || agentLoopEnabled} />
         </section>
         <div className="quant-side-stack quant-side-stack-readiness">
           <CompetitionReadinessStrip state={state} />
