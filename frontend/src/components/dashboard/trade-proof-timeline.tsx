@@ -40,18 +40,18 @@ export function TradeProofTimeline({ workOrders, recovery, ledgerEvents, running
   const activeIndex = firstPendingIndex === -1 ? -1 : firstPendingIndex;
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto py-2 custom-scrollbar">
-      <div className="mb-2 grid gap-2 rounded-md border border-white/10 bg-black/20 p-2">
-        <div className="flex items-center justify-between gap-2">
+    <div className="trade-plan-panel min-h-0 flex-1 overflow-y-auto custom-scrollbar">
+      <div className="trade-plan-card">
+        <div className="trade-plan-head">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase text-white/38">Current trade plan</p>
-            <p className="truncate font-mono text-[12px] text-bnb-gold">
+            <p className="trade-plan-eyebrow">Current trade plan</p>
+            <p className="trade-plan-route">
               {order ? humanizeState(order.id, "live policy monitor") : "live policy monitor"}
             </p>
           </div>
           <StateBadge state={humanizeState(order?.state, "monitoring")} />
         </div>
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="trade-plan-stats">
           <MiniStat label="Pair" value={`${text(order?.symbol, "BSC")} / ${text(order?.side, "hold")}`} />
           <MiniStat label="Ledger" value={`${ledgerEvents.length} events`} />
           <MiniStat label="Proof" value={latestProof ? "linked" : "none"} />
@@ -177,11 +177,11 @@ function EvidenceRow({ event, index }: { event: any; index: number }) {
 }
 
 function MiniStat({ label, value }: { label: string; value: string }) {
-  return <div className="min-w-0 rounded-sm bg-white/[0.035] px-2 py-1"><p className="text-[9px] uppercase text-white/34">{label}</p><p className="truncate font-mono text-[11px] text-white/68">{value}</p></div>;
+  return <div className="trade-plan-stat"><p>{label}</p><strong>{value}</strong></div>;
 }
 
 function StateBadge({ state }: { state: string }) {
-  return <span className="rounded-sm border border-white/10 bg-white/[0.035] px-1.5 py-1 font-mono text-[10px] uppercase text-white/50">{humanizeState(state)}</span>;
+  return <span className="trade-plan-state">{humanizeState(state)}</span>;
 }
 
 function safeTimelineText(value: string) {
