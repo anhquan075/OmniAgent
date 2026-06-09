@@ -70,12 +70,12 @@ export function TradeProofTimeline({ workOrders, recovery, ledgerEvents, running
           ))}
         </div>
       ) : (
-        <div className="rounded-md border border-dashed border-white/12 p-3 text-[12px] text-white/42">
+        <div className="trade-stage-empty rounded-md border border-dashed border-white/12 p-3 text-[12px] text-white/42">
           No trade plan has been recorded yet.
         </div>
       )}
 
-      <div className="mt-2 grid gap-2 lg:grid-cols-[1fr_0.95fr]">
+      <div className="trade-plan-support-grid mt-2 grid gap-2 lg:grid-cols-[1fr_0.95fr]">
         <ProofCard event={latestProof} />
         <RecoveryCard recovery={recovery} />
       </div>
