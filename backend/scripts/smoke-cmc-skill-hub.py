@@ -5,10 +5,11 @@ import asyncio
 import json
 from typing import Any
 
-from loguru import logger
-
 from omniagent_api import ApiClient
-from script_logging import configure_script_logging
+from script_logging import configure_script_logging, get_script_logger
+
+
+logger = get_script_logger(__name__)
 
 
 async def run(args: argparse.Namespace) -> int:
@@ -28,7 +29,7 @@ async def run(args: argparse.Namespace) -> int:
             raise RuntimeError(f"execute_skill preview failed: {preview}")
         if preview.get("error_code"):
             raise RuntimeError(f"execute_skill preview failed: {preview.get('error_code')}: {preview.get('reason')}")
-    logger.success("CMC Skill Hub smoke ok")
+    logger.info("cmc_skill_hub_smoke_ok")
     return 0
 
 

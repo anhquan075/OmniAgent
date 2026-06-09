@@ -1,11 +1,13 @@
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from datetime import datetime, timezone
 
-from loguru import logger
-
+from app.core.logging import get_logger
 from app.core.settings import get_settings
+from app.services.shared.ledger_pnl import LedgerPnl
+
+logger = get_logger(__name__)
 
 class TradeLedger:
     @staticmethod
@@ -130,33 +132,22 @@ class TradeLedger:
             proof = payload["submissionProof"]
             cmc_signal = proof.get("cmcAgentHubSignal") if isinstance(proof.get("cmcAgentHubSignal"), dict) else {}
         logger.info(
-            "ledger event={} intent={} tx={} status={} cmcTool={} cmcVerified={}",
-            event.get("eventType"),
-            event.get("tradeIntentId"),
-            event.get("txHash"),
-            payload.get("status") or payload.get("reason"),
-            cmc_signal.get("toolName"),
-            cmc_signal.get("serverVerified"),
+            "ledger_event_recorded",
+            eventType=event.get("eventType"),
+            tradeIntentId=event.get("tradeIntentId"),
+            txHash=event.get("txHash"),
+            status=payload.get("status") or payload.get("reason"),
+            cmcTool=cmc_signal.get("toolName"),
+            cmcVerified=cmc_signal.get("serverVerified"),
         )
 
     @staticmethod
     def is_today(value: object) -> bool:
-        if not isinstance(value, str) or not value:
+        timestamp = LedgerPnl.parse_timestamp(value)
+        if timestamp is None:
             return False
-        try:
-            timestamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            return False
-        return timestamp.astimezone(timezone.utc).date() == datetime.now(timezone.utc).date()
+        return timestamp.date() == datetime.now(timezone.utc).date()
 
     @staticmethod
-    def latest_pnl(events: list[dict[str, Any]]) -> dict[str, float]:
-        for event in reversed(events):
-            payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
-            for candidate in (payload, event):
-                if "totalReturnPct" in candidate or "maxDrawdownPct" in candidate:
-                    return {
-                        "totalReturnPct": float(candidate.get("totalReturnPct") or 0),
-                        "maxDrawdownPct": float(candidate.get("maxDrawdownPct") or 0),
-                    }
-        return {"totalReturnPct": 0, "maxDrawdownPct": 0}
+    def latest_pnl(events: list[dict[str, Any]]) -> dict[str, object]:
+        return LedgerPnl.latest(events)

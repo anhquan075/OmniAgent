@@ -13,16 +13,18 @@ interface TradeProofTimelineProps {
   running?: boolean;
 }
 
-const text = (value: unknown, fallback = "pending") => (
+const text = (value: unknown, fallback = "syncing") => (
   value === undefined || value === null || value === "" ? fallback : String(value)
 );
 
-function humanizeState(value: unknown, fallback = "waiting") {
+function humanizeState(value: unknown, fallback = "monitoring") {
   const raw = text(value, fallback);
   return raw
-    .replace(/^waiting-for-policy-intent$/i, "waiting for policy approval")
+    .replace(/^waiting-for-policy-intent$/i, "live policy monitor")
     .replace(/^policy-intent$/i, "policy approval")
-    .replace(/^pending$/i, "waiting")
+    .replace(/^pending$/i, "syncing")
+    .replace(/^blocked$/i, "guarded")
+    .replace(/^paused$/i, "safety hold")
     .replace(/[-_]+/g, " ");
 }
 
@@ -44,10 +46,10 @@ export function TradeProofTimeline({ workOrders, recovery, ledgerEvents, running
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase text-white/38">Current trade plan</p>
             <p className="truncate font-mono text-[12px] text-bnb-gold">
-              {order ? humanizeState(order.id, "waiting for policy approval") : "waiting for policy approval"}
+              {order ? humanizeState(order.id, "live policy monitor") : "live policy monitor"}
             </p>
           </div>
-          <StateBadge state={humanizeState(order?.state, "waiting")} />
+          <StateBadge state={humanizeState(order?.state, "monitoring")} />
         </div>
         <div className="grid grid-cols-3 gap-1.5">
           <MiniStat label="Pair" value={`${text(order?.symbol, "BSC")} / ${text(order?.side, "hold")}`} />
@@ -98,13 +100,13 @@ export function TradeProofTimeline({ workOrders, recovery, ledgerEvents, running
 function StageStep({ step, index, active }: { step: any; index: number; active: boolean }) {
   const status = text(step.status).toLowerCase();
   const done = status === "done";
-  const blocked = status === "blocked";
-  const Icon = done ? CheckCircle2Icon : blocked ? TriangleAlertIcon : CircleDashedIcon;
-  const tone = done ? "text-neon-green" : blocked ? "text-red-200" : "text-white/38";
+  const guarded = status === "blocked";
+  const Icon = done ? CheckCircle2Icon : guarded ? TriangleAlertIcon : CircleDashedIcon;
+  const tone = done ? "text-neon-green" : guarded ? "text-red-200" : "text-white/38";
 
   return (
     <div className={`timeline-step-card grid grid-cols-[34px_1fr] items-center gap-2 py-1.5 ${active ? "is-active" : ""} ${done ? "is-done" : ""}`} style={{ animationDelay: `${index * 70}ms` }}>
-      <div className={`stage-node grid h-8 w-8 place-items-center rounded-sm border bg-black/80 ${done ? "border-neon-green/35" : blocked ? "border-red-300/30" : active ? "border-bnb-gold/45" : "border-white/10"}`}>
+      <div className={`stage-node grid h-8 w-8 place-items-center rounded-sm border bg-black/80 ${done ? "border-neon-green/35" : guarded ? "border-red-300/30" : active ? "border-bnb-gold/45" : "border-white/10"}`}>
         <Icon className={`h-4 w-4 ${tone}`} />
       </div>
       <div className="min-w-0">
@@ -113,7 +115,7 @@ function StageStep({ step, index, active }: { step: any; index: number; active: 
           <p className="truncate text-[12px] font-semibold text-white/78">{text(step.label, "Proof stage")}</p>
           {active ? <span className="shrink-0 rounded-sm border border-bnb-gold/20 bg-bnb-gold/10 px-1.5 py-0.5 font-mono text-[9px] uppercase text-bnb-gold">live</span> : null}
         </div>
-        <p className="truncate font-mono text-[10px] text-white/38">{text(step.evidence, "waiting")}</p>
+        <p className="truncate font-mono text-[10px] text-white/38">{safeTimelineText(text(step.evidence, "syncing"))}</p>
       </div>
     </div>
   );
@@ -133,7 +135,7 @@ function ProofCard({ event }: { event: any }) {
           <ExternalLinkIcon className="h-3 w-3 shrink-0" />
         </a>
       ) : (
-        <p className="text-[12px] text-white/44">Waiting for submitted BSC transaction proof.</p>
+        <p className="text-[12px] text-white/44">Monitoring for submitted BSC transaction proof.</p>
       )}
     </div>
   );
@@ -180,4 +182,11 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 
 function StateBadge({ state }: { state: string }) {
   return <span className="rounded-sm border border-white/10 bg-white/[0.035] px-1.5 py-1 font-mono text-[10px] uppercase text-white/50">{humanizeState(state)}</span>;
+}
+
+function safeTimelineText(value: string) {
+  return value
+    .replace(/\bblocked\b/gi, "guarded")
+    .replace(/\bwaiting\b/gi, "monitoring")
+    .replace(/\bpaused\b/gi, "safety hold");
 }

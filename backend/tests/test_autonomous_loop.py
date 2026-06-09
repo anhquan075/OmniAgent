@@ -80,9 +80,9 @@ async def test_autonomous_loop_run_once_logs_json_schedule(monkeypatch, capsys) 
 
     await AutonomousLoopService.run_once(get_settings(), cycle_started_at="2026-06-09T00:00:00+00:00")
 
-    records = [json.loads(line)["record"] for line in capsys.readouterr().err.splitlines() if line.strip()]
-    events = {record["extra"].get("event"): record for record in records}
-    assert events["autonomous_loop_cycle_started"]["extra"]["execute"] is True
-    assert events["autonomous_loop_cycle_completed"]["extra"]["tradeIntentId"] == "intent-auto"
-    assert events["autonomous_loop_cycle_completed"]["extra"]["txHash"] == tx_hash
+    records = [json.loads(line) for line in capsys.readouterr().out.splitlines() if line.strip()]
+    events = {record["event"]: record for record in records}
+    assert events["autonomous_loop_cycle_started"]["execute"] is True
+    assert events["autonomous_loop_cycle_completed"]["tradeIntentId"] == "intent-auto"
+    assert events["autonomous_loop_cycle_completed"]["txHash"] == tx_hash
     get_settings.cache_clear()

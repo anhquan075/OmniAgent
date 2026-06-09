@@ -4,10 +4,11 @@ import argparse
 import os
 from pathlib import Path
 
-from loguru import logger
-
 from live_env import DEFAULT_ENV, parse_env, write_env
-from script_logging import configure_script_logging
+from script_logging import configure_script_logging, get_script_logger
+
+
+logger = get_script_logger(__name__)
 
 
 CMC_KEYS = (
@@ -51,7 +52,11 @@ def main() -> int:
     configure_script_logging()
     args = build_parser().parse_args()
     apply_live_flags(args.env, enable=bool(args.enable_live))
-    logger.success("Updated {} with live trading {}", args.env, "enabled" if args.enable_live else "disabled")
+    logger.info(
+        "live_env_updated",
+        env=str(args.env),
+        liveTrading="enabled" if args.enable_live else "disabled",
+    )
     return 0
 
 

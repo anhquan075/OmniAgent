@@ -3,11 +3,13 @@ import json
 import re
 
 import httpx
-from loguru import logger
 
+from app.core.logging import get_logger
 from app.core.settings import get_settings
 from app.services.cmc.prices import CMC_KEY_REASON
 from app.services.cmc.agent_hub import CmcAgentHubClient
+
+logger = get_logger(__name__)
 
 TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_.:/-]{1,160}$")
 MAX_ARGUMENT_BYTES = 20_000
@@ -140,9 +142,9 @@ class CmcAgentHubToolClient:
     @staticmethod
     def log_cmc_tool(payload: dict[str, object]) -> None:
         logger.info(
-            "cmc agent hub tool={} ready={} reachable={} reason={}",
-            payload.get("toolName"),
-            payload.get("ready"),
-            payload.get("reachable"),
-            payload.get("reason"),
+            "cmc_agent_hub_tool",
+            toolName=payload.get("toolName"),
+            ready=payload.get("ready"),
+            reachable=payload.get("reachable"),
+            reason=payload.get("reason"),
         )

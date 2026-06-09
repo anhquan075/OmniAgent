@@ -18,6 +18,7 @@ import {
   SignalTile,
 } from './quant-terminal-widgets';
 import { DecisionSummary } from './quant-terminal-market-panels';
+import { registrationPnlView } from './pnl-metrics';
 import { apiFetch } from '../../lib/api';
 
 type Payload = Record<string, any>;
@@ -39,7 +40,7 @@ export function BnbTradingAgentDashboard() {
   const [state, setState] = useState<Payload>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState('waiting');
+  const [lastUpdated, setLastUpdated] = useState('syncing');
 
   const loadSnapshot = useCallback(async (overrides: Payload = {}) => {
     setLoading(true);
@@ -91,66 +92,68 @@ export function BnbTradingAgentDashboard() {
   const signerValidated = Boolean(signerStatus.ready);
   const paused = Boolean(state.ledger?.control?.emergencyPaused);
   const offline = Boolean(error);
-  const mode = offline ? 'Offline' : paused ? 'Paused' : signerValidated ? 'Armed' : 'Guarded';
   const liveExecution = Boolean(state.livePreflight?.readyForLiveTrade);
   const backendHealth = state.backendHealth ?? {};
   const autonomousLoop = backendHealth.autonomousLoop ?? {};
   const agentLoopEnabled = Boolean(backendHealth.autonomousLoopEnabled);
   const nextRunTime = timeOnly(autonomousLoop.nextRunAt);
-  const loopMode = offline ? 'backend session' : nextRunTime ? `next ${nextRunTime}` : agentLoopEnabled ? 'agent active' : 'policy controlled';
+  const mode = offline ? 'Offline' : agentLoopEnabled ? 'Active' : signerValidated ? 'Armed' : 'Live';
+  const loopMode = offline ? 'backend session' : agentLoopEnabled ? '24/7 live' : nextRunTime ? `cycle ${nextRunTime}` : 'policy live';
   const txLogEvents = state.liveProofBundle?.txEvents?.length ? state.liveProofBundle.txEvents : ledgerEvents;
   const walletAddress = wallet.walletAddress ? String(wallet.walletAddress) : '';
-  const walletLabel = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : offline ? 'not checked' : 'pending';
-  const proofLabel = proofScore?.score !== undefined && proofScore?.total !== undefined ? `${proofScore.score}/${proofScore.total}` : offline ? 'not checked' : 'checking';
-  const marketLabel = state.prices?.configured ? 'online' : offline ? 'offline' : 'needs feed';
-  const signalConfidenceLabel = state.cycle?.strategyDecision?.decision?.confidence ? `${Math.round(state.cycle.strategyDecision.decision.confidence * 100)}%` : offline ? 'offline' : 'waiting';
-  const dataCoverageLabel = state.prices?.configured ? '100%' : offline ? 'offline' : 'waiting';
-  const loopStatusLabel = offline ? 'read-only' : asText(autonomousLoop.state, agentLoopEnabled ? 'automatic' : 'idle');
+  const pnl = registrationPnlView(state.ledger);
+  const walletLabel = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : offline ? 'offline' : 'syncing';
+  const proofLabel = proofScore?.score !== undefined && proofScore?.total !== undefined ? `${proofScore.score}/${proofScore.total}` : offline ? 'offline' : 'checking';
+  const marketLabel = state.prices?.configured ? 'online' : offline ? 'offline' : 'syncing';
+  const signalConfidenceLabel = state.cycle?.strategyDecision?.decision?.confidence ? `${Math.round(state.cycle.strategyDecision.decision.confidence * 100)}%` : offline ? 'offline' : 'scanning';
+  const dataCoverageLabel = state.prices?.configured ? '100%' : offline ? 'offline' : 'syncing';
+  const loopStatusLabel = offline ? 'read-only' : agentLoopEnabled ? asText(autonomousLoop.phase, 'monitoring') : asText(autonomousLoop.state, 'active');
   const readinessCopy = liveExecution
     ? 'Ready for a backend-controlled trade when policy allows it.'
-    : paused
-      ? 'Paused by policy; the cockpit stays in observation mode.'
-      : 'Watching market, wallet, proof, and policy gates before action.';
+    : 'Agent loop is live 24/7 and continuously monitors market, wallet, proof, and policy gates.';
 
   return (
     <div className={`robot-cockpit quant-terminal flex min-h-0 flex-col gap-2 ${loading ? 'is-refreshing' : ''}`}>
       <QuantTerminalHeader state={state} mode={mode} liveExecution={liveExecution} offline={offline} />
       <div className="quant-priority-row">
         <DecisionSummary state={state} />
-        <div className="quant-signal-strip">
-          <SignalTile label="Signal confidence" value={signalConfidenceLabel} hint={offline ? 'backend session' : 'trade conviction'} />
-          <SignalTile label="Decision source" value={state.cycle?.strategyDecision?.source === 'openrouter' ? 'model' : 'read-only'} hint="current mode" />
-          <SignalTile label="Data coverage" value={dataCoverageLabel} hint={offline ? 'backend session' : 'market feed'} />
-          <SignalTile label="Execution gate" value={state.livePreflight?.readyForLiveTrade ? 'ready' : 'guarded'} hint={loopMode} />
-          <SignalTile label="Ledger result" value={`${asText(state.ledger?.pnl?.totalReturnPct, '0')}%`} hint="portfolio change" />
+        <div className="quant-signal-stack">
+          <div className="quant-signal-strip">
+            <SignalTile label="Signal" value={signalConfidenceLabel} hint={offline ? 'backend session' : 'trade conviction'} />
+            <SignalTile label="Source" value={state.cycle?.strategyDecision?.source === 'openrouter' ? 'model' : 'read-only'} hint="current mode" />
+            <SignalTile label="Coverage" value={dataCoverageLabel} hint={offline ? 'backend session' : 'market feed'} />
+            <SignalTile label="Gate" value={state.livePreflight?.readyForLiveTrade ? 'ready' : agentLoopEnabled ? 'live' : 'guarded'} hint={loopMode} />
+            <SignalTile label={pnl.metricLabel} value={pnl.label} hint={pnl.hint} />
+          </div>
+          <section className={`quant-operator-band quant-status-band ${error ? 'has-error' : ''}`}>
+            <div className="quant-operator-copy">
+              <span>Readiness</span>
+              <strong>{mode}</strong>
+              <p>{readinessCopy}</p>
+            </div>
+            <div className="quant-operator-metrics" aria-label="Dashboard readiness">
+              <span><small>Market</small><b>{marketLabel}</b></span>
+              <span className={pnl.tone}><small>{pnl.metricLabel}</small><b>{pnl.label}</b></span>
+              <span><small>Proof</small><b>{proofLabel}</b></span>
+              <span><small>Wallet</small><b>{walletLabel}</b></span>
+            </div>
+            {error ? (
+              <div className="quant-error quant-offline-brief" aria-live="polite">
+                <div>
+                  <AlertTriangleIcon className="h-4 w-4" aria-hidden="true" />
+                  <span>API session unavailable</span>
+                </div>
+                <p>Live market, wallet, and proof checks stay guarded until the backend session recovers.</p>
+                <div className="quant-offline-meta" aria-label="Offline details">
+                  <span><small>Cause</small><b>{error}</b></span>
+                  <span><small>Mode</small><b>read-only</b></span>
+                  <span><small>Refresh</small><b>{Math.round(AUTO_REFRESH_MS / 1000)}s</b></span>
+                </div>
+              </div>
+            ) : null}
+          </section>
         </div>
       </div>
-      <section className={`quant-operator-band quant-status-band ${error ? 'has-error' : ''}`}>
-        <div className="quant-operator-copy">
-          <span>Readiness</span>
-          <strong>{mode}</strong>
-          <p>{readinessCopy}</p>
-        </div>
-        <div className="quant-operator-metrics" aria-label="Dashboard readiness">
-          <span><small>Market</small><b>{marketLabel}</b></span>
-          <span><small>Proof</small><b>{proofLabel}</b></span>
-          <span><small>Wallet</small><b>{walletLabel}</b></span>
-        </div>
-        {error ? (
-          <div className="quant-error quant-offline-brief" aria-live="polite">
-            <div>
-              <AlertTriangleIcon className="h-4 w-4" aria-hidden="true" />
-              <span>API session unavailable</span>
-            </div>
-            <p>Live market, wallet, and proof checks stay guarded until the backend session recovers.</p>
-            <div className="quant-offline-meta" aria-label="Offline details">
-              <span><small>Cause</small><b>{error}</b></span>
-              <span><small>Mode</small><b>read-only</b></span>
-              <span><small>Refresh</small><b>{Math.round(AUTO_REFRESH_MS / 1000)}s</b></span>
-            </div>
-          </div>
-        ) : null}
-      </section>
       <div className="quant-main-grid">
         <DecisionContextPanel state={state} offline={offline} loopStatusLabel={loopStatusLabel} liveExecution={liveExecution} />
       </div>
@@ -160,7 +163,7 @@ export function BnbTradingAgentDashboard() {
           <div className="quant-section-title">
             <BrainCircuitIcon className="h-4 w-4 text-bnb-gold" />
             Trade plan
-            <span>{asText(lifecycle?.state ?? workOrders[0]?.state, 'idle').replace(/[-_]+/g, ' ')}</span>
+            <span>{asText(lifecycle?.state ?? workOrders[0]?.state, 'active').replace(/blocked|waiting|paused/gi, 'guarded').replace(/[-_]+/g, ' ')}</span>
           </div>
           <TradeProofScorePanel score={proofScore} />
           <TradeProofTimeline workOrders={workOrders} recovery={recovery} ledgerEvents={ledgerEvents} running={loading} />
@@ -172,8 +175,10 @@ export function BnbTradingAgentDashboard() {
         </div>
         <div className="quant-side-stack quant-side-stack-reasoning">
           <AgentReasoningPanel state={state} offline={offline} paused={paused} />
-          <ChainTxLog events={txLogEvents} />
-          <ExecutedTradeHistory history={state.executedTrades} loading={loading} />
+          <div className="quant-execution-stack" aria-label="Backend execution evidence">
+            <ChainTxLog events={txLogEvents} />
+            <ExecutedTradeHistory history={state.executedTrades} loading={loading} />
+          </div>
         </div>
       </div>
       <p className="quant-footer">snapshot {lastUpdated} / {signerValidated ? 'signer valid' : 'signer guarded'} / {walletLabel}</p>

@@ -3,12 +3,13 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 
-from loguru import logger
-
 from app.services.shared.ledger import TradeLedger
 from app.services.trading.registration import CompetitionRegistrationService
 from app.services.wallet.agent_wallet import AgentWalletService
-from script_logging import configure_script_logging
+from script_logging import configure_script_logging, get_script_logger
+
+
+logger = get_script_logger(__name__)
 
 
 def run(args: argparse.Namespace) -> int:
@@ -21,7 +22,7 @@ def run(args: argparse.Namespace) -> int:
     )
     existing = TradeLedger.find_trade_event(tx_hash=str(proof["txHash"]), event_type="competition_registered")
     if existing:
-        logger.success("competition registration proof already recorded: {}", proof["txHash"])
+        logger.info("competition_registration_proof_already_recorded", txHash=proof["txHash"])
         return 0
     TradeLedger.append_event({
         "eventType": "competition_registered",
@@ -29,7 +30,7 @@ def run(args: argparse.Namespace) -> int:
         "payload": proof,
         "createdAt": datetime.now(timezone.utc).isoformat(),
     })
-    logger.success("recorded competition registration proof: {}", proof["txHash"])
+    logger.info("competition_registration_proof_recorded", txHash=proof["txHash"])
     return 0
 
 

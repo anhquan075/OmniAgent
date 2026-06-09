@@ -43,7 +43,7 @@ export function ChainTxLog({ events }: { events: McpPayload[] }) {
           );
         }) : (
           <div className="chain-tx-empty">
-            <strong>Awaiting chain proof</strong>
+            <strong>Monitoring chain proof</strong>
             <p>Signed swaps and registration hashes will appear here after the backend records live BSC proof.</p>
           </div>
         )}

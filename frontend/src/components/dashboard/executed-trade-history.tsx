@@ -39,6 +39,8 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
   const total = Number(history?.total ?? trades.length);
   const unavailable = history?.status === 'unavailable';
   const countLabel = unavailable ? 'offline' : total ? `${total} trades` : loading ? 'syncing' : 'empty';
+  const confirmedCount = trades.filter((trade: Payload) => text(trade.status, '') === 'confirmed').length;
+  const proofCount = trades.filter((trade: Payload) => trade.receiptProofValid === true).length;
 
   return (
     <section className="executed-trade-history-panel">
@@ -48,6 +50,11 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
           <h3>Executed Trade History</h3>
         </div>
         <b>{countLabel}</b>
+      </div>
+      <div className="executed-trade-summary" aria-label="Executed trade summary">
+        <span><small>Confirmed</small><strong>{confirmedCount}</strong></span>
+        <span><small>Proof</small><strong>{proofCount}</strong></span>
+        <span><small>Source</small><strong>{unavailable ? 'offline' : 'ledger'}</strong></span>
       </div>
       <div className="executed-trade-list" aria-label="Backend executed trades">
         {trades.length ? trades.map((trade: Payload, index: number) => {
@@ -63,7 +70,7 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
             >
               <div className="executed-trade-main">
                 <span>
-                  <small>{text(trade.side, 'trade')}</small>
+                  <small>{text(trade.side, 'backend trade')}</small>
                   <strong>{text(trade.symbol, 'BSC')}</strong>
                 </span>
                 <span>
@@ -73,7 +80,7 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
               </div>
               <div className="executed-trade-meta">
                 <span>{timeLabel(trade.confirmedAt ?? trade.executedAt ?? trade.createdAt)}</span>
-                <span>{proofValid ? 'receipt proof valid' : status === 'confirmed' ? 'receipt recorded' : 'receipt pending'}</span>
+                <span>{proofValid ? 'proof valid' : status === 'confirmed' ? 'proof recorded' : 'proof pending'}</span>
               </div>
               <div className="executed-trade-proof">
                 <span>
@@ -81,7 +88,7 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
                   {trade.cmcServerVerified ? text(trade.cmcTool, 'CMC verified') : text(trade.bridgeMode, 'ledger')}
                 </span>
                 {hash && explorerUrl ? (
-                  <a href={explorerUrl} target="_blank" rel="noreferrer">
+                  <a href={explorerUrl} target="_blank" rel="noreferrer" aria-label={`Open ${shortHash(hash)} on BscScan`}>
                     {shortHash(hash)}
                     <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
                   </a>

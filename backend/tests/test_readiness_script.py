@@ -44,7 +44,7 @@ def test_missing_cmc_agent_hub_signal_tool_is_warning_in_dry_run() -> None:
 
 def test_dry_readiness_counts_nonfatal_signal_warning(monkeypatch) -> None:
     module = load_script_module()
-    calls: list[tuple[str, tuple[object, ...]]] = []
+    calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
 
     class FakeClient:
         def __init__(self, api_url: str) -> None:
@@ -57,17 +57,14 @@ def test_dry_readiness_counts_nonfatal_signal_warning(monkeypatch) -> None:
             return {"cmcAgentHubSignal": {"ready": False, "reason": "tool missing"}, "blockers": []}
 
     class FakeLogger:
-        def success(self, *args: object) -> None:
-            calls.append(("success", args))
+        def warning(self, *args: object, **kwargs: object) -> None:
+            calls.append(("warning", args, kwargs))
 
-        def warning(self, *args: object) -> None:
-            calls.append(("warning", args))
+        def error(self, *args: object, **kwargs: object) -> None:
+            calls.append(("error", args, kwargs))
 
-        def error(self, *args: object) -> None:
-            calls.append(("error", args))
-
-        def info(self, *args: object) -> None:
-            calls.append(("info", args))
+        def info(self, *args: object, **kwargs: object) -> None:
+            calls.append(("info", args, kwargs))
 
     monkeypatch.setattr(module, "ApiClient", FakeClient)
     monkeypatch.setattr(module, "logger", FakeLogger())
@@ -75,8 +72,8 @@ def test_dry_readiness_counts_nonfatal_signal_warning(monkeypatch) -> None:
     result = asyncio.run(module.run(SimpleNamespace(api_url="http://127.0.0.1:8000", live=False)))
 
     assert result == 0
-    assert any(name == "warning" and args[0] == "{}: {}" for name, args in calls)
-    assert ("info", ("readiness summary: {} errors, {} warnings", 0, 1)) in calls
+    assert ("warning", ("readiness_warning",), {"check": "cmc_agent_hub_signal", "reason": "tool missing"}) in calls
+    assert ("info", ("readiness_summary",), {"errors": 0, "warnings": 1}) in calls
 
 
 def test_live_flags_are_warning_in_dry_run_and_error_in_live_mode() -> None:

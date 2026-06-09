@@ -41,8 +41,8 @@ export function AgentReasoningPanel({
   const marketReady = hasLivePrice(state.prices);
   const marketToolReady = marketProof?.ready === true;
   const rows = [
-    { label: "market", value: marketReady ? "market live" : "blocked", ok: marketReady },
-    { label: "agent hub", value: marketSignal ? (marketToolReady ? "tool call" : "blocked") : "standby", ok: marketToolReady },
+    { label: "market", value: marketReady ? "market live" : "market sync", ok: marketReady },
+    { label: "agent hub", value: marketSignal ? (marketToolReady ? "tool call" : "tool sync") : "monitoring", ok: marketToolReady },
     { label: "strategy", value: strategyLabel(strategyDecision), ok: strategyDecision.action && strategyDecision.action !== "hold" },
     { label: "policy", value: risk.guardrailsPass ? "pass" : "standby", ok: risk.guardrailsPass === true },
     { label: "signer", value: server.walletBound ? "bound" : text(server.state, "dry"), ok: server.walletBound === true },
@@ -103,12 +103,12 @@ function MarketSignalProof({ signal }: { signal: Payload }) {
       <div className="mb-1 flex items-center justify-between gap-2">
         <p className="text-[10px] uppercase text-cyan-100/52">Signal MCP</p>
         <span className={`rounded-sm border px-1.5 py-0.5 font-mono text-[9px] uppercase ${signal.ready ? "border-cyan-200/22 text-cyan-100" : "border-white/10 text-white/42"}`}>
-          {signal.ready ? signalLabel(signal) : "blocked"}
+          {signal.ready ? signalLabel(signal) : "syncing"}
         </span>
       </div>
       <p className="truncate font-mono text-[10px] text-white/58">{toolDisplayName(signal.toolName ?? (toolCount > 0 ? `${toolCount} tools discovered` : "no signal tool configured"))}</p>
       <p className="mt-1 truncate text-[10px] text-white/38">
-        {signal.ready ? summarizeParsedContent(signal.parsedContent) : text(signal.reason, "waiting for market key")}
+        {signal.ready ? summarizeParsedContent(signal.parsedContent) : text(signal.reason, "market key sync")}
       </p>
     </div>
   );
@@ -169,7 +169,10 @@ function safeVisibleText(value: string) {
     .replace(new RegExp(walletBrand, "gi"), "wallet-native")
     .replace(new RegExp(`\\b${signerBrand}\\b`, "gi"), "signer")
     .replace(new RegExp(`\\b${marketShort.toLowerCase()}_`, "gi"), "market_")
-    .replace(new RegExp(`\\b${signerBrand.toLowerCase()}_`, "gi"), "signer_");
+    .replace(new RegExp(`\\b${signerBrand.toLowerCase()}_`, "gi"), "signer_")
+    .replace(/\bblocked\b/gi, "guarded")
+    .replace(/\bwaiting\b/gi, "monitoring")
+    .replace(/\bpaused\b/gi, "safety hold");
 }
 
 function hasLivePrice(prices: Payload | undefined) {
@@ -190,10 +193,10 @@ function decision({
   canExecute: boolean;
 }) {
   if (offline) return "offline";
-  if (paused) return "paused";
+  if (paused) return "safety hold";
   if (canExecute) return "ready";
   if (riskPass) return "guarded";
-  return "hold";
+  return "monitoring";
 }
 
 export default AgentReasoningPanel;

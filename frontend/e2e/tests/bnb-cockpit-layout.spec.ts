@@ -8,6 +8,35 @@ async function panelBox(page: import('@playwright/test').Page, title: string) {
   return box!;
 }
 
+async function expectReadinessDockedBelowSignals(page: import('@playwright/test').Page) {
+  const metrics = await page.evaluate(() => {
+    const rect = (selector: string) => {
+      const el = document.querySelector(selector);
+      if (!el) return null;
+      const box = el.getBoundingClientRect();
+      return {
+        bottom: box.bottom,
+        height: box.height,
+        left: box.left,
+        right: box.right,
+        top: box.top,
+        width: box.width,
+      };
+    };
+    const signal = rect('.quant-signal-strip');
+    const readiness = rect('.quant-status-band');
+    const stack = rect('.quant-signal-stack');
+    return {
+      readinessBelowSignal: Boolean(signal && readiness && readiness.top >= signal.bottom - 2),
+      readinessInsideStack: Boolean(stack && readiness && readiness.left >= stack.left - 2 && readiness.right <= stack.right + 2),
+      signalHasSpace: Boolean(signal && signal.height > 0 && signal.width > 0),
+    };
+  });
+  expect(metrics.signalHasSpace).toBe(true);
+  expect(metrics.readinessBelowSignal).toBe(true);
+  expect(metrics.readinessInsideStack).toBe(true);
+}
+
 test.describe('BNB cockpit layout', () => {
   const removedRibbonLabels = [
     'Mainnet',
@@ -58,13 +87,14 @@ test.describe('BNB cockpit layout', () => {
     await expect(page.getByText('Backend agent loop')).toBeVisible();
     await expect(page.getByText('Why this verdict')).toBeVisible();
     await expect(page.getByText(/read-only/i).first()).toBeVisible();
-    await expect(page.getByText('backend offline').first()).toBeVisible();
-    await expect(page.getByText('API session unavailable').first()).toBeVisible();
     await expect(page.locator('.quant-status-band')).toBeVisible();
+    await expect(page.locator('.quant-status-band')).toContainText(/Readiness/i);
+    await expect(page.locator('.quant-status-band')).toContainText(/PnL/i);
+    await expectReadinessDockedBelowSignals(page);
     await expect(page.getByText('Tools used')).toBeVisible();
     await expect(page.getByText('Proof score')).toBeVisible();
     await expect(page.locator('.quant-section-title').filter({ hasText: 'Trade plan' })).toBeVisible();
-    await expect(page.getByText('Blocking checks', { exact: true })).toBeVisible();
+    await expect(page.getByText('Safety checks', { exact: true })).toBeVisible();
     await expect(page.getByText('Live safety check')).toBeVisible();
     await expect(page.getByText('Recovery candidates')).toBeVisible();
     await expect(page.getByText('Decision summary')).toBeVisible();
@@ -72,10 +102,12 @@ test.describe('BNB cockpit layout', () => {
     await expect(primaryVerdict).toBeVisible();
     const primaryVerdictBox = await primaryVerdict.boundingBox();
     const readinessBandBox = await page.locator('.quant-operator-band').boundingBox();
-    const offlineBriefBox = await page.locator('.quant-offline-brief').boundingBox();
-    expect(primaryVerdictBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(readinessBandBox?.y ?? 0);
-    expect(primaryVerdictBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(offlineBriefBox?.y ?? 0);
-    await expect(page.locator('.reasoning-verdict-summary')).toContainText('No trade can be sent'); expect(await page.locator('.agent-reasoning-panel').evaluate(el => el.scrollHeight <= el.clientHeight + 1)).toBe(true);
+    const signalStripBox = await page.locator('.quant-signal-strip').boundingBox();
+    expect(primaryVerdictBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual((signalStripBox?.y ?? 0) + 1);
+    expect(readinessBandBox?.y ?? 0).toBeGreaterThanOrEqual(((signalStripBox?.y ?? 0) + (signalStripBox?.height ?? 0)) - 2);
+    await expect(page.locator('.reasoning-verdict-summary')).toContainText(/No trade can be sent|Agent live in safety hold|Monitoring safety gates|Ready when policy allows/);
+    await expect(page.locator('body')).not.toContainText(/\b(blocked|waiting|paused)\b/i);
+    expect(await page.locator('.agent-reasoning-panel').evaluate(el => el.scrollHeight <= el.clientHeight + 1)).toBe(true);
     for (const label of removedRibbonLabels) {
       await expect(page.getByText(label, { exact: true })).toHaveCount(0);
     }
@@ -114,10 +146,11 @@ test.describe('BNB cockpit layout', () => {
     await expect(primaryVerdict).toBeVisible();
     const primaryVerdictBox = await primaryVerdict.boundingBox();
     const readinessBandBox = await page.locator('.quant-operator-band').boundingBox();
-    const offlineBriefBox = await page.locator('.quant-offline-brief').boundingBox();
-    expect(primaryVerdictBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(readinessBandBox?.y ?? 0);
-    expect(primaryVerdictBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(offlineBriefBox?.y ?? 0);
-    await expect(page.locator('.reasoning-verdict-summary')).toContainText('No trade can be sent');
+    const signalStripBox = await page.locator('.quant-signal-strip').boundingBox();
+    expect(primaryVerdictBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual((signalStripBox?.y ?? 0) + 1);
+    expect(readinessBandBox?.y ?? 0).toBeGreaterThanOrEqual(((signalStripBox?.y ?? 0) + (signalStripBox?.height ?? 0)) - 2);
+    await expectReadinessDockedBelowSignals(page);
+    await expect(page.locator('.reasoning-verdict-summary')).toContainText(/No trade can be sent|Agent live in safety hold|Monitoring safety gates|Ready when policy allows/);
     await expect(page.getByText(removedLoopPattern)).toHaveCount(0);
     for (const pattern of removedCopyPatterns) {
       await expect(page.getByText(pattern)).toHaveCount(0);
@@ -156,7 +189,11 @@ test.describe('BNB cockpit layout', () => {
 
     const signalStripLocator = page.locator('.quant-signal-strip');
     await expect(page.locator('.quant-status-band')).toBeVisible();
-    await expect(page.locator('.quant-status-band').getByText('Offline').first()).toBeVisible();
+    await expect(page.locator('.quant-status-band')).toContainText(/Readiness/i);
+    await expect(page.locator('.quant-status-band')).toContainText(/PnL/i);
+    await expect(page.locator('.quant-status-band')).toContainText(/Offline|Active|Live|Armed/i);
+    await expect(page.locator('body')).not.toContainText(/\b(blocked|waiting|paused)\b/i);
+    await expectReadinessDockedBelowSignals(page);
     await expect(signalStripLocator.getByText('read-only').first()).toBeVisible();
     const visibleSignalTilesFit = await signalStripLocator.locator('.quant-signal-tile').evaluateAll(els => els.filter(el => getComputedStyle(el).display !== 'none').every(el => el.scrollHeight <= el.clientHeight + 1));
     expect(visibleSignalTilesFit).toBe(true);

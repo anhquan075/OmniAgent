@@ -4,10 +4,11 @@ import argparse
 import asyncio
 from typing import Any
 
-from loguru import logger
-
 from omniagent_api import ApiClient
-from script_logging import configure_script_logging
+from script_logging import configure_script_logging, get_script_logger
+
+
+logger = get_script_logger(__name__)
 
 
 def require_prices(payload: dict[str, Any], symbols: list[str]) -> None:
@@ -51,7 +52,7 @@ async def run(args: argparse.Namespace) -> int:
     signal = preflight.get("cmcAgentHubSignal") if isinstance(preflight.get("cmcAgentHubSignal"), dict) else {}
     if not signal.get("ready"):
         raise RuntimeError(str(signal.get("reason") or "CMC Agent Hub signal proof is not ready"))
-    logger.success("CMC Agent Hub live proof ok via {}", signal.get("toolName"))
+    logger.info("cmc_agent_hub_live_proof_ok", toolName=signal.get("toolName"))
     return 0
 
 

@@ -5,10 +5,11 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any
 
-from loguru import logger
-
 from omniagent_api import ApiClient
-from script_logging import configure_script_logging
+from script_logging import configure_script_logging, get_script_logger
+
+
+logger = get_script_logger(__name__)
 
 
 @dataclass
@@ -73,13 +74,13 @@ async def run(args: argparse.Namespace) -> int:
     for result in summarize_preflight(preflight, live=args.live):
         if result.severity == "warn":
             warnings += 1
-            logger.warning("{}: {}", result.name, result.reason)
+            logger.warning("readiness_warning", check=result.name, reason=result.reason)
         elif result.ok:
-            logger.success("{} ok", result.name)
+            logger.info("readiness_check_ok", check=result.name)
         elif result.severity == "error":
             errors += 1
-            logger.error("{}: {}", result.name, result.reason)
-    logger.info("readiness summary: {} errors, {} warnings", errors, warnings)
+            logger.error("readiness_error", check=result.name, reason=result.reason)
+    logger.info("readiness_summary", errors=errors, warnings=warnings)
     return 1 if errors else 0
 
 
