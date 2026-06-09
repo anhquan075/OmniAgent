@@ -1,5 +1,7 @@
 from typing import Any
 
+from app.services.agent.ledger_memory_normalizer import LedgerMemoryNormalizer
+
 
 class LedgerMemoryService:
     @staticmethod
@@ -9,10 +11,13 @@ class LedgerMemoryService:
         proof_bundle: dict[str, Any],
         cycle: dict[str, Any] | None = None,
     ) -> dict[str, object]:
-        events = [event for event in ledger.get("events") or [] if isinstance(event, dict)]
-        latest = LedgerMemoryService.latest_decision(events, cycle or {})
+        events = [
+            event for event in ledger.get("events") or []
+            if isinstance(event, dict) and not LedgerMemoryNormalizer.is_synthetic_event(event)
+        ]
         why_no_trade = LedgerMemoryService.why_no_trade(events, preflight, proof_bundle)
         why_trade = LedgerMemoryService.why_trade(events, preflight, proof_bundle, cycle or {})
+        latest = LedgerMemoryService.latest_decision(events, cycle or {}, preflight, proof_bundle, why_no_trade)
         return {
             "source": "trade-ledger",
             "style": "finmem-inspired",
@@ -28,13 +33,25 @@ class LedgerMemoryService:
         }
 
     @staticmethod
-    def latest_decision(events: list[dict[str, Any]], cycle: dict[str, Any]) -> dict[str, object]:
+    def latest_decision(
+        events: list[dict[str, Any]],
+        cycle: dict[str, Any],
+        preflight: dict[str, Any],
+        proof_bundle: dict[str, Any],
+        why_no_trade: list[str],
+    ) -> dict[str, object]:
+        guarded = LedgerMemoryNormalizer.is_guarded(preflight, proof_bundle)
         cycle_decision = ((cycle.get("strategyDecision") or {}).get("decision") or {})
         if cycle_decision:
+            action = str(cycle_decision.get("action") or "hold")
             return {
-                "action": str(cycle_decision.get("action") or "hold"),
-                "status": str(cycle.get("status") or "monitoring"),
-                "reason": str(cycle_decision.get("rationale") or "latest autonomous cycle"),
+                "action": LedgerMemoryNormalizer.safe_action_label(action, guarded),
+                "status": "guarded" if guarded else str(cycle.get("status") or "monitoring"),
+                "reason": str(
+                    why_no_trade[0]
+                    if guarded and why_no_trade
+                    else cycle_decision.get("rationale") or "latest autonomous cycle"
+                ),
                 "source": str((cycle.get("strategyDecision") or {}).get("source") or "cycle"),
                 "tradeIntentId": cycle.get("tradeIntentId"),
                 "createdAt": cycle.get("completedAt") or cycle.get("startedAt"),
@@ -45,9 +62,12 @@ class LedgerMemoryService:
             action = event.get("action") or payload.get("side") or payload.get("action")
             reason = payload.get("reason") or payload.get("status") or event_type
             return {
-                "action": str(action or LedgerMemoryService.action_from_event(event_type)),
-                "status": str(payload.get("status") or LedgerMemoryService.status_from_event(event_type)),
-                "reason": str(reason),
+                "action": LedgerMemoryNormalizer.safe_action_label(
+                    str(action or LedgerMemoryService.action_from_event(event_type)),
+                    guarded or event_type == "trade_blocked",
+                ),
+                "status": "guarded" if guarded or event_type == "trade_blocked" else str(payload.get("status") or LedgerMemoryService.status_from_event(event_type)),
+                "reason": str(why_no_trade[0] if (guarded or event_type == "trade_blocked") and why_no_trade else reason),
                 "source": "trade-ledger",
                 "tradeIntentId": event.get("tradeIntentId"),
                 "createdAt": event.get("createdAt"),
@@ -71,15 +91,15 @@ class LedgerMemoryService:
         blockers = preflight.get("blockers") if isinstance(preflight.get("blockers"), list) else []
         for blocker in blockers[:4]:
             if isinstance(blocker, dict):
-                reasons.append(str(blocker.get("reason") or blocker.get("name") or "preflight guarded"))
+                reasons.extend(LedgerMemoryNormalizer.reason_parts(blocker.get("reason") or blocker.get("name") or "preflight guarded"))
         proof_score = proof_bundle.get("proofScore") if isinstance(proof_bundle.get("proofScore"), dict) else {}
         for blocker in (proof_score.get("hardBlockers") or [])[:4]:
-            reasons.append(str(blocker))
+            reasons.extend(LedgerMemoryNormalizer.reason_parts(blocker))
         for event in events:
             if event.get("eventType") != "trade_blocked":
                 continue
             payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
-            reasons.append(str(payload.get("reason") or event.get("action") or "trade blocked"))
+            reasons.extend(LedgerMemoryNormalizer.reason_parts(payload.get("reason") or event.get("action") or "trade blocked"))
             break
         return LedgerMemoryService.unique(reasons) or ["No active no-trade reason recorded."]
 
@@ -94,6 +114,8 @@ class LedgerMemoryService:
         decision = ((cycle.get("strategyDecision") or {}).get("decision") or {})
         if decision.get("rationale"):
             reasons.append(str(decision["rationale"]))
+        if LedgerMemoryNormalizer.is_guarded(preflight, proof_bundle):
+            return ["No executable trade thesis while live safety gates are guarded."]
         if preflight.get("readyForLiveTrade") is True:
             reasons.append("Live preflight passed all deterministic backend gates.")
         proof_score = proof_bundle.get("proofScore") if isinstance(proof_bundle.get("proofScore"), dict) else {}

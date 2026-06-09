@@ -55,7 +55,7 @@ export function toolDisplayName(value: unknown) {
   if (normalized.includes(signerShort) || normalized.includes("trust")) return "wallet-native signer";
   if (normalized.includes("wallet")) return "wallet signer";
   if (normalized.includes("proof")) return "proof bundle";
-  if (normalized.includes("preflight")) return "live preflight";
+  if (normalized.includes("preflight")) return "policy precheck";
   if (normalized.includes("cockpit") || normalized.includes("snapshot")) return "agent snapshot";
   if (normalized.includes("trade")) return "chain trade";
   return safeVisibleText(raw.replace(/^bnb_/, "chain_").replace(/_/g, " "));

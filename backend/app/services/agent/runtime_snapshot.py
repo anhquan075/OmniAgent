@@ -6,6 +6,7 @@ from app.services.agent.backtest_report import BacktestRiskReportService
 from app.services.agent.cockpit import AgentCockpitService
 from app.services.agent.identity import BnbAgentIdentityService
 from app.services.agent.ledger_memory import LedgerMemoryService
+from app.services.agent.sdk_runtime import BnbAgentSdkRuntimeService
 from app.services.agent.status import BnbAgentStatusService
 from app.services.agent.strategy_research import StrategyResearchService
 from app.services.shared.ledger import TradeLedger
@@ -32,6 +33,8 @@ class BnbAgentRuntimeService:
     ) -> dict[str, object]:
         ledger = cockpit.get("ledger") if isinstance(cockpit.get("ledger"), dict) else TradeLedger.get_ledger_summary(limit=25)
         sdk_status = cockpit.get("sdkStatus") if isinstance(cockpit.get("sdkStatus"), dict) else BnbAgentStatusService.get_agent_sdk_status_dict()
+        wallet = cockpit.get("wallet") if isinstance(cockpit.get("wallet"), dict) else {}
+        sdk_runtime = BnbAgentSdkRuntimeService.get_facade_snapshot(str(wallet.get("walletAddress") or ""), sdk_status)
         memory = LedgerMemoryService.build(ledger, preflight, proof_bundle, cycle)
         report = BacktestRiskReportService.build(ledger, proof_bundle)
         research = StrategyResearchService.build(cockpit, preflight, proof_bundle, memory)
@@ -43,7 +46,8 @@ class BnbAgentRuntimeService:
             "sdkExecutesTrades": False,
             "executorBoundary": "BNB Agent SDK provides identity, profile, status, and memory surfaces; TWAK signs and submits trades.",
             "sdkStatus": sdk_status,
-            "agentProfile": BnbAgentRuntimeService.agent_profile(cockpit, sdk_status),
+            "sdkRuntime": sdk_runtime,
+            "agentProfile": BnbAgentRuntimeService.agent_profile(cockpit, sdk_status, sdk_runtime),
             "identityRegistration": BnbAgentRuntimeService.identity_registration(sdk_status),
             "ledgerMemory": memory,
             "strategyResearch": research,
@@ -69,7 +73,7 @@ class BnbAgentRuntimeService:
         return {"network": "bsc", **snapshot["backtestRiskReport"]}  # type: ignore[arg-type]
 
     @staticmethod
-    def agent_profile(cockpit: dict[str, Any], sdk_status: dict[str, Any]) -> dict[str, object]:
+    def agent_profile(cockpit: dict[str, Any], sdk_status: dict[str, Any], sdk_runtime: dict[str, Any]) -> dict[str, object]:
         settings = get_settings()
         wallet = cockpit.get("wallet") if isinstance(cockpit.get("wallet"), dict) else {}
         agent_uri = BnbAgentRuntimeService.agent_uri(wallet)
@@ -81,7 +85,13 @@ class BnbAgentRuntimeService:
             "agentUriGenerated": bool(agent_uri),
             "agentUriPreview": f"{agent_uri[:96]}..." if agent_uri and len(agent_uri) > 96 else agent_uri,
             "capabilities": [
+                {"name": "bnbagent_facade", "provider": "bnbagent", "ready": bool(sdk_runtime.get("facadeInitialized"))},
                 {"name": "erc8004_identity", "provider": "bnbagent", "ready": bool(sdk_status.get("ready"))},
+                {
+                    "name": "erc8183_protocol",
+                    "provider": "bnbagent",
+                    "ready": "erc8183" in (sdk_runtime.get("modulesInitialized") or []),
+                },
                 {"name": "ledger_memory", "provider": "omniagent", "ready": True},
                 {"name": "cmc_signal", "provider": "coinmarketcap", "ready": bool((cockpit.get("prices") or {}).get("configured"))},
                 {"name": "twak_execution", "provider": "twak", "ready": bool((cockpit.get("twakStatus") or {}).get("ready"))},

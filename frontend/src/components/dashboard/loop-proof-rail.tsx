@@ -2,11 +2,18 @@ import {
   ActivityIcon,
   BadgeCheckIcon,
   CircleDashedIcon,
+  ExternalLinkIcon,
   RadioTowerIcon,
-  RouteIcon,
   ShieldCheckIcon,
   WalletCardsIcon,
 } from "lucide-react";
+import {
+  bscAddressLink,
+  CMC_SYMBOL_LINKS,
+  latestTxLinkFromState,
+  marketSignalLinks,
+} from "./live-evidence-links";
+import BrandMark from "./brand-mark";
 
 type Payload = Record<string, any>;
 
@@ -35,7 +42,11 @@ export function LoopProofRail({ state, offline = false }: { state: Payload; offl
     || proofScore.checks?.policyGate === true;
   const signer = state[SIGNER_STATUS_KEY] ?? {};
   const hasTx = Boolean(proof.latestReceiptStatus?.txHash ?? proof.latestSubmission?.txHash ?? proof.txEvents?.[0]?.txHash);
+  const txLink = latestTxLinkFromState(state);
+  const walletLink = bscAddressLink(state.wallet?.walletAddress ?? signer.observedWallet, "Wallet proof");
   const hasPriceFeed = Boolean(state.prices?.configured);
+  const marketLink = marketSignalLinks(marketSignal)[0]
+    ?? (hasPriceFeed ? { label: "CMC BNB market", href: CMC_SYMBOL_LINKS.BNB } : null);
   const hasStrategyDecision = Boolean(decision.action);
 
   const steps = [
@@ -45,6 +56,8 @@ export function LoopProofRail({ state, offline = false }: { state: Payload; offl
       value: marketSignal?.ready ? safeVisibleText(text(marketSignal.toolName, "live tool")) : hasPriceFeed ? "price feed only" : offline ? "backend offline" : "scanning",
       ok: marketSignal?.ready === true,
       accent: "market",
+      link: marketLink,
+      brand: "cmc" as const,
     },
     {
       icon: ActivityIcon,
@@ -52,6 +65,7 @@ export function LoopProofRail({ state, offline = false }: { state: Payload; offl
       value: decision.action ? `${decision.action} ${Math.round(Number(decision.confidence ?? 0) * 100)}%` : offline ? "backend offline" : "monitoring",
       ok: hasStrategyDecision,
       accent: "strategy",
+      link: marketLink,
     },
     {
       icon: ShieldCheckIcon,
@@ -59,6 +73,7 @@ export function LoopProofRail({ state, offline = false }: { state: Payload; offl
       value: riskReady ? "pass" : "guarded",
       ok: riskReady,
       accent: "risk",
+      link: txLink,
     },
     {
       icon: WalletCardsIcon,
@@ -66,6 +81,8 @@ export function LoopProofRail({ state, offline = false }: { state: Payload; offl
       value: signer.ready ? "ready" : offline ? "not checked" : safeVisibleText(text(signer.state, "syncing")),
       ok: signer.ready === true,
       accent: "wallet",
+      link: walletLink,
+      brand: "trust" as const,
     },
     {
       icon: BadgeCheckIcon,
@@ -73,13 +90,15 @@ export function LoopProofRail({ state, offline = false }: { state: Payload; offl
       value: hasTx ? "proof linked" : offline ? "not checked" : "proof sync",
       ok: hasTx,
       accent: "chain",
+      link: txLink,
+      brand: "bnb" as const,
     },
   ];
 
   return (
     <section className="loop-proof-rail" aria-label="Proof loop">
       <div className="loop-proof-title">
-        <RouteIcon className="h-4 w-4" />
+        <BrandMark kind="bnb" label="BNB proof loop" />
         <span>Proof loop</span>
       </div>
       <div className="loop-proof-steps">
@@ -87,12 +106,17 @@ export function LoopProofRail({ state, offline = false }: { state: Payload; offl
           <div key={step.label} className={`loop-proof-step is-${step.accent} ${step.ok ? "is-ready" : ""}`}>
             <span className="loop-proof-index">{String(index + 1).padStart(2, "0")}</span>
             <span className="loop-proof-icon">
-              {step.ok ? <step.icon className="h-4 w-4" /> : <CircleDashedIcon className="h-4 w-4" />}
+              {step.brand ? <BrandMark kind={step.brand} /> : step.ok ? <step.icon className="h-4 w-4" /> : <CircleDashedIcon className="h-4 w-4" />}
             </span>
             <div className="min-w-0">
               <p>{step.label}</p>
               <strong>{step.value}</strong>
             </div>
+            {step.link ? (
+              <a className="loop-proof-link" href={step.link.href} target="_blank" rel="noreferrer" aria-label={step.link.label}>
+                <ExternalLinkIcon className="h-3 w-3" />
+              </a>
+            ) : null}
           </div>
         ))}
       </div>

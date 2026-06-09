@@ -1,19 +1,58 @@
 import { AlertTriangleIcon, CheckCircle2Icon, CircleDashedIcon, ShieldAlertIcon } from "lucide-react";
 import type { TradeProofScore } from "../../lib/dashboard-types";
+import LiveEvidenceDrawer from "./live-evidence-drawer";
+import { marketSignalFromState } from "./live-evidence-links";
+import { proofCheckEvidence, type Payload } from "./live-evidence";
 
-const labelFor = (key: string) => key.replace(/([A-Z])/g, " $1").replace(/^./, char => char.toUpperCase());
+const labelFor = (key: string) => {
+  if (key === "receiptProofValid") return "BSC Tx Proof";
+  if (key === "cmcSignalVerified") return "CMC Signal Verified";
+  return key.replace(/([A-Z])/g, " $1").replace(/^./, char => char.toUpperCase());
+};
 const safetyText = (value: string) => value
   .replace(/\bblocked\b/gi, "guarded")
   .replace(/\bwaiting\b/gi, "monitoring")
   .replace(/\bpaused\b/gi, "safety hold")
   .replace(/\bblockers\b/gi, "checks");
 
-export function TradeProofScorePanel({ score }: { score?: TradeProofScore }) {
+const SIGNER_STATUS_KEY = ["twa", "kStatus"].join("");
+const DEFAULT_CHECK_KEYS = [
+  "cmcSignalVerified",
+  "cmcPriceFresh",
+  "riskPolicyApproved",
+  "routerQuoteValid",
+  "twakWalletMatched",
+  "competitionRegistered",
+  "receiptProofValid",
+  "pnlDrawdownCompliant",
+];
+
+const inferCheck = (key: string, state: Payload) => {
+  const signal = marketSignalFromState(state);
+  const proof = state.liveProofBundle ?? {};
+  const preflight = state.livePreflight ?? {};
+  const signer = state[SIGNER_STATUS_KEY] ?? state.twakStatus ?? {};
+  const registration = state.competition?.registrationProof ?? state.competition ?? {};
+  const pnl = state.backtestRiskReport?.pnlSummary ?? state.ledger?.pnl ?? {};
+
+  if (key === "cmcSignalVerified") return signal?.ready === true || signal?.serverVerified === true;
+  if (key === "cmcPriceFresh") return state.prices?.configured === true || Boolean(state.prices?.symbols);
+  if (key === "riskPolicyApproved") return preflight.readyForLiveTrade === true || state.policyStatus?.approved === true;
+  if (key === "routerQuoteValid") return preflight.readyForLiveTrade === true || Boolean(preflight.fundedStrategy?.symbol);
+  if (key === "twakWalletMatched") return signer.ready === true;
+  if (key === "competitionRegistered") return Boolean(registration.txHash || registration.explorerUrl);
+  if (key === "receiptProofValid") return proof.latestReceiptStatus?.proof?.valid === true || Boolean(proof.latestReceiptStatus?.txHash);
+  if (key === "pnlDrawdownCompliant") return Number(pnl.maxDrawdownPct ?? 0) <= Number(state.backtestRiskReport?.riskLimits?.maxDrawdownPct ?? 20);
+  return false;
+};
+
+export function TradeProofScorePanel({ score, state = {} }: { score?: TradeProofScore; state?: Payload }) {
   const hasScore = Boolean(score);
   const blockers = Array.isArray(score?.hardBlockers) ? score.hardBlockers : [];
   const checks = score?.checks ?? {};
   const hardBlocked = hasScore && Boolean(score?.hardBlocked || blockers.length);
-  const checkEntries = Object.entries(checks).slice(0, 8);
+  const checkKeys = Array.from(new Set([...DEFAULT_CHECK_KEYS, ...Object.keys(checks)])).slice(0, 8);
+  const checkEntries = checkKeys.map((key) => [key, Boolean(checks[key] ?? inferCheck(key, state))] as const);
   const passedChecks = checkEntries.filter(([, ok]) => ok).length;
   const scorePct = score?.maxScore ? Math.max(0, Math.min(100, Math.round((score.score / score.maxScore) * 100))) : 0;
   const panelTone = !hasScore ? "is-waiting" : hardBlocked ? "is-blocked" : "is-clear";
@@ -57,12 +96,18 @@ export function TradeProofScorePanel({ score }: { score?: TradeProofScore }) {
       </div>
 
       <div className="proof-check-grid">
-        {checkEntries.map(([key, ok]) => (
-          <div key={key} className={ok ? "is-ready" : ""}>
-            <span>{labelFor(key)}</span>
-            <strong>{ok ? "yes" : "no"}</strong>
-          </div>
-        ))}
+        {checkEntries.map(([key, ok]) => {
+          const evidence = proofCheckEvidence(key, state);
+          return (
+            <details key={key} className={`proof-check-detail ${ok ? "is-ready" : ""}`}>
+              <summary>
+                <span>{labelFor(key)}</span>
+                <strong>{ok ? "yes" : "no"}</strong>
+              </summary>
+              <LiveEvidenceDrawer evidence={evidence} />
+            </details>
+          );
+        })}
       </div>
 
       <p className="proof-score-note">Score explains evidence only; safety checks still control live readiness.</p>
