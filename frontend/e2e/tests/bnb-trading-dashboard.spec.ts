@@ -50,7 +50,8 @@ test.describe('BNB trading dashboard', () => {
     await expect(page.getByText('Market signal').first()).toBeVisible();
     await expect(page.getByText('Wallet-native signer').first()).toBeVisible();
     await expect(signalStrip.getByText('Signal')).toBeVisible();
-    await expect(page.getByText(/read-only/i).first()).toBeVisible();
+    await expect(page.getByText('BNB Agent Runtime').first()).toBeVisible();
+    await expect(page.getByText('Replay Risk Report').first()).toBeVisible();
     await expect(page.locator('.quant-status-band')).toBeVisible();
     await expect(page.locator('.quant-status-band')).toContainText(/Active|Live|Offline/i);
     await expect(page.locator('.quant-status-band')).toContainText(/PnL/i);
@@ -83,9 +84,98 @@ test.describe('BNB trading dashboard', () => {
     await expect(page.getByText('Backend agent loop').first()).toBeVisible();
     await expect(page.getByText('Why this verdict').first()).toBeVisible();
     await expect(page.getByText('Agent Reasoning').first()).toBeVisible();
+    await expect(page.getByText('Ledger Memory').first()).toBeVisible();
     await expect(page.getByText('Tools used').first()).toBeVisible();
     await expect(page.getByText('Blockchain Proof Log').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /pause|run trade|run agent|execute/i })).toHaveCount(0);
     await expect(page.getByRole('button')).toHaveCount(0);
   });
+
+  test('renders mocked runtime memory, advisory, and report panels', async ({ page }) => {
+    await page.route('**/api/session', async route => {
+      await route.fulfill({
+        json: { csrfToken: 'test-csrf' },
+        headers: { 'Set-Cookie': 'omniagent_session=test; Path=/; SameSite=Lax' },
+      });
+    });
+    await page.route('**/api/dashboard/trades?**', async route => {
+      await route.fulfill({ json: { status: 'ok', trades: [] } });
+    });
+    await page.route('**/api/dashboard/snapshot?**', async route => {
+      await route.fulfill({ json: mockedRuntimeSnapshot() });
+    });
+
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 15_000 });
+
+    await expect(page.getByText('BNB Agent Runtime').first()).toBeVisible();
+    await expect(page.getByText('SDK READY').first()).toBeVisible();
+    await expect(page.getByText('Replay Risk Report').first()).toBeVisible();
+    await expect(page.getByText('Ledger Memory').first()).toBeVisible();
+    await expect(page.locator('.reasoning-advisory-card')).toHaveCount(4);
+  });
 });
+
+function mockedRuntimeSnapshot() {
+  const proofScore = {
+    score: 6,
+    maxScore: 8,
+    status: 'guarded',
+    hardBlocked: true,
+    hardBlockers: ['funded_route'],
+    checks: { riskPolicyApproved: true },
+  };
+  const strategyResearch = {
+    mode: 'advisory_only',
+    canExecute: false,
+    panels: [
+      { role: 'bull', stance: 'watchful', confidence: 0.42, evidence: ['CMC market feed is available.'] },
+      { role: 'bear', stance: 'defensive', confidence: 0.72, evidence: ['funded route missing'] },
+      { role: 'risk', stance: 'policy-gated', confidence: 0.86, evidence: ['TWAK executor ready.'] },
+      { role: 'arbiter', stance: 'observe', confidence: 0.55, evidence: ['Backend policy controls execution.'] },
+    ],
+  };
+  const ledgerMemory = {
+    latestDecision: { action: 'observe', status: 'guarded', reason: 'funded route missing' },
+    whyTrade: ['market feed live'],
+    whyNoTrade: ['funded route missing'],
+    memoryLayers: {
+      episodic: [{ eventType: 'trade_guarded', summary: 'policy hold' }],
+    },
+  };
+  return {
+    wallet: { walletAddress: '0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25' },
+    twakStatus: { ready: true },
+    prices: { configured: true, reachable: true, symbols: { BNB: { priceUsd: 587, percentChange24h: -2.8, volume24h: 1200000000 } } },
+    ledger: { events: [], control: {}, dailyCompliance: { progress: '0/7' }, pnl: { totalReturnPct: 0, maxDrawdownPct: 0, registrationPeriod: { totalReturnPct: 0 } } },
+    workOrders: { proofScore, workOrders: [] },
+    liveProofBundle: { proofScore, txEvents: [], recoveryCandidates: [] },
+    livePreflight: { readyForLiveTrade: false, blockers: [{ name: 'funded_route', reason: 'funded route missing' }] },
+    backendHealth: { autonomousLoopEnabled: true, autonomousLoop: { enabled: true, execute: false, phase: 'monitoring' } },
+    bnbAgentRuntime: {
+      sdkRole: 'runtime_core',
+      executor: 'twak',
+      sdkExecutesTrades: false,
+      sdkStatus: { ready: true, registryAddress: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432' },
+      agentProfile: {
+        walletAddress: '0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25',
+        agentUriPreview: 'data:application/json;base64,test',
+        capabilities: [
+          { name: 'erc8004_identity', ready: true },
+          { name: 'ledger_memory', ready: true },
+          { name: 'cmc_signal', ready: true },
+          { name: 'twak_execution', ready: true },
+        ],
+      },
+      identityRegistration: { ready: false, reason: 'registration is operator gated' },
+      strategyResearch,
+    },
+    ledgerMemory,
+    strategyResearch,
+    backtestRiskReport: {
+      source: 'ledger-replay',
+      dryRunSummary: { cycles: 1, submittedTrades: 0, confirmedTrades: 0, blockedTrades: 1 },
+      pnlSummary: { totalReturnPct: 0, maxDrawdownPct: 0, registrationPeriod: { totalReturnPct: 0, maxDrawdownPct: 0 } },
+      riskSummary: { proofCoverage: '6/8', hardBlockers: ['funded_route'] },
+    },
+  };
+}

@@ -36,6 +36,8 @@ export function AgentReasoningPanel({
   const backendLoop = state.backendHealth?.autonomousLoop ?? {};
   const preflight = state.livePreflight ?? {};
   const proofScore = proofBundle.proofScore ?? state.workOrders?.proofScore ?? {};
+  const research = state.strategyResearch ?? state.bnbAgentRuntime?.strategyResearch ?? {};
+  const advisoryPanels = Array.isArray(research.panels) ? research.panels : [];
   const strategyTrace = strategyDecision.rationale ? [
     `${text(strategyDecision.action, "hold")} ${Math.round(Number(strategyDecision.confidence ?? 0) * 100)}%: ${strategyDecision.rationale}`,
     ...(strategyDecision.risks ?? []).slice(0, 2),
@@ -86,9 +88,23 @@ export function AgentReasoningPanel({
           </div>
         ))}
       </div>
+      {advisoryPanels.length ? (
+        <div className="reasoning-advisory-grid" aria-label="Advisory strategy research">
+          {advisoryPanels.slice(0, 4).map((item: Payload) => (
+            <div key={text(item.role, "advisor")} className={`reasoning-advisory-card is-${text(item.role, "advisor")}`}>
+              <div>
+                <span>{text(item.role, "advisor").replace(/_/g, " ")}</span>
+                <b>{Math.round(Number(item.confidence ?? 0) * 100)}%</b>
+              </div>
+              <strong>{text(item.stance, "advisory")}</strong>
+              <p>{safeVisibleText(text((item.evidence ?? [])[0], "Advisory only; backend policy controls execution."))}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
       {trace.length ? (
         <div className="reasoning-trace-block">
-          <p>{strategy?.advisor?.ready ? "model trace" : "strategy trace"}</p>
+          <p>{research.mode ? "advisory trace" : strategy?.advisor?.ready ? "model trace" : "strategy trace"}</p>
           <div className="space-y-1">
             {trace.slice(0, 3).map((item: string) => (
               <p key={item} className="reasoning-trace-line">

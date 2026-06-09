@@ -6,6 +6,7 @@ from typing import Any, Protocol
 from app.services.agent.autonomous_cycle import AutonomousTradingAgent
 from app.services.agent.cockpit import AgentCockpitService
 from app.services.agent.identity import BnbAgentIdentityService
+from app.services.agent.runtime_snapshot import BnbAgentRuntimeService
 from app.services.agent.status import BnbAgentStatusService
 from app.services.cmc.agent_hub import CmcAgentHubClient
 from app.services.cmc.agent_hub_recommendations import CmcAgentHubRecommendationService
@@ -34,6 +35,10 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     "bnb_trust_wallet_status": "Validate the configured Trust Wallet Agent Kit execution surface.",
     "bnb_agent_sdk_status": "Read BNB Agent SDK runtime status.",
     "bnb_agent_sdk_register_identity": "Register or dry-run an ERC-8004 BNB Agent SDK identity proof.",
+    "bnb_agent_runtime_snapshot": "Read BNB Agent SDK runtime-core, TWAK executor, memory, advisory, and risk report.",
+    "bnb_ledger_memory": "Read FinMem-style ledger memory explaining why the agent did or did not trade.",
+    "bnb_strategy_research": "Read TradingAgents-style bull, bear, risk, and arbiter advisory reasoning.",
+    "bnb_backtest_report": "Read Freqtrade/Hummingbot-inspired ledger replay, PnL, and risk report.",
     "bnb_paid_resource_status": "Return CMC and TWAK x402 paid-resource readiness without unverified prize claims.",
     "bnb_record_paid_signal_access": "Record an x402 paid-resource attempt only when proof requirements are met.",
     "cmc_agent_hub_status": "Validate CoinMarketCap Agent Hub MCP connectivity and tool discovery.",
@@ -110,6 +115,10 @@ class FastApiBnbAgentAdapter:
             "bnb_trust_wallet_status": self.trust_wallet_status,
             "bnb_agent_sdk_status": self.agent_sdk_status,
             "bnb_agent_sdk_register_identity": BnbAgentIdentityService.register_agent_identity,
+            "bnb_agent_runtime_snapshot": BnbAgentRuntimeService.get_runtime_snapshot,
+            "bnb_ledger_memory": BnbAgentRuntimeService.get_ledger_memory,
+            "bnb_strategy_research": BnbAgentRuntimeService.get_strategy_research,
+            "bnb_backtest_report": BnbAgentRuntimeService.get_backtest_report,
             "bnb_paid_resource_status": lambda args: X402PaymentService.get_paid_resource_status(limit=int(args.get("limit") or 20)),
             "bnb_record_paid_signal_access": X402PaymentService.record_paid_signal_access,
             "cmc_agent_hub_status": lambda _: CmcAgentHubClient.get_cmc_agent_hub_status(),

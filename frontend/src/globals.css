@@ -1129,6 +1129,7 @@ body:has(.robot-cockpit.quant-terminal) {
 .quant-focus,
 .quant-stack,
 .quant-context-panel,
+.runtime-card,
 .quant-summary,
 .quant-workrail,
 .quant-side-stack > * {
@@ -1584,7 +1585,7 @@ body:has(.robot-cockpit.quant-terminal) {
   display: grid;
   flex: 0 0 auto;
   min-height: 0;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(360px, 1.12fr) minmax(240px, 0.48fr) minmax(260px, 0.54fr);
   gap: 0.5rem;
   overflow: hidden;
 }
@@ -1934,7 +1935,7 @@ body:has(.robot-cockpit.quant-terminal) {
   align-self: start;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto auto;
+  grid-template-rows: auto auto auto minmax(6.5rem, 0.42fr);
   gap: 0.46rem;
   max-height: 100%;
   padding: 0;
@@ -2594,6 +2595,385 @@ body:has(.robot-cockpit.quant-terminal) {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   text-transform: uppercase;
 }
+
+.runtime-card {
+  display: grid;
+  align-content: start;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0.62rem;
+}
+
+.runtime-card-head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.runtime-card-head span {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.38rem;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.58rem;
+  font-weight: 840;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.runtime-card-head span svg {
+  flex: 0 0 auto;
+  color: rgba(240, 185, 11, 0.92);
+}
+
+.runtime-card-head b {
+  flex: 0 0 auto;
+  border: 1px solid rgba(240, 185, 11, 0.22);
+  border-radius: 0.28rem;
+  background: rgba(240, 185, 11, 0.07);
+  padding: 0.18rem 0.36rem;
+  color: rgba(240, 185, 11, 0.92);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.54rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.bnb-runtime-panel.is-ready .runtime-card-head b {
+  border-color: rgba(77, 219, 190, 0.22);
+  background: rgba(77, 219, 190, 0.06);
+  color: rgba(165, 243, 233, 0.92);
+}
+
+.runtime-split,
+.report-pnl-band {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.runtime-split span,
+.report-pnl-band span {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  border-radius: 0.32rem;
+  background: rgba(255, 255, 255, 0.032);
+  padding: 0.34rem 0.4rem;
+}
+
+.runtime-split small,
+.runtime-split strong,
+.report-pnl-band small,
+.report-pnl-band strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-transform: uppercase;
+}
+
+.runtime-split small,
+.report-pnl-band small {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.5rem;
+  font-weight: 780;
+}
+
+.runtime-split strong,
+.report-pnl-band strong {
+  margin-top: 0.08rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.62rem;
+  font-weight: 820;
+}
+
+.runtime-split span.is-good strong,
+.report-pnl-band strong {
+  color: rgba(165, 243, 233, 0.9);
+}
+
+.runtime-identity {
+  display: grid;
+  gap: 0.32rem;
+  min-width: 0;
+  border: 1px solid rgba(77, 219, 190, 0.12);
+  border-radius: 0.34rem;
+  background: rgba(77, 219, 190, 0.04);
+  padding: 0.46rem;
+}
+
+.runtime-identity div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.36rem;
+  color: rgba(165, 243, 233, 0.9);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.62rem;
+  font-weight: 820;
+}
+
+.runtime-identity p,
+.runtime-note {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.62rem;
+  line-height: 1.32;
+}
+
+.runtime-identity p {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runtime-capability-list,
+.report-blockers div {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+  overflow: hidden;
+}
+
+.runtime-capability-list span,
+.report-blockers span {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.26rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 0.25rem;
+  background: rgba(255, 255, 255, 0.032);
+  padding: 0.18rem 0.32rem;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.54rem;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.runtime-capability-list span.is-ready {
+  border-color: rgba(77, 219, 190, 0.18);
+  background: rgba(77, 219, 190, 0.055);
+  color: rgba(165, 243, 233, 0.86);
+}
+
+.runtime-note {
+  display: flex;
+  align-items: center;
+  gap: 0.32rem;
+}
+
+.ledger-memory-panel {
+  margin: 0 0.65rem 0.65rem;
+  border-color: rgba(77, 219, 190, 0.14);
+}
+
+.memory-decision {
+  display: grid;
+  gap: 0.18rem;
+  border: 1px solid rgba(240, 185, 11, 0.15);
+  border-radius: 0.34rem;
+  background: rgba(240, 185, 11, 0.045);
+  padding: 0.46rem 0.5rem;
+}
+
+.memory-decision span,
+.memory-decision strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memory-decision span {
+  color: rgba(240, 185, 11, 0.92);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.62rem;
+  font-weight: 840;
+  text-transform: uppercase;
+}
+
+.memory-decision strong {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.68rem;
+  font-weight: 680;
+}
+
+.memory-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.36rem;
+}
+
+.memory-list {
+  display: grid;
+  gap: 0.24rem;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.34rem;
+  background: rgba(255, 255, 255, 0.026);
+  padding: 0.42rem;
+}
+
+.memory-list p,
+.memory-episodes p,
+.report-blockers p {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.36);
+  font-size: 0.54rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.memory-list span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: rgba(255, 255, 255, 0.54);
+  font-size: 0.6rem;
+  line-height: 1.28;
+}
+
+.memory-list.is-good span {
+  color: rgba(165, 243, 233, 0.8);
+}
+
+.memory-list.is-warn span {
+  color: rgba(253, 230, 138, 0.78);
+}
+
+.memory-episodes {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.memory-episodes > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.28rem;
+}
+
+.memory-episodes span {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 0.3rem;
+  background: rgba(255, 255, 255, 0.026);
+  padding: 0.28rem 0.34rem;
+}
+
+.memory-episodes small,
+.memory-episodes strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-transform: uppercase;
+}
+
+.memory-episodes small {
+  color: rgba(255, 255, 255, 0.36);
+  font-size: 0.48rem;
+}
+
+.memory-episodes strong {
+  margin-top: 0.08rem;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.54rem;
+}
+
+.report-blockers {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.reasoning-advisory-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.32rem;
+  margin-top: 0.52rem;
+}
+
+.reasoning-advisory-card {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.34rem;
+  background: rgba(255, 255, 255, 0.028);
+  padding: 0.38rem 0.42rem;
+}
+
+.reasoning-advisory-card div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.36rem;
+}
+
+.reasoning-advisory-card span,
+.reasoning-advisory-card b,
+.reasoning-advisory-card strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-transform: uppercase;
+}
+
+.reasoning-advisory-card span {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.48rem;
+}
+
+.reasoning-advisory-card b {
+  color: rgba(240, 185, 11, 0.86);
+  font-size: 0.5rem;
+}
+
+.reasoning-advisory-card strong {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.58rem;
+}
+
+.reasoning-advisory-card p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 0.56rem;
+  line-height: 1.28;
+}
+
+.reasoning-advisory-card.is-bull { border-color: rgba(77, 219, 190, 0.16); }
+.reasoning-advisory-card.is-bear { border-color: rgba(253, 230, 138, 0.16); }
+.reasoning-advisory-card.is-risk { border-color: rgba(91, 140, 255, 0.16); }
+.reasoning-advisory-card.is-arbiter { border-color: rgba(240, 185, 11, 0.18); }
 
 .proof-score-panel {
   display: grid;
@@ -4724,6 +5104,82 @@ body:has(.robot-cockpit.quant-terminal) {
   .trade-plan-stat {
     min-height: 2rem;
     padding: 0.22rem 0.28rem;
+  }
+}
+
+@media (max-width: 1180px) {
+  body:has(.robot-cockpit.quant-terminal),
+  .bnb-cockpit-bg:has(.robot-cockpit.quant-terminal) {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  .bnb-cockpit-bg:has(.robot-cockpit.quant-terminal) > div {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+  }
+
+  .robot-cockpit.quant-terminal {
+    grid-template-rows: none !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+  }
+
+  .quant-priority-row,
+  .quant-main-grid,
+  .loop-proof-rail,
+  .quant-bottom-grid,
+  .quant-workrail,
+  .quant-side-stack,
+  .quant-side-stack-readiness,
+  .quant-side-stack-reasoning,
+  .quant-execution-stack {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .quant-main-grid,
+  .quant-bottom-grid,
+  .quant-side-stack-readiness,
+  .quant-side-stack-reasoning,
+  .quant-execution-stack {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: none !important;
+  }
+
+  .quant-side-stack-reasoning > :first-child {
+    grid-row: auto !important;
+  }
+
+  .quant-execution-stack .executed-trade-summary {
+    display: grid;
+  }
+}
+
+@media (max-width: 720px) {
+  .runtime-card {
+    padding: 0.5rem;
+  }
+
+  .ledger-memory-panel {
+    margin: 0 0.48rem 0.48rem;
+  }
+
+  .memory-columns,
+  .memory-episodes > div,
+  .reasoning-advisory-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .runtime-split,
+  .report-pnl-band {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

@@ -6,6 +6,7 @@ from app.core.security import require_session
 from app.core.settings import get_settings
 from app.services.agent.autonomous_loop import AutonomousLoopService
 from app.services.agent.cockpit import AgentCockpitService
+from app.services.agent.runtime_snapshot import BnbAgentRuntimeService
 from app.services.cmc.daily_market_overview import CmcDailyMarketOverviewService
 from app.services.shared.trade_history import TradeHistoryService
 from app.services.trading.live_preflight import LivePreflightService
@@ -29,14 +30,25 @@ async def dashboard_snapshot(request: Request, limit: int = 10) -> dict[str, obj
 
     settings = get_settings()
     autonomous_loop = AutonomousLoopService.get_status(request.app)
+    latest_cycle = AutonomousLoopService.get_latest_cycle(request.app)
     snapshot = dict(cockpit)
-    snapshot["cycle"] = AutonomousLoopService.get_latest_cycle(request.app)
+    snapshot["cycle"] = latest_cycle
     snapshot["livePreflight"] = (
         unavailable("preflight", preflight) if isinstance(preflight, Exception) else preflight
     )
     snapshot["liveProofBundle"] = (
         unavailable("proof_bundle", proof_bundle) if isinstance(proof_bundle, Exception) else proof_bundle
     )
+    runtime = BnbAgentRuntimeService.build_runtime_snapshot(
+        snapshot,
+        snapshot["livePreflight"],
+        snapshot["liveProofBundle"],
+        latest_cycle,
+    )
+    snapshot["bnbAgentRuntime"] = runtime
+    snapshot["ledgerMemory"] = runtime["ledgerMemory"]
+    snapshot["strategyResearch"] = runtime["strategyResearch"]
+    snapshot["backtestRiskReport"] = runtime["backtestRiskReport"]
     snapshot["backendHealth"] = {
         "status": "ok",
         "service": "omniagent-fastapi",
