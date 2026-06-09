@@ -23,14 +23,17 @@ class InterceptHandler(logging.Handler):
 
 def configure_logging() -> None:
     level = os.getenv("OMNIAGENT_LOG_LEVEL", "INFO").upper()
+    json_logs = os.getenv("OMNIAGENT_LOG_JSON", "true").lower() not in {"0", "false", "no"}
     logger.remove()
-    logger.add(
-        sys.stderr,
-        level=level,
-        backtrace=False,
-        diagnose=False,
-        format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {name}:{function}:{line} - {message}",
-    )
+    sink_options = {
+        "level": level,
+        "backtrace": False,
+        "diagnose": False,
+        "serialize": json_logs,
+    }
+    if not json_logs:
+        sink_options["format"] = "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {name}:{function}:{line} - {message}"
+    logger.add(sys.stderr, **sink_options)
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
     for name in ("uvicorn", "uvicorn.error", "uvicorn.access", "fastapi"):
         logging.getLogger(name).handlers.clear()

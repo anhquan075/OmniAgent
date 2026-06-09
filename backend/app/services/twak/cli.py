@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 import re
-import shlex
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -56,7 +55,7 @@ class TrustWalletCliClient:
     def run_cli_json_sync(args: list[str], timeout: float) -> dict[str, Any]:
         try:
             process = subprocess.run(
-                TrustWalletCliClient.shell_args(args),
+                TrustWalletCliClient.cli_args(args),
                 capture_output=True,
                 text=True,
                 timeout=timeout,
@@ -72,7 +71,7 @@ class TrustWalletCliClient:
     async def run_cli_json(args: list[str], timeout: float) -> dict[str, Any]:
         try:
             process = await asyncio.create_subprocess_exec(
-                *TrustWalletCliClient.shell_args(args),
+                *TrustWalletCliClient.cli_args(args),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=TWAK_CWD,
@@ -88,8 +87,8 @@ class TrustWalletCliClient:
         )
 
     @staticmethod
-    def shell_args(args: list[str]) -> list[str]:
-        return ["/bin/sh", "-lc", f"exec {shlex.join(args)}"]
+    def cli_args(args: list[str]) -> list[str]:
+        return [str(item) for item in args if str(item)]
 
     @staticmethod
     def cli_env() -> dict[str, str]:

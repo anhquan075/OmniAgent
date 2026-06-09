@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import AgentReasoningPanel from './agent-reasoning-panel';
 import ChainTxLog from './chain-tx-log';
 import CompetitionReadinessStrip from './competition-readiness-strip';
+import ExecutedTradeHistory from './executed-trade-history';
 import LivePreflightPanel from './live-preflight-panel';
 import LoopProofRail from './loop-proof-rail';
 import RecoveryCandidatePanel from './recovery-candidate-panel';
@@ -28,6 +29,12 @@ const asText = (value: unknown, fallback = 'pending') => (
   value === undefined || value === null || value === '' ? fallback : String(value)
 );
 
+const timeOnly = (value: unknown) => {
+  const date = typeof value === 'string' ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+};
+
 export function BnbTradingAgentDashboard() {
   const [state, setState] = useState<Payload>({});
   const [loading, setLoading] = useState(false);
@@ -38,10 +45,22 @@ export function BnbTradingAgentDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiFetch('/api/dashboard/snapshot?limit=10');
+      const [response, executedTrades] = await Promise.all([
+        apiFetch('/api/dashboard/snapshot?limit=10'),
+        apiFetch('/api/dashboard/trades?limit=500')
+          .then(async (tradeResponse) => {
+            if (!tradeResponse.ok) return { status: 'unavailable', trades: [], error: `trades ${tradeResponse.status}` };
+            return await tradeResponse.json() as Payload;
+          })
+          .catch((tradeError) => ({
+            status: 'unavailable',
+            trades: [],
+            error: tradeError instanceof Error ? tradeError.message : 'trade history unavailable',
+          })),
+      ]);
       if (!response.ok) throw new Error(`dashboard ${response.status}`);
       const snapshot = await response.json() as Payload;
-      setState({ ...snapshot, ...overrides });
+      setState({ ...snapshot, executedTrades, ...overrides });
       setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (err) {
       setError(err instanceof Error && err.message === 'Failed to fetch' ? 'Backend dashboard unavailable' : err instanceof Error ? err.message : 'Unable to refresh cockpit');
@@ -75,8 +94,10 @@ export function BnbTradingAgentDashboard() {
   const mode = offline ? 'Offline' : paused ? 'Paused' : signerValidated ? 'Armed' : 'Guarded';
   const liveExecution = Boolean(state.livePreflight?.readyForLiveTrade);
   const backendHealth = state.backendHealth ?? {};
+  const autonomousLoop = backendHealth.autonomousLoop ?? {};
   const agentLoopEnabled = Boolean(backendHealth.autonomousLoopEnabled);
-  const loopMode = offline ? 'backend session' : agentLoopEnabled ? 'agent active' : 'policy controlled';
+  const nextRunTime = timeOnly(autonomousLoop.nextRunAt);
+  const loopMode = offline ? 'backend session' : nextRunTime ? `next ${nextRunTime}` : agentLoopEnabled ? 'agent active' : 'policy controlled';
   const txLogEvents = state.liveProofBundle?.txEvents?.length ? state.liveProofBundle.txEvents : ledgerEvents;
   const walletAddress = wallet.walletAddress ? String(wallet.walletAddress) : '';
   const walletLabel = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : offline ? 'not checked' : 'pending';
@@ -84,7 +105,7 @@ export function BnbTradingAgentDashboard() {
   const marketLabel = state.prices?.configured ? 'online' : offline ? 'offline' : 'needs feed';
   const signalConfidenceLabel = state.cycle?.strategyDecision?.decision?.confidence ? `${Math.round(state.cycle.strategyDecision.decision.confidence * 100)}%` : offline ? 'offline' : 'waiting';
   const dataCoverageLabel = state.prices?.configured ? '100%' : offline ? 'offline' : 'waiting';
-  const loopStatusLabel = offline ? 'read-only' : agentLoopEnabled ? 'automatic' : 'idle';
+  const loopStatusLabel = offline ? 'read-only' : asText(autonomousLoop.state, agentLoopEnabled ? 'automatic' : 'idle');
   const readinessCopy = liveExecution
     ? 'Ready for a backend-controlled trade when policy allows it.'
     : paused
@@ -152,6 +173,7 @@ export function BnbTradingAgentDashboard() {
         <div className="quant-side-stack quant-side-stack-reasoning">
           <AgentReasoningPanel state={state} offline={offline} paused={paused} />
           <ChainTxLog events={txLogEvents} />
+          <ExecutedTradeHistory history={state.executedTrades} loading={loading} />
         </div>
       </div>
       <p className="quant-footer">snapshot {lastUpdated} / {signerValidated ? 'signer valid' : 'signer guarded'} / {walletLabel}</p>

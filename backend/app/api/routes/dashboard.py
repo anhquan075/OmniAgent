@@ -1,11 +1,13 @@
 import asyncio
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.core.security import require_session
 from app.core.settings import get_settings
+from app.services.agent.autonomous_loop import AutonomousLoopService
 from app.services.agent.cockpit import AgentCockpitService
 from app.services.cmc.daily_market_overview import CmcDailyMarketOverviewService
+from app.services.shared.trade_history import TradeHistoryService
 from app.services.trading.live_preflight import LivePreflightService
 from app.services.trading.proof_bundle import ProofBundleService
 
@@ -14,7 +16,7 @@ router = APIRouter()
 
 
 @router.get("/dashboard/snapshot", dependencies=[Depends(require_session)])
-async def dashboard_snapshot(limit: int = 10) -> dict[str, object]:
+async def dashboard_snapshot(request: Request, limit: int = 10) -> dict[str, object]:
     selected_limit = max(1, min(limit, 25))
     cockpit, preflight, proof_bundle = await asyncio.gather(
         AgentCockpitService.get_cockpit_snapshot(limit=selected_limit),
@@ -39,8 +41,14 @@ async def dashboard_snapshot(limit: int = 10) -> dict[str, object]:
         "network": "bsc",
         "tradingEnabled": settings.bnb_trading_enabled,
         "autonomousLoopEnabled": settings.bnb_autonomous_loop_enabled,
+        "autonomousLoop": AutonomousLoopService.get_status(request.app),
     }
     return snapshot
+
+
+@router.get("/dashboard/trades", dependencies=[Depends(require_session)])
+async def dashboard_trades(limit: int = 100, offset: int = 0) -> dict[str, object]:
+    return TradeHistoryService.get_executed_trades(limit=limit, offset=offset)
 
 
 @router.post("/dashboard/cmc-daily-market-overview", dependencies=[Depends(require_session)])
