@@ -27,11 +27,12 @@ const timeLabel = (value: unknown) => {
   const timestamp = typeof value === 'string' ? new Date(value) : null;
   if (!timestamp || Number.isNaN(timestamp.getTime())) return 'time pending';
   return timestamp.toLocaleString([], {
+    timeZone: 'UTC',
     month: 'short',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-  });
+  }) + ' UTC';
 };
 
 const statusClass = (status: unknown) => (

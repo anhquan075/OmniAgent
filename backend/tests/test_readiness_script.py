@@ -185,6 +185,75 @@ def test_record_registration_script_writes_valid_ledger_event(monkeypatch, tmp_p
     assert event["payload"]["walletAddress"] == "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"
     assert event["payload"]["competitionContractAddress"] == "0x212c61b9b72c95d95bf29cf032f5e5635629aed5"
     assert event["payload"]["explorerUrl"] == "https://bscscan.com/tx/" + "0x" + "b" * 64
+    assert event["payload"]["receiptProof"]["valid"] is False
+    get_settings.cache_clear()
+
+
+def test_record_registration_script_can_store_verified_receipt_proof(monkeypatch, tmp_path) -> None:
+    from app.core.settings import get_settings
+    from app.services.trading.registration import CompetitionRegistrationService
+
+    module = load_script_module(RECORD_REGISTRATION_SCRIPT, "record_bnb_competition_registration_receipt")
+    ledger_path = tmp_path / "ledger.jsonl"
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(ledger_path))
+    monkeypatch.setenv("ROBOT_FLEET_AGENT_WALLET", "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25")
+    get_settings.cache_clear()
+
+    result = module.run(SimpleNamespace(
+        tx_hash="0x" + "c" * 64,
+        wallet_address="",
+        metadata_uri="ipfs://omniagent",
+        bridge_mode="manual-twak-cli",
+        receipt_proof_valid=True,
+        receipt_status="success",
+        block_number=102615129,
+        event_topic="0x2d3734a8e47ac8316e500ac231c90a6e1848ca2285f40d07eaa52005e4b3a0e9",
+    ))
+
+    assert result == 0
+    event = json.loads(ledger_path.read_text(encoding="utf-8"))
+    assert event["payload"]["receiptProof"]["valid"] is True
+    assert event["payload"]["receiptProof"]["blockNumber"] == 102615129
+    assert CompetitionRegistrationService.has_stored_registration_proof(
+        "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"
+    )
+    get_settings.cache_clear()
+
+
+def test_record_registration_script_repairs_existing_unverified_proof(monkeypatch, tmp_path) -> None:
+    from app.core.settings import get_settings
+    from app.services.trading.registration import CompetitionRegistrationService
+
+    module = load_script_module(RECORD_REGISTRATION_SCRIPT, "record_bnb_competition_registration_repair")
+    ledger_path = tmp_path / "ledger.jsonl"
+    tx_hash = "0x" + "d" * 64
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(ledger_path))
+    monkeypatch.setenv("ROBOT_FLEET_AGENT_WALLET", "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25")
+    get_settings.cache_clear()
+
+    base_args = {
+        "tx_hash": tx_hash,
+        "wallet_address": "",
+        "metadata_uri": "ipfs://omniagent",
+        "bridge_mode": "manual-twak-cli",
+        "receipt_status": "success",
+        "block_number": 102615129,
+        "event_topic": "0x2d3734a8e47ac8316e500ac231c90a6e1848ca2285f40d07eaa52005e4b3a0e9",
+    }
+    assert module.run(SimpleNamespace(**base_args, receipt_proof_valid=False)) == 0
+    assert not CompetitionRegistrationService.has_stored_registration_proof(
+        "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"
+    )
+
+    assert module.run(SimpleNamespace(**base_args, receipt_proof_valid=True)) == 0
+
+    events = [json.loads(line) for line in ledger_path.read_text(encoding="utf-8").splitlines()]
+    assert len(events) == 2
+    assert events[-1]["txHash"] == tx_hash
+    assert events[-1]["payload"]["receiptProof"]["valid"] is True
+    assert CompetitionRegistrationService.has_stored_registration_proof(
+        "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"
+    )
     get_settings.cache_clear()
 
 

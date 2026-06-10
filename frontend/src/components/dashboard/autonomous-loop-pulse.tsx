@@ -7,7 +7,7 @@ const text = (value: unknown, fallback = "pending") => (
 const timeOnly = (value: unknown) => {
   const date = typeof value === "string" ? new Date(value) : null;
   if (!date || Number.isNaN(date.getTime())) return "syncing";
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return `${date.toLocaleTimeString([], { timeZone: "UTC", hour: "2-digit", minute: "2-digit", second: "2-digit" })} UTC`;
 };
 
 export function AutonomousLoopPulse({

@@ -20,8 +20,20 @@ def run(args: argparse.Namespace) -> int:
         tx_hash=args.tx_hash,
         bridge_mode=args.bridge_mode,
     )
+    if getattr(args, "receipt_proof_valid", False):
+        proof["receiptProof"] = {
+            "valid": True,
+            "reasons": [],
+            "source": "external_bsc_receipt",
+            "status": args.receipt_status,
+            "blockNumber": args.block_number,
+            "eventTopic": args.event_topic,
+            "verifiedAt": datetime.now(timezone.utc).isoformat(),
+        }
     existing = TradeLedger.find_trade_event(tx_hash=str(proof["txHash"]), event_type="competition_registered")
-    if existing:
+    existing_payload = existing.get("payload") if isinstance(existing, dict) and isinstance(existing.get("payload"), dict) else {}
+    existing_receipt_valid = CompetitionRegistrationService.registration_receipt_valid(existing_payload)
+    if existing and (existing_receipt_valid or not getattr(args, "receipt_proof_valid", False)):
         logger.info("competition_registration_proof_already_recorded", txHash=proof["txHash"])
         return 0
     TradeLedger.append_event({
@@ -40,6 +52,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--wallet-address", default="", help="Registered wallet. Defaults to configured agent wallet.")
     parser.add_argument("--metadata-uri", default="ipfs://omniagent")
     parser.add_argument("--bridge-mode", default="manual-twak-cli")
+    parser.add_argument(
+        "--receipt-proof-valid",
+        action="store_true",
+        help="Mark the registration receipt as externally verified from BscScan/RPC evidence.",
+    )
+    parser.add_argument("--receipt-status", default="success")
+    parser.add_argument("--block-number", type=int, default=None)
+    parser.add_argument("--event-topic", default="")
     return parser
 
 

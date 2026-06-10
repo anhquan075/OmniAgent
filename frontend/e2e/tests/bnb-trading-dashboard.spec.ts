@@ -100,6 +100,8 @@ test.describe('BNB trading dashboard', () => {
 
     await expect(page.getByText('BNB Agent Runtime').first()).toBeVisible();
     await expect(page.getByText('Core live').first()).toBeVisible();
+    await expect(page.getByText('Agent log reasoning').first()).toBeVisible();
+    await expect(page.getByText('OpenRouter advisor reviewed live market signal.').first()).toBeVisible();
     await expect(page.getByText('BNBAgent').first()).toBeVisible();
     await expect(page.getByText('erc8004+erc8183').first()).toBeVisible();
     await expect(page.getByText('Replay Risk Report').first()).toBeVisible();
@@ -216,13 +218,34 @@ function mockedRuntimeSnapshot() {
       episodic: [{ eventType: 'trade_guarded', summary: 'policy hold' }],
     },
   };
+  const reasoning = [
+    'Agent log: OpenRouter advisor reviewed live market signal.',
+    'Agent log: wallet signer is ready for policy-approved orders.',
+  ];
   return {
     wallet: { walletAddress: '0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25' },
     twakStatus: { ready: true },
     prices: { configured: true, reachable: true, symbols: { BNB: { priceUsd: 587, percentChange24h: -2.8, volume24h: 1200000000 } } },
     ledger: { events: [], control: {}, dailyCompliance: { progress: '0/7' }, pnl: { totalReturnPct: 0, maxDrawdownPct: 0, registrationPeriod: { totalReturnPct: 0 } } },
     workOrders: { proofScore, workOrders: [] },
-    cycle: { cmcAgentHubSignal, toolsUsed: ['trending crypto narratives', 'chain trade'] },
+    cycle: {
+      cmcAgentHubSignal,
+      toolsUsed: ['trending crypto narratives', 'chain trade'],
+      stages: [
+        { stage: 'strategy', state: 'completed', note: 'OpenRouter advisor reviewed live market signal.' },
+        { stage: 'risk', state: 'guarded', note: 'funded route missing' },
+      ],
+      strategyDecision: {
+        source: 'openrouter',
+        advisor: { ready: true, model: 'openrouter/test-model' },
+        decision: {
+          action: 'hold',
+          confidence: 0.64,
+          rationale: 'OpenRouter advisor keeps execution guarded until funded route is ready.',
+          risks: ['funded route missing'],
+        },
+      },
+    },
     liveProofBundle: {
       proofScore,
       latestReceiptStatus: { txHash, status: 'confirmed', proof: { valid: true } },
@@ -264,6 +287,7 @@ function mockedRuntimeSnapshot() {
       strategyResearch,
     },
     ledgerMemory,
+    reasoning,
     strategyResearch,
     backtestRiskReport: {
       source: 'ledger-replay',

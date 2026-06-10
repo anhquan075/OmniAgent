@@ -31,7 +31,7 @@ export function AgentReasoningPanel({
   const risk = state.risk ?? {};
   const simulation = state.simulation?.simulation ?? state.simulation ?? {};
   const server = state.wallet?.[SIGNER_SERVER_KEY] ?? {};
-  const reasoning = state.reasoning ?? [];
+  const reasoning = Array.isArray(state.reasoning) ? state.reasoning : [];
   const cycle = state.cycle ?? {};
   const strategy = cycle.strategyDecision ?? state.strategyDecision;
   const strategyDecision = strategy?.decision ?? {};
@@ -45,6 +45,11 @@ export function AgentReasoningPanel({
     `${text(strategyDecision.action, "hold")} ${Math.round(Number(strategyDecision.confidence ?? 0) * 100)}%: ${strategyDecision.rationale}`,
     ...(strategyDecision.risks ?? []).slice(0, 2),
   ] : [];
+  const stageTrace = Array.isArray(cycle.stages)
+    ? cycle.stages.slice(0, 3).map((stage: Payload) => (
+      `${text(stage.stage, "agent")}: ${text(stage.note ?? stage.reason ?? stage.state ?? stage.tool, "running")}`
+    ))
+    : [];
   const proofSignal = proofBundle.latestReceiptStatus?.submissionProof?.[MARKET_SIGNAL_KEY]
     ?? proofBundle.latestSubmission?.payload?.[MARKET_SIGNAL_KEY];
   const marketSignal = cycle[MARKET_SIGNAL_KEY] ?? state[MARKET_SIGNAL_KEY] ?? proofSignal;
@@ -61,7 +66,8 @@ export function AgentReasoningPanel({
     preflight.readyForLiveTrade ? "policy precheck ready for backend gate" : `policy precheck guarded: ${blockerLabel(preflight.blockers)}`,
     proofScore.hardBlockers?.length ? `proof blockers: ${proofScore.hardBlockers.slice(0, 3).join(", ")}` : "proof bundle watching BSC evidence",
   ];
-  const trace = reasoning.length ? reasoning : strategyTrace.length ? strategyTrace : fallbackTrace;
+  const agentLogTrace = [...stageTrace, ...strategyTrace, ...reasoning].filter(Boolean);
+  const trace = agentLogTrace.length ? agentLogTrace : fallbackTrace;
   const rows = [
     { label: "market", value: marketReady ? "market live" : "market sync", ok: marketReady },
     { label: "agent hub", value: marketSignal ? (marketToolReady ? "tool call" : "tool sync") : "monitoring", ok: marketToolReady },
@@ -118,11 +124,11 @@ export function AgentReasoningPanel({
         </div>
       ) : null}
       {trace.length ? (
-        <div className="reasoning-trace-block">
-          <p>{research.mode ? "advisory trace" : strategy?.advisor?.ready ? "model trace" : "strategy trace"}</p>
+        <div className="reasoning-trace-block" aria-label="Agent log reasoning">
+          <p>{agentLogTrace.length ? "Agent log reasoning" : research.mode ? "advisory trace" : strategy?.advisor?.ready ? "model trace" : "strategy trace"}</p>
           <div className="space-y-1">
-            {trace.slice(0, 3).map((item: string) => (
-              <p key={item} className="reasoning-trace-line">
+            {trace.slice(0, 5).map((item: string, index: number) => (
+              <p key={`${index}-${item}`} className="reasoning-trace-line">
                 {safeVisibleText(item)}
               </p>
             ))}

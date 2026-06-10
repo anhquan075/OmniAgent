@@ -6,6 +6,7 @@ from app.services.agent.backtest_report import BacktestRiskReportService
 from app.services.agent.cockpit import AgentCockpitService
 from app.services.agent.identity import BnbAgentIdentityService
 from app.services.agent.ledger_memory import LedgerMemoryService
+from app.services.agent.runtime_core_agent import BnbAgentCoreRuntimeAdvisor
 from app.services.agent.sdk_runtime import BnbAgentSdkRuntimeService
 from app.services.agent.status import BnbAgentStatusService
 from app.services.agent.strategy_research import StrategyResearchService
@@ -22,7 +23,8 @@ class BnbAgentRuntimeService:
         cockpit = await AgentCockpitService.get_cockpit_snapshot(limit=limit)
         preflight = await LivePreflightService.get_live_preflight({"skipFundedCycle": True})
         proof_bundle = await ProofBundleService.get_live_proof_bundle({"limit": limit})
-        return BnbAgentRuntimeService.build_runtime_snapshot(cockpit, preflight, proof_bundle, None)
+        core_agent = await BnbAgentCoreRuntimeAdvisor.evaluate(cockpit, preflight)
+        return BnbAgentRuntimeService.build_runtime_snapshot(cockpit, preflight, proof_bundle, core_agent)
 
     @staticmethod
     def build_runtime_snapshot(
@@ -38,6 +40,7 @@ class BnbAgentRuntimeService:
         memory = LedgerMemoryService.build(ledger, preflight, proof_bundle, cycle)
         report = BacktestRiskReportService.build(ledger, proof_bundle)
         research = StrategyResearchService.build(cockpit, preflight, proof_bundle, memory)
+        core_agent = BnbAgentRuntimeService.core_agent_summary(cycle)
         return {
             "network": "bsc",
             "role": "runtime_core",
@@ -49,12 +52,32 @@ class BnbAgentRuntimeService:
             "sdkRuntime": sdk_runtime,
             "agentProfile": BnbAgentRuntimeService.agent_profile(cockpit, sdk_status, sdk_runtime),
             "identityRegistration": BnbAgentRuntimeService.identity_registration(sdk_status),
+            "coreAgent": core_agent,
+            "openRouterAdvisor": core_agent.get("strategyDecision", {}).get("advisor") if isinstance(core_agent.get("strategyDecision"), dict) else {},
             "ledgerMemory": memory,
             "strategyResearch": research,
             "backtestRiskReport": report,
             "liveReadiness": preflight,
             "proofScore": proof_bundle.get("proofScore"),
             "updatedAt": datetime.now(timezone.utc).isoformat(),
+        }
+
+    @staticmethod
+    def core_agent_summary(cycle: dict[str, Any] | None) -> dict[str, object]:
+        settings = get_settings()
+        strategy = cycle.get("strategyDecision") if isinstance(cycle, dict) and isinstance(cycle.get("strategyDecision"), dict) else {}
+        advisor = strategy.get("advisor") if isinstance(strategy.get("advisor"), dict) else {}
+        decision = strategy.get("decision") if isinstance(strategy.get("decision"), dict) else {}
+        source = str(strategy.get("source") or "monitoring")
+        return {
+            "provider": "openrouter",
+            "runtimeRole": "agent_core",
+            "called": bool(advisor) or source == "openrouter",
+            "ready": bool(advisor.get("ready")) if advisor else source == "openrouter",
+            "model": advisor.get("model") or settings.openrouter_model,
+            "reason": advisor.get("reason"),
+            "strategyDecision": strategy,
+            "decision": decision,
         }
 
     @staticmethod
