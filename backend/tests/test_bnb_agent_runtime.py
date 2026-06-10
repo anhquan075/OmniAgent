@@ -159,6 +159,23 @@ def test_ledger_memory_ignores_synthetic_intent_test_events() -> None:
     assert "Emergency pause is enabled." in memory["whyNoTrade"]  # type: ignore[operator]
 
 
+def test_ledger_memory_filters_proof_route_blocker_when_preflight_clears_route() -> None:
+    memory = LedgerMemoryService.build(
+        {"events": []},
+        {
+            "readyForLiveTrade": True,
+            "blockers": [],
+            "checks": [{"name": "funded_route", "ok": True}],
+        },
+        {"proofScore": {"hardBlocked": True, "hardBlockers": ["funded_route", "emergency_pause"]}},
+        {"strategyDecision": {"decision": {"action": "buy", "rationale": "route checked"}}},
+    )
+
+    assert "Router-backed funded route is not ready." not in memory["whyNoTrade"]  # type: ignore[operator]
+    assert memory["whyNoTrade"] == ["Emergency pause is enabled."]
+    assert memory["latestDecision"]["reason"] == "Emergency pause is enabled."  # type: ignore[index]
+
+
 def test_bnbagent_facade_probe_initializes_without_signer_material() -> None:
     result = BnbAgentSdkRuntimeService.get_facade_snapshot(
         "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
