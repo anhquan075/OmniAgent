@@ -30,6 +30,52 @@ def test_autonomous_loop_payload_uses_settings(monkeypatch) -> None:
     get_settings.cache_clear()
 
 
+@pytest.mark.asyncio
+async def test_autonomous_loop_payload_resolves_funded_cake_buy(monkeypatch) -> None:
+    from app.services.agent.autonomous_loop_payload import AutonomousLoopPayloadService
+
+    async def fake_capital(wallet_address: str) -> dict[str, object]:
+        assert wallet_address == "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"
+        return {
+            "balances": [
+                {"symbol": "BNB", "raw": "747086800000000", "spendableRaw": "247086800000000"},
+                {"symbol": "USDT", "raw": "41336198426727476", "spendableRaw": "41336198426727476"},
+            ]
+        }
+
+    async def fake_prices(symbols: list[str]) -> dict[str, object]:
+        assert symbols == ["BNB", "CAKE", "TWT"]
+        return {"symbols": {"BNB": {"priceUsd": 584.0}}}
+
+    monkeypatch.setattr(
+        "app.services.agent.autonomous_loop_payload.AgentWalletService.get_wallet_data",
+        lambda: {"walletAddress": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"},
+    )
+    monkeypatch.setattr(
+        "app.services.agent.autonomous_loop_payload.CapitalReadinessService.get_capital_readiness",
+        fake_capital,
+    )
+    monkeypatch.setattr(
+        "app.services.agent.autonomous_loop_payload.CmcPriceService.get_price_snapshot",
+        fake_prices,
+    )
+    monkeypatch.setenv("BNB_AUTONOMOUS_LOOP_SYMBOL", "CAKE")
+    monkeypatch.setenv("BNB_AUTONOMOUS_LOOP_SIDE", "buy")
+    monkeypatch.setenv("BNB_AUTONOMOUS_LOOP_AMOUNT_USD", "25")
+    monkeypatch.setenv("BNB_MAX_TRADE_USD", "25")
+    monkeypatch.setenv("BNB_AUTONOMOUS_LOOP_EXECUTE", "false")
+    get_settings.cache_clear()
+
+    payload = await AutonomousLoopPayloadService.resolved_cycle_payload(get_settings())
+
+    assert payload["symbol"] == "CAKE"
+    assert payload["side"] == "buy"
+    assert payload["amountUsd"] == 0.041336
+    assert payload["configuredAmountUsd"] == 25.0
+    assert payload["execute"] is False
+    get_settings.cache_clear()
+
+
 def test_autonomous_cycle_summary_keeps_strategy_for_dashboard() -> None:
     summary = AutonomousCycleSummary.from_result({
         "tradeIntentId": "intent-auto",
@@ -64,6 +110,11 @@ async def test_autonomous_loop_run_once_invokes_agent(monkeypatch) -> None:
         "app.services.agent.autonomous_loop.AutonomousTradingAgent.run_autonomous_cycle",
         fake_cycle,
     )
+
+    async def fake_payload(settings) -> dict[str, object]:
+        return AutonomousLoopService.cycle_payload(settings)
+
+    monkeypatch.setattr(AutonomousLoopService, "resolved_cycle_payload", fake_payload)
     monkeypatch.setenv("BNB_AUTONOMOUS_LOOP_SYMBOL", "CAKE")
     monkeypatch.setenv("BNB_AUTONOMOUS_LOOP_EXECUTE", "false")
     get_settings.cache_clear()
@@ -92,6 +143,11 @@ async def test_autonomous_loop_run_once_logs_json_schedule(monkeypatch, capsys) 
         "app.services.agent.autonomous_loop.AutonomousTradingAgent.run_autonomous_cycle",
         fake_cycle,
     )
+
+    async def fake_payload(settings) -> dict[str, object]:
+        return AutonomousLoopService.cycle_payload(settings)
+
+    monkeypatch.setattr(AutonomousLoopService, "resolved_cycle_payload", fake_payload)
     monkeypatch.setenv("OMNIAGENT_LOG_JSON", "true")
     monkeypatch.setenv("BNB_AUTONOMOUS_LOOP_EXECUTE", "true")
     get_settings.cache_clear()

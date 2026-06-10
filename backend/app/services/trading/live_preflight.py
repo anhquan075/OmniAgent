@@ -7,6 +7,7 @@ from app.services.cmc.agent_hub_tools import CmcAgentHubToolClient
 from app.services.cmc.signal_config import CmcSignalConfigService
 from app.services.agent.cockpit import AgentCockpitService
 from app.services.trading.registration import CompetitionRegistrationService
+from app.services.trading.funded_strategy import FundedStrategyService
 from app.services.twak.bridge import TrustWalletBridge
 from app.services.wallet.agent_wallet import AgentWalletService
 
@@ -146,31 +147,7 @@ class LivePreflightService:
 
     @staticmethod
     def build_funded_strategy(capital: dict[str, object], cmc: dict[str, object]) -> dict[str, object] | None:
-        balances = capital.get("balances") if isinstance(capital.get("balances"), list) else []
-        bnb = next((item for item in balances if isinstance(item, dict) and item.get("symbol") == "BNB"), None)
-        bnb_price = LivePreflightService.price_usd(cmc, "BNB")
-        if bnb and bnb_price:
-            spendable = int(str(bnb.get("spendableRaw") or "0"))
-            spendable_usd = spendable / 1e18 * bnb_price
-            if spendable_usd > 0:
-                return {
-                    "symbol": "BNB",
-                    "side": "sell",
-                    "amountUsd": round(min(0.25, spendable_usd * 0.5), 6),
-                    "slippageBps": 50,
-                    "signalSource": "cmc",
-                }
-        for item in balances:
-            if isinstance(item, dict) and item.get("symbol") in {"USDT", "USDC"} and int(str(item.get("spendableRaw") or item.get("raw") or "0")) > 0:
-                return {"symbol": "CAKE", "side": "buy", "amountUsd": 1, "slippageBps": 50, "signalSource": "cmc"}
-        return None
-
-    @staticmethod
-    def price_usd(cmc: dict[str, object], symbol: str) -> float | None:
-        symbols = cmc.get("symbols") if isinstance(cmc.get("symbols"), dict) else {}
-        item = symbols.get(symbol) if isinstance(symbols, dict) else None
-        value = item.get("priceUsd") if isinstance(item, dict) else None
-        return float(value) if isinstance(value, int | float) and value > 0 else None
+        return FundedStrategyService.build(capital, cmc)
 
     @staticmethod
     def funded_cycle_ready(payload: dict[str, object]) -> bool:

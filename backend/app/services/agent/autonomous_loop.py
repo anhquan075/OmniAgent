@@ -8,6 +8,7 @@ from app.core.logging import get_logger
 from app.core.settings import Settings
 from app.core.settings import get_settings
 from app.services.agent.autonomous_cycle import AutonomousTradingAgent
+from app.services.agent.autonomous_loop_payload import AutonomousLoopPayloadService
 from app.services.agent.autonomous_cycle_summary import AutonomousCycleSummary
 
 logger = get_logger(__name__)
@@ -101,7 +102,7 @@ class AutonomousLoopService:
 
     @classmethod
     async def run_once(cls, settings: Settings, cycle_started_at: str | None = None) -> dict[str, object]:
-        payload = cls.cycle_payload(settings)
+        payload = await cls.resolved_cycle_payload(settings)
         started_at = cycle_started_at or cls.utc_now().isoformat()
         logger.info(
             "autonomous_loop_cycle_started",
@@ -122,15 +123,11 @@ class AutonomousLoopService:
 
     @staticmethod
     def cycle_payload(settings: Settings) -> dict[str, Any]:
-        return {
-            "symbol": settings.bnb_autonomous_loop_symbol,
-            "side": settings.bnb_autonomous_loop_side,
-            "amountUsd": settings.bnb_autonomous_loop_amount_usd,
-            "slippageBps": settings.bnb_autonomous_loop_slippage_bps,
-            "signalSource": "cmc",
-            "execute": settings.bnb_autonomous_loop_execute,
-            "recordLedger": True,
-        }
+        return AutonomousLoopPayloadService.cycle_payload(settings)
+
+    @classmethod
+    async def resolved_cycle_payload(cls, settings: Settings) -> dict[str, Any]:
+        return await AutonomousLoopPayloadService.resolved_cycle_payload(settings)
 
     @staticmethod
     def utc_now() -> datetime:
