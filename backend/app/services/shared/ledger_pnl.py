@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from typing import Any
 
+from app.services.shared.trade_pnl import TradePnlService
+
 
 class LedgerPnl:
     @staticmethod
@@ -14,6 +16,8 @@ class LedgerPnl:
 
     @staticmethod
     def from_event(event: dict[str, Any]) -> dict[str, float] | None:
+        if event.get("eventType") != "pnl_updated":
+            return None
         payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
         for candidate in (payload, event):
             if "totalReturnPct" in candidate or "maxDrawdownPct" in candidate:
@@ -25,6 +29,12 @@ class LedgerPnl:
 
     @staticmethod
     def latest(events: list[dict[str, Any]]) -> dict[str, object]:
+        trade_pnl = TradePnlService.summary(events)
+        if int(trade_pnl.get("confirmedTrades") or 0) > 0:
+            return {
+                **trade_pnl,
+                "registrationPeriod": LedgerPnl.registration_period(events),
+            }
         for event in reversed(events):
             pnl = LedgerPnl.from_event(event)
             if pnl is not None:
@@ -43,7 +53,7 @@ class LedgerPnl:
         as_of = datetime.now(timezone.utc)
         registration = next(
             (
-                event for event in events
+                event for event in reversed(events)
                 if event.get("eventType") == "competition_registered"
             ),
             None,
@@ -52,6 +62,18 @@ class LedgerPnl:
             return LedgerPnl.empty_registration_period(as_of)
 
         start = LedgerPnl.parse_timestamp(registration.get("createdAt")) or as_of
+        trade_period = TradePnlService.summary(events, start_at=start, source="competition_registered")
+        if int(trade_period.get("confirmedTrades") or 0) > 0:
+            payload = registration.get("payload") if isinstance(registration.get("payload"), dict) else {}
+            days = max(1, (as_of.date() - start.date()).days + 1)
+            return {
+                **trade_period,
+                "source": "competition_registered",
+                "registrationStartAt": start.isoformat(),
+                "registrationTxHash": registration.get("txHash") or payload.get("txHash"),
+                "asOf": as_of.isoformat(),
+                "days": days,
+            }
         baseline_return = 0.0
         latest_return = 0.0
         period_drawdown = 0.0

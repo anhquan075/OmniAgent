@@ -35,6 +35,12 @@ def cockpit_fixture() -> dict[str, object]:
             ],
             "dailyCompliance": {"progress": "0/7"},
             "pnl": {
+                "source": "trade_history_missing_pnl",
+                "available": False,
+                "status": "missing_trade_pnl",
+                "confirmedTrades": 1,
+                "trackedTrades": 0,
+                "missingPnlTrades": 1,
                 "totalReturnPct": 1.25,
                 "maxDrawdownPct": 2.5,
                 "registrationPeriod": {"source": "competition_registered", "totalReturnPct": 1.25},
@@ -75,6 +81,8 @@ def test_runtime_snapshot_keeps_bnb_sdk_runtime_and_twak_executor(monkeypatch) -
     assert result["strategyResearch"]["mode"] == "advisory_only"  # type: ignore[index]
     assert result["strategyResearch"]["canExecute"] is False  # type: ignore[index]
     assert result["backtestRiskReport"]["runtimeImported"] is False  # type: ignore[index]
+    assert result["backtestRiskReport"]["pnlSummary"]["available"] is False  # type: ignore[index]
+    assert result["backtestRiskReport"]["pnlSummary"]["missingPnlTrades"] == 1  # type: ignore[index]
 
 
 def test_runtime_mcp_tools_are_listed_without_replacing_execution_tools() -> None:

@@ -16,10 +16,20 @@ const pct = (value: unknown) => {
   return Number.isFinite(number) ? `${number >= 0 ? "+" : ""}${number.toFixed(2)}%` : "syncing";
 };
 
+const pnlPct = (summary: Payload, value: unknown) => (
+  summary.available === false
+  || summary.status === "missing_trade_pnl"
+  || summary.status === "partial"
+  || Number(summary.missingPnlTrades) > 0
+    ? "pending"
+    : pct(value)
+);
+
 export function BacktestRiskReportPanel({ report }: { report?: Payload }) {
   const dry = report?.dryRunSummary ?? {};
   const pnl = report?.pnlSummary ?? {};
   const period = pnl.registrationPeriod ?? {};
+  const pnlSource = period.source === "competition_registered" ? period : pnl;
   const risk = report?.riskSummary ?? {};
   const blockers = Array.isArray(risk.hardBlockers) ? risk.hardBlockers : [];
 
@@ -38,11 +48,11 @@ export function BacktestRiskReportPanel({ report }: { report?: Payload }) {
       <div className="report-pnl-band">
         <span>
           <small>Since register</small>
-          <strong>{pct(period.totalReturnPct ?? pnl.totalReturnPct)}</strong>
+          <strong>{pnlPct(pnlSource, pnlSource.totalReturnPct)}</strong>
         </span>
         <span>
           <small>Max drawdown</small>
-          <strong>{pct(period.maxDrawdownPct ?? pnl.maxDrawdownPct)}</strong>
+          <strong>{pnlPct(pnlSource, pnlSource.maxDrawdownPct)}</strong>
         </span>
         <span>
           <small>Proof</small>

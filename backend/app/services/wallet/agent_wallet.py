@@ -1,5 +1,6 @@
 from app.core.settings import get_settings
 from app.services.twak.cli import TrustWalletCliClient
+from app.services.wallet.url_safety import redact_url
 
 class AgentWalletService:
     @staticmethod
@@ -18,7 +19,7 @@ class AgentWalletService:
             "network": "bsc",
             "chainId": settings.bnb_chain_id,
             "explorerUrl": settings.bnb_explorer_url,
-            "rpcUrl": settings.bnb_rpc_url,
+            "rpcUrl": redact_url(settings.bnb_rpc_url),
             "walletMode": "agent",
             "walletAddress": wallet_address,
             "competitionContractAddress": settings.bnb_competition_contract_address,

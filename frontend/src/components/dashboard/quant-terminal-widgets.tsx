@@ -1,12 +1,9 @@
 import {
-  ActivityIcon,
-  BadgeCheckIcon,
   RadioTowerIcon,
-  ShieldCheckIcon,
   SigmaIcon,
   SparklesIcon,
-  WalletCardsIcon,
 } from "lucide-react";
+import AutonomousLoopPulse from "./autonomous-loop-pulse";
 
 type Payload = Record<string, any>;
 
@@ -57,13 +54,8 @@ export function SignalTile({ label, value, hint }: { label: string; value: strin
 export function DecisionContextPanel({ state, offline, loopStatusLabel, liveExecution }: { state: Payload; offline: boolean; loopStatusLabel: string; liveExecution: boolean }) {
   const bnb = state.prices?.symbols?.BNB ?? {};
   const decision = state.cycle?.strategyDecision?.decision ?? {};
-  const proof = state.liveProofBundle ?? {};
-  const signer = state[["twa", "kStatus"].join("")] ?? {};
   const loopDryRun = state.backendHealth?.autonomousLoop?.execute === false;
   const hasDecision = Boolean(decision.action);
-  const marketReady = Boolean(state.prices?.configured);
-  const policyReady = Boolean(state.livePreflight?.readyForLiveTrade ?? state.policyStatus?.approved);
-  const hasTxProof = Boolean(proof.latestReceiptStatus?.txHash ?? proof.latestSubmission?.txHash ?? proof.txEvents?.[0]?.txHash);
   const confidence = Math.round(Number(decision.confidence ?? 0) * 100);
   const action = offline ? "No live action" : text(decision.action, "Monitoring");
   const change24h = Number(bnb.percentChange24h);
@@ -93,28 +85,13 @@ export function DecisionContextPanel({ state, offline, loopStatusLabel, liveExec
           <MiniBar label="24h volume" value={hasVolume ? Math.min(Math.log10(volume24h) * 10, 100) : null} display={hasVolume ? compactUsd(volume24h) : offline ? "no feed" : "scanning"} tone={hasVolume ? "neutral" : "syncing"} />
         </div>
       </div>
-      <div className="quant-context-checks">
-        <StackRow icon={RadioTowerIcon} label="Market signal" value={offline ? "backend offline" : marketReady ? "live feed" : "market sync"} tone={marketReady ? "good" : "warn"} />
-        <StackRow icon={ActivityIcon} label="Strategy decision" value={decision.action ? `${text(decision.action)} ${confidence}%` : "monitoring"} tone={decision.action ? "good" : "neutral"} />
-        <StackRow icon={ShieldCheckIcon} label="Policy gate" value={policyReady ? "pass" : "guarded"} tone={policyReady ? "good" : "warn"} />
-        <StackRow icon={WalletCardsIcon} label="Wallet signer" value={signer.ready ? "ready" : offline ? "not checked" : "syncing"} tone={signer.ready ? "good" : "neutral"} />
-        <StackRow icon={BadgeCheckIcon} label="BSC proof" value={hasTxProof ? "proof linked" : offline ? "not checked" : "proof sync"} tone={hasTxProof ? "good" : "warn"} />
-      </div>
-      <div className="quant-context-loop">
-        <span>Backend agent loop</span>
-        <strong>{loopStatusLabel}</strong>
-        <p>{loopCopy}</p>
-      </div>
+      <AutonomousLoopPulse state={state} offline={offline} statusLabel={loopStatusLabel} copy={loopCopy} />
     </section>
   );
 }
 
 function TopMetric({ label, value, tone = "neutral" }: { label: string; value: string; tone?: string }) {
   return <div className={`quant-topmetric is-${tone}`}><span>{label}</span><strong>{value}</strong></div>;
-}
-
-function StackRow({ icon: Icon, label, value, tone }: { icon: typeof ActivityIcon; label: string; value: string; tone: string }) {
-  return <div className={`quant-stack-row is-${tone}`}><Icon className="h-4 w-4" /><span>{label}</span><strong>{value}</strong></div>;
 }
 
 export function MiniBar({ label, value, tone = "neutral", display }: { label: string; value: number | null; tone?: string; display?: string }) {

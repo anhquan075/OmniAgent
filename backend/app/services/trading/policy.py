@@ -36,6 +36,8 @@ class RiskPolicyService:
             reasons.append("slippage_exceeds_limit")
         if bool((ledger.get("control") or {}).get("emergencyPaused")):
             reasons.append("emergency_pause_enabled")
+        if RiskPolicyService.pnl_history_incomplete(pnl):
+            reasons.append("pnl_history_incomplete")
         if float(pnl.get("maxDrawdownPct") or 0) >= settings.bnb_max_drawdown_pct:
             reasons.append("drawdown_cap_reached")
         if int(daily.get("todayTradeCount") or 0) >= settings.bnb_max_daily_trades:
@@ -59,9 +61,20 @@ class RiskPolicyService:
                 "slippageBps": policy_input.slippage_bps,
                 "todayTradeCount": int(daily.get("todayTradeCount") or 0),
                 "maxDrawdownPct": float(pnl.get("maxDrawdownPct") or 0),
+                "pnlStatus": pnl.get("status"),
+                "missingPnlTrades": int(pnl.get("missingPnlTrades") or 0),
                 "signalSource": policy_input.signal_source,
             },
         }
+
+    @staticmethod
+    def pnl_history_incomplete(pnl: dict[str, object]) -> bool:
+        status = str(pnl.get("status") or "")
+        return (
+            pnl.get("available") is False
+            or status in {"missing_trade_pnl", "partial"}
+            or int(pnl.get("missingPnlTrades") or 0) > 0
+        )
 
     @staticmethod
     def policy_input_from_args(args: dict[str, object], defaults: dict[str, object] | None = None) -> TradePolicyInput:

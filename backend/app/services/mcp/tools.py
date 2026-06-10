@@ -9,12 +9,27 @@ from app.services.adapters.runtime import DynamicAgentAdapterRegistry, RuntimeTo
 ToolPayload = dict[str, Any]
 McpTool = RuntimeTool
 
+OPERATOR_TOOL_NAMES = {
+    "bnb_agent_sdk_register_identity",
+    "bnb_competition_register",
+    "bnb_emergency_pause",
+    "bnb_execute_trade",
+    "bnb_get_trade_status",
+    "bnb_record_paid_signal_access",
+    "bnb_run_autonomous_cycle",
+    "cmc_agent_hub_call_tool",
+    "cmc_skill_hub_execute_skill",
+}
+
 
 class McpToolRegistry:
     @classmethod
-    def list_tools(cls) -> list[ToolPayload]:
+    def list_tools(cls, *, operator: bool = True) -> list[ToolPayload]:
         settings = get_settings()
-        return cls._adapter(None).list_tools(settings.allowed_tools)
+        allowed_tools = settings.allowed_tools
+        if not operator:
+            allowed_tools = allowed_tools - OPERATOR_TOOL_NAMES
+        return cls._adapter(None).list_tools(allowed_tools)
 
     @classmethod
     async def call_tool(cls, name: str, args: ToolPayload) -> ToolResult:

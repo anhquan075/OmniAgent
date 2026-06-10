@@ -5,6 +5,9 @@ import { extname, join, normalize, resolve } from "node:path";
 const port = Number(process.env.PORT || 4173);
 const distDir = resolve("dist");
 const backendUrl = normalizeBackendUrl(process.env.BACKEND_INTERNAL_URL || process.env.BACKEND_URL || "");
+const maxRequestBodyBytes = Number(process.env.FRONTEND_MAX_BODY_BYTES || 1_048_576);
+
+class RequestBodyTooLargeError extends Error {}
 
 const mimeTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -70,9 +73,22 @@ function copyProxyHeaders(source, res) {
 
 function getRequestBody(req) {
   if (req.method === "GET" || req.method === "HEAD") return undefined;
+  const contentLength = Number(req.headers["content-length"] || 0);
+  if (contentLength > maxRequestBodyBytes) {
+    throw new RequestBodyTooLargeError("frontend_api_body_too_large");
+  }
   return new Promise((resolveBody, reject) => {
     const chunks = [];
-    req.on("data", (chunk) => chunks.push(chunk));
+    let received = 0;
+    req.on("data", (chunk) => {
+      received += chunk.length;
+      if (received > maxRequestBodyBytes) {
+        reject(new RequestBodyTooLargeError("frontend_api_body_too_large"));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on("end", () => resolveBody(Buffer.concat(chunks)));
     req.on("error", reject);
   });
@@ -88,10 +104,24 @@ async function proxyApi(req, res, url) {
   headers.set("x-forwarded-host", req.headers.host || "");
   headers.set("x-forwarded-proto", "https");
 
+  let requestBody;
+  try {
+    requestBody = await getRequestBody(req);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      setSecurityHeaders(res);
+      res.statusCode = 413;
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.end(JSON.stringify({ error: "frontend_api_body_too_large" }));
+      return;
+    }
+    throw error;
+  }
+
   const upstream = await fetch(targetUrl, {
     method: req.method,
     headers,
-    body: await getRequestBody(req),
+    body: requestBody,
   });
 
   res.statusCode = upstream.status;

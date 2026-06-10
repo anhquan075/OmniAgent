@@ -16,15 +16,23 @@ export const registrationPnlView = (ledger: Payload | undefined) => {
   const pnl = ledger?.pnl ?? {};
   const period = pnl.registrationPeriod ?? {};
   const hasRegistrationWindow = period.source === 'competition_registered';
-  const value = hasRegistrationWindow ? period.totalReturnPct : pnl.totalReturnPct;
+  const source = hasRegistrationWindow ? period : pnl;
+  const value = source.totalReturnPct;
   const days = Number(period.days);
+  const pending = source.available === false
+    || source.status === 'missing_trade_pnl'
+    || source.status === 'partial'
+    || Number(source.missingPnlTrades) > 0;
+  const missingTrades = Number(source.missingPnlTrades ?? source.confirmedTrades);
 
   return {
-    label: signedPct(value),
+    label: pending ? 'pending' : signedPct(value),
     metricLabel: hasRegistrationWindow ? 'Reg PnL' : 'PnL',
-    hint: hasRegistrationWindow && Number.isFinite(days) && days > 0
+    hint: pending && Number.isFinite(missingTrades) && missingTrades > 0
+      ? `${missingTrades} trade PnL missing`
+      : hasRegistrationWindow && Number.isFinite(days) && days > 0
       ? `${days}d to today`
       : 'register to today',
-    tone: toneFor(value),
+    tone: pending ? 'is-neutral' : toneFor(value),
   };
 };

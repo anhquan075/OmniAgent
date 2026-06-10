@@ -5,7 +5,7 @@ import httpx
 
 from app.core.settings import get_settings
 from app.services.shared.ledger import TradeLedger
-from app.services.wallet.agent_wallet import AgentWalletService
+from app.services.trading.receipt_payload import ReceiptPayloadService
 
 TX_RE = re.compile(r"^0x[a-fA-F0-9]{64}$")
 BSC_ADDRESS_RE = re.compile(r"^0x[a-fA-F0-9]{40}$")
@@ -57,19 +57,13 @@ class ReceiptProofService:
         }
         if success and proof["valid"]:
             existing_event = TradeLedger.find_trade_event(tx_hash=tx_hash, event_type="trade_receipt_confirmed")
+            payload = ReceiptPayloadService.receipt_payload(result, submission_proof, args)
             result["ledgerEvent"] = existing_event or TradeLedger.append_event({
                 "eventType": "trade_receipt_confirmed",
                 "tradeIntentId": args.get("tradeIntentId"),
                 "txHash": tx_hash,
                 "createdAt": datetime.now(timezone.utc).isoformat(),
-                "payload": {
-                    "blockNumber": result["blockNumber"],
-                    "from": result["from"],
-                    "to": result["to"],
-                    "explorerUrl": result["explorerUrl"],
-                    "submissionProof": submission_proof,
-                    "proof": proof,
-                },
+                "payload": payload,
             })
         return result
 
@@ -82,15 +76,7 @@ class ReceiptProofService:
         )
         if not event:
             return None
-        payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
-        cmc_signal = payload.get("cmcAgentHubSignal") if isinstance(payload, dict) else None
-        return {
-            "tradeIntentId": event.get("tradeIntentId"),
-            "txHash": event.get("txHash"),
-            "bridgeMode": payload.get("bridgeMode"),
-            "walletAddress": payload.get("walletAddress"),
-            "cmcAgentHubSignal": cmc_signal if isinstance(cmc_signal, dict) else None,
-        }
+        return ReceiptPayloadService.submission_proof(event)
 
     @staticmethod
     def validate_trade_proof(
@@ -101,10 +87,9 @@ class ReceiptProofService:
         submission_proof: dict[str, object] | None = None,
     ) -> dict[str, object]:
         settings = get_settings()
-        wallet = AgentWalletService.get_wallet_data()
-        expected_from = ReceiptProofService.normalize_address(str(args.get("expectedFrom") or wallet.get("walletAddress") or ""))
-        expected_to = ReceiptProofService.normalize_address(str(args.get("expectedTo") or settings.bnb_pancake_swap_router_address))
-        expected_prefix = str(args.get("expectedDataPrefix") or "").lower()
+        expected_from = ReceiptProofService.normalize_address(str((submission_proof or {}).get("walletAddress") or ""))
+        expected_to = ReceiptProofService.normalize_address(settings.bnb_pancake_swap_router_address)
+        expected_prefix = ReceiptProofService.expected_data_prefix(submission_proof)
         actual_from = ReceiptProofService.normalize_address(str(receipt.get("from") or (transaction or {}).get("from") or ""))
         actual_to = ReceiptProofService.normalize_address(str(receipt.get("to") or (transaction or {}).get("to") or ""))
         actual_input = str((transaction or {}).get("input") or (transaction or {}).get("data") or "").lower()
@@ -112,6 +97,8 @@ class ReceiptProofService:
         twak_rest_verified = ReceiptProofService.is_twak_rest_verified(submission_proof, expected_from, actual_from)
         reasons: list[str] = []
 
+        if not submission_proof:
+            reasons.append("submission_proof_missing")
         if not receipt_success:
             reasons.append("receipt_failed")
         if expected_from and actual_from != expected_from:
@@ -140,6 +127,14 @@ class ReceiptProofService:
             },
             "bridgeMode": (submission_proof or {}).get("bridgeMode"),
         }
+
+    @staticmethod
+    def expected_data_prefix(submission_proof: dict[str, object] | None) -> str:
+        quote = (submission_proof or {}).get("quote")
+        if not isinstance(quote, dict):
+            return ""
+        calldata = str(quote.get("calldata") or quote.get("data") or "").lower()
+        return calldata[:10] if calldata.startswith("0x") and len(calldata) >= 10 else ""
 
     @staticmethod
     def normalize_address(value: str) -> str | None:

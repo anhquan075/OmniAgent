@@ -18,6 +18,7 @@ async def test_latest_receipt_status_uses_cached_ledger_without_rpc(monkeypatch,
         "payload": {
             "blockNumber": 1,
             "proof": {"valid": True, "reasons": []},
+            "submissionProof": {"tradeIntentId": "intent-1", "txHash": tx_hash},
             "explorerUrl": f"https://bscscan.com/tx/{tx_hash}",
         },
     })
@@ -33,6 +34,33 @@ async def test_latest_receipt_status_uses_cached_ledger_without_rpc(monkeypatch,
     assert result["source"] == "ledger"
     assert result["status"] == "confirmed"
     assert result["proof"]["valid"] is True
+    get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_latest_receipt_status_marks_cached_proof_invalid_without_submission(monkeypatch, tmp_path) -> None:
+    from app.core.settings import get_settings
+
+    tx_hash = "0x" + "3" * 64
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    get_settings.cache_clear()
+    TradeLedger.append_event({
+        "eventType": "trade_receipt_confirmed",
+        "tradeIntentId": "intent-3",
+        "txHash": tx_hash,
+        "payload": {
+            "blockNumber": 1,
+            "proof": {"valid": True, "reasons": []},
+        },
+    })
+
+    result = await ProofBundleService.latest_receipt_status(
+        {"tradeIntentId": "intent-3", "txHash": tx_hash},
+    )
+
+    assert result["source"] == "ledger"
+    assert result["proof"]["valid"] is False
+    assert result["proof"]["reasons"] == ["cached_submission_proof_missing"]
     get_settings.cache_clear()
 
 

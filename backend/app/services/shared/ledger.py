@@ -31,10 +31,10 @@ class TradeLedger:
         settings = get_settings()
         events = TradeLedger._read_events(settings.trade_ledger_path)
         tx_events = [event for event in events if event.get("txHash")]
-        submitted_trade_events = [
+        submitted_trade_events = TradeLedger.unique_trade_events([
             event for event in events
             if event.get("eventType") in {"trade_executed", "trade_receipt_confirmed"}
-        ]
+        ])
         confirmed_trade_events = TradeLedger.unique_trade_events([
             event for event in events
             if event.get("eventType") == "trade_receipt_confirmed"

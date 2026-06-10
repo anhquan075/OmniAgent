@@ -63,7 +63,6 @@ test.describe('BNB trading dashboard', () => {
     await expect(page.getByText('24h volume').first()).toBeVisible();
     await expect(page.getByText('Trade plan').first()).toBeVisible();
     await expect(page.getByText('Proof score').first()).toBeVisible();
-    await expect(page.getByText('Safety checks', { exact: true })).toBeVisible();
     await expect(page.getByText('Live safety check').first()).toBeVisible();
     await expect(page.getByText('Recovery candidates').first()).toBeVisible();
     await expect(page.getByText('Decision summary').first()).toBeVisible();
@@ -83,7 +82,8 @@ test.describe('BNB trading dashboard', () => {
     for (const pattern of removedCopyPatterns) {
       await expect(page.getByText(pattern)).toHaveCount(0);
     }
-    await expect(page.getByText('Backend agent loop').first()).toBeVisible();
+    await expect(page.getByText('Autonomous loop').first()).toBeVisible();
+    await expect(page.locator('.autonomous-loop-pulse').first()).toBeVisible();
     await expect(page.getByText('Why this verdict').first()).toBeVisible();
     await expect(page.getByText('Agent Reasoning').first()).toBeVisible();
     await expect(page.getByText('Ledger Memory').first()).toBeVisible();
@@ -147,15 +147,15 @@ test.describe('BNB trading dashboard', () => {
           * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
       };
       return {
-        contextLoopOutside: Math.max(0, (rect('.quant-context-loop')?.right ?? 0) - (rect('.quant-context-panel')?.right ?? 0)),
-        contextLoopRuntime: overlap(rect('.quant-context-loop'), rect('.bnb-runtime-panel')),
+        autonomousLoopOutside: Math.max(0, (rect('.autonomous-loop-pulse')?.right ?? 0) - (rect('.quant-context-panel')?.right ?? 0)),
+        autonomousLoopRuntime: overlap(rect('.autonomous-loop-pulse'), rect('.bnb-runtime-panel')),
         signalMcpExecution: overlap(rect('.market-signal-proof'), rect('.quant-execution-stack')),
         reasoningExecution: overlap(rect('.agent-reasoning-panel'), rect('.quant-execution-stack')),
         horizontalOverflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth),
       };
     });
-    expect(metrics.contextLoopOutside).toBeLessThanOrEqual(1);
-    expect(metrics.contextLoopRuntime).toBe(0);
+    expect(metrics.autonomousLoopOutside).toBeLessThanOrEqual(1);
+    expect(metrics.autonomousLoopRuntime).toBe(0);
     expect(metrics.signalMcpExecution).toBe(0);
     expect(metrics.reasoningExecution).toBe(0);
     expect(metrics.horizontalOverflow).toBe(0);

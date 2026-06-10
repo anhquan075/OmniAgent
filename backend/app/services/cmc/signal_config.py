@@ -12,6 +12,8 @@ class CmcSignalConfigService:
         execute: bool,
         tool_name: str | None,
         signal: dict[str, object] | None,
+        symbol: str | None = None,
+        side: str | None = None,
     ) -> str | None:
         if not execute:
             return None
@@ -24,6 +26,9 @@ class CmcSignalConfigService:
         freshness = CmcSignalConfigService.signal_freshness_blocker(signal)
         if freshness:
             return freshness
+        semantics = CmcSignalConfigService.signal_semantics_blocker(signal, symbol=symbol, side=side)
+        if semantics:
+            return semantics
         return None
 
     @staticmethod
@@ -44,7 +49,7 @@ class CmcSignalConfigService:
 
     @staticmethod
     def configured_cmc_signal_tool(args: dict[str, object]) -> str | None:
-        raw = args.get("cmcAgentHubTool") or get_settings().cmc_agent_hub_signal_tool
+        raw = get_settings().cmc_agent_hub_signal_tool
         tool_name = str(raw or "").strip()
         return tool_name or None
 
@@ -75,9 +80,6 @@ class CmcSignalConfigService:
         side: str,
         amount_usd: float,
     ) -> dict[str, object]:
-        raw = args.get("cmcAgentHubArgs")
-        if isinstance(raw, dict):
-            return raw
         env_raw = get_settings().cmc_agent_hub_signal_args
         if not env_raw:
             return {"symbol": symbol, "side": side, "amountUsd": amount_usd}
@@ -88,3 +90,47 @@ class CmcSignalConfigService:
         if not isinstance(parsed, dict):
             raise ValueError("CMC_AGENT_HUB_SIGNAL_ARGS must be a JSON object.")
         return parsed
+
+    @staticmethod
+    def signal_semantics_blocker(
+        signal: dict[str, object],
+        *,
+        symbol: str | None,
+        side: str | None,
+    ) -> str | None:
+        expected_side = str(side or "").lower()
+        if not expected_side:
+            return None
+        candidates = [
+            signal.get("signal"),
+            signal.get("side"),
+            signal.get("action"),
+            signal.get("recommendation"),
+            signal.get("parsedContent"),
+            signal.get("result"),
+        ]
+        if CmcSignalConfigService.contains_trade_side(candidates, expected_side):
+            return None
+        expected_symbol = str(symbol or "").upper()
+        suffix = f" for {expected_symbol}" if expected_symbol else ""
+        return f"CMC Agent Hub signal must include a {expected_side} trade signal{suffix}."
+
+    @staticmethod
+    def contains_trade_side(value: object, expected_side: str) -> bool:
+        if value is None:
+            return False
+        if isinstance(value, str):
+            return value.strip().lower() == expected_side
+        if isinstance(value, list):
+            return any(CmcSignalConfigService.contains_trade_side(item, expected_side) for item in value[:16])
+        if isinstance(value, dict):
+            signal_values = (
+                value.get("signal"),
+                value.get("side"),
+                value.get("action"),
+                value.get("recommendation"),
+            )
+            if any(CmcSignalConfigService.contains_trade_side(item, expected_side) for item in signal_values):
+                return True
+            return any(CmcSignalConfigService.contains_trade_side(item, expected_side) for item in list(value.values())[:16])
+        return False

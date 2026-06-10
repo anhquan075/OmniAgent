@@ -30,7 +30,7 @@ def test_dashboard_trades_returns_full_executed_history(monkeypatch, tmp_path) -
             "symbol": "CAKE",
             "side": "buy",
             "amountUsd": 25,
-            "execution": {"status": "submitted", "txHash": tx_a},
+            "status": "submitted",
         },
     })
     TradeLedger.append_event({
@@ -46,9 +46,11 @@ def test_dashboard_trades_returns_full_executed_history(monkeypatch, tmp_path) -
         "txHash": tx_a,
         "createdAt": "2026-06-09T00:03:00+00:00",
         "payload": {
+            "amountUsd": 25,
             "blockNumber": 123,
             "from": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
             "to": "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "pnl": {"realizedPnlUsd": 1.5, "basisUsd": 25},
             "proof": {"valid": True},
         },
     })
@@ -66,6 +68,10 @@ def test_dashboard_trades_returns_full_executed_history(monkeypatch, tmp_path) -
     assert body["trades"][0]["txHash"] == tx_a
     assert body["trades"][0]["status"] == "confirmed"
     assert body["trades"][0]["symbol"] == "CAKE"
+    assert body["trades"][0]["side"] == "buy"
+    assert body["trades"][0]["amountUsd"] == 25
+    assert body["trades"][0]["pnlUsd"] == 1.5
+    assert body["trades"][0]["pnlPct"] == 6
     assert body["trades"][0]["cmcTool"] == "cmc.signal"
     assert body["trades"][0]["cmcServerVerified"] is True
     assert body["trades"][0]["receiptProofValid"] is True

@@ -7,7 +7,12 @@ from app.services.trading.token_registry import TOKEN_REGISTRY
 class FundedStrategyService:
     @staticmethod
     def build(capital: dict[str, object], cmc: dict[str, object]) -> dict[str, object] | None:
-        return FundedStrategyService.usdt_buy_strategy(capital) or FundedStrategyService.bnb_sell_strategy(capital, cmc)
+        candidates = [
+            FundedStrategyService.usdt_buy_strategy(capital),
+            FundedStrategyService.bnb_sell_strategy(capital, cmc),
+        ]
+        viable = [candidate for candidate in candidates if candidate]
+        return max(viable, key=FundedStrategyService.amount_usd) if viable else None
 
     @staticmethod
     def usdt_buy_strategy(capital: dict[str, object]) -> dict[str, object] | None:
@@ -65,6 +70,10 @@ class FundedStrategyService:
     def slippage_bps() -> int:
         settings = get_settings()
         return min(settings.bnb_autonomous_loop_slippage_bps, settings.bnb_max_slippage_bps)
+
+    @staticmethod
+    def amount_usd(strategy: dict[str, object]) -> float:
+        return float(strategy.get("amountUsd") or 0)
 
     @staticmethod
     def price_usd(cmc: dict[str, object], symbol: str) -> float | None:

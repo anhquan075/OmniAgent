@@ -21,6 +21,7 @@ class Settings(BaseSettings):
 
     port: int = Field(default=8000, alias="PORT")
     api_session_secret: str = Field(default="local-development-session-secret-change-me")
+    api_operator_token: str | None = Field(default=None, alias="API_OPERATOR_TOKEN")
     api_session_ttl_ms: int = 1_800_000
     api_security_enabled: bool = True
     api_security_headers_enabled: bool = True

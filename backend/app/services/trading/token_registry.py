@@ -28,6 +28,14 @@ class TokenRegistryService:
         return TOKEN_REGISTRY.get(symbol.upper())
 
     @staticmethod
+    def get_token_by_address(address: str) -> BnbToken | None:
+        normalized = address.lower()
+        for token in TOKEN_REGISTRY.values():
+            if token.address.lower() == normalized:
+                return token
+        return None
+
+    @staticmethod
     def is_token_allowed(symbol: str) -> bool:
         settings = get_settings()
         token = TokenRegistryService.get_token(symbol)

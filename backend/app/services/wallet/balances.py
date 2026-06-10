@@ -4,6 +4,7 @@ import httpx
 
 from app.core.settings import get_settings
 from app.services.trading.token_registry import TOKEN_REGISTRY
+from app.services.wallet.url_safety import redact_url_text
 
 BALANCE_OF_SELECTOR = "0x70a08231"
 
@@ -35,7 +36,7 @@ class CapitalReadinessService:
             return {
                 "ready": False,
                 "status": "rpc_unavailable",
-                "reason": f"BSC balance check failed: {error}",
+                "reason": f"BSC balance check failed: {redact_url_text(error)}",
                 "walletAddress": wallet_address,
             }
         gas_ready = any(

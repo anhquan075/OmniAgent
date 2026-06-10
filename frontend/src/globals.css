@@ -1837,16 +1837,172 @@ body:has(.robot-cockpit.quant-terminal) {
 
 .quant-context-panel {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.86fr) minmax(0, 0.62fr);
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
   gap: 0.7rem;
   min-height: clamp(9rem, 16vh, 12rem);
   padding: 0.62rem 0.72rem;
 }
 
 .quant-context-lead,
-.quant-context-checks,
-.quant-context-loop {
+.quant-context-loop,
+.autonomous-loop-pulse {
   min-width: 0;
+}
+
+.autonomous-loop-pulse {
+  display: grid;
+  grid-template-columns: 5.25rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.72rem;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(76, 219, 205, 0.14);
+  border-radius: 0.38rem;
+  background:
+    radial-gradient(circle at 16% 28%, rgba(76, 219, 205, 0.12), transparent 42%),
+    linear-gradient(135deg, rgba(76, 219, 205, 0.07), transparent 58%),
+    rgba(255, 255, 255, 0.026);
+  padding: 0.58rem 0.62rem;
+}
+
+.autonomous-loop-orbit {
+  position: relative;
+  aspect-ratio: 1;
+  width: 5.05rem;
+  border: 1px solid rgba(76, 219, 205, 0.16);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(76, 219, 205, 0.24) 0 8%, transparent 9%),
+    conic-gradient(from 16deg, rgba(76, 219, 205, 0.12), rgba(240, 185, 11, 0.34), rgba(91, 140, 255, 0.16), rgba(76, 219, 205, 0.12));
+}
+
+.autonomous-loop-orbit::before,
+.autonomous-loop-orbit::after {
+  position: absolute;
+  inset: 0.48rem;
+  content: "";
+  border-radius: inherit;
+}
+
+.autonomous-loop-orbit::before {
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  animation: autonomous-loop-spin 5s linear infinite;
+}
+
+.autonomous-loop-orbit::after {
+  inset: 1.6rem;
+  background: rgba(5, 14, 20, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.autonomous-loop-pulse.is-running .autonomous-loop-orbit {
+  animation: autonomous-loop-breathe 2.4s ease-in-out infinite;
+}
+
+.loop-core {
+  position: absolute;
+  inset: 2.1rem;
+  z-index: 2;
+  border-radius: 50%;
+  background: rgba(240, 185, 11, 0.94);
+  box-shadow: 0 0 0 0 rgba(240, 185, 11, 0.28);
+  animation: autonomous-loop-core 1.8s ease-out infinite;
+}
+
+.loop-node {
+  position: absolute;
+  z-index: 3;
+  width: 1.84rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(3, 12, 16, 0.92);
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.42rem;
+  font-style: normal;
+  font-weight: 820;
+  line-height: 1rem;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.loop-node-1 { top: 0.14rem; left: 50%; transform: translateX(-50%); }
+.loop-node-2 { top: 50%; right: 0.02rem; transform: translateY(-50%); }
+.loop-node-3 { bottom: 0.14rem; left: 50%; transform: translateX(-50%); }
+.loop-node-4 { top: 50%; left: 0.02rem; transform: translateY(-50%); }
+
+.autonomous-loop-pulse.is-running .loop-node {
+  animation: autonomous-loop-node 4s ease-in-out infinite;
+}
+
+.autonomous-loop-pulse.is-running .loop-node-2 { animation-delay: 1s; }
+.autonomous-loop-pulse.is-running .loop-node-3 { animation-delay: 2s; }
+.autonomous-loop-pulse.is-running .loop-node-4 { animation-delay: 3s; }
+
+.autonomous-loop-copy {
+  display: grid;
+  gap: 0.32rem;
+  min-width: 0;
+}
+
+.autonomous-loop-copy span {
+  color: rgba(76, 219, 205, 0.78);
+  font-size: 0.62rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.autonomous-loop-copy strong {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.92);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 1rem;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.autonomous-loop-copy p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.54);
+  font-size: 0.72rem;
+  line-height: 1.38;
+}
+
+.autonomous-loop-copy div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.22rem;
+}
+
+.autonomous-loop-copy small {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 0.24rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.54rem;
+  line-height: 1.1;
+  padding: 0.24rem 0.28rem;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.autonomous-loop-copy b {
+  color: rgba(240, 185, 11, 0.9);
+  font-weight: 840;
+}
+
+.autonomous-loop-pulse.is-offline .autonomous-loop-orbit,
+.autonomous-loop-pulse.is-idle .autonomous-loop-orbit {
+  filter: grayscale(0.8);
+  opacity: 0.62;
 }
 
 .quant-context-lead h2 {
@@ -2440,7 +2596,7 @@ body:has(.robot-cockpit.quant-terminal) {
   .quant-side-stack-reasoning .agent-reasoning-panel {
     gap: 0.34rem;
     overflow-y: auto;
-    padding: 0.62rem 0.68rem;
+    padding: 0.62rem 0.68rem 0.86rem;
   }
 
   .quant-side-stack-reasoning .reasoning-verdict-summary {
@@ -2479,12 +2635,18 @@ body:has(.robot-cockpit.quant-terminal) {
     display: grid;
     gap: 0.26rem;
     margin-top: 0.34rem;
+    margin-bottom: 0.1rem;
     padding-top: 0.42rem;
+    padding-bottom: 0.38rem;
   }
 
   .quant-side-stack-reasoning .reasoning-tools-block > div {
     flex-wrap: wrap;
     overflow: visible;
+  }
+
+  .quant-side-stack-reasoning .reasoning-tool-detail {
+    min-width: 0;
   }
 
   .quant-execution-stack {
@@ -3747,7 +3909,9 @@ body:has(.robot-cockpit.quant-terminal) {
   overflow: visible;
   border-top: 1px solid rgba(255, 255, 255, 0.085);
   margin-top: 0.6rem;
+  margin-bottom: 0.16rem;
   padding-top: 0.55rem;
+  padding-bottom: 0.26rem;
 }
 
 .reasoning-trace-block > p,
@@ -3776,12 +3940,12 @@ body:has(.robot-cockpit.quant-terminal) {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 0.36rem;
+  gap: 0.34rem 0.46rem;
 }
 
 .reasoning-tool-detail {
   max-width: 100%;
-  min-width: min(100%, 11rem);
+  min-width: 0;
   border-radius: 0.3rem;
 }
 
@@ -3913,6 +4077,41 @@ body:has(.robot-cockpit.quant-terminal) {
   }
 }
 
+@keyframes autonomous-loop-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes autonomous-loop-breathe {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(76, 219, 205, 0.14);
+  }
+  50% {
+    box-shadow: 0 0 0 0.28rem rgba(76, 219, 205, 0.02);
+  }
+}
+
+@keyframes autonomous-loop-core {
+  0% {
+    box-shadow: 0 0 0 0 rgba(240, 185, 11, 0.28);
+  }
+  72%, 100% {
+    box-shadow: 0 0 0 0.68rem rgba(240, 185, 11, 0);
+  }
+}
+
+@keyframes autonomous-loop-node {
+  0%, 18%, 100% {
+    border-color: rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.66);
+  }
+  8% {
+    border-color: rgba(240, 185, 11, 0.74);
+    color: rgba(240, 185, 11, 0.96);
+  }
+}
+
 @keyframes rail-progress-scan {
   0% {
     transform: translateY(-120%);
@@ -3965,6 +4164,11 @@ body:has(.robot-cockpit.quant-terminal) {
   .proof-score-meter span,
   .agent-loop-step::after,
   .robot-orbit,
+  .autonomous-loop-orbit,
+  .autonomous-loop-orbit::before,
+  .autonomous-loop-pulse.is-running .autonomous-loop-orbit,
+  .autonomous-loop-pulse.is-running .loop-node,
+  .loop-core,
   .trade-stage-rail.is-running::after,
   .trade-stage-rail .timeline-step-card.is-active .stage-node::after {
     animation: none !important;
@@ -3976,6 +4180,7 @@ body:has(.robot-cockpit.quant-terminal) {
   .quant-bottom-grid {
     grid-template-columns: minmax(360px, 0.88fr) minmax(220px, 0.46fr) minmax(520px, 1.28fr);
     grid-template-rows: minmax(0, 0.82fr) minmax(10rem, 0.78fr);
+    gap: 0.64rem;
   }
 
   .quant-execution-stack {
@@ -4228,11 +4433,11 @@ body:has(.robot-cockpit.quant-terminal) {
   }
 
   .quant-context-panel {
-    grid-template-columns: minmax(0, 0.62fr) minmax(0, 0.9fr) minmax(0, 0.38fr);
+    grid-template-columns: minmax(0, 0.58fr) minmax(0, 1.18fr);
     align-content: start;
     align-items: start;
     min-height: 0;
-    gap: 0.42rem;
+    gap: 0.5rem;
     padding: 0.56rem 0.66rem;
   }
 
@@ -4320,6 +4525,62 @@ body:has(.robot-cockpit.quant-terminal) {
   }
 
   .quant-context-loop p {
+    display: none;
+  }
+
+  .autonomous-loop-pulse {
+    grid-template-columns: 3.35rem minmax(0, 1fr);
+    align-content: center;
+    gap: 0.52rem;
+    min-height: 3.88rem;
+    padding: 0.34rem 0.44rem;
+  }
+
+  .autonomous-loop-orbit {
+    width: 3.22rem;
+  }
+
+  .autonomous-loop-orbit::before {
+    inset: 0.36rem;
+  }
+
+  .autonomous-loop-orbit::after {
+    inset: 1.04rem;
+  }
+
+  .loop-core {
+    inset: 1.32rem;
+  }
+
+  .loop-node {
+    width: 1.02rem;
+    height: auto;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.64);
+    font-size: 0.3rem;
+    line-height: 0.62rem;
+  }
+
+  .autonomous-loop-copy {
+    gap: 0.12rem;
+  }
+
+  .autonomous-loop-copy span {
+    font-size: 0.54rem;
+  }
+
+  .autonomous-loop-copy strong {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 0.86rem;
+    line-height: 1.08;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .autonomous-loop-copy p,
+  .autonomous-loop-copy div {
     display: none;
   }
 
@@ -5647,6 +5908,72 @@ body:has(.robot-cockpit.quant-terminal) {
   }
 
   .loop-proof-index {
+    display: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .autonomous-loop-pulse {
+    grid-column: 1 / -1;
+    grid-template-columns: 4.65rem minmax(0, 1fr);
+  }
+
+  .autonomous-loop-orbit {
+    width: 4.55rem;
+  }
+
+  .loop-node {
+    width: 1.62rem;
+    font-size: 0.38rem;
+    line-height: 0.92rem;
+  }
+
+  .loop-core {
+    inset: 1.88rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .autonomous-loop-pulse {
+    grid-template-columns: 3.4rem minmax(0, 1fr);
+    gap: 0.5rem;
+    padding: 0.46rem;
+  }
+
+  .autonomous-loop-orbit {
+    width: 3.35rem;
+  }
+
+  .autonomous-loop-orbit::after {
+    inset: 1.08rem;
+  }
+
+  .loop-core {
+    inset: 1.36rem;
+  }
+
+  .loop-node {
+    width: 0.72rem;
+    color: transparent;
+  }
+
+  .autonomous-loop-copy span {
+    font-size: 0.56rem;
+  }
+
+  .autonomous-loop-copy strong {
+    font-size: 0.84rem;
+  }
+
+  .autonomous-loop-copy p {
+    display: none;
+  }
+
+  .autonomous-loop-copy div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .autonomous-loop-copy small:nth-child(n + 5) {
     display: none;
   }
 }
