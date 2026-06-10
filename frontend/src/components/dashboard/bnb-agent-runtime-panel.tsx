@@ -17,6 +17,7 @@ export function BnbAgentRuntimePanel({ runtime }: { runtime?: Payload }) {
   const sdkRuntime = runtime?.sdkRuntime ?? {};
   const profile = runtime?.agentProfile ?? {};
   const registration = runtime?.identityRegistration ?? {};
+  const coreAgent = runtime?.coreAgent ?? {};
   const capabilities = Array.isArray(profile.capabilities) ? profile.capabilities : [];
   const initializedModules = Array.isArray(sdkRuntime.modulesInitialized) ? sdkRuntime.modulesInitialized : [];
   const moduleText = initializedModules.length ? initializedModules.join("+") : "syncing";
@@ -34,6 +35,7 @@ export function BnbAgentRuntimePanel({ runtime }: { runtime?: Payload }) {
         <RuntimeStat label="Modules" value={moduleText} good={initializedModules.includes("erc8004")} />
         <RuntimeStat label="SDK role" value={text(runtime?.sdkRole, "runtime_core")} />
         <RuntimeStat label="Executor" value={text(runtime?.executor, "twak")} good />
+        <RuntimeStat label="Agent core" value={coreAgent.called ? "OpenRouter" : "policy"} good={Boolean(coreAgent.ready)} />
         <RuntimeStat label="SDK trades" value={runtime?.sdkExecutesTrades === false ? "no" : "guarded"} />
         <RuntimeStat label="Registry" value={short(sdk.registryAddress ?? profile.registryAddress)} />
       </div>
@@ -55,7 +57,7 @@ export function BnbAgentRuntimePanel({ runtime }: { runtime?: Payload }) {
       <p className="runtime-note">
         <BadgeCheckIcon className="h-3.5 w-3.5" />
         {facadeLive
-          ? "Official BNBAgent facade is the runtime core; TWAK remains the on-chain executor."
+          ? `Official BNBAgent facade is the runtime core; ${coreAgent.called ? "OpenRouter advises agent decisions; " : ""}TWAK remains the on-chain executor.`
           : registration.ready
             ? "Identity registration is operator-gated and ready."
             : text(registration.reason, "TWAK signs trades; SDK stays runtime-only.")}

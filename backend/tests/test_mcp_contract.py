@@ -1,3 +1,5 @@
+# ruff: noqa: E402
+
 from fastapi.testclient import TestClient
 from datetime import datetime, timezone
 import asyncio
@@ -455,7 +457,10 @@ def test_live_preflight_blocks_when_configured_cmc_agent_hub_signal_fails(monkey
         return {"ready": True}
 
     async def fake_cmc_signal(args: dict[str, object]) -> dict[str, object]:
-        assert args == {"toolName": "crypto.signal.test", "arguments": {"symbol": "BNB"}}
+        assert args == {
+            "toolName": "crypto.signal.test",
+            "arguments": {"symbol": "BNB", "side": "sell", "amountUsd": 0.25},
+        }
         return {"ready": False, "reason": "tool not found"}
 
     async def fake_recommendation(limit: int = 1) -> dict[str, object]:
@@ -517,7 +522,10 @@ def test_live_preflight_auto_discovers_cmc_agent_hub_signal_tool(monkeypatch, tm
         return {"ready": True, "recommendedToolName": "crypto.signal.auto", "recommendedArgs": {"symbol": "BNB"}}
 
     async def fake_cmc_signal(args: dict[str, object]) -> dict[str, object]:
-        assert args == {"toolName": "crypto.signal.auto", "arguments": {"symbol": "BNB"}}
+        assert args == {
+            "toolName": "crypto.signal.auto",
+            "arguments": {"symbol": "BNB", "side": "sell", "amountUsd": 0.25},
+        }
         return {
             "ready": True,
             "toolName": "crypto.signal.auto",
@@ -579,7 +587,10 @@ def test_live_preflight_accepts_cmc_agent_hub_signal_args(monkeypatch, tmp_path)
         return {"ready": True}
 
     async def fake_cmc_signal(args: dict[str, object]) -> dict[str, object]:
-        assert args == {"toolName": "crypto.signal.test", "arguments": {"symbol": "BNB"}}
+        assert args == {
+            "toolName": "crypto.signal.test",
+            "arguments": {"symbol": "BNB", "side": "sell", "amountUsd": 0.25},
+        }
         return {
             "ready": True,
             "toolName": "crypto.signal.test",
@@ -1526,6 +1537,58 @@ def test_live_cmc_config_ignores_request_pinned_tool(monkeypatch) -> None:
     get_settings.cache_clear()
 
 
+def test_live_cmc_signal_args_keep_strategy_symbol_side_and_amount(monkeypatch) -> None:
+    monkeypatch.setenv(
+        "CMC_AGENT_HUB_SIGNAL_ARGS",
+        '{"symbol":"CAKE","side":"buy","timeframe":"5m"}',
+    )
+    get_settings.cache_clear()
+
+    args = CmcSignalConfigService.configured_cmc_signal_args(
+        {},
+        symbol="BNB",
+        side="sell",
+        amount_usd=0.25,
+    )
+
+    assert args == {"symbol": "BNB", "side": "sell", "amountUsd": 0.25, "timeframe": "5m"}
+    get_settings.cache_clear()
+
+
+def test_live_cmc_tool_blocker_accepts_natural_language_sell_signal() -> None:
+    reason = CmcSignalConfigService.live_cmc_tool_blocker(
+        True,
+        "crypto.signal.test",
+        {
+            "ready": True,
+            "toolName": "crypto.signal.test",
+            "parsedContent": [{"summary": "CMC momentum supports a sell BNB trade signal now."}],
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+        symbol="BNB",
+        side="sell",
+    )
+
+    assert reason is None
+
+
+def test_live_cmc_tool_blocker_rejects_negated_sell_signal() -> None:
+    reason = CmcSignalConfigService.live_cmc_tool_blocker(
+        True,
+        "crypto.signal.test",
+        {
+            "ready": True,
+            "toolName": "crypto.signal.test",
+            "parsedContent": [{"summary": "Do not sell BNB while the proof gate is guarded."}],
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+        symbol="BNB",
+        side="sell",
+    )
+
+    assert reason == "CMC Agent Hub signal must include a sell trade signal for BNB."
+
+
 def test_live_cmc_tool_blocker_rejects_unrelated_signal() -> None:
     reason = CmcSignalConfigService.live_cmc_tool_blocker(
         True,
@@ -2464,7 +2527,10 @@ def test_autonomous_cycle_auto_discovers_cmc_agent_hub_tool(monkeypatch, tmp_pat
         }
 
     async def fake_agent_hub_tool(args: dict[str, object]) -> dict[str, object]:
-        assert args == {"toolName": "crypto.signal.auto", "arguments": {"symbol": "CAKE"}}
+        assert args == {
+            "toolName": "crypto.signal.auto",
+            "arguments": {"symbol": "CAKE", "side": "buy", "amountUsd": 10.0},
+        }
         return {"ready": True, "parsedContent": [{"signal": "buy"}]}
 
     monkeypatch.setattr("app.services.trading.pancake.PancakeRouterService.get_amounts_out", fake_amounts_out)
@@ -2876,7 +2942,10 @@ def test_execute_trade_auto_discovers_cmc_agent_hub_signal(monkeypatch, tmp_path
         return {"ready": True, "recommendedToolName": "crypto.signal.auto", "recommendedArgs": {"symbol": "CAKE"}}
 
     async def fake_cmc_agent_hub_tool(args: dict[str, object]) -> dict[str, object]:
-        assert args == {"toolName": "crypto.signal.auto", "arguments": {"symbol": "CAKE"}}
+        assert args == {
+            "toolName": "crypto.signal.auto",
+            "arguments": {"symbol": "CAKE", "side": "buy", "amountUsd": 10.0},
+        }
         return {
             "source": "coinmarketcap-agent-hub-mcp",
             "ready": True,

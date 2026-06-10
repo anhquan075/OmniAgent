@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime, timezone
 
 from app.core.settings import get_settings
@@ -70,7 +71,15 @@ class CmcSignalConfigService:
         if not recommendation.get("ready") or not recommended_tool:
             return None, signal_args, str(recommendation.get("reason") or "CMC Agent Hub did not recommend a signal tool."), "missing"
         recommended_args = recommendation.get("recommendedArgs")
-        return recommended_tool, recommended_args if isinstance(recommended_args, dict) else signal_args, None, "auto_discovered"
+        if isinstance(recommended_args, dict):
+            return recommended_tool, {
+                **signal_args,
+                **recommended_args,
+                "symbol": symbol,
+                "side": side,
+                "amountUsd": amount_usd,
+            }, None, "auto_discovered"
+        return recommended_tool, signal_args, None, "auto_discovered"
 
     @staticmethod
     def configured_cmc_signal_args(
@@ -80,16 +89,17 @@ class CmcSignalConfigService:
         side: str,
         amount_usd: float,
     ) -> dict[str, object]:
+        strategy_args = {"symbol": symbol, "side": side, "amountUsd": amount_usd}
         env_raw = get_settings().cmc_agent_hub_signal_args
         if not env_raw:
-            return {"symbol": symbol, "side": side, "amountUsd": amount_usd}
+            return strategy_args
         try:
             parsed = json.loads(env_raw)
         except json.JSONDecodeError as error:
             raise ValueError(f"CMC_AGENT_HUB_SIGNAL_ARGS must be a JSON object: {error}") from error
         if not isinstance(parsed, dict):
             raise ValueError("CMC_AGENT_HUB_SIGNAL_ARGS must be a JSON object.")
-        return parsed
+        return {**parsed, **strategy_args}
 
     @staticmethod
     def signal_semantics_blocker(
@@ -120,7 +130,12 @@ class CmcSignalConfigService:
         if value is None:
             return False
         if isinstance(value, str):
-            return value.strip().lower() == expected_side
+            normalized = value.strip().lower()
+            if normalized == expected_side:
+                return True
+            if CmcSignalConfigService.negates_trade_side(normalized, expected_side):
+                return False
+            return re.search(rf"(^|[^a-z0-9]){re.escape(expected_side)}([^a-z0-9]|$)", normalized) is not None
         if isinstance(value, list):
             return any(CmcSignalConfigService.contains_trade_side(item, expected_side) for item in value[:16])
         if isinstance(value, dict):
@@ -134,3 +149,14 @@ class CmcSignalConfigService:
                 return True
             return any(CmcSignalConfigService.contains_trade_side(item, expected_side) for item in list(value.values())[:16])
         return False
+
+    @staticmethod
+    def negates_trade_side(value: str, expected_side: str) -> bool:
+        patterns = (
+            rf"\bno\s+{re.escape(expected_side)}\b",
+            rf"\bnot\s+{re.escape(expected_side)}\b",
+            rf"\bdo\s+not\s+{re.escape(expected_side)}\b",
+            rf"\bdon't\s+{re.escape(expected_side)}\b",
+            rf"\bavoid\s+{re.escape(expected_side)}\b",
+        )
+        return any(re.search(pattern, value) for pattern in patterns)
