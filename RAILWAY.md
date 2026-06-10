@@ -42,6 +42,8 @@ BNB_STRATEGY_MIN_CONFIDENCE=0.62
 BNB_STRATEGY_MAX_POSITION_PCT=0.35
 OPENROUTER_API_KEY=<backend-only-openrouter-key>
 OPENROUTER_MODEL=deepseek/deepseek-v4-pro
+API_TRUSTED_HOSTS=localhost,127.0.0.1,testserver,healthcheck.railway.app,*.up.railway.app,*.railway.internal
+ALLOWED_FRONTEND_ORIGINS=https://<frontend-public-domain>.up.railway.app
 ```
 
 `BNB_AUTONOMOUS_LOOP_ENABLED=true` starts the backend loop automatically on service startup.
@@ -80,6 +82,7 @@ BACKEND_INTERNAL_URL=http://${{backend.RAILWAY_PRIVATE_DOMAIN}}:${{backend.PORT}
 The frontend serves browser traffic and proxies `/api/*` to `BACKEND_INTERNAL_URL` server-side.
 Do not set a public backend URL in `VITE_API_URL` for production; browser assets should not contain the backend origin.
 In Railway, remove the backend public domain after the frontend proxy health checks pass so users cannot bypass the frontend origin.
+If `/api/session` returns `{"detail":"Host is not trusted"}`, confirm the backend service has `API_TRUSTED_HOSTS` set to include the frontend public domain and the backend private Railway domain, or use the checked-in Railway suffix patterns above.
 
 ## Post-Deploy Checks
 

@@ -119,3 +119,19 @@ def test_api_rejects_untrusted_host(monkeypatch) -> None:
     assert response.status_code == 400
     assert response.json()["detail"] == "Host is not trusted"
     get_settings.cache_clear()
+
+
+def test_api_accepts_railway_trusted_host_patterns(monkeypatch) -> None:
+    monkeypatch.setenv("API_TRUSTED_HOSTS", "*.up.railway.app,*.railway.internal")
+    get_settings.cache_clear()
+    client = TestClient(app)
+
+    frontend = client.get("/api/session", headers={"host": "omniagent-frontend-production.up.railway.app"})
+    internal = client.get("/api/session", headers={"host": "backend.railway.internal:8000"})
+    attacker = client.get("/api/session", headers={"host": "attackerup.railway.app"})
+
+    assert frontend.status_code == 200
+    assert internal.status_code == 200
+    assert attacker.status_code == 400
+    assert attacker.json()["detail"] == "Host is not trusted"
+    get_settings.cache_clear()

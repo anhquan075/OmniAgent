@@ -34,9 +34,21 @@ class RequestSecurityMiddleware(BaseHTTPMiddleware):
         if not trusted_hosts or "*" in trusted_hosts:
             return None
         host = (request.headers.get("host") or "").split(":")[0].lower()
-        if host and host in trusted_hosts:
+        if host and RequestSecurityMiddleware.host_is_trusted(host, trusted_hosts):
             return None
         return JSONResponse({"detail": "Host is not trusted"}, status_code=400)
+
+    @staticmethod
+    def host_is_trusted(host: str, trusted_hosts: set[str]) -> bool:
+        if host in trusted_hosts:
+            return True
+        for trusted_host in trusted_hosts:
+            if not trusted_host.startswith("*."):
+                continue
+            suffix = trusted_host[1:]
+            if host.endswith(suffix) and host != suffix.lstrip("."):
+                return True
+        return False
 
     @staticmethod
     def validate_body_size(request: Request, max_body_bytes: int) -> JSONResponse | None:

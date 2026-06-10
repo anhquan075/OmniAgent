@@ -92,8 +92,7 @@ class LedgerMemoryService:
         for blocker in blockers[:4]:
             if isinstance(blocker, dict):
                 reasons.extend(LedgerMemoryNormalizer.reason_parts(blocker.get("reason") or blocker.get("name") or "preflight guarded"))
-        proof_score = proof_bundle.get("proofScore") if isinstance(proof_bundle.get("proofScore"), dict) else {}
-        for blocker in (proof_score.get("hardBlockers") or [])[:4]:
+        for blocker in LedgerMemoryNormalizer.active_hard_blockers(preflight, proof_bundle)[:4]:
             reasons.extend(LedgerMemoryNormalizer.reason_parts(blocker))
         for event in events:
             if event.get("eventType") != "trade_blocked":
