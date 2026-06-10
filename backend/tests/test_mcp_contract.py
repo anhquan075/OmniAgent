@@ -1165,6 +1165,44 @@ def test_capital_readiness_accepts_spendable_bnb_after_gas_reserve(monkeypatch) 
     get_settings.cache_clear()
 
 
+def test_funded_strategy_prefers_usdt_over_spendable_bnb(monkeypatch) -> None:
+    from app.services.trading.funded_strategy import FundedStrategyService
+
+    monkeypatch.setenv("BNB_AUTONOMOUS_LOOP_AMOUNT_USD", "25")
+    monkeypatch.setenv("BNB_MAX_TRADE_USD", "25")
+    monkeypatch.setenv("BNB_AUTONOMOUS_LOOP_SLIPPAGE_BPS", "50")
+    get_settings.cache_clear()
+
+    result = FundedStrategyService.build(
+        {
+            "balances": [
+                {"symbol": "BNB", "raw": "1000000000000000", "spendableRaw": "500000000000000"},
+                {"symbol": "USDT", "raw": "1000000000000000000", "spendableRaw": "1000000000000000000"},
+            ]
+        },
+        {"symbols": {"BNB": {"priceUsd": 584.0}}},
+    )
+
+    assert result == {"symbol": "CAKE", "side": "buy", "amountUsd": 1.0, "slippageBps": 50, "signalSource": "cmc"}
+    get_settings.cache_clear()
+
+
+def test_funded_strategy_caps_buy_to_actual_usdt_balance(monkeypatch) -> None:
+    from app.services.trading.funded_strategy import FundedStrategyService
+
+    monkeypatch.setenv("BNB_AUTONOMOUS_LOOP_AMOUNT_USD", "25")
+    monkeypatch.setenv("BNB_MAX_TRADE_USD", "25")
+    get_settings.cache_clear()
+
+    result = FundedStrategyService.build(
+        {"balances": [{"symbol": "USDT", "raw": "41336198426727476", "spendableRaw": "41336198426727476"}]},
+        {},
+    )
+
+    assert result == {"symbol": "CAKE", "side": "buy", "amountUsd": 0.041336, "slippageBps": 50, "signalSource": "cmc"}
+    get_settings.cache_clear()
+
+
 def test_paid_resource_status_requires_trusted_verifier(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_MODE", "rest")
