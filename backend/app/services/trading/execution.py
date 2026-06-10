@@ -61,12 +61,13 @@ class TradeExecutionService:
     @staticmethod
     async def execute_trade(args: dict[str, object]) -> dict[str, object]:
         args = await CmcSignalProofService.with_server_cmc_agent_hub_signal(args)
-        simulation = await TradeExecutionService.simulate_trade(args)
+        execution_args = TradeExecutionService.server_execution_args(args)
+        simulation = await TradeExecutionService.simulate_trade(execution_args)
         sim = simulation["simulation"]
         if not sim["canExecute"]:
             TradeLedger.append_event({
                 "eventType": "trade_blocked",
-                "tradeIntentId": args.get("tradeIntentId"),
+                "tradeIntentId": execution_args.get("tradeIntentId"),
                 "action": "execute_trade",
                 "payload": {"reason": sim["reason"], "simulation": sim},
                 "createdAt": datetime.now(timezone.utc).isoformat(),
@@ -75,16 +76,24 @@ class TradeExecutionService:
 
         bridge = TrustWalletConfigService.get_trust_wallet_bridge_config()
         if bridge.mode == "rest":
-            payload = await TradeExecutionService.execute_via_rest(bridge, args, sim)
+            payload = await TradeExecutionService.execute_via_rest(bridge, execution_args, sim)
         elif bridge.mode == "cli":
-            payload = await TradeExecutionService.execute_via_cli(bridge.command, args, sim)
+            payload = await TradeExecutionService.execute_via_cli(bridge.command, execution_args, sim)
         else:
             return {**simulation, "status": "blocked", "reason": "TWAK REST or CLI bridge is required for live execution"}
         tx_hash = payload.get("txHash") or payload.get("hash")
         tx_hash = tx_hash or TrustWalletCliClient.find_tx_hash(payload)
         if not tx_hash or not TX_RE.match(str(tx_hash)):
             raise ValueError("TWAK execution did not return a txHash.")
-        return CmcSignalEvidenceService.submitted_trade_result(args, sim, tx_hash, bridge.mode)
+        return CmcSignalEvidenceService.submitted_trade_result(execution_args, sim, tx_hash, bridge.mode)
+
+    @staticmethod
+    def server_execution_args(args: dict[str, object]) -> dict[str, object]:
+        return {
+            key: value
+            for key, value in args.items()
+            if key not in {"quote", "transaction"}
+        }
 
     @staticmethod
     async def execute_via_rest(bridge: object, args: dict[str, object], simulation: dict[str, object]) -> dict[str, object]:
@@ -125,6 +134,7 @@ class TradeExecutionService:
     @staticmethod
     def rest_swap_args(args: dict[str, object], simulation: dict[str, object]) -> dict[str, object]:
         quote = simulation.get("quote") if isinstance(simulation.get("quote"), dict) else {}
+        TradeExecutionService.validate_router_quote(quote)
         return {
             "fromChain": "bsc",
             "toChain": "bsc",
@@ -144,6 +154,13 @@ class TradeExecutionService:
             return str(args.get("amount") or 0)
         amount_raw = int(str(quote.get("amountInRaw") or "0"))
         return format(amount_raw / (10 ** token.decimals), "f")
+
+    @staticmethod
+    def validate_router_quote(quote: dict[str, object]) -> None:
+        for key in ("inputTokenAddress", "outputTokenAddress"):
+            token = TokenRegistryService.get_token_by_address(str(quote.get(key) or ""))
+            if not token or not TokenRegistryService.is_token_allowed(token.symbol):
+                raise ValueError(f"Router quote {key} is not in the BSC allowlist.")
 
     @staticmethod
     def execution_blockers(
@@ -170,10 +187,13 @@ class TradeExecutionService:
             reasons.append("competition registration proof is required before live execution")
         if settings.bnb_trading_enabled and not TradeExecutionService.cmc_signal_ready(cmc_snapshot):
             reasons.append("CMC live signal is required")
+        policy_observed = policy.get("observed") if isinstance(policy.get("observed"), dict) else {}
         cmc_tool_blocker = CmcSignalConfigService.live_cmc_tool_blocker(
             settings.bnb_trading_enabled,
             str(cmc_agent_hub_signal.get("toolName") or "") if cmc_agent_hub_signal else None,
             cmc_agent_hub_signal,
+            symbol=str(policy_observed.get("symbol") or ""),
+            side=str(policy_observed.get("side") or ""),
         )
         if cmc_tool_blocker:
             reasons.append(cmc_tool_blocker)

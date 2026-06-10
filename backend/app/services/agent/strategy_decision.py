@@ -148,12 +148,31 @@ class TradingStrategyDecisionService:
         advisor_decision = advisor.get("decision") if isinstance(advisor.get("decision"), dict) else None
         if not advisor.get("ready") or not advisor_decision:
             return {"source": "deterministic", "decision": deterministic_decision}
-        if advisor_decision["action"] == "hold" or advisor_decision["confidence"] < settings.bnb_strategy_min_confidence:
+        advisor_action = str(advisor_decision.get("action") or "hold").lower()
+        advisor_confidence = float(advisor_decision.get("confidence") or 0)
+        deterministic_action = str(deterministic_decision["action"]).lower()
+        if advisor_action == "hold" or advisor_confidence < settings.bnb_strategy_min_confidence:
             return {"source": "openrouter", "decision": {**advisor_decision, "action": "hold"}}
+        if advisor_action != deterministic_action:
+            return {
+                "source": "policy",
+                "decision": {
+                    **deterministic_decision,
+                    "action": "hold",
+                    "rationale": "Hold: advisor direction disagrees with deterministic policy",
+                    "risks": [*deterministic_decision.get("risks", []), "advisor_direction_disagreement"][:5],
+                },
+            }
         max_amount = min(float(deterministic_decision["maxAmountUsd"]), float(advisor_decision["maxAmountUsd"]))
+        slippage_bps = min(int(deterministic_decision["slippageBps"]), int(advisor_decision.get("slippageBps") or deterministic_decision["slippageBps"]))
         return {
             "source": "openrouter",
-            "decision": {**advisor_decision, "maxAmountUsd": round(max_amount, 6)},
+            "decision": {
+                **advisor_decision,
+                "action": deterministic_action,
+                "maxAmountUsd": round(max_amount, 6),
+                "slippageBps": slippage_bps,
+            },
         }
 
     @staticmethod

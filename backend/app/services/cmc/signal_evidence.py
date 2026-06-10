@@ -26,6 +26,7 @@ class CmcSignalEvidenceService:
                 "walletAddress": simulation["walletAddress"],
                 "explorerUrl": explorer_url,
                 "cmcAgentHubSignal": cmc_evidence,
+                **CmcSignalEvidenceService.trade_context(args, simulation),
             },
             "createdAt": datetime.now(timezone.utc).isoformat(),
         })
@@ -37,6 +38,30 @@ class CmcSignalEvidenceService:
             "cmcAgentHubSignal": cmc_evidence,
             "ledgerEvent": event,
         }
+
+    @staticmethod
+    def trade_context(args: dict[str, object], simulation: dict[str, object]) -> dict[str, object]:
+        quote = simulation.get("quote") if isinstance(simulation.get("quote"), dict) else {}
+        return {
+            "symbol": args.get("symbol"),
+            "side": args.get("side"),
+            "amountUsd": args.get("amountUsd") or quote.get("amountUsd"),
+            "slippageBps": args.get("slippageBps") or quote.get("slippageBps"),
+            "quote": CmcSignalEvidenceService.quote_evidence(quote),
+        }
+
+    @staticmethod
+    def quote_evidence(quote: dict[str, object]) -> dict[str, object]:
+        keys = (
+            "quoteSource",
+            "inputSymbol",
+            "outputSymbol",
+            "amountInRaw",
+            "expectedOutputRaw",
+            "minOutputRaw",
+            "slippageBps",
+        )
+        return {key: quote[key] for key in keys if key in quote}
 
     @staticmethod
     def cmc_signal_evidence(args: dict[str, object]) -> dict[str, object] | None:

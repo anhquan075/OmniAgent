@@ -14,17 +14,23 @@ COOKIE_NAME = "omni_api_session"
 class ApiSession:
     csrf_token: str
     expires_at: int
+    operator: bool = False
 
 
 sessions: dict[str, ApiSession] = {}
 
 
-def create_session(response: Response) -> dict[str, int | str]:
+def create_session(response: Response, operator_token: str | None = None) -> dict[str, int | str | bool]:
     settings = get_settings()
     session_id = secrets.token_urlsafe(48)
     csrf_token = secrets.token_urlsafe(48)
     expires_at = int(time.time() * 1000) + settings.api_session_ttl_ms
-    sessions[session_id] = ApiSession(csrf_token=csrf_token, expires_at=expires_at)
+    operator = bool(
+        settings.api_operator_token
+        and operator_token
+        and secrets.compare_digest(operator_token, settings.api_operator_token)
+    )
+    sessions[session_id] = ApiSession(csrf_token=csrf_token, expires_at=expires_at, operator=operator)
     response.set_cookie(
         COOKIE_NAME,
         session_id,
@@ -34,10 +40,13 @@ def create_session(response: Response) -> dict[str, int | str]:
         secure=False,
         path="/",
     )
-    return {"csrfToken": csrf_token, "expiresAt": expires_at}
+    return {"csrfToken": csrf_token, "expiresAt": expires_at, "operator": operator}
 
 
-def require_session(request: Request, csrf_token: str | None = Header(default=None, alias="X-CSRF-Token")) -> None:
+def require_session(
+    request: Request,
+    csrf_token: str | None = Header(default=None, alias="X-CSRF-Token"),
+) -> ApiSession:
     session_id = request.cookies.get(COOKIE_NAME)
     session = sessions.get(session_id or "")
     if not session or session.expires_at <= int(time.time() * 1000):
@@ -46,3 +55,4 @@ def require_session(request: Request, csrf_token: str | None = Header(default=No
         raise HTTPException(status_code=401, detail="Valid frontend session is required")
     if request.method not in {"GET", "HEAD"} and csrf_token != session.csrf_token:
         raise HTTPException(status_code=403, detail="Valid CSRF token is required")
+    return session

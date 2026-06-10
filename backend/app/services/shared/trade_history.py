@@ -3,6 +3,7 @@ from typing import Any
 
 from app.core.settings import get_settings
 from app.services.shared.ledger import TradeLedger
+from app.services.shared.trade_pnl import TradePnlService
 
 
 class TradeHistoryService:
@@ -32,6 +33,7 @@ class TradeHistoryService:
     @staticmethod
     def records_from_events(events: list[dict[str, Any]]) -> list[dict[str, object]]:
         records: dict[str, dict[str, object]] = {}
+        intent_keys: dict[str, str] = {}
         for event in events:
             event_type = str(event.get("eventType") or "")
             if event_type not in TradeHistoryService.TRADE_EVENT_TYPES:
@@ -39,8 +41,13 @@ class TradeHistoryService:
             payload = TradeHistoryService.payload(event)
             tx_hash = TradeHistoryService.tx_hash(event, payload)
             if event_type == "autonomous_cycle_completed" and not tx_hash:
-                continue
-            key = tx_hash or str(event.get("tradeIntentId") or event.get("createdAt") or len(records))
+                key = intent_keys.get(str(event.get("tradeIntentId") or ""))
+                if not key:
+                    continue
+            else:
+                key = tx_hash or str(event.get("tradeIntentId") or event.get("createdAt") or len(records))
+            if event.get("tradeIntentId"):
+                intent_keys[str(event["tradeIntentId"])] = key
             record = records.setdefault(key, TradeHistoryService.base_record(event, payload, tx_hash))
             TradeHistoryService.merge_event(record, event, payload, event_type, tx_hash)
         return sorted(records.values(), key=TradeHistoryService.sort_key, reverse=True)
@@ -66,6 +73,10 @@ class TradeHistoryService:
             "cmcTool": None,
             "cmcServerVerified": False,
             "receiptProofValid": None,
+            "basisUsd": None,
+            "pnlUsd": None,
+            "pnlPct": None,
+            "pnlSource": None,
             "blockNumber": None,
             "from": None,
             "to": None,
@@ -84,17 +95,30 @@ class TradeHistoryService:
         execution = payload.get("execution") if isinstance(payload.get("execution"), dict) else {}
         ledger_event = execution.get("ledgerEvent") if isinstance(execution.get("ledgerEvent"), dict) else {}
         ledger_payload = TradeHistoryService.payload(ledger_event)
+        submission = payload.get("submissionProof") if isinstance(payload.get("submissionProof"), dict) else {}
         for key, value in {
             "tradeIntentId": event.get("tradeIntentId"),
             "txHash": tx_hash,
-            "symbol": payload.get("symbol"),
-            "side": payload.get("side"),
-            "amountUsd": payload.get("amountUsd"),
-            "walletAddress": payload.get("walletAddress") or ledger_payload.get("walletAddress"),
-            "bridgeMode": payload.get("bridgeMode") or ledger_payload.get("bridgeMode"),
+            "symbol": payload.get("symbol") or submission.get("symbol"),
+            "side": payload.get("side") or submission.get("side"),
+            "amountUsd": payload.get("amountUsd") or submission.get("amountUsd"),
+            "walletAddress": (
+                payload.get("walletAddress") or ledger_payload.get("walletAddress")
+                or submission.get("walletAddress")
+            ),
+            "bridgeMode": payload.get("bridgeMode") or ledger_payload.get("bridgeMode") or submission.get("bridgeMode"),
             "explorerUrl": TradeHistoryService.explorer_url(payload, tx_hash),
         }.items():
             TradeHistoryService.prefer(record, key, value)
+        pnl_fields = TradePnlService.pnl_fields_from_payloads(
+            TradeHistoryService.pnl_payloads(payload, ledger_payload, execution, submission),
+            record.get("amountUsd"),
+        )
+        if pnl_fields.get("pnlUsd") is not None:
+            record["basisUsd"] = pnl_fields.get("basisUsd")
+            record["pnlUsd"] = pnl_fields.get("pnlUsd")
+            record["pnlPct"] = pnl_fields.get("pnlPct")
+            record["pnlSource"] = "trade_history"
         cmc_signal = TradeHistoryService.cmc_signal(payload, execution, ledger_payload)
         if cmc_signal:
             TradeHistoryService.prefer(record, "cmcTool", cmc_signal.get("toolName"))
@@ -148,6 +172,14 @@ class TradeHistoryService:
             if isinstance(value, dict):
                 return value
         return None
+
+    @staticmethod
+    def pnl_payloads(*payloads: dict[str, Any]) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        for payload in payloads:
+            if isinstance(payload, dict):
+                result.extend(TradePnlService.pnl_payloads(payload))
+        return result
 
     @staticmethod
     def prefer(record: dict[str, object], key: str, value: object) -> None:

@@ -80,7 +80,7 @@ class LivePreflightService:
                 "result": {},
                 "parsedContent": None,
                 "resolution": resolution,
-                "reason": reason or "Set CMC_AGENT_HUB_SIGNAL_TOOL or pass cmcAgentHubTool before live trading.",
+                "reason": reason or "Set CMC_AGENT_HUB_SIGNAL_TOOL before live trading.",
             }
         signal = await CmcAgentHubToolClient.call_cmc_agent_hub_tool({"toolName": tool_name, "arguments": signal_args})
         return {**signal, "serverVerified": True, "resolution": resolution}
@@ -117,6 +117,8 @@ class LivePreflightService:
             True,
             str(cmc_agent_hub_signal.get("toolName") or "") if cmc_agent_hub_signal else None,
             cmc_agent_hub_signal,
+            symbol=str((funded_strategy or {}).get("symbol") or "CAKE"),
+            side=str((funded_strategy or {}).get("side") or "buy"),
         )
         checks.insert(
             7,
@@ -155,7 +157,7 @@ class LivePreflightService:
         execution = payload.get("execution") if isinstance(payload.get("execution"), dict) else {}
         simulation = execution.get("simulation") if isinstance(execution.get("simulation"), dict) else {}
         transaction = simulation.get("transaction") if isinstance(simulation.get("transaction"), dict) else {}
-        return quote.get("quoteSource") == "router" and bool(transaction.get("data"))
+        return quote.get("quoteSource") == "router" and bool(transaction.get("data")) and bool(simulation.get("canExecute"))
 
     @staticmethod
     def funded_route_reason(strategy: dict[str, object] | None, cycle: dict[str, object]) -> str:
@@ -165,4 +167,8 @@ class LivePreflightService:
             return "Funded route dry-run skipped for read-only proof bundle; run bnb_live_preflight for full route readiness."
         if cycle.get("_error"):
             return str(cycle["_error"])
+        execution = cycle.get("execution") if isinstance(cycle.get("execution"), dict) else {}
+        simulation = execution.get("simulation") if isinstance(execution.get("simulation"), dict) else {}
+        if simulation.get("reason"):
+            return str(simulation["reason"])
         return f"Funded strategy did not build a router transaction: {strategy}"

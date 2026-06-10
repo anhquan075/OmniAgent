@@ -67,7 +67,7 @@ export function proofCheckEvidence(key: string, state: Payload): EvidencePayload
     };
   }
   if (key === "competitionRegistered") {
-    const txLink = registration.explorerUrl ? { label: "Competition proof", href: String(registration.explorerUrl) } : bscTxLink(registration.txHash);
+    const txLink = bscTxLink(registration.txHash);
     return {
       summary: registration.txHash ? "Competition registration proof is present in the ledger." : "Competition registration proof is not present in the current snapshot.",
       rows: [

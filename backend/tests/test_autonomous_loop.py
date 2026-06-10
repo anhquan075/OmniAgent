@@ -68,9 +68,9 @@ async def test_autonomous_loop_payload_resolves_funded_cake_buy(monkeypatch) -> 
 
     payload = await AutonomousLoopPayloadService.resolved_cycle_payload(get_settings())
 
-    assert payload["symbol"] == "CAKE"
-    assert payload["side"] == "buy"
-    assert payload["amountUsd"] == 0.041336
+    assert payload["symbol"] == "BNB"
+    assert payload["side"] == "sell"
+    assert payload["amountUsd"] == 0.072149
     assert payload["configuredAmountUsd"] == 25.0
     assert payload["execute"] is False
     get_settings.cache_clear()

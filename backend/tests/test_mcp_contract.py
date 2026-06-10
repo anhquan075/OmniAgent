@@ -3,17 +3,45 @@ from datetime import datetime, timezone
 import asyncio
 import httpx
 import json
+import os
+
+TEST_OPERATOR_TOKEN = "test-operator-token"
+os.environ.setdefault("API_OPERATOR_TOKEN", TEST_OPERATOR_TOKEN)
 
 from app.core.settings import get_settings
 from app.main import app
 from app.services.agent.heikin_ashi_signal import HeikinAshiSignalService
 from app.services.agent.strategy_decision import TradingStrategyDecisionService
 from app.services.cmc.signal_config import CmcSignalConfigService
+from app.services.mcp.tools import OPERATOR_TOOL_NAMES
 from app.services.shared.ledger import TradeLedger
 from app.services.trading.execution import TradeExecutionService
 
 
-def call_mcp(client: TestClient, csrf_token: str, name: str, arguments: dict[str, object]) -> dict[str, object]:
+def operator_csrf_token(client: TestClient) -> str:
+    session = client.get("/api/session", headers={"X-Operator-Token": TEST_OPERATOR_TOKEN})
+    assert session.status_code == 200
+    assert session.json()["operator"] is True
+    return session.json()["csrfToken"]
+
+
+def public_csrf_token(client: TestClient) -> str:
+    session = client.get("/api/session")
+    assert session.status_code == 200
+    assert session.json()["operator"] is False
+    return session.json()["csrfToken"]
+
+
+def call_mcp(
+    client: TestClient,
+    csrf_token: str,
+    name: str,
+    arguments: dict[str, object],
+    *,
+    operator: bool | None = None,
+) -> dict[str, object]:
+    operator = name in OPERATOR_TOOL_NAMES if operator is None else operator
+    csrf_token = operator_csrf_token(client) if operator else public_csrf_token(client)
     response = client.post(
         "/api/mcp",
         headers={"X-CSRF-Token": csrf_token},
@@ -54,6 +82,7 @@ def seed_competition_registration(ledger_path) -> None:
             "walletAddress": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
             "competitionContractAddress": "0x212c61b9b72c95d95bf29cf032f5e5635629aed5",
             "chainId": 56,
+            "receiptProof": {"valid": True, "reasons": []},
         },
     }) + "\n", encoding="utf-8")
 
@@ -100,6 +129,28 @@ def test_mcp_session_and_cockpit_snapshot() -> None:
     assert "\"identityProof\"" in text
     assert "\"twakStatus\"" in text
     assert "\"_meta\"" in text
+
+
+def test_public_mcp_session_hides_and_rejects_operator_tools() -> None:
+    client = TestClient(app)
+    session = client.get("/api/session")
+    assert session.status_code == 200
+    assert session.json()["operator"] is False
+    csrf_token = session.json()["csrfToken"]
+
+    tools = client.post(
+        "/api/mcp",
+        headers={"X-CSRF-Token": csrf_token},
+        json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
+    )
+    tool_names = [tool["name"] for tool in tools.json()["result"]["tools"]]
+    assert "bnb_agent_cockpit_snapshot" in tool_names
+    assert "bnb_execute_trade" not in tool_names
+    assert "bnb_emergency_pause" not in tool_names
+
+    response = call_mcp(client, csrf_token, "bnb_emergency_pause", {"enabled": True}, operator=False)
+    assert response["error"]["code"] == -32004
+    assert response["error"]["message"] == "Operator session is required for this tool"
 
 
 def test_dashboard_snapshot_is_session_scoped(monkeypatch) -> None:
@@ -291,7 +342,7 @@ def test_competition_readiness_exposes_wallet_registration_proof(monkeypatch, tm
         "chainId": 56,
         "createdAt": result["registrationProof"]["createdAt"],
         "recordedAt": None,
-        "receiptProof": None,
+        "receiptProof": {"valid": True, "reasons": []},
     }
     get_settings.cache_clear()
 
@@ -309,6 +360,20 @@ def test_agent_sdk_status_reports_uv_installed_package() -> None:
     assert result["installed"] is True
     assert result["version"]
     assert result["registryAddress"] == "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
+
+
+def test_wallet_metadata_redacts_bnb_rpc_url(monkeypatch) -> None:
+    monkeypatch.setenv("BNB_RPC_URL", "https://user:secret@rpc.example.com/path?apiKey=super-secret")
+    get_settings.cache_clear()
+    client = TestClient(app)
+    csrf_token = client.get("/api/session").json()["csrfToken"]
+    result = parsed_tool_result(call_mcp(client, csrf_token, "bnb_get_wallet", {}))
+    payload = json.dumps(result)
+
+    assert result["rpcUrl"] == "https://rpc.example.com"
+    assert "super-secret" not in payload
+    assert "user:secret" not in payload
+    get_settings.cache_clear()
 
 
 def test_live_preflight_blocks_when_cmc_is_missing(monkeypatch, tmp_path) -> None:
@@ -400,7 +465,7 @@ def test_live_preflight_blocks_when_configured_cmc_agent_hub_signal_fails(monkey
     async def fake_cycle(_: dict[str, object]) -> dict[str, object]:
         return {
             "quote": {"quoteSource": "router"},
-            "execution": {"simulation": {"transaction": {"data": "0x1234"}}},
+            "execution": {"simulation": {"canExecute": True, "transaction": {"data": "0x1234"}}},
         }
 
     monkeypatch.setattr(
@@ -456,11 +521,12 @@ def test_live_preflight_auto_discovers_cmc_agent_hub_signal_tool(monkeypatch, tm
         return {
             "ready": True,
             "toolName": "crypto.signal.auto",
+            "parsedContent": [{"signal": "sell"}],
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     async def fake_cycle(_: dict[str, object]) -> dict[str, object]:
-        return {"quote": {"quoteSource": "router"}, "execution": {"simulation": {"transaction": {"data": "0x1234"}}}}
+        return {"quote": {"quoteSource": "router"}, "execution": {"simulation": {"canExecute": True, "transaction": {"data": "0x1234"}}}}
 
     monkeypatch.setattr(
         "app.services.wallet.agent_wallet.AgentWalletService.get_wallet_data",
@@ -517,14 +583,14 @@ def test_live_preflight_accepts_cmc_agent_hub_signal_args(monkeypatch, tmp_path)
         return {
             "ready": True,
             "toolName": "crypto.signal.test",
-            "parsedContent": [{"signal": "buy"}],
+            "parsedContent": [{"signal": "sell"}],
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     async def fake_cycle(_: dict[str, object]) -> dict[str, object]:
         return {
             "quote": {"quoteSource": "router"},
-            "execution": {"simulation": {"transaction": {"data": "0x1234"}}},
+            "execution": {"simulation": {"canExecute": True, "transaction": {"data": "0x1234"}}},
         }
 
     monkeypatch.setattr(
@@ -539,6 +605,8 @@ def test_live_preflight_accepts_cmc_agent_hub_signal_args(monkeypatch, tmp_path)
     monkeypatch.setattr("app.services.cmc.agent_hub.CmcAgentHubClient.get_cmc_agent_hub_status", fake_cmc_agent_hub)
     monkeypatch.setattr("app.services.cmc.agent_hub_tools.CmcAgentHubToolClient.call_cmc_agent_hub_tool", fake_cmc_signal)
     monkeypatch.setattr("app.services.agent.autonomous_cycle.AutonomousTradingAgent.run_autonomous_cycle", fake_cycle)
+    monkeypatch.setenv("CMC_AGENT_HUB_SIGNAL_TOOL", "crypto.signal.test")
+    monkeypatch.setenv("CMC_AGENT_HUB_SIGNAL_ARGS", '{"symbol":"BNB"}')
     ledger_path = tmp_path / "ledger.jsonl"
     seed_competition_registration(ledger_path)
     monkeypatch.setenv("TRADE_LEDGER_PATH", str(ledger_path))
@@ -549,12 +617,12 @@ def test_live_preflight_accepts_cmc_agent_hub_signal_args(monkeypatch, tmp_path)
         client,
         csrf_token,
         "bnb_live_preflight",
-        {"cmcAgentHubTool": "crypto.signal.test", "cmcAgentHubArgs": {"symbol": "BNB"}},
+        {"cmcAgentHubTool": "attacker.signal", "cmcAgentHubArgs": {"symbol": "ATTACK"}},
     ))
     assert result["readyToEnableLive"] is True
     assert result["readyForLiveTrade"] is True
     assert result["blockers"] == []
-    assert result["cmcAgentHubSignal"]["parsedContent"] == [{"signal": "buy"}]
+    assert result["cmcAgentHubSignal"]["parsedContent"] == [{"signal": "sell"}]
     get_settings.cache_clear()
 
 
@@ -581,7 +649,7 @@ def test_live_preflight_requires_stored_competition_proof_even_when_twak_reports
         return {"ready": True, "toolName": "crypto.signal.auto", "timestamp": datetime.now(timezone.utc).isoformat()}
 
     async def fake_cycle(_: dict[str, object]) -> dict[str, object]:
-        return {"quote": {"quoteSource": "router"}, "execution": {"simulation": {"transaction": {"data": "0x1234"}}}}
+        return {"quote": {"quoteSource": "router"}, "execution": {"simulation": {"canExecute": True, "transaction": {"data": "0x1234"}}}}
 
     monkeypatch.setattr(
         "app.services.wallet.agent_wallet.AgentWalletService.get_wallet_data",
@@ -1165,7 +1233,7 @@ def test_capital_readiness_accepts_spendable_bnb_after_gas_reserve(monkeypatch) 
     get_settings.cache_clear()
 
 
-def test_funded_strategy_prefers_usdt_over_spendable_bnb(monkeypatch) -> None:
+def test_funded_strategy_prefers_largest_spendable_route(monkeypatch) -> None:
     from app.services.trading.funded_strategy import FundedStrategyService
 
     monkeypatch.setenv("BNB_AUTONOMOUS_LOOP_AMOUNT_USD", "25")
@@ -1450,6 +1518,30 @@ def test_live_cmc_tool_blocker_rejects_stale_signal() -> None:
     assert reason == "CMC Agent Hub signal is stale; refresh it before live execution."
 
 
+def test_live_cmc_config_ignores_request_pinned_tool(monkeypatch) -> None:
+    monkeypatch.delenv("CMC_AGENT_HUB_SIGNAL_TOOL", raising=False)
+    get_settings.cache_clear()
+
+    assert CmcSignalConfigService.configured_cmc_signal_tool({"cmcAgentHubTool": "attacker.pong"}) is None
+    get_settings.cache_clear()
+
+
+def test_live_cmc_tool_blocker_rejects_unrelated_signal() -> None:
+    reason = CmcSignalConfigService.live_cmc_tool_blocker(
+        True,
+        "crypto.signal.test",
+        {
+            "ready": True,
+            "toolName": "crypto.signal.test",
+            "parsedContent": [{"pong": True}],
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+        symbol="CAKE",
+        side="buy",
+    )
+    assert reason == "CMC Agent Hub signal must include a buy trade signal for CAKE."
+
+
 def test_risk_check_blocks_slippage_above_limit(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     monkeypatch.setenv("BNB_MAX_SLIPPAGE_BPS", "25")
@@ -1513,6 +1605,30 @@ def test_risk_check_blocks_drawdown_cap(monkeypatch, tmp_path) -> None:
     get_settings.cache_clear()
 
 
+def test_risk_check_blocks_incomplete_confirmed_trade_pnl(monkeypatch, tmp_path) -> None:
+    ledger_path = tmp_path / "ledger.jsonl"
+    ledger_path.write_text(json.dumps({
+        "eventType": "trade_receipt_confirmed",
+        "txHash": "0x" + "c" * 64,
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "payload": {"amountUsd": 10, "proof": {"valid": True}},
+    }) + "\n", encoding="utf-8")
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(ledger_path))
+    get_settings.cache_clear()
+    client = TestClient(app)
+    csrf_token = client.get("/api/session").json()["csrfToken"]
+    result = parsed_tool_result(call_mcp(
+        client,
+        csrf_token,
+        "bnb_risk_check",
+        {"symbol": "CAKE", "side": "buy", "amountUsd": 10, "slippageBps": 20, "signalSource": "cmc"},
+    ))
+    assert result["approved"] is False
+    assert "pnl_history_incomplete" in result["reasons"]
+    assert result["policy"]["observed"]["pnlStatus"] == "missing_trade_pnl"
+    get_settings.cache_clear()
+
+
 def test_risk_check_requires_cmc_signal(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     get_settings.cache_clear()
@@ -1539,6 +1655,50 @@ def test_trade_status_rejects_invalid_tx_hash() -> None:
         {"txHash": "not-a-tx"},
     )
     assert response["error"]["message"] == "A valid BSC transaction hash is required."
+
+
+def test_trade_status_does_not_trust_caller_supplied_expectations(monkeypatch, tmp_path) -> None:
+    tx_hash = "0x" + "9" * 64
+
+    async def fake_rpc_call(method: str, params: list[object]) -> object:
+        if method == "eth_getTransactionReceipt":
+            return {
+                "status": "0x1",
+                "blockNumber": "0x10",
+                "from": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
+                "to": "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            }
+        if method == "eth_getTransactionByHash":
+            return {
+                "from": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
+                "to": "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+                "input": "0x38ed1739" + "00" * 64,
+            }
+        raise AssertionError(method)
+
+    monkeypatch.setattr("app.services.trading.receipt.ReceiptProofService.rpc_call", fake_rpc_call)
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    get_settings.cache_clear()
+
+    client = TestClient(app)
+    csrf_token = client.get("/api/session").json()["csrfToken"]
+    result = parsed_tool_result(call_mcp(
+        client,
+        csrf_token,
+        "bnb_get_trade_status",
+        {
+            "txHash": tx_hash,
+            "expectedFrom": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
+            "expectedTo": "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "expectedDataPrefix": "0x38ed1739",
+        },
+    ))
+
+    assert result["status"] == "confirmed"
+    assert result["proof"]["valid"] is False
+    assert "submission_proof_missing" in result["proof"]["reasons"]
+    assert "ledgerEvent" not in result
+    get_settings.cache_clear()
 
 
 def test_trade_status_confirms_router_wallet_and_calldata_proof(monkeypatch, tmp_path) -> None:
@@ -1585,12 +1745,22 @@ def test_trade_status_confirms_router_wallet_and_calldata_proof(monkeypatch, tmp
         client,
         csrf_token,
         "bnb_get_trade_status",
-        {"txHash": tx_hash, "tradeIntentId": "intent-proof"},
+        {
+            "txHash": tx_hash,
+            "tradeIntentId": "intent-proof",
+            "symbol": "CAKE",
+            "side": "buy",
+            "amountUsd": 25,
+            "realizedPnlUsd": 1.25,
+            "basisUsd": 25,
+        },
     ))
     assert result["status"] == "confirmed"
     assert result["proof"]["valid"] is True
     assert result["submissionProof"]["cmcAgentHubSignal"]["serverVerified"] is True
     assert result["ledgerEvent"]["eventType"] == "trade_receipt_confirmed"
+    assert result["ledgerEvent"]["payload"]["symbol"] == "CAKE"
+    assert result["ledgerEvent"]["payload"]["pnl"]["realizedPnlUsd"] == 1.25
     assert result["ledgerEvent"]["payload"]["submissionProof"]["cmcAgentHubSignal"]["toolName"] == "crypto.signal.test"
 
     ledger = parsed_tool_result(call_mcp(client, csrf_token, "bnb_trade_ledger_summary", {"limit": 5}))
@@ -1726,9 +1896,24 @@ def test_trade_status_does_not_count_router_mismatch(monkeypatch, tmp_path) -> N
     monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     monkeypatch.setenv("ROBOT_FLEET_AGENT_WALLET", "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25")
     get_settings.cache_clear()
+    TradeLedger.append_event({
+        "eventType": "trade_executed",
+        "tradeIntentId": "intent-router-mismatch",
+        "txHash": tx_hash,
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "payload": {
+            "bridgeMode": "cli",
+            "walletAddress": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
+        },
+    })
     client = TestClient(app)
     csrf_token = client.get("/api/session").json()["csrfToken"]
-    result = parsed_tool_result(call_mcp(client, csrf_token, "bnb_get_trade_status", {"txHash": tx_hash}))
+    result = parsed_tool_result(call_mcp(
+        client,
+        csrf_token,
+        "bnb_get_trade_status",
+        {"txHash": tx_hash, "tradeIntentId": "intent-router-mismatch"},
+    ))
     assert result["status"] == "confirmed"
     assert result["proof"]["valid"] is False
     assert "router_mismatch" in result["proof"]["reasons"]
@@ -1762,13 +1947,24 @@ def test_trade_status_validates_expected_calldata_prefix(monkeypatch, tmp_path) 
     monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     monkeypatch.setenv("ROBOT_FLEET_AGENT_WALLET", "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25")
     get_settings.cache_clear()
+    TradeLedger.append_event({
+        "eventType": "trade_executed",
+        "tradeIntentId": "intent-prefix-mismatch",
+        "txHash": tx_hash,
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "payload": {
+            "bridgeMode": "cli",
+            "walletAddress": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
+            "quote": {"calldata": "0x7ff36ab5" + "00" * 64},
+        },
+    })
     client = TestClient(app)
     csrf_token = client.get("/api/session").json()["csrfToken"]
     result = parsed_tool_result(call_mcp(
         client,
         csrf_token,
         "bnb_get_trade_status",
-        {"txHash": tx_hash, "expectedDataPrefix": "0x7ff36ab5"},
+        {"txHash": tx_hash, "tradeIntentId": "intent-prefix-mismatch"},
     ))
     assert result["proof"]["valid"] is False
     assert "calldata_prefix_mismatch" in result["proof"]["reasons"]
@@ -1844,6 +2040,10 @@ def test_emergency_pause_tool_persists_latest_control_state(monkeypatch, tmp_pat
 
 
 def test_execute_trade_blocks_when_twak_disabled(monkeypatch, tmp_path) -> None:
+    async def fake_amounts_out(amount_in_raw: str, path: list[str]) -> list[int]:
+        return [int(amount_in_raw), 5_000_000_000_000_000_000]
+
+    monkeypatch.setattr("app.services.trading.pancake.PancakeRouterService.get_amounts_out", fake_amounts_out)
     monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     monkeypatch.setenv("BNB_TRADING_ENABLED", "true")
     monkeypatch.setenv("ALLOW_AGENT_RUN", "true")
@@ -1965,6 +2165,10 @@ def test_trust_wallet_status_blocks_rest_without_swap_action(monkeypatch, tmp_pa
 
 
 def test_execute_trade_blocks_when_twak_rest_surface_is_not_configured(monkeypatch, tmp_path) -> None:
+    async def fake_amounts_out(amount_in_raw: str, path: list[str]) -> list[int]:
+        return [int(amount_in_raw), 5_000_000_000_000_000_000]
+
+    monkeypatch.setattr("app.services.trading.pancake.PancakeRouterService.get_amounts_out", fake_amounts_out)
     monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     monkeypatch.setenv("BNB_TRADING_ENABLED", "true")
     monkeypatch.setenv("ALLOW_AGENT_RUN", "true")
@@ -2160,6 +2364,41 @@ def test_strategy_holds_buy_against_heikin_ashi_sell_signal(monkeypatch, tmp_pat
     assert "heikin_ashi_5m_sell_signal" in result["decision"]["rationale"]
     assert result["deterministic"]["decision"]["dataQuality"] == "medium"
     get_settings.cache_clear()
+
+
+def test_strategy_advisor_cannot_flip_direction_or_widen_slippage() -> None:
+    deterministic = {
+        "ready": True,
+        "decision": {
+            "action": "buy",
+            "confidence": 0.72,
+            "maxAmountUsd": 10,
+            "slippageBps": 20,
+            "rationale": "buy allowed",
+            "risks": [],
+        },
+    }
+    disagreeing = {
+        "ready": True,
+        "decision": {
+            "action": "sell",
+            "confidence": 0.9,
+            "maxAmountUsd": 5,
+            "slippageBps": 80,
+            "rationale": "sell",
+        },
+    }
+    selected = TradingStrategyDecisionService.select_decision(deterministic, disagreeing, execute=True)
+    assert selected["source"] == "policy"
+    assert selected["decision"]["action"] == "hold"
+    assert "advisor_direction_disagreement" in selected["decision"]["risks"]
+
+    agreeing = {**disagreeing, "decision": {**disagreeing["decision"], "action": "buy"}}
+    selected = TradingStrategyDecisionService.select_decision(deterministic, agreeing, execute=True)
+    assert selected["source"] == "openrouter"
+    assert selected["decision"]["action"] == "buy"
+    assert selected["decision"]["maxAmountUsd"] == 5
+    assert selected["decision"]["slippageBps"] == 20
 
 
 def test_autonomous_cycle_invokes_configured_cmc_agent_hub_tool(monkeypatch, tmp_path) -> None:
@@ -2494,11 +2733,22 @@ def test_execute_trade_submits_through_twak_cli_when_live_ready(monkeypatch, tmp
             "amountUsd": 10,
             "slippageBps": 20,
             "signalSource": "cmc",
+            "quote": {
+                "inputTokenAddress": "0x1111111111111111111111111111111111111111",
+                "outputTokenAddress": "0x2222222222222222222222222222222222222222",
+                "transaction": {"chainId": 56, "data": "0xdeadbeef"},
+            },
+            "transaction": {"chainId": 56, "to": "0x3333333333333333333333333333333333333333"},
         },
     ))
     assert result["status"] == "submitted"
     assert result["txHash"] == "0x" + "d" * 64
     assert result["ledgerEvent"]["eventType"] == "trade_executed"
+    assert result["ledgerEvent"]["payload"]["symbol"] == "CAKE"
+    assert result["ledgerEvent"]["payload"]["side"] == "buy"
+    assert result["ledgerEvent"]["payload"]["amountUsd"] == 10
+    assert result["ledgerEvent"]["payload"]["quote"]["inputSymbol"] == "USDT"
+    assert result["ledgerEvent"]["payload"]["quote"]["outputSymbol"] == "CAKE"
     assert result["cmcAgentHubSignal"]["toolName"] == "crypto.signal.test"
     assert result["cmcAgentHubSignal"]["serverVerified"] is True
     assert result["ledgerEvent"]["payload"]["cmcAgentHubSignal"]["parsedContent"] == [
@@ -2631,6 +2881,7 @@ def test_execute_trade_auto_discovers_cmc_agent_hub_signal(monkeypatch, tmp_path
             "source": "coinmarketcap-agent-hub-mcp",
             "ready": True,
             "toolName": "crypto.signal.auto",
+            "parsedContent": [{"signal": "buy"}],
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 

@@ -82,6 +82,13 @@ class ProofBundleService:
         cached = TradeLedger.find_trade_event(tx_hash=tx_hash, event_type="trade_receipt_confirmed")
         if cached and not refresh:
             payload = cached.get("payload") if isinstance(cached.get("payload"), dict) else {}
+            proof = payload.get("proof") if isinstance(payload.get("proof"), dict) else {
+                "valid": False,
+                "reasons": ["cached_proof_missing"],
+            }
+            submission_proof = payload.get("submissionProof") if isinstance(payload.get("submissionProof"), dict) else None
+            if proof.get("valid") is True and not submission_proof:
+                proof = {"valid": False, "reasons": ["cached_submission_proof_missing"]}
             return {
                 "network": "bsc",
                 "txHash": tx_hash,
@@ -90,8 +97,8 @@ class ProofBundleService:
                 "from": payload.get("from"),
                 "to": payload.get("to"),
                 "explorerUrl": payload.get("explorerUrl"),
-                "submissionProof": payload.get("submissionProof"),
-                "proof": payload.get("proof") if isinstance(payload.get("proof"), dict) else {"valid": True, "reasons": []},
+                "submissionProof": submission_proof,
+                "proof": proof,
                 "ledgerEvent": cached,
                 "source": "ledger",
             }

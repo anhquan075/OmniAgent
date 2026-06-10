@@ -1,7 +1,12 @@
 import { ExternalLinkIcon } from "lucide-react";
 import type { EvidencePayload } from "./live-evidence";
+import { safeEvidenceHref } from "./live-evidence-links";
 
 export function LiveEvidenceDrawer({ evidence }: { evidence: EvidencePayload }) {
+  const links = evidence.links
+    .map((link) => ({ ...link, href: safeEvidenceHref(link.href) }))
+    .filter((link): link is { label: string; href: string } => Boolean(link.href));
+
   return (
     <div className="live-evidence-drawer">
       <p>{evidence.summary}</p>
@@ -15,10 +20,10 @@ export function LiveEvidenceDrawer({ evidence }: { evidence: EvidencePayload }) 
           ))}
         </div>
       ) : null}
-      {evidence.links.length ? (
+      {links.length ? (
         <div className="live-evidence-links">
-          {evidence.links.slice(0, 4).map((link) => (
-            <a key={link.href} href={link.href} target="_blank" rel="noreferrer">
+          {links.slice(0, 4).map((link, index) => (
+            <a key={`${link.label}-${link.href}-${index}`} href={link.href} target="_blank" rel="noreferrer">
               {link.label}
               <ExternalLinkIcon className="h-3 w-3" />
             </a>

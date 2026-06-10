@@ -86,7 +86,8 @@ test.describe('BNB cockpit layout', () => {
     await expect(page.getByText('24h move').first()).toBeVisible();
     await expect(page.getByText('24h volume').first()).toBeVisible();
     await expect(page.getByText('Wallet-native signer')).toBeVisible();
-    await expect(page.getByText('Backend agent loop')).toBeVisible();
+    await expect(page.getByText('Autonomous loop')).toBeVisible();
+    await expect(page.locator('.autonomous-loop-pulse')).toBeVisible();
     await expect(page.getByText('Why this verdict')).toBeVisible();
     await expect(page.locator('.quant-status-band')).toBeVisible();
     await expect(page.locator('.quant-status-band')).toContainText(/Readiness/i);
@@ -95,7 +96,6 @@ test.describe('BNB cockpit layout', () => {
     await expect(page.getByText('Tools used')).toBeVisible();
     await expect(page.getByText('Proof score', { exact: true })).toBeVisible();
     await expect(page.locator('.quant-section-title').filter({ hasText: 'Trade plan' })).toBeVisible();
-    await expect(page.getByText('Safety checks', { exact: true })).toBeVisible();
     await expect(page.getByText('Live safety check')).toBeVisible();
     await expect(page.getByText('Recovery candidates')).toBeVisible();
     await expect(page.getByText('Decision summary')).toBeVisible();
@@ -154,7 +154,8 @@ test.describe('BNB cockpit layout', () => {
     for (const pattern of removedCopyPatterns) {
       await expect(page.getByText(pattern)).toHaveCount(0);
     }
-    await expect(page.getByText('Backend agent loop')).toBeVisible();
+    await expect(page.getByText('Autonomous loop')).toBeVisible();
+    await expect(page.locator('.autonomous-loop-pulse')).toBeVisible();
     await expect(page.getByText('Why this verdict')).toBeVisible();
     await expect(page.getByText('market', { exact: true })).toBeVisible();
     await expect(page.getByText('action', { exact: true })).toBeVisible();

@@ -14,6 +14,10 @@ const shortHash = (hash: string) => (
   hash.length > 22 ? `${hash.slice(0, 10)}...${hash.slice(-8)}` : hash
 );
 
+const bscTxUrl = (hash: string) => (
+  /^0x[a-fA-F0-9]{64}$/.test(hash) ? `https://bscscan.com/tx/${hash}` : ''
+);
+
 const formatAmount = (value: unknown) => {
   const amount = Number(value);
   return Number.isFinite(amount) && amount > 0 ? `$${amount.toFixed(amount >= 10 ? 2 : 4)}` : 'size pending';
@@ -61,7 +65,12 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
           const hash = text(trade.txHash, '');
           const status = text(trade.status, 'submitted');
           const proofValid = trade.receiptProofValid === true;
-          const explorerUrl = text(trade.explorerUrl, hash ? `https://bscscan.com/tx/${hash}` : '');
+          const explorerUrl = bscTxUrl(hash);
+          const proofLabel = proofValid
+            ? 'proof valid'
+            : status === 'confirmed'
+              ? 'proof missing'
+              : 'tx submitted, proof pending';
           return (
             <article
               key={`${hash || trade.tradeIntentId || index}-${index}`}
@@ -80,7 +89,7 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
               </div>
               <div className="executed-trade-meta">
                 <span>{timeLabel(trade.confirmedAt ?? trade.executedAt ?? trade.createdAt)}</span>
-                <span>{proofValid ? 'proof valid' : status === 'confirmed' ? 'proof recorded' : 'proof pending'}</span>
+                <span>{proofLabel}</span>
               </div>
               <div className="executed-trade-proof">
                 <span>

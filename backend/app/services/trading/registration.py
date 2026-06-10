@@ -149,6 +149,10 @@ class CompetitionRegistrationService:
             "txHash": tx_hash,
             "explorerUrl": f"{explorer}/tx/{tx_hash}",
             "bridgeMode": bridge_mode,
+            "receiptProof": {
+                "valid": False,
+                "reasons": ["receipt_not_validated"],
+            },
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -156,8 +160,8 @@ class CompetitionRegistrationService:
     def stored_registration_proof(wallet_address: str | None = None) -> dict[str, object] | None:
         settings = get_settings()
         expected_wallet = str(wallet_address or AgentWalletService.get_wallet_data().get("walletAddress") or "")
-        events = TradeLedger.get_ledger_summary(limit=1000).get("events")
-        for event in events if isinstance(events, list) else []:
+        events = TradeLedger._read_events(settings.trade_ledger_path)
+        for event in reversed(events):
             if not isinstance(event, dict) or event.get("eventType") != "competition_registered":
                 continue
             payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
@@ -173,12 +177,19 @@ class CompetitionRegistrationService:
                 continue
             if chain_id != settings.bnb_chain_id:
                 continue
+            if not CompetitionRegistrationService.registration_receipt_valid(payload):
+                continue
             return event
         return None
 
     @staticmethod
     def has_stored_registration_proof(wallet_address: str | None = None) -> bool:
         return CompetitionRegistrationService.stored_registration_proof(wallet_address) is not None
+
+    @staticmethod
+    def registration_receipt_valid(payload: dict[str, object]) -> bool:
+        receipt_proof = payload.get("receiptProof")
+        return isinstance(receipt_proof, dict) and receipt_proof.get("valid") is True
 
     @staticmethod
     def validate_registration_input(wallet_address: str, metadata_uri: str) -> None:

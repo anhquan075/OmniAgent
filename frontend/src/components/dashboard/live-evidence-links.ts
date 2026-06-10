@@ -42,6 +42,17 @@ export function bscAddressLink(address: unknown, label = "BscScan wallet"): Evid
   return value ? { label, href: `https://bscscan.com/address/${value}` } : null;
 }
 
+export function safeEvidenceHref(href: string) {
+  try {
+    const url = new URL(href);
+    const trustedHosts = new Set(["bscscan.com", "coinmarketcap.com", "mcp.coinmarketcap.com"]);
+    if (url.protocol !== "https:" || !trustedHosts.has(url.hostname)) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 export function marketSignalFromState(state: Payload) {
   const proof = state.liveProofBundle ?? {};
   return state.livePreflight?.[MARKET_SIGNAL_KEY]
@@ -64,8 +75,11 @@ export function latestTxLinkFromState(state: Payload): EvidenceLink | null {
 
 export function marketSignalLinks(signal: Payload | undefined): EvidenceLink[] {
   const links: EvidenceLink[] = [];
-  if (typeof signal?.endpoint === "string" && signal.endpoint.startsWith("https://")) {
-    links.push({ label: "CMC MCP endpoint", href: signal.endpoint });
+  if (typeof signal?.endpoint === "string") {
+    const endpoint = safeEvidenceHref(signal.endpoint);
+    if (endpoint?.startsWith("https://mcp.coinmarketcap.com/")) {
+      links.push({ label: "CMC MCP endpoint", href: endpoint });
+    }
   }
   links.push(...coinMarketCapLinks(signal?.parsedContent));
   return dedupeLinks(links).slice(0, 4);
@@ -90,8 +104,10 @@ function coinMarketCapLinks(value: unknown): EvidenceLink[] {
 function dedupeLinks(links: EvidenceLink[]) {
   const seen = new Set<string>();
   return links.filter((link) => {
-    if (!link.href || seen.has(link.href)) return false;
-    seen.add(link.href);
+    const href = safeEvidenceHref(link.href);
+    if (!href || seen.has(href)) return false;
+    link.href = href;
+    seen.add(href);
     return true;
   });
 }
