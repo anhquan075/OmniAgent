@@ -40,7 +40,11 @@ const inferCheck = (key: string, state: Payload) => {
   if (key === "riskPolicyApproved") return preflight.readyForLiveTrade === true || state.policyStatus?.approved === true;
   if (key === "routerQuoteValid") return preflight.readyForLiveTrade === true || Boolean(preflight.fundedStrategy?.symbol);
   if (key === "twakWalletMatched") return signer.ready === true;
-  if (key === "competitionRegistered") return registration.receiptProof?.valid === true;
+  if (key === "competitionRegistered") {
+    return registration.receiptProof?.valid === true
+      || registration.statusProof?.valid === true
+      || state.competition?.registered === true;
+  }
   if (key === "receiptProofValid") return proof.latestReceiptStatus?.proof?.valid === true;
   if (key === "pnlDrawdownCompliant") return Number(pnl.maxDrawdownPct ?? 0) <= Number(state.backtestRiskReport?.riskLimits?.maxDrawdownPct ?? 20);
   return false;

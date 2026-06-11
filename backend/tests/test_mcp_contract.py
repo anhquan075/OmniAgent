@@ -287,7 +287,7 @@ def test_competition_status_reports_cli_failure(monkeypatch) -> None:
     get_settings.cache_clear()
 
 
-def test_competition_register_already_registered_reports_missing_ledger_proof(monkeypatch, tmp_path) -> None:
+def test_competition_register_already_registered_uses_status_proof(monkeypatch, tmp_path) -> None:
     async def fake_call_rest_action(*args: object, **kwargs: object) -> dict[str, object]:
         return {"registered": True, "participant": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"}
 
@@ -309,9 +309,9 @@ def test_competition_register_already_registered_reports_missing_ledger_proof(mo
     ))
 
     assert result["status"] == "already_registered_external"
-    assert result["ledgerProofRequired"] is True
+    assert result["ledgerProofRequired"] is False
     assert result["ledgerProofStored"] is False
-    assert "record-bnb-competition-registration.py" in result["reason"]
+    assert "contract status proof" in result["reason"]
     assert not (tmp_path / "ledger.jsonl").exists()
     get_settings.cache_clear()
 
@@ -329,23 +329,16 @@ def test_competition_readiness_exposes_wallet_registration_proof(monkeypatch, tm
         {"walletAddress": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"},
         TradeLedger.get_ledger_summary(limit=10),
         {"status": "ready"},
-        {"registered": True},
+        {"registered": True, "participant": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"},
     )
 
     assert result["registered"] is True
-    assert result["registrationTxHash"] == "0x" + "c" * 64
-    assert result["registrationProof"] == {
-        "source": "trade-ledger",
-        "eventType": "competition_registered",
-        "txHash": "0x" + "c" * 64,
-        "explorerUrl": "https://bscscan.com/tx/" + "0x" + "c" * 64,
-        "walletAddress": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
-        "competitionContractAddress": "0x212c61b9b72c95d95bf29cf032f5e5635629aed5",
-        "chainId": 56,
-        "createdAt": result["registrationProof"]["createdAt"],
-        "recordedAt": None,
-        "receiptProof": {"valid": True, "reasons": []},
-    }
+    assert result["registrationTxHash"] is None
+    assert result["registrationProof"]["source"] == "competition-status"
+    assert result["registrationProof"]["statusProof"]["valid"] is True
+    assert result["registrationProof"]["walletAddress"] == "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"
+    assert result["registrationProof"]["competitionContractAddress"] == "0x212c61b9b72c95d95bf29cf032f5e5635629aed5"
+    assert result["registrationProof"]["chainId"] == 56
     get_settings.cache_clear()
 
 
@@ -382,8 +375,8 @@ def test_live_preflight_blocks_when_cmc_is_missing(monkeypatch, tmp_path) -> Non
     async def fake_twak_status() -> dict[str, object]:
         return {"ready": True}
 
-    async def fake_competition_status() -> dict[str, object]:
-        return {"registered": True}
+    async def fake_competition_status(_: str | None = None) -> dict[str, object]:
+        return {"registered": True, "participant": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"}
 
     async def fake_capital(_: str) -> dict[str, object]:
         return {
@@ -437,8 +430,8 @@ def test_live_preflight_blocks_when_configured_cmc_agent_hub_signal_fails(monkey
     async def fake_twak_status() -> dict[str, object]:
         return {"ready": True}
 
-    async def fake_competition_status() -> dict[str, object]:
-        return {"registered": True}
+    async def fake_competition_status(_: str | None = None) -> dict[str, object]:
+        return {"registered": True, "participant": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"}
 
     async def fake_capital(_: str) -> dict[str, object]:
         return {
@@ -506,8 +499,8 @@ def test_live_preflight_auto_discovers_cmc_agent_hub_signal_tool(monkeypatch, tm
     async def fake_twak_status() -> dict[str, object]:
         return {"ready": True}
 
-    async def fake_competition_status() -> dict[str, object]:
-        return {"registered": True}
+    async def fake_competition_status(_: str | None = None) -> dict[str, object]:
+        return {"registered": True, "participant": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"}
 
     async def fake_capital(_: str) -> dict[str, object]:
         return {"ready": True, "balances": [{"symbol": "BNB", "spendableRaw": "1000000000000000000"}]}
@@ -567,8 +560,8 @@ def test_live_preflight_accepts_cmc_agent_hub_signal_args(monkeypatch, tmp_path)
     async def fake_twak_status() -> dict[str, object]:
         return {"ready": True}
 
-    async def fake_competition_status() -> dict[str, object]:
-        return {"registered": True}
+    async def fake_competition_status(_: str | None = None) -> dict[str, object]:
+        return {"registered": True, "participant": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"}
 
     async def fake_capital(_: str) -> dict[str, object]:
         return {
@@ -637,11 +630,11 @@ def test_live_preflight_accepts_cmc_agent_hub_signal_args(monkeypatch, tmp_path)
     get_settings.cache_clear()
 
 
-def test_live_preflight_requires_stored_competition_proof_even_when_twak_reports_registered(monkeypatch, tmp_path) -> None:
+def test_live_preflight_accepts_live_competition_status_without_jsonl(monkeypatch, tmp_path) -> None:
     async def fake_twak_status() -> dict[str, object]:
         return {"ready": True}
 
-    async def fake_competition_status() -> dict[str, object]:
+    async def fake_competition_status(_: str | None = None) -> dict[str, object]:
         return {"registered": True, "participant": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"}
 
     async def fake_capital(_: str) -> dict[str, object]:
@@ -657,7 +650,12 @@ def test_live_preflight_requires_stored_competition_proof_even_when_twak_reports
         return {"ready": True, "recommendedToolName": "crypto.signal.auto", "recommendedArgs": {"symbol": "BNB"}}
 
     async def fake_cmc_signal(args: dict[str, object]) -> dict[str, object]:
-        return {"ready": True, "toolName": "crypto.signal.auto", "timestamp": datetime.now(timezone.utc).isoformat()}
+        return {
+            "ready": True,
+            "toolName": "crypto.signal.auto",
+            "parsedContent": [{"signal": "sell"}],
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
 
     async def fake_cycle(_: dict[str, object]) -> dict[str, object]:
         return {"quote": {"quoteSource": "router"}, "execution": {"simulation": {"canExecute": True, "transaction": {"data": "0x1234"}}}}
@@ -682,8 +680,9 @@ def test_live_preflight_requires_stored_competition_proof_even_when_twak_reports
     csrf_token = client.get("/api/session").json()["csrfToken"]
     result = parsed_tool_result(call_mcp(client, csrf_token, "bnb_live_preflight", {}))
 
-    assert result["readyForLiveTrade"] is False
-    assert any(item["name"] == "competition" for item in result["blockers"])
+    assert result["readyForLiveTrade"] is True
+    assert result["blockers"] == []
+    assert not (tmp_path / "ledger.jsonl").exists()
     get_settings.cache_clear()
 
 
@@ -2854,6 +2853,11 @@ def test_execute_trade_submits_through_twak_rest_when_live_ready(monkeypatch, tm
         timeout: float = 30,
     ) -> dict[str, object]:
         assert base_url == "http://twak.local"
+        if action == "competition_status":
+            return {
+                "registered": True,
+                "participant": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
+            }
         assert action == "swap"
         assert arguments == {
             "fromChain": "bsc",
@@ -2936,6 +2940,12 @@ def test_execute_trade_auto_discovers_cmc_agent_hub_signal(monkeypatch, tmp_path
         }
 
     async def fake_call_rest_action(*args: object, **kwargs: object) -> dict[str, object]:
+        action = str(args[3] if len(args) > 3 else kwargs.get("action") or "")
+        if action == "competition_status":
+            return {
+                "registered": True,
+                "participant": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
+            }
         return {"success": True, "txHash": "0x" + "a" * 64}
 
     async def fake_recommendation(limit: int = 1) -> dict[str, object]:

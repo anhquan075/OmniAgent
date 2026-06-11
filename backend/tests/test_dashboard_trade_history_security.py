@@ -1,5 +1,7 @@
 from fastapi.testclient import TestClient
 
+from app.core.security import COOKIE_NAME
+from app.core.security import decode_session_cookie
 from app.core.security_middleware import rate_limit_buckets
 from app.core.settings import get_settings
 from app.main import app
@@ -112,6 +114,39 @@ def test_api_rate_limit_blocks_session_spam(monkeypatch) -> None:
     assert blocked.json()["detail"] == "Rate limit exceeded"
     assert blocked.headers["Retry-After"]
     rate_limit_buckets.clear()
+    get_settings.cache_clear()
+
+
+def test_api_session_cookie_is_signed_for_railway_restart_safety(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    get_settings.cache_clear()
+    client = TestClient(app)
+
+    session_response = client.get("/api/session")
+    cookie = session_response.cookies.get(COOKIE_NAME)
+    decoded = decode_session_cookie(cookie)
+    response = client.get("/api/dashboard/trades?limit=1")
+
+    assert session_response.status_code == 200
+    assert decoded is not None
+    assert decoded.csrf_token == session_response.json()["csrfToken"]
+    assert response.status_code == 200
+    get_settings.cache_clear()
+
+
+def test_api_session_rejects_tampered_cookie(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    get_settings.cache_clear()
+    client = TestClient(app)
+
+    session_response = client.get("/api/session")
+    cookie = session_response.cookies.get(COOKIE_NAME)
+    assert cookie
+    client.cookies.set(COOKIE_NAME, f"{cookie}x")
+
+    response = client.get("/api/dashboard/trades?limit=1")
+
+    assert response.status_code == 401
     get_settings.cache_clear()
 
 

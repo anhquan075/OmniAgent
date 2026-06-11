@@ -1,7 +1,5 @@
 from datetime import datetime, timezone
 
-import httpx
-
 from app.services.agent.status import BnbAgentStatusService
 from app.services.wallet.balances import CapitalReadinessService
 from app.services.cmc.prices import CmcPriceService
@@ -9,13 +7,10 @@ from app.services.shared.ledger import TradeLedger
 from app.services.trading.policy import TradePolicyInput
 from app.services.trading.policy import RiskPolicyService
 from app.services.trading.proof_score import TradeProofScoreService
-from app.services.trading.registration import CompetitionRegistrationService
+from app.services.trading.registration_status import CompetitionRegistrationStatusService
 from app.services.trading.recovery_candidates import TradeRecoveryCandidateService
 from app.services.trading.trade_work_order import TradeWorkOrderService
 from app.services.twak.bridge import TrustWalletBridge
-from app.services.twak.config import TrustWalletConfigService
-from app.services.twak.cli import TrustWalletCliClient
-from app.services.twak.rest import TrustWalletRestClient
 from app.services.wallet.agent_wallet import AgentWalletService
 from app.services.wallet.x402 import X402PaymentService
 class AgentCockpitService:
@@ -26,7 +21,9 @@ class AgentCockpitService:
         sdk_status = BnbAgentStatusService.get_agent_sdk_status_dict()
         identity_proof = AgentCockpitService.latest_identity_proof(ledger)
         twak_status = await TrustWalletBridge.get_trust_wallet_status()
-        competition_status = await AgentCockpitService.get_competition_status()
+        competition_status = await AgentCockpitService.get_competition_status(
+            str(wallet.get("walletAddress") or ""),
+        )
         paid_status = X402PaymentService.get_paid_resource_status(limit=10)
         capital = await CapitalReadinessService.get_capital_readiness(str(wallet.get("walletAddress") or ""))
         prices = await CmcPriceService.get_price_snapshot(["BNB", "CAKE", "TWT"])
@@ -158,15 +155,19 @@ class AgentCockpitService:
         capital: dict[str, object],
         competition_status: dict[str, object] | None = None,
     ) -> dict[str, object]:
-        registered_event = CompetitionRegistrationService.stored_registration_proof(str(wallet.get("walletAddress") or ""))
-        registration_proof = AgentCockpitService.build_registration_proof_summary(registered_event)
+        proof_record = CompetitionRegistrationStatusService.current_registration_proof(
+            str(wallet.get("walletAddress") or ""),
+            competition_status,
+        )
+        registration_proof = AgentCockpitService.build_registration_proof_summary(proof_record)
         trade_count = ((ledger.get("dailyCompliance") or {}).get("tradeCount")) or 0
         return {
             "track": "Track 1 Autonomous Trading Agents",
             "contractAddress": wallet.get("competitionContractAddress"),
-            "registered": bool(registered_event),
-            "registrationTxHash": (registered_event or {}).get("txHash") if isinstance(registered_event, dict) else None,
+            "registered": bool(proof_record),
+            "registrationTxHash": (registration_proof or {}).get("txHash"),
             "registrationProof": registration_proof,
+            "registrationProofSource": (registration_proof or {}).get("source"),
             "registrationStatus": competition_status,
             "minimumTrades": 7,
             "tradeCount": trade_count,
@@ -181,6 +182,8 @@ class AgentCockpitService:
     def build_registration_proof_summary(event: dict[str, object] | None) -> dict[str, object] | None:
         if not isinstance(event, dict):
             return None
+        if event.get("statusProof"):
+            return event
         payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
         tx_hash = str(event.get("txHash") or payload.get("txHash") or "")
         explorer_url = payload.get("explorerUrl")
@@ -198,28 +201,8 @@ class AgentCockpitService:
         }
 
     @staticmethod
-    async def get_competition_status() -> dict[str, object] | None:
-        bridge = TrustWalletConfigService.get_trust_wallet_bridge_config()
-        if bridge.mode == "rest" and bridge.base_url:
-            try:
-                status = await TrustWalletRestClient.call_rest_action(
-                    bridge.base_url,
-                    bridge.api_key,
-                    bridge.hmac_secret,
-                    "competition_status",
-                    {},
-                    bridge.timeout_ms / 1000,
-                )
-            except (httpx.HTTPError, ValueError, TypeError) as error:
-                return {"ready": False, "registered": False, "reason": str(error)}
-            return status if "_error" not in status else {"ready": False, "reason": status["_error"]}
-        if bridge.mode == "cli":
-            try:
-                status = await TrustWalletCliClient.get_cli_competition_status(bridge.command, bridge.timeout_ms / 1000)
-            except (RuntimeError, OSError, ValueError, TypeError) as error:
-                return {"ready": False, "registered": False, "reason": str(error)}
-            return status if "_error" not in status else {"ready": False, "reason": status["_error"]}
-        return None
+    async def get_competition_status(wallet_address: str | None = None) -> dict[str, object] | None:
+        return await CompetitionRegistrationStatusService.get_competition_status(wallet_address)
 
     @staticmethod
     def build_reasoning(
