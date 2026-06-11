@@ -28,7 +28,7 @@ class CompetitionRegistrationService:
             "status": "instructions_only",
             "manualCommand": " ".join(manual_command_args),
             "manualCommandArgs": manual_command_args,
-            "note": "Registration is complete only after TWAK returns a BSC txHash and it is stored in the ledger.",
+            "note": "Registration is complete once TWAK returns a BSC txHash or live contract status verifies the agent wallet.",
         }
 
     @staticmethod
@@ -115,10 +115,9 @@ class CompetitionRegistrationService:
             "status": "already_registered_external",
             "registered": True,
             "ledgerProofStored": False,
-            "ledgerProofRequired": True,
+            "ledgerProofRequired": False,
             "reason": (
-                "TWAK reports this wallet is already registered, but did not return a registration txHash. "
-                "Record the BSC registration tx with scripts/record-bnb-competition-registration.py before live trading."
+                "TWAK reports this wallet is already registered; live execution can use contract status proof."
             ),
             "participant": status.get("participant"),
             "deadline": status.get("deadline"),

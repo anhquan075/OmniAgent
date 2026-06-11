@@ -9,7 +9,7 @@ from app.services.cmc.signal_proof import CmcSignalProofService
 from app.services.shared.ledger import TradeLedger
 from app.services.trading.pancake import PancakeRouterService
 from app.services.trading.policy import RiskPolicyService
-from app.services.trading.registration import CompetitionRegistrationService
+from app.services.trading.registration_status import CompetitionRegistrationStatusService
 from app.services.trading.token_registry import BNB_NATIVE_TOKEN_ADDRESS
 from app.services.trading.token_registry import TokenRegistryService
 from app.services.twak.bridge import TrustWalletBridge
@@ -35,12 +35,22 @@ class TradeExecutionService:
         if cmc_snapshot is None and "symbol" in args:
             cmc_snapshot = await CmcPriceService.get_price_snapshot([str(args.get("symbol") or "CAKE")])
         cmc_agent_hub_signal = args.get("cmcAgentHubSignal")
+        signal_payload = cmc_agent_hub_signal if isinstance(cmc_agent_hub_signal, dict) else None
+        wallet_address = str(wallet.get("walletAddress") or "")
+        competition_status = None
+        if (
+            get_settings().bnb_trading_enabled
+            and wallet_address
+            and TradeExecutionService.cmc_tool_blocker(policy, signal_payload) is None
+        ):
+            competition_status = await CompetitionRegistrationStatusService.get_competition_status(wallet_address)
         reasons = TradeExecutionService.execution_blockers(
             transaction,
             policy,
             twak_status,
             cmc_snapshot,
-            cmc_agent_hub_signal if isinstance(cmc_agent_hub_signal, dict) else None,
+            signal_payload,
+            competition_status,
         )
         can_execute = not reasons
         return {
@@ -169,6 +179,7 @@ class TradeExecutionService:
         twak_status: dict[str, object] | None = None,
         cmc_snapshot: dict[str, object] | None = None,
         cmc_agent_hub_signal: dict[str, object] | None = None,
+        competition_status: dict[str, object] | None = None,
     ) -> list[str]:
         settings = get_settings()
         wallet = AgentWalletService.get_wallet_data()
@@ -183,18 +194,14 @@ class TradeExecutionService:
             reasons.append("BNB live trading is disabled")
         if not settings.allow_agent_run:
             reasons.append("ALLOW_AGENT_RUN is false")
-        if settings.bnb_trading_enabled and not TradeExecutionService.competition_registered(str(wallet.get("walletAddress") or "")):
+        cmc_tool_blocker = TradeExecutionService.cmc_tool_blocker(policy, cmc_agent_hub_signal)
+        if settings.bnb_trading_enabled and not cmc_tool_blocker and not TradeExecutionService.competition_registered(
+            str(wallet.get("walletAddress") or ""),
+            competition_status,
+        ):
             reasons.append("competition registration proof is required before live execution")
         if settings.bnb_trading_enabled and not TradeExecutionService.cmc_signal_ready(cmc_snapshot):
             reasons.append("CMC live signal is required")
-        policy_observed = policy.get("observed") if isinstance(policy.get("observed"), dict) else {}
-        cmc_tool_blocker = CmcSignalConfigService.live_cmc_tool_blocker(
-            settings.bnb_trading_enabled,
-            str(cmc_agent_hub_signal.get("toolName") or "") if cmc_agent_hub_signal else None,
-            cmc_agent_hub_signal,
-            symbol=str(policy_observed.get("symbol") or ""),
-            side=str(policy_observed.get("side") or ""),
-        )
         if cmc_tool_blocker:
             reasons.append(cmc_tool_blocker)
         if not policy.get("approved"):
@@ -215,5 +222,22 @@ class TradeExecutionService:
         return any(bool((item or {}).get("priceUsd")) for item in symbols.values() if isinstance(item, dict))
 
     @staticmethod
-    def competition_registered(wallet_address: str | None = None) -> bool:
-        return CompetitionRegistrationService.has_stored_registration_proof(wallet_address)
+    def cmc_tool_blocker(
+        policy: dict[str, object],
+        cmc_agent_hub_signal: dict[str, object] | None,
+    ) -> str | None:
+        policy_observed = policy.get("observed") if isinstance(policy.get("observed"), dict) else {}
+        return CmcSignalConfigService.live_cmc_tool_blocker(
+            get_settings().bnb_trading_enabled,
+            str(cmc_agent_hub_signal.get("toolName") or "") if cmc_agent_hub_signal else None,
+            cmc_agent_hub_signal,
+            symbol=str(policy_observed.get("symbol") or ""),
+            side=str(policy_observed.get("side") or ""),
+        )
+
+    @staticmethod
+    def competition_registered(
+        wallet_address: str | None = None,
+        competition_status: dict[str, object] | None = None,
+    ) -> bool:
+        return CompetitionRegistrationStatusService.is_registered(wallet_address, competition_status)

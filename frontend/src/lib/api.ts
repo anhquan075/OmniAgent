@@ -7,6 +7,11 @@ export const getApiUrl = (path: string): string => {
 let csrfToken: string | null = null;
 let sessionPromise: Promise<string> | null = null;
 
+export const resetApiSession = () => {
+  csrfToken = null;
+  sessionPromise = null;
+};
+
 export const ensureApiSession = async (): Promise<string> => {
   if (csrfToken) return csrfToken;
   if (sessionPromise) return sessionPromise;
@@ -35,19 +40,31 @@ export const ensureApiSession = async (): Promise<string> => {
 
 export const apiFetch = async (path: string, init: RequestInit = {}) => {
   const method = (init.method || 'GET').toUpperCase();
-  const headers = new Headers(init.headers);
+  const needsSession = path.startsWith('/api/') && path !== '/api/session';
 
-  if (path.startsWith('/api/') && path !== '/api/session') {
-    const token = await ensureApiSession();
-    if (!['GET', 'HEAD'].includes(method)) {
-      headers.set('X-CSRF-Token', token);
+  const buildHeaders = async () => {
+    const headers = new Headers(init.headers);
+    if (needsSession) {
+      const token = await ensureApiSession();
+      if (!['GET', 'HEAD'].includes(method)) {
+        headers.set('X-CSRF-Token', token);
+      }
     }
-  }
+    return headers;
+  };
 
-  return fetch(getApiUrl(path), {
+  const request = async () => fetch(getApiUrl(path), {
     ...init,
     method,
-    headers,
+    headers: await buildHeaders(),
     credentials: 'include',
   });
+
+  const response = await request();
+  if (response.status !== 401 || !needsSession) {
+    return response;
+  }
+
+  resetApiSession();
+  return request();
 };

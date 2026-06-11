@@ -68,12 +68,18 @@ export function proofCheckEvidence(key: string, state: Payload): EvidencePayload
   }
   if (key === "competitionRegistered") {
     const txLink = bscTxLink(registration.txHash);
+    const statusValid = registration.statusProof?.valid === true;
     return {
-      summary: registration.txHash ? "Competition registration proof is present in the ledger." : "Competition registration proof is not present in the current snapshot.",
+      summary: statusValid
+        ? "Competition registration is verified by the live contract status surface."
+        : registration.txHash
+          ? "Competition registration proof is present in the ledger."
+          : "Competition registration proof is not present in the current snapshot.",
       rows: [
         { label: "Wallet", value: text(registration.walletAddress ?? wallet.walletAddress, "agent wallet") },
         { label: "Contract", value: text(registration.competitionContractAddress ?? wallet.competitionContractAddress, "competition contract") },
-        { label: "Tx", value: text(registration.txHash, "no tx proof") },
+        { label: "Source", value: text(registration.source, statusValid ? "competition status" : "proof sync") },
+        { label: "Tx", value: text(registration.txHash, statusValid ? "status proof" : "no tx proof") },
       ],
       links: [txLink, bscAddressLink(registration.walletAddress ?? wallet.walletAddress)].filter(Boolean) as EvidenceLink[],
     };

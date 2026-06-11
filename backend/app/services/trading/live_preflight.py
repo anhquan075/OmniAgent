@@ -6,7 +6,7 @@ from app.services.cmc.agent_hub import CmcAgentHubClient
 from app.services.cmc.agent_hub_tools import CmcAgentHubToolClient
 from app.services.cmc.signal_config import CmcSignalConfigService
 from app.services.agent.cockpit import AgentCockpitService
-from app.services.trading.registration import CompetitionRegistrationService
+from app.services.trading.registration_status import CompetitionRegistrationStatusService
 from app.services.trading.funded_strategy import FundedStrategyService
 from app.services.twak.bridge import TrustWalletBridge
 from app.services.wallet.agent_wallet import AgentWalletService
@@ -22,6 +22,7 @@ class LivePreflightService:
         capital = await CapitalReadinessService.get_capital_readiness(wallet_address)
         funded_strategy = LivePreflightService.build_funded_strategy(capital, cmc)
         cmc_agent_hub_signal = await LivePreflightService.validate_cmc_agent_hub_signal_tool(funded_strategy, args)
+        competition_status = await AgentCockpitService.get_competition_status(wallet_address)
         skip_funded_cycle = bool(args.get("skipFundedCycle"))
         funded_cycle = {"_skipped": True} if skip_funded_cycle else await AutonomousTradingAgent.run_autonomous_cycle({
             **funded_strategy,
@@ -32,7 +33,7 @@ class LivePreflightService:
             wallet=wallet,
             twak=await TrustWalletBridge.get_trust_wallet_status(),
             sdk=BnbAgentStatusService.get_agent_sdk_status_dict(),
-            competition=await AgentCockpitService.get_competition_status(),
+            competition=competition_status,
             capital=capital,
             cmc=cmc,
             cmc_agent_hub=cmc_agent_hub,
@@ -55,6 +56,7 @@ class LivePreflightService:
             "checks": checks,
             "fundedStrategy": funded_strategy,
             "cmcAgentHubSignal": cmc_agent_hub_signal,
+            "competitionStatus": competition_status,
         }
 
     @staticmethod
@@ -104,7 +106,10 @@ class LivePreflightService:
             LivePreflightService.check("bnb_agent_sdk", bool(sdk.get("ready")), str(sdk.get("reason") or "BNB Agent SDK is not ready.")),
             LivePreflightService.check(
                 "competition",
-                CompetitionRegistrationService.has_stored_registration_proof(str(wallet.get("walletAddress") or "")),
+                CompetitionRegistrationStatusService.is_registered(
+                    str(wallet.get("walletAddress") or ""),
+                    competition,
+                ),
                 "Agent wallet is not registered in the competition contract.",
             ),
             LivePreflightService.check("capital", bool(capital.get("ready")), str(capital.get("reason") or "Fund the agent wallet with gas and an in-scope asset.")),
