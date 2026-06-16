@@ -56,6 +56,22 @@ Also set the private CMC, TWAK, SDK, and x402 secrets from `backend/.env.example
 Recommended: attach a Railway volume mounted at `/data` so `TRADE_LEDGER_PATH` survives redeploys.
 Without the volume, the backend can still deploy and write the ledger inside the container filesystem, but that file is ephemeral and can be lost on redeploy.
 
+### Dashboard Data Parity
+
+Local dashboard history is read from the ignored runtime ledger at `backend/data/trade-ledger.jsonl`.
+Railway does not receive that file from git, so the deployed dashboard will only show records written to the configured `TRADE_LEDGER_PATH`.
+
+Use these checks when the Railway frontend looks sparse:
+
+```bash
+curl -c /tmp/omniagent.cookies https://<frontend-public-domain>.up.railway.app/api/session
+curl -b /tmp/omniagent.cookies https://<frontend-public-domain>.up.railway.app/api/dashboard/trades?limit=5
+curl -b /tmp/omniagent.cookies https://<frontend-public-domain>.up.railway.app/api/dashboard/snapshot?limit=5
+```
+
+`recordType: "trade"` rows are submitted or confirmed on-chain trades. `recordType: "cycle"` rows are guarded autonomous cycles with no tx hash yet; these are still useful dashboard evidence, but they are not execution proof.
+If local has historical `trade_executed` rows and Railway does not, attach the `/data` volume and import or preserve the production ledger there before comparing frontend parity.
+
 ## TWAK Bridge Variables
 
 Set a fixed `PORT` service variable so other services can reference it:
