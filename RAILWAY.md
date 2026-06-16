@@ -49,6 +49,7 @@ ALLOWED_FRONTEND_ORIGINS=https://<frontend-public-domain>.up.railway.app
 
 `BNB_AUTONOMOUS_LOOP_ENABLED=true` starts the backend loop automatically on service startup.
 Keep `BNB_AUTONOMOUS_LOOP_EXECUTE=false` for proof/smoke mode. Set it to `true` only when `BNB_TRADING_ENABLED=true`, `ALLOW_AGENT_RUN=true`, CMC signal proof, TWAK bridge, capital, registration, and emergency-pause recovery are all verified.
+`BNB_BUNDLED_REGISTRATION_PROOF_ENABLED=true` is an explicit fallback for the packaged public registration receipt when the production ledger volume is empty and BSC RPC log lookup is rate-limited. Leave it false if the deployment must rely only on live RPC/TWAK registration status.
 `OPENROUTER_API_KEY` must be set only on the backend service. The browser should never receive OpenRouter or CMC keys.
 `deepseek/deepseek-v4-pro` is the current recommended cheap/reasoning model; use `deepseek/deepseek-v4-flash` only when cost is more important than strategy quality.
 

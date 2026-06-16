@@ -78,7 +78,7 @@ class Settings(BaseSettings):
     bnb_competition_contract_address: str = "0x212c61b9b72c95d95bf29cf032f5e5635629aed5"
     bnb_pancake_swap_router_address: str = "0x10ED43C718714eb63d5aA57B78B54704E256024E"
     bnb_competition_registration_enabled: bool = False
-    bnb_bundled_registration_proof_enabled: bool = True
+    bnb_bundled_registration_proof_enabled: bool = False
     bnb_agent_sdk_enabled: bool = False
     bnb_agent_sdk_registration_enabled: bool = False
     bnb_agent_sdk_network: str = "bsc-mainnet"
