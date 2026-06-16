@@ -77,5 +77,5 @@ def test_rest_reason_reports_wrong_bridge_base_url() -> None:
 
     assert reason == (
         "TWAK REST bridge returned 404 for https://homniagent-twak-production.up.railway.app; "
-        "check TRUST_WALLET_AGENT_KIT_CONFIG baseUrl."
+        "check TRUST_WALLET_AGENT_KIT_BASE_URL."
     )

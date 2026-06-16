@@ -63,7 +63,7 @@ class CompetitionRegistrationService:
     async def register_via_rest(wallet_address: str, metadata_uri: str) -> dict[str, object]:
         bridge = TrustWalletConfigService.get_trust_wallet_bridge_config()
         if not bridge.base_url:
-            raise ValueError("TRUST_WALLET_AGENT_KIT_CONFIG must include baseUrl for TWAK REST registration.")
+            raise ValueError("TRUST_WALLET_AGENT_KIT_BASE_URL is required for TWAK REST registration.")
         status = await TrustWalletRestClient.call_rest_action(
             bridge.base_url,
             bridge.api_key,

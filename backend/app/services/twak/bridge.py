@@ -179,7 +179,7 @@ class TrustWalletBridge:
         if not reachable:
             status_code = status_codes[0] if status_codes else None
             if status_code == 404:
-                return f"TWAK REST bridge returned 404 for {base_url}; check TRUST_WALLET_AGENT_KIT_CONFIG baseUrl."
+                return f"TWAK REST bridge returned 404 for {base_url}; check TRUST_WALLET_AGENT_KIT_BASE_URL."
             return "TWAK REST bridge is not reachable"
         if expected_wallet and not observed_wallet and wallet_state == "unbound":
             return "TWAK REST bridge wallet is unbound; bind the local TWAK wallet or connect WalletConnect."

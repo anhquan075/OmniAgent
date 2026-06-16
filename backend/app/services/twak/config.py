@@ -52,10 +52,12 @@ class TrustWalletConfigService:
         return TrustWalletBridgeConfig(
             mode=settings.trust_wallet_agent_kit_mode,
             enabled=settings.trust_wallet_agent_kit_mode != "disabled",
-            base_url=TrustWalletConfigService.normalize_base_url(raw.get("baseUrl") or raw.get("base_url")),
-            api_key=str(raw.get("apiKey") or raw.get("api_key") or "") or None,
-            timeout_ms=int(raw.get("timeoutMs") or raw.get("timeout_ms") or 30_000),
-            command=str(raw.get("command") or "twak"),
+            base_url=TrustWalletConfigService.normalize_base_url(
+                settings.trust_wallet_agent_kit_base_url or raw.get("baseUrl") or raw.get("base_url"),
+            ),
+            api_key=settings.trust_wallet_agent_kit_api_key or str(raw.get("apiKey") or raw.get("api_key") or "") or None,
+            timeout_ms=settings.trust_wallet_agent_kit_timeout_ms or int(raw.get("timeoutMs") or raw.get("timeout_ms") or 30_000),
+            command=settings.trust_wallet_agent_kit_command or str(raw.get("command") or "twak"),
             access_id=settings.tw_access_id,
             hmac_secret=settings.tw_hmac_secret,
         )

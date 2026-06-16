@@ -73,10 +73,11 @@ The proof layer produces an 8-check scorecard and a 7-state trade work order FSM
 | `CMC_AGENT_HUB_API_KEY` | Yes | CoinMarketCap Agent Hub MCP |
 | `TW_ACCESS_ID` | Yes | Trust Wallet Agent Kit access ID |
 | `TW_HMAC_SECRET` | Yes | Trust Wallet Agent Kit HMAC secret |
-| `TRUST_WALLET_AGENT_KIT_CONFIG` | Yes | TWAK wallet config JSON |
+| `TRUST_WALLET_AGENT_KIT_BASE_URL` | Yes | TWAK REST bridge URL |
 | `OPENROUTER_API_KEY` | No | LLM advisor (deepseek/deepseek-v4-pro) |
 
 Never commit secrets. Use `backend/.env` locally; use deployment secrets in production.
+`TRUST_WALLET_AGENT_KIT_CONFIG` JSON is still supported for compatibility, but direct TWAK env vars take precedence.
 
 ---
 

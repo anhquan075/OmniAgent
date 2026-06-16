@@ -108,7 +108,7 @@ class TradeExecutionService:
     @staticmethod
     async def execute_via_rest(bridge: object, args: dict[str, object], simulation: dict[str, object]) -> dict[str, object]:
         if not bridge.base_url:
-            raise ValueError("TRUST_WALLET_AGENT_KIT_CONFIG must include baseUrl for TWAK REST execution.")
+            raise ValueError("TRUST_WALLET_AGENT_KIT_BASE_URL is required for TWAK REST execution.")
         payload = await TrustWalletRestClient.call_rest_action(
             bridge.base_url,
             bridge.api_key,

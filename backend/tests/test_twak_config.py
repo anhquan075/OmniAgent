@@ -30,6 +30,46 @@ def test_public_host_only_bridge_url_defaults_to_https(monkeypatch) -> None:
     assert config.base_url == "https://omniagent-twak-production.up.railway.app"
 
 
+def test_direct_bridge_url_env_works_without_json(monkeypatch) -> None:
+    monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_MODE", "rest")
+    monkeypatch.delenv("TRUST_WALLET_AGENT_KIT_CONFIG", raising=False)
+    monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_BASE_URL", "omniagent-twak-production.up.railway.app/")
+
+    config = TrustWalletConfigService.get_trust_wallet_bridge_config()
+
+    assert config.base_url == "https://omniagent-twak-production.up.railway.app"
+
+
+def test_direct_bridge_url_env_overrides_json(monkeypatch) -> None:
+    monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_MODE", "rest")
+    monkeypatch.setenv(
+        "TRUST_WALLET_AGENT_KIT_CONFIG",
+        bridge_config_for("homniagent-twak-production.up.railway.app/"),
+    )
+    monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_BASE_URL", "omniagent-twak-production.up.railway.app/")
+
+    config = TrustWalletConfigService.get_trust_wallet_bridge_config()
+
+    assert config.base_url == "https://omniagent-twak-production.up.railway.app"
+
+
+def test_direct_bridge_runtime_env_overrides_json(monkeypatch) -> None:
+    monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_MODE", "rest")
+    monkeypatch.setenv(
+        "TRUST_WALLET_AGENT_KIT_CONFIG",
+        json.dumps({"apiKey": "json-key", "timeoutMs": 1_000, "command": "json-twak"}),
+    )
+    monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_API_KEY", "env-key")
+    monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_TIMEOUT_MS", "45")
+    monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_COMMAND", "env-twak")
+
+    config = TrustWalletConfigService.get_trust_wallet_bridge_config()
+
+    assert config.api_key == "env-key"
+    assert config.timeout_ms == 45
+    assert config.command == "env-twak"
+
+
 def test_private_railway_bridge_url_defaults_to_http(monkeypatch) -> None:
     monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_MODE", "rest")
     monkeypatch.setenv(
