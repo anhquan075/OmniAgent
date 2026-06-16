@@ -3,15 +3,14 @@ from datetime import datetime, timezone
 
 from app.core.settings import get_settings
 from app.services.shared.ledger import TradeLedger
+from app.services.trading.bundled_registration_proof import BundledRegistrationProof
 from app.services.twak.config import TrustWalletConfigService
 from app.services.twak.cli import TrustWalletCliClient
 from app.services.twak.rest import TrustWalletRestClient
 from app.services.wallet.agent_wallet import AgentWalletService
-
 ADDRESS_RE = re.compile(r"^0x[a-fA-F0-9]{40}$")
 TX_RE = re.compile(r"^0x[a-fA-F0-9]{64}$")
 URI_RE = re.compile(r"^(ipfs://[A-Za-z0-9._:/-]+|https://[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+)$")
-
 class CompetitionRegistrationService:
     @staticmethod
     def build_registration_instructions(wallet_address: str, metadata_uri: str) -> dict[str, object]:
@@ -116,9 +115,7 @@ class CompetitionRegistrationService:
             "registered": True,
             "ledgerProofStored": False,
             "ledgerProofRequired": False,
-            "reason": (
-                "TWAK reports this wallet is already registered; live execution can use contract status proof."
-            ),
+            "reason": "TWAK reports this wallet is already registered; live execution can use contract status proof.",
             "participant": status.get("participant"),
             "deadline": status.get("deadline"),
             "bridgeMode": bridge_mode,
@@ -159,7 +156,8 @@ class CompetitionRegistrationService:
     def stored_registration_proof(wallet_address: str | None = None) -> dict[str, object] | None:
         settings = get_settings()
         expected_wallet = str(wallet_address or AgentWalletService.get_wallet_data().get("walletAddress") or "")
-        events = TradeLedger._read_events(settings.trade_ledger_path)
+        bundled = BundledRegistrationProof.events() if settings.bnb_bundled_registration_proof_enabled else []
+        events = [*bundled, *TradeLedger._read_events(settings.trade_ledger_path)]
         for event in reversed(events):
             if not isinstance(event, dict) or event.get("eventType") != "competition_registered":
                 continue

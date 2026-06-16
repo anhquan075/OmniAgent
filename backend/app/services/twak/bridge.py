@@ -69,11 +69,16 @@ class TrustWalletBridge:
         probes = [await TrustWalletBridge.probe_rest_actions(config)]
         actions = TrustWalletBridge.rest_action_names(probes[0])
         best_payload: dict[str, object] = {}
+        wallet_state: str | None = None
         for action, arguments in (("get_wallet_status", {}), ("get_address", {"chain": "bsc"})):
             probe = await TrustWalletBridge.probe_rest_action(config, action, arguments)
             probes.append(probe)
-            if action == "get_address" and isinstance(probe.get("payload"), dict):
-                best_payload = probe["payload"]
+            payload = probe.get("payload")
+            if isinstance(payload, dict):
+                if isinstance(payload.get("state"), str):
+                    wallet_state = payload["state"]
+                if action == "get_address" or not best_payload:
+                    best_payload = payload
         reachable = any(bool(probe.get("ok")) for probe in probes)
         observed_wallet = TrustWalletBridge.extract_wallet_address(best_payload)
         wallet_validated = bool(expected_wallet and observed_wallet and observed_wallet.lower() == expected_wallet.lower())
@@ -91,7 +96,9 @@ class TrustWalletBridge:
             "observedWallet": observed_wallet,
             "actions": actions,
             "requiredActions": ["swap"],
-            "reason": TrustWalletBridge.rest_reason(reachable, expected_wallet, observed_wallet, wallet_validated, actions_validated),
+            "reason": TrustWalletBridge.rest_reason(
+                reachable, expected_wallet, observed_wallet, wallet_validated, actions_validated, wallet_state,
+            ),
             "probes": probes,
         }
 
@@ -151,9 +158,12 @@ class TrustWalletBridge:
         observed_wallet: str | None,
         wallet_validated: bool,
         actions_validated: bool,
+        wallet_state: str | None = None,
     ) -> str | None:
         if not reachable:
             return "TWAK REST bridge is not reachable"
+        if expected_wallet and not observed_wallet and wallet_state == "unbound":
+            return "TWAK REST bridge wallet is unbound; bind the local TWAK wallet or connect WalletConnect."
         if expected_wallet and not observed_wallet:
             return "TWAK REST bridge did not expose a wallet address"
         if expected_wallet and observed_wallet and not wallet_validated:

@@ -20,6 +20,9 @@ class CompetitionRegistrationStatusService:
             rpc_status = await CompetitionRegistrationRpcStatusService.get_rpc_competition_status(wallet_address)
             if CompetitionRegistrationStatusService.status_registration_proof(wallet_address, rpc_status):
                 return rpc_status
+            stored_status = CompetitionRegistrationStatusService.stored_proof_status(wallet_address, rpc_status)
+            if stored_status:
+                return stored_status
             if not twak_status or twak_status.get("ready") is False:
                 return rpc_status or twak_status
         return twak_status
@@ -75,6 +78,30 @@ class CompetitionRegistrationStatusService:
             wallet_address,
             competition_status,
         ) is not None
+
+    @staticmethod
+    def stored_proof_status(
+        wallet_address: str | None,
+        competition_status: dict[str, object] | None,
+    ) -> dict[str, object] | None:
+        proof = CompetitionRegistrationStatusService.current_registration_proof(wallet_address, competition_status)
+        if not proof:
+            return None
+        payload = proof.get("payload") if isinstance(proof.get("payload"), dict) else {}
+        receipt = payload.get("receiptProof") if isinstance(payload.get("receiptProof"), dict) else {}
+        return {
+            "source": "stored-registration-proof",
+            "ready": True,
+            "registered": True,
+            "participant": payload.get("walletAddress") or wallet_address,
+            "competitionContractAddress": payload.get("competitionContractAddress"),
+            "chainId": payload.get("chainId"),
+            "txHash": proof.get("txHash") or payload.get("txHash"),
+            "blockNumber": receipt.get("blockNumber"),
+            "eventTopic": receipt.get("eventTopic"),
+            "statusProof": {"valid": True, "source": "stored-registration-proof"},
+            "fallbackFrom": competition_status,
+        }
 
     @staticmethod
     def status_registration_proof(

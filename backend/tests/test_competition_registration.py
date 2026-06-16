@@ -93,6 +93,19 @@ def test_old_registration_proof_with_valid_receipt_still_unlocks_live_execution(
     get_settings.cache_clear()
 
 
+def test_bundled_registration_proof_unlocks_empty_runtime_ledger(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    monkeypatch.setenv("BNB_BUNDLED_REGISTRATION_PROOF_ENABLED", "true")
+    get_settings.cache_clear()
+
+    proof = CompetitionRegistrationService.stored_registration_proof(REGISTERED_WALLET)
+
+    assert proof is not None
+    assert proof["txHash"] == "0xc9e4e4ca69156d20da4f8b5f343ee1354dfac72c40363d8e6d32b51f712c3cf4"
+    assert REGISTRATION_BLOCKER not in execution_blockers(monkeypatch)
+    get_settings.cache_clear()
+
+
 def test_live_competition_status_unlocks_live_execution_without_jsonl(monkeypatch, tmp_path) -> None:
     ledger_path = tmp_path / "ledger.jsonl"
     monkeypatch.setenv("TRADE_LEDGER_PATH", str(ledger_path))
@@ -178,6 +191,36 @@ def test_rpc_competition_status_proves_registration_without_jsonl(monkeypatch, t
     assert status["source"] == "bsc-rpc"
     assert status["registered"] is True
     assert not ledger_path.exists()
+    assert REGISTRATION_BLOCKER not in execution_blockers(monkeypatch, status)
+    get_settings.cache_clear()
+
+
+def test_rpc_limit_uses_bundled_registration_proof(monkeypatch, tmp_path) -> None:
+    async def fake_rpc_call(method: str, params: list[object]) -> object:
+        raise ValueError("limit exceeded")
+
+    async def fake_twak_status() -> None:
+        return None
+
+    monkeypatch.setattr(
+        "app.services.trading.registration_status.CompetitionRegistrationStatusService.get_twak_competition_status",
+        fake_twak_status,
+    )
+    monkeypatch.setattr(
+        "app.services.trading.registration_rpc_status.CompetitionRegistrationRpcStatusService.rpc_call",
+        fake_rpc_call,
+    )
+    monkeypatch.setenv("BNB_BUNDLED_REGISTRATION_PROOF_ENABLED", "true")
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    get_settings.cache_clear()
+
+    status = asyncio.run(
+        CompetitionRegistrationStatusService.get_competition_status(REGISTERED_WALLET)
+    )
+
+    assert status["source"] == "stored-registration-proof"
+    assert status["registered"] is True
+    assert status["fallbackFrom"]["reason"] == "limit exceeded"
     assert REGISTRATION_BLOCKER not in execution_blockers(monkeypatch, status)
     get_settings.cache_clear()
 

@@ -65,15 +65,17 @@ class CmcAgentHubToolClient:
             )
             CmcAgentHubToolClient.log_cmc_tool(payload)
             return payload
+        parsed_content = CmcAgentHubToolClient.parse_tool_content(result)
+        tool_error = CmcAgentHubToolClient.parsed_error_reason(parsed_content)
         payload = CmcAgentHubToolClient.call_payload(
             configured=True,
             reachable=True,
-            ready=True,
+            ready=tool_error is None,
             endpoint=endpoint,
             tool_name=tool_name,
-            reason=None,
+            reason=tool_error,
             result=result,
-            parsed_content=CmcAgentHubToolClient.parse_tool_content(result),
+            parsed_content=parsed_content,
         )
         CmcAgentHubToolClient.log_cmc_tool(payload)
         return payload
@@ -113,6 +115,32 @@ class CmcAgentHubToolClient:
             except json.JSONDecodeError:
                 parsed.append(text)
         return parsed or None
+
+    @staticmethod
+    def parsed_error_reason(value: object) -> str | None:
+        if isinstance(value, list):
+            for item in value[:16]:
+                reason = CmcAgentHubToolClient.parsed_error_reason(item)
+                if reason:
+                    return reason
+            return None
+        if isinstance(value, dict):
+            error = value.get("error")
+            if isinstance(error, dict):
+                message = str(error.get("message") or error.get("reason") or "").strip()
+                code = str(error.get("code") or "").strip()
+                prefix = f"CMC Agent Hub error {code}: " if code else "CMC Agent Hub error: "
+                return prefix + (message or "Tool returned an error payload.")
+            status = str(value.get("status") or "").strip().lower()
+            if status == "error":
+                message = str(value.get("message") or value.get("reason") or "").strip()
+                return message or "CMC Agent Hub tool returned an error payload."
+            return None
+        if isinstance(value, str):
+            lowered = value.lower()
+            if "credit limit" in lowered or "rate limit" in lowered:
+                return value.strip()
+        return None
 
     @staticmethod
     def call_payload(

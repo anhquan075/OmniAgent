@@ -36,6 +36,7 @@ BNB_AUTONOMOUS_LOOP_SYMBOL=CAKE
 BNB_AUTONOMOUS_LOOP_SIDE=buy
 BNB_AUTONOMOUS_LOOP_AMOUNT_USD=25
 BNB_AUTONOMOUS_LOOP_SLIPPAGE_BPS=50
+BNB_BUNDLED_REGISTRATION_PROOF_ENABLED=true
 BNB_STRATEGY_ADVISOR_ENABLED=true
 BNB_STRATEGY_REQUIRE_LLM_FOR_LIVE=false
 BNB_STRATEGY_MIN_CONFIDENCE=0.62
@@ -84,6 +85,7 @@ WALLET_PASSWORD=<sealed secret, if the TWAK wallet requires one>
 ```
 
 The bridge startup also accepts `TW_ACCESS_ID` / `TW_HMAC_SECRET` and maps them to TWAK's expected env names, but prefer `TWAK_*` on the bridge service. The backend service still uses `TW_ACCESS_ID` / `TW_HMAC_SECRET`; set the backend `TW_HMAC_SECRET` to the same value as bridge `TWAK_HMAC_SECRET`.
+If `bnb_trust_wallet_status` reports `state: "unbound"`, the bridge is reachable but no local TWAK wallet is bound. Create or restore the TWAK wallet in the bridge service storage, set `WALLET_PASSWORD`, and confirm `twak wallet status --json` reports the same address configured in `TWAK_AGENT_WALLET` / `ROBOT_FLEET_AGENT_WALLET`.
 
 Do not expose a public Railway domain for this service. The backend should reach it only over Railway private networking.
 
