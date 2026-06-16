@@ -6,6 +6,7 @@ import httpx
 from app.core.settings import get_settings
 from app.services.trading.registration import CompetitionRegistrationService
 from app.services.trading.registration import TX_RE
+from app.services.trading.registration_proof_lookup import RegistrationProofLookup
 from app.services.trading.registration_rpc_status import CompetitionRegistrationRpcStatusService
 from app.services.twak.cli import TrustWalletCliClient
 from app.services.twak.config import TrustWalletConfigService
@@ -138,6 +139,15 @@ class CompetitionRegistrationStatusService:
         if chain_id is not None and chain_id != settings.bnb_chain_id:
             return None
         tx_hash = CompetitionRegistrationStatusService.valid_tx_hash(status.get("txHash") or status.get("hash"))
+        stored = (
+            RegistrationProofLookup.find(expected_wallet, include_bundled=True)
+            if expected_wallet and not tx_hash else None
+        )
+        payload = stored.get("payload") if isinstance((stored or {}).get("payload"), dict) else {}
+        receipt = payload.get("receiptProof") if isinstance(payload.get("receiptProof"), dict) else {}
+        tx_hash = tx_hash or CompetitionRegistrationStatusService.valid_tx_hash(
+            (stored or {}).get("txHash") or payload.get("txHash")
+        )
         explorer = settings.bnb_explorer_url.rstrip("/")
         return {
             "source": status.get("source") or "competition-status",
@@ -149,6 +159,7 @@ class CompetitionRegistrationStatusService:
             "walletAddress": participant or expected_wallet or None,
             "competitionContractAddress": contract or settings.bnb_competition_contract_address,
             "chainId": chain_id or settings.bnb_chain_id,
+            "receiptProof": receipt or None,
             "checkedAt": datetime.now(timezone.utc).isoformat(),
             "statusProof": {
                 "valid": True,

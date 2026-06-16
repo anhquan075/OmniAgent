@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from app.core.settings import get_settings
 from app.services.shared.ledger import TradeLedger
-from app.services.trading.bundled_registration_proof import BundledRegistrationProof
+from app.services.trading.registration_proof_lookup import RegistrationProofLookup
 from app.services.twak.config import TrustWalletConfigService
 from app.services.twak.cli import TrustWalletCliClient
 from app.services.twak.rest import TrustWalletRestClient
@@ -154,30 +154,7 @@ class CompetitionRegistrationService:
 
     @staticmethod
     def stored_registration_proof(wallet_address: str | None = None) -> dict[str, object] | None:
-        settings = get_settings()
-        expected_wallet = str(wallet_address or AgentWalletService.get_wallet_data().get("walletAddress") or "")
-        bundled = BundledRegistrationProof.events() if settings.bnb_bundled_registration_proof_enabled else []
-        events = [*bundled, *TradeLedger._read_events(settings.trade_ledger_path)]
-        for event in reversed(events):
-            if not isinstance(event, dict) or event.get("eventType") != "competition_registered":
-                continue
-            payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
-            tx_hash = str(event.get("txHash") or payload.get("txHash") or "")
-            contract_address = str(payload.get("competitionContractAddress") or "")
-            chain_id = int(payload.get("chainId") or 0)
-            proof_wallet = str(payload.get("walletAddress") or "")
-            if not TX_RE.match(tx_hash):
-                continue
-            if expected_wallet and not CompetitionRegistrationService.same_address(proof_wallet, expected_wallet):
-                continue
-            if not CompetitionRegistrationService.same_address(contract_address, settings.bnb_competition_contract_address):
-                continue
-            if chain_id != settings.bnb_chain_id:
-                continue
-            if not CompetitionRegistrationService.registration_receipt_valid(payload):
-                continue
-            return event
-        return None
+        return RegistrationProofLookup.find(wallet_address)
 
     @staticmethod
     def has_stored_registration_proof(wallet_address: str | None = None) -> bool:

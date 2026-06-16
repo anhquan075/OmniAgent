@@ -21,6 +21,7 @@ import {
 } from './quant-terminal-widgets';
 import { DecisionSummary } from './quant-terminal-market-panels';
 import { registrationPnlView } from './pnl-metrics';
+import { proofLogEvents } from './chain-tx-events';
 import { apiFetch } from '../../lib/api';
 
 type Payload = Record<string, any>;
@@ -101,7 +102,7 @@ export function BnbTradingAgentDashboard() {
   const nextRunTime = timeOnly(autonomousLoop.nextRunAt);
   const mode = offline ? 'Offline' : agentLoopEnabled ? 'Active' : signerValidated ? 'Armed' : 'Live';
   const loopMode = offline ? 'backend session' : agentLoopEnabled ? '24/7 live' : nextRunTime ? `cycle ${nextRunTime}` : 'policy live';
-  const txLogEvents = state.liveProofBundle?.txEvents?.length ? state.liveProofBundle.txEvents : ledgerEvents;
+  const txLogEvents = proofLogEvents(state, ledgerEvents);
   const walletAddress = wallet.walletAddress ? String(wallet.walletAddress) : '';
   const pnl = registrationPnlView(state.ledger);
   const walletLabel = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : offline ? 'offline' : 'syncing';
