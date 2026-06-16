@@ -106,6 +106,12 @@ test.describe('BNB trading dashboard', () => {
     await expect(page.getByText('erc8004+erc8183').first()).toBeVisible();
     await expect(page.getByText('Replay Risk Report').first()).toBeVisible();
     await expect(page.getByText('Ledger Memory').first()).toBeVisible();
+    await expect(page.getByText('Agent Activity History').first()).toBeVisible();
+    await expect(page.getByText('1 cycles').first()).toBeVisible();
+    await expect(page.locator('.executed-trade-summary')).toContainText('Trades0');
+    await expect(page.locator('.executed-trade-summary')).toContainText('Cycles1');
+    await expect(page.getByText('guarded cycle').first()).toBeVisible();
+    await expect(page.locator('.executed-trade-list a[href*="bscscan.com/tx/"]')).toHaveCount(0);
     await expect(page.locator('.reasoning-advisory-card')).toHaveCount(4);
 
     const cmcProof = page.locator('.proof-check-detail').filter({ hasText: 'CMC Signal Verified' });
@@ -172,7 +178,26 @@ async function routeMockedRuntime(page: import('@playwright/test').Page) {
     });
   });
   await page.route('**/api/dashboard/trades?**', async route => {
-    await route.fulfill({ json: { status: 'ok', trades: [] } });
+    await route.fulfill({
+      json: {
+        status: 'ok',
+        trades: [{
+          recordType: 'cycle',
+          executionKind: 'guarded_cycle',
+          tradeIntentId: 'intent-cycle',
+          txHash: null,
+          status: 'blocked',
+          eventType: 'autonomous_cycle_completed',
+          symbol: 'CAKE',
+          side: 'buy',
+          amountUsd: 25,
+          createdAt: '2026-06-16T11:34:04.257797+00:00',
+        }],
+        count: 1,
+        total: 1,
+        recordCounts: { trade: 0, cycle: 1 },
+      },
+    });
   });
   await page.route('**/api/dashboard/snapshot?**', async route => {
     await route.fulfill({ json: mockedRuntimeSnapshot() });

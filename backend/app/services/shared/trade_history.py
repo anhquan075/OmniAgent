@@ -1,17 +1,11 @@
 from datetime import datetime, timezone
 from typing import Any
-
 from app.core.settings import get_settings
 from app.services.shared.ledger import TradeLedger
 from app.services.shared.trade_pnl import TradePnlService
 
-
 class TradeHistoryService:
-    TRADE_EVENT_TYPES = {
-        "trade_executed",
-        "trade_receipt_confirmed",
-        "autonomous_cycle_completed",
-    }
+    TRADE_EVENT_TYPES = {"trade_executed", "trade_receipt_confirmed", "autonomous_cycle_completed"}
 
     @staticmethod
     def get_executed_trades(limit: int = 100, offset: int = 0) -> dict[str, object]:
@@ -25,6 +19,10 @@ class TradeHistoryService:
             "trades": page,
             "count": len(page),
             "total": len(trades),
+            "recordCounts": {
+                "trade": sum(1 for record in trades if record.get("recordType") == "trade"),
+                "cycle": sum(1 for record in trades if record.get("recordType") == "cycle"),
+            },
             "limit": selected_limit,
             "offset": selected_offset,
             "hasMore": selected_offset + selected_limit < len(trades),
@@ -40,46 +38,52 @@ class TradeHistoryService:
                 continue
             payload = TradeHistoryService.payload(event)
             tx_hash = TradeHistoryService.tx_hash(event, payload)
+            intent_id = str(event.get("tradeIntentId") or "")
+            existing_key = intent_keys.get(intent_id) if intent_id else None
             if event_type == "autonomous_cycle_completed" and not tx_hash:
-                key = intent_keys.get(str(event.get("tradeIntentId") or ""))
-                if not key:
-                    continue
+                key = existing_key or f"cycle:{intent_id or event.get('createdAt') or len(records)}"
             else:
-                key = tx_hash or str(event.get("tradeIntentId") or event.get("createdAt") or len(records))
-            if event.get("tradeIntentId"):
-                intent_keys[str(event["tradeIntentId"])] = key
-            record = records.setdefault(key, TradeHistoryService.base_record(event, payload, tx_hash))
+                key = existing_key or tx_hash or str(
+                    event.get("tradeIntentId") or event.get("createdAt") or len(records)
+                )
+            if intent_id:
+                intent_keys[intent_id] = key
+            base = TradeHistoryService.base_record(event, payload, tx_hash, event_type)
+            record = records.setdefault(key, base)
             TradeHistoryService.merge_event(record, event, payload, event_type, tx_hash)
         return sorted(records.values(), key=TradeHistoryService.sort_key, reverse=True)
 
     @staticmethod
-    def base_record(event: dict[str, Any], payload: dict[str, Any], tx_hash: str | None) -> dict[str, object]:
+    def base_record(
+        event: dict[str, Any],
+        payload: dict[str, Any],
+        tx_hash: str | None,
+        event_type: str,
+    ) -> dict[str, object]:
         created_at = str(event.get("createdAt") or datetime.now(timezone.utc).isoformat())
+        is_trade = bool(tx_hash) or event_type in {"trade_executed", "trade_receipt_confirmed"}
         return {
+            "recordType": "trade" if is_trade else "cycle",
+            "executionKind": "onchain_trade" if is_trade else "guarded_cycle",
             "tradeIntentId": event.get("tradeIntentId"),
             "txHash": tx_hash,
-            "status": "submitted",
+            "status": "submitted" if is_trade else str(payload.get("status") or "guarded"),
             "eventType": event.get("eventType"),
             "symbol": payload.get("symbol"),
             "side": payload.get("side"),
             "amountUsd": payload.get("amountUsd"),
             "createdAt": created_at,
-            "executedAt": created_at,
+            "executedAt": created_at if is_trade else None,
             "confirmedAt": None,
             "updatedAt": created_at,
             "walletAddress": payload.get("walletAddress"),
             "bridgeMode": payload.get("bridgeMode"),
             "explorerUrl": TradeHistoryService.explorer_url(payload, tx_hash),
-            "cmcTool": None,
+            **dict.fromkeys((
+                "cmcTool", "receiptProofValid", "basisUsd", "pnlUsd", "pnlPct", "pnlSource",
+                "blockNumber", "from", "to",
+            ), None),
             "cmcServerVerified": False,
-            "receiptProofValid": None,
-            "basisUsd": None,
-            "pnlUsd": None,
-            "pnlPct": None,
-            "pnlSource": None,
-            "blockNumber": None,
-            "from": None,
-            "to": None,
             "sources": [],
         }
 
@@ -124,6 +128,8 @@ class TradeHistoryService:
             TradeHistoryService.prefer(record, "cmcTool", cmc_signal.get("toolName"))
             record["cmcServerVerified"] = bool(cmc_signal.get("serverVerified"))
         if event_type == "trade_receipt_confirmed":
+            record["recordType"] = "trade"
+            record["executionKind"] = "onchain_trade"
             proof = payload.get("proof") if isinstance(payload.get("proof"), dict) else {}
             record.update({
                 "status": "confirmed",
@@ -134,6 +140,8 @@ class TradeHistoryService:
                 "to": payload.get("to"),
             })
         elif event_type == "trade_executed":
+            record["recordType"] = "trade"
+            record["executionKind"] = "onchain_trade"
             record["status"] = "submitted" if record.get("status") != "confirmed" else record["status"]
             record["executedAt"] = created_at
         elif event_type == "autonomous_cycle_completed":

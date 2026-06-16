@@ -39,11 +39,25 @@ const statusClass = (status: unknown) => (
   `is-${text(status, 'submitted').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 );
 
+const displayStatus = (status: unknown, fallback: string) => {
+  const value = text(status, fallback).toLowerCase().replace(/[-_]+/g, ' ');
+  return /blocked|waiting|paused/.test(value) ? 'guarded' : value;
+};
+
 export function ExecutedTradeHistory({ history, loading }: { history?: Payload; loading?: boolean }) {
   const trades = Array.isArray(history?.trades) ? history.trades : [];
   const total = Number(history?.total ?? trades.length);
   const unavailable = history?.status === 'unavailable';
-  const countLabel = unavailable ? 'offline' : total ? `${total} trades` : loading ? 'syncing' : 'empty';
+  const visibleCycleCount = trades.filter((trade: Payload) => text(trade.recordType, '') === 'cycle').length;
+  const cycleCount = Number(history?.recordCounts?.cycle ?? visibleCycleCount);
+  const tradeCount = Number(
+    history?.recordCounts?.trade ?? trades.filter((trade: Payload) => text(trade.recordType, '') !== 'cycle').length,
+  );
+  const countLabel = unavailable
+    ? 'offline'
+    : total
+      ? cycleCount === total ? `${total} cycles` : `${total} records`
+      : loading ? 'syncing' : 'empty';
   const confirmedCount = trades.filter((trade: Payload) => text(trade.status, '') === 'confirmed').length;
   const proofCount = trades.filter((trade: Payload) => trade.receiptProofValid === true).length;
 
@@ -51,27 +65,30 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
     <section className="executed-trade-history-panel">
       <div className="executed-trade-head">
         <div>
-          <span>Backend execution</span>
-          <h3>Executed Trade History</h3>
+          <span>Backend ledger</span>
+          <h3>Agent Activity History</h3>
         </div>
         <b>{countLabel}</b>
       </div>
-      <div className="executed-trade-summary" aria-label="Executed trade summary">
-        <span><small>Confirmed</small><strong>{confirmedCount}</strong></span>
+      <div className="executed-trade-summary" aria-label="Agent activity summary">
+        <span><small>Trades</small><strong>{tradeCount}</strong></span>
         <span><small>Proof</small><strong>{proofCount}</strong></span>
-        <span><small>Source</small><strong>{unavailable ? 'offline' : 'ledger'}</strong></span>
+        <span><small>Cycles</small><strong>{cycleCount}</strong></span>
       </div>
-      <div className="executed-trade-list" aria-label="Backend executed trades">
+      <div className="executed-trade-list" aria-label="Backend agent activity">
         {trades.length ? trades.map((trade: Payload, index: number) => {
           const hash = text(trade.txHash, '');
-          const status = text(trade.status, 'submitted');
+          const isCycle = text(trade.recordType, hash ? 'trade' : 'cycle') === 'cycle';
+          const status = displayStatus(trade.status, isCycle ? 'guarded' : 'submitted');
           const proofValid = trade.receiptProofValid === true;
           const explorerUrl = bscTxUrl(hash);
-          const proofLabel = proofValid
-            ? 'proof valid'
-            : status === 'confirmed'
-              ? 'proof missing'
-              : 'tx submitted, proof pending';
+          const proofLabel = isCycle
+            ? 'guarded cycle'
+            : proofValid
+              ? 'proof valid'
+              : status === 'confirmed'
+                ? 'proof missing'
+                : 'tx submitted, proof pending';
           return (
             <article
               key={`${hash || trade.tradeIntentId || index}-${index}`}
@@ -80,7 +97,7 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
             >
               <div className="executed-trade-main">
                 <span>
-                  <small>{text(trade.side, 'backend trade')}</small>
+                  <small>{text(trade.side, isCycle ? 'agent cycle' : 'backend trade')}</small>
                   <strong>{text(trade.symbol, 'BSC')}</strong>
                 </span>
                 <span>
@@ -95,7 +112,9 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
               <div className="executed-trade-proof">
                 <span>
                   <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />
-                  {trade.cmcServerVerified ? text(trade.cmcTool, 'CMC verified') : text(trade.bridgeMode, 'ledger')}
+                  {trade.cmcServerVerified
+                    ? text(trade.cmcTool, 'CMC verified')
+                    : text(trade.bridgeMode, isCycle ? text(trade.eventType, 'cycle') : 'ledger')}
                 </span>
                 {hash && explorerUrl ? (
                   <a href={explorerUrl} target="_blank" rel="noreferrer" aria-label={`Open ${shortHash(hash)} on BscScan`}>
@@ -109,8 +128,8 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
         }) : (
           <div className="executed-trade-empty">
             <HistoryIcon className="h-4 w-4" aria-hidden="true" />
-            <strong>{unavailable ? 'Trade history unavailable' : 'No backend trades recorded'}</strong>
-            <p>{unavailable ? text(history?.error, 'dashboard history sync failed') : 'Backend-executed swaps will appear after the ledger records a live tx.'}</p>
+            <strong>{unavailable ? 'Trade history unavailable' : 'No backend activity recorded'}</strong>
+            <p>{unavailable ? text(history?.error, 'dashboard history sync failed') : 'Guarded cycles and backend-executed swaps will appear after the ledger records activity.'}</p>
           </div>
         )}
       </div>
