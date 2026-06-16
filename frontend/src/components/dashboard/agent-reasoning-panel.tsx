@@ -1,6 +1,11 @@
 import { BrainCircuitIcon } from "lucide-react";
 import AgentVerdictSummary from "./agent-verdict-summary";
-import BrandMark from "./brand-mark";
+import {
+  buildAgentOutputReasoning,
+  buildMcpCallLog,
+} from "./agent-reasoning-json";
+import { MarketSignalProof } from "./market-signal-proof";
+import { ReasoningJsonPanel } from "./reasoning-json-panel";
 import {
   blockerLabel,
   decision,
@@ -8,10 +13,8 @@ import {
   MARKET_HUB_KEY,
   MARKET_SIGNAL_KEY,
   safeVisibleText,
-  signalLabel,
   SIGNER_SERVER_KEY,
   strategyLabel,
-  summarizeParsedContent,
   text,
   toolDisplayName,
   type Payload,
@@ -86,6 +89,15 @@ export function AgentReasoningPanel({
     loopEnabled ? "autonomous_loop" : "policy_monitor",
     "agent_snapshot",
   ]);
+  const agentOutputReasoning = buildAgentOutputReasoning({
+    state,
+    rows,
+    trace,
+    readyCount,
+    offline,
+    paused,
+  });
+  const mcpCallLog = buildMcpCallLog(state, tools);
 
   return (
     <section className="robot-core-panel agent-reasoning-panel flex min-h-0 flex-col overflow-x-hidden overflow-y-auto p-3">
@@ -135,6 +147,7 @@ export function AgentReasoningPanel({
           </div>
         </div>
       ) : null}
+      <ReasoningJsonPanel agentOutput={agentOutputReasoning} mcpLog={mcpCallLog} />
       <div className="reasoning-tools-block">
         <p>Tools used</p>
         <div>
@@ -149,27 +162,6 @@ export function AgentReasoningPanel({
         </div>
       </div>
     </section>
-  );
-}
-
-function MarketSignalProof({ signal }: { signal: Payload }) {
-  const toolCount = Number(signal.toolCount);
-  return (
-    <div className="market-signal-proof mt-2 overflow-hidden rounded-md border border-cyan-200/12 bg-cyan-200/[0.035] p-2">
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <p className="market-signal-proof-title text-[10px] uppercase text-cyan-100/52">
-          <BrandMark kind="cmc" />
-          Signal MCP
-        </p>
-        <span className={`rounded-sm border px-1.5 py-0.5 font-mono text-[9px] uppercase ${signal.ready ? "border-cyan-200/22 text-cyan-100" : "border-white/10 text-white/42"}`}>
-          {signal.ready ? signalLabel(signal) : "syncing"}
-        </span>
-      </div>
-      <p className="truncate font-mono text-[10px] text-white/58">{toolDisplayName(signal.toolName ?? (toolCount > 0 ? `${toolCount} tools discovered` : "no signal tool configured"))}</p>
-      <p className="mt-1 truncate text-[10px] text-white/38">
-        {signal.ready ? summarizeParsedContent(signal.parsedContent) : text(signal.reason, "market key sync")}
-      </p>
-    </div>
   );
 }
 
