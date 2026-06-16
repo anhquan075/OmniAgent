@@ -1,17 +1,17 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
 
 from app.core.settings import get_settings
 from app.services.cmc.quota_guard import CmcQuotaGuard
+from app.services.cmc.response_cache import CmcResponseCache
 
 CMC_KEY_REASON = (
     "CMC_AGENT_HUB_API_KEY, CMC_MCP_API_KEY, CMC_PRO_API_KEY, "
     "COINMARKETCAP_API_KEY, or X_CMC_PRO_API_KEY is not configured"
 )
-PRICE_CACHE_TTL = timedelta(seconds=45)
-_PRICE_CACHE: dict[tuple[str, ...], tuple[datetime, dict[str, object]]] = {}
+_PRICE_CACHE = CmcResponseCache()
 
 class CmcPriceService:
     @staticmethod
@@ -28,7 +28,7 @@ class CmcPriceService:
                 "reason": CMC_KEY_REASON,
             }
 
-        cache_key = tuple(selected)
+        cache_key = CmcResponseCache.key(settings.cmc_agent_hub_base_url, api_key, *selected)
         cached = CmcPriceService.cached_snapshot(cache_key)
         if cached:
             return cached
@@ -79,7 +79,7 @@ class CmcPriceService:
             "symbols": prices,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
-        _PRICE_CACHE[cache_key] = (datetime.now(timezone.utc), snapshot)
+        _PRICE_CACHE.set(cache_key, snapshot)
         return snapshot
 
     @staticmethod
@@ -95,14 +95,7 @@ class CmcPriceService:
 
     @staticmethod
     def cached_snapshot(cache_key: tuple[str, ...]) -> dict[str, object] | None:
-        cached = _PRICE_CACHE.get(cache_key)
-        if not cached:
-            return None
-        cached_at, payload = cached
-        if datetime.now(timezone.utc) - cached_at > PRICE_CACHE_TTL:
-            _PRICE_CACHE.pop(cache_key, None)
-            return None
-        return {**payload, "cached": True}
+        return _PRICE_CACHE.get(cache_key, get_settings().cmc_price_cache_ttl_sec)
 
     @staticmethod
     def unreachable_snapshot(symbols: list[str], fields: dict[str, object]) -> dict[str, object]:

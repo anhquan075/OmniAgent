@@ -105,3 +105,88 @@ def test_cmc_agent_hub_status_short_circuits_during_quota_cooldown(monkeypatch) 
     assert result["quotaLimited"] is True
     assert "Monthly credit limit reached" in str(result["reason"])
     get_settings.cache_clear()
+
+
+def test_cmc_agent_hub_status_caches_tool_list(monkeypatch) -> None:
+    calls: list[str] = []
+
+    async def fake_request(
+        endpoint: str,
+        api_key: str,
+        method: str,
+        params: dict[str, object],
+        session_id: str | None = None,
+        timeout_sec: int = 15,
+    ) -> dict[str, object]:
+        calls.append(method)
+        if method == "initialize":
+            return {"sessionId": "session-1"}
+        return {
+            "tools": [{
+                "name": "crypto_signal",
+                "description": "Return a trade signal.",
+                "inputSchema": {"type": "object"},
+            }]
+        }
+
+    async def fake_notification(*args: object, **kwargs: object) -> None:
+        return None
+
+    monkeypatch.setenv("CMC_MCP_API_KEY", "cmc-test-key")
+    get_settings.cache_clear()
+    monkeypatch.setattr(CmcAgentHubClient, "mcp_request", fake_request)
+    monkeypatch.setattr(CmcAgentHubClient, "mcp_notification", fake_notification)
+
+    first = asyncio.run(CmcAgentHubClient.get_cmc_agent_hub_status())
+    second = asyncio.run(CmcAgentHubClient.get_cmc_agent_hub_status())
+
+    assert calls == ["initialize", "tools/list"]
+    assert first["ready"] is True
+    assert second["cached"] is True
+    assert second["toolCount"] == 1
+    get_settings.cache_clear()
+
+
+def test_cmc_agent_hub_tool_call_caches_signal(monkeypatch) -> None:
+    calls: list[str] = []
+
+    async def fake_request(
+        endpoint: str,
+        api_key: str,
+        method: str,
+        params: dict[str, object],
+        session_id: str | None = None,
+        timeout_sec: int = 15,
+    ) -> dict[str, object]:
+        calls.append(method)
+        if method == "initialize":
+            return {"sessionId": "session-1"}
+        return {
+            "content": [{
+                "type": "text",
+                "text": '{"signal":"sell","symbol":"BNB"}',
+            }]
+        }
+
+    async def fake_notification(*args: object, **kwargs: object) -> None:
+        return None
+
+    monkeypatch.setenv("CMC_MCP_API_KEY", "cmc-test-key")
+    get_settings.cache_clear()
+    monkeypatch.setattr(CmcAgentHubClient, "mcp_request", fake_request)
+    monkeypatch.setattr(CmcAgentHubClient, "mcp_notification", fake_notification)
+
+    first = asyncio.run(CmcAgentHubToolClient.call_cmc_agent_hub_tool({
+        "toolName": "crypto_signal",
+        "arguments": {"symbol": "BNB", "side": "sell"},
+    }))
+    second = asyncio.run(CmcAgentHubToolClient.call_cmc_agent_hub_tool({
+        "toolName": "crypto_signal",
+        "arguments": {"side": "sell", "symbol": "BNB"},
+    }))
+
+    assert calls == ["initialize", "tools/call"]
+    assert first["ready"] is True
+    assert second["cached"] is True
+    assert second["parsedContent"] == [{"signal": "sell", "symbol": "BNB"}]
+    get_settings.cache_clear()

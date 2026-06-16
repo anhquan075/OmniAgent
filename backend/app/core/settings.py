@@ -108,6 +108,9 @@ class Settings(BaseSettings):
     cmc_skill_hub_mcp_url: str = "https://mcp.coinmarketcap.com/skill-hub/stream"
     cmc_skill_hub_tool_timeout_sec: int = 300
     cmc_quota_cooldown_sec: int = 3600
+    cmc_price_cache_ttl_sec: int = 90
+    cmc_agent_hub_status_cache_ttl_sec: int = 900
+    cmc_agent_hub_signal_cache_ttl_sec: int = 120
     cmc_agent_hub_signal_tool: str | None = None
     cmc_agent_hub_signal_args: str | None = None
     openrouter_api_key: str | None = None
