@@ -99,10 +99,19 @@ export function ExecutedTradeHistory({ history, walletLog, loading }: { history?
           const explorerUrl = bscTxUrl(hash);
           const observedWalletAddress = text(trade.observedWallet, '');
           const expectedWalletAddress = text(trade.expectedWallet ?? trade.configuredWallet, '');
+          const primaryLabel = isWalletRead
+            ? observedWalletAddress ? shortAddress(observedWalletAddress) : 'pending'
+            : text(trade.symbol, 'BSC');
           const walletUrl = bscAddressUrl(observedWalletAddress);
           const showExpectedWallet = isWalletRead
             && expectedWalletAddress
             && expectedWalletAddress.toLowerCase() !== observedWalletAddress.toLowerCase();
+          const sourceLabel = isWalletRead
+            ? text(trade.readSource, 'agent wallet read')
+            : trade.cmcServerVerified
+              ? text(trade.cmcTool, 'CMC verified')
+              : text(trade.bridgeMode, isCycle ? text(trade.eventType, 'cycle') : 'ledger');
+          const activityTimeLabel = timeLabel(trade.confirmedAt ?? trade.executedAt ?? trade.createdAt);
           const proofLabel = isWalletRead
             ? text(trade.reason, trade.walletValidated ? 'wallet validated' : 'wallet read guarded')
             : isCycle
@@ -115,13 +124,13 @@ export function ExecutedTradeHistory({ history, walletLog, loading }: { history?
           return (
             <article
               key={`${hash || trade.tradeIntentId || index}-${index}`}
-              className={`executed-trade-row ${statusClass(status)}`}
+              className={`executed-trade-row ${statusClass(status)}${isWalletRead ? ' is-wallet-read' : ''}`}
               style={{ animationDelay: `${index * 40}ms` }}
             >
               <div className="executed-trade-main">
                 <span>
                   <small>{text(trade.side, isWalletRead ? 'agent wallet' : isCycle ? 'agent cycle' : 'backend trade')}</small>
-                  <strong>{isWalletRead ? shortAddress(observedWalletAddress) : text(trade.symbol, 'BSC')}</strong>
+                  <strong title={primaryLabel}>{primaryLabel}</strong>
                 </span>
                 <span>
                   <small>{isWalletRead ? text(trade.bridgeMode, 'rest') : formatAmount(trade.amountUsd)}</small>
@@ -129,17 +138,13 @@ export function ExecutedTradeHistory({ history, walletLog, loading }: { history?
                 </span>
               </div>
               <div className="executed-trade-meta">
-                <span>{timeLabel(trade.confirmedAt ?? trade.executedAt ?? trade.createdAt)}</span>
-                <span>{proofLabel}</span>
+                <span title={activityTimeLabel}>{activityTimeLabel}</span>
+                <span title={proofLabel}>{proofLabel}</span>
               </div>
               <div className="executed-trade-proof">
-                <span>
+                <span className="executed-trade-source" title={sourceLabel}>
                   {isWalletRead ? <WalletIcon className="h-3 w-3" aria-hidden="true" /> : <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />}
-                  {isWalletRead
-                    ? text(trade.readSource, 'agent wallet read')
-                    : trade.cmcServerVerified
-                    ? text(trade.cmcTool, 'CMC verified')
-                    : text(trade.bridgeMode, isCycle ? text(trade.eventType, 'cycle') : 'ledger')}
+                  <span>{sourceLabel}</span>
                 </span>
                 {hash && explorerUrl ? (
                   <a href={explorerUrl} target="_blank" rel="noreferrer" aria-label={`Open ${shortHash(hash)} on BscScan`}>
@@ -152,7 +157,7 @@ export function ExecutedTradeHistory({ history, walletLog, loading }: { history?
                     <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
                   </a>
                 ) : null}
-                {showExpectedWallet ? <span>expected {shortAddress(expectedWalletAddress)}</span> : null}
+                {showExpectedWallet ? <span title={`expected ${expectedWalletAddress}`}>expected {shortAddress(expectedWalletAddress)}</span> : null}
               </div>
             </article>
           );
