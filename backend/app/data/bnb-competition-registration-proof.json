@@ -1,0 +1,32 @@
+{
+  "eventType": "competition_registered",
+  "txHash": "0xc9e4e4ca69156d20da4f8b5f343ee1354dfac72c40363d8e6d32b51f712c3cf4",
+  "createdAt": "2026-06-07T04:56:13.485959+00:00",
+  "payload": {
+    "network": "bsc",
+    "chainId": 56,
+    "walletAddress": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
+    "competitionContractAddress": "0x212c61b9b72c95d95bf29cf032f5e5635629aed5",
+    "metadataUri": "ipfs://omniagent",
+    "submitted": true,
+    "status": "submitted",
+    "txHash": "0xc9e4e4ca69156d20da4f8b5f343ee1354dfac72c40363d8e6d32b51f712c3cf4",
+    "explorerUrl": "https://bscscan.com/tx/0xc9e4e4ca69156d20da4f8b5f343ee1354dfac72c40363d8e6d32b51f712c3cf4",
+    "bridgeMode": "manual-twak-cli",
+    "timestamp": "2026-06-07T04:56:13.484288+00:00",
+    "receiptProof": {
+      "valid": true,
+      "source": "bsc-rpc",
+      "blockNumber": 102615129,
+      "blockTimestamp": "2026-06-06T08:21:55Z",
+      "status": "0x1",
+      "from": "0x047fccc4b2c0058ecfcf331ca7590f227886fd25",
+      "to": "0x212c61b9b72c95d95bf29cf032f5e5635629aed5",
+      "input": "0x1aa3a008",
+      "gasUsed": 49132,
+      "eventAddress": "0x212c61b9b72c95d95bf29cf032f5e5635629aed5",
+      "eventTopic": "0x2d3734a8e47ac8316e500ac231c90a6e1848ca2285f40d07eaa52005e4b3a0e9",
+      "indexedWalletTopic": "0x000000000000000000000000047fccc4b2c0058ecfcf331ca7590f227886fd25"
+    }
+  }
+}

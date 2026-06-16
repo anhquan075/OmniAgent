@@ -918,6 +918,50 @@ def test_cmc_agent_hub_call_tool_invokes_mcp_tool(monkeypatch) -> None:
     get_settings.cache_clear()
 
 
+def test_cmc_agent_hub_call_tool_fails_closed_on_tool_error(monkeypatch) -> None:
+    from app.services.cmc import agent_hub_tools as cmc_agent_hub_tools
+
+    async def fake_request(
+        endpoint: str,
+        api_key: str,
+        method: str,
+        params: dict[str, object],
+        session_id: str | None = None,
+    ) -> dict[str, object]:
+        if method == "initialize":
+            return {"sessionId": "cmc-session"}
+        return {
+            "content": [{
+                "type": "text",
+                "text": json.dumps({"error": {"code": 1010, "message": "Monthly credit limit reached."}}),
+            }]
+        }
+
+    async def fake_notification(
+        endpoint: str,
+        api_key: str,
+        method: str,
+        params: dict[str, object],
+        session_id: str | None = None,
+    ) -> None:
+        return None
+
+    monkeypatch.setenv("CMC_MCP_API_KEY", "cmc-test-key")
+    get_settings.cache_clear()
+    monkeypatch.setattr(cmc_agent_hub_tools.CmcAgentHubClient, "mcp_request", fake_request)
+    monkeypatch.setattr(cmc_agent_hub_tools.CmcAgentHubClient, "mcp_notification", fake_notification)
+
+    result = asyncio.run(cmc_agent_hub_tools.CmcAgentHubToolClient.call_cmc_agent_hub_tool({
+        "toolName": "trending_crypto_narratives",
+        "arguments": {"symbol": "CAKE"},
+    }))
+
+    assert result["reachable"] is True
+    assert result["ready"] is False
+    assert result["reason"] == "CMC Agent Hub error 1010: Monthly credit limit reached."
+    get_settings.cache_clear()
+
+
 def test_cmc_price_snapshot_deduplicates_and_caches(monkeypatch) -> None:
     from app.services.cmc import prices as cmc
 
@@ -2183,6 +2227,36 @@ def test_trust_wallet_status_validates_rest_wallet(monkeypatch, tmp_path) -> Non
     assert result["actions"] == ["get_address", "swap"]
     assert result["requiredActions"] == ["swap"]
     assert result["observedWallet"] == "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"
+    get_settings.cache_clear()
+
+
+def test_trust_wallet_status_reports_unbound_rest_wallet(monkeypatch, tmp_path) -> None:
+    async def fake_probe_rest_actions(config: object) -> dict[str, object]:
+        return {
+            "path": "/actions",
+            "ok": True,
+            "statusCode": 200,
+            "payload": {"actions": [{"name": "get_wallet_status"}, {"name": "get_address"}, {"name": "swap"}]},
+        }
+
+    async def fake_probe_rest_action(config: object, action: str, arguments: dict[str, object]) -> dict[str, object]:
+        if action == "get_wallet_status":
+            return {"path": "/actions/get_wallet_status", "ok": True, "statusCode": 200, "payload": {"state": "unbound"}}
+        return {"path": f"/actions/{action}", "ok": False, "statusCode": None, "payload": None}
+
+    monkeypatch.setattr("app.services.twak.bridge.TrustWalletBridge.probe_rest_actions", fake_probe_rest_actions)
+    monkeypatch.setattr("app.services.twak.bridge.TrustWalletBridge.probe_rest_action", fake_probe_rest_action)
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_MODE", "rest")
+    monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_CONFIG", json.dumps({"baseUrl": "http://twak.local"}))
+    monkeypatch.setenv("ROBOT_FLEET_AGENT_WALLET", "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25")
+    get_settings.cache_clear()
+    client = TestClient(app)
+    csrf_token = client.get("/api/session").json()["csrfToken"]
+    result = parsed_tool_result(call_mcp(client, csrf_token, "bnb_trust_wallet_status", {}))
+    assert result["ready"] is False
+    assert result["walletValidated"] is False
+    assert result["reason"] == "TWAK REST bridge wallet is unbound; bind the local TWAK wallet or connect WalletConnect."
     get_settings.cache_clear()
 
 
