@@ -22,7 +22,13 @@ class TrustWalletBridge:
                 "command": config.command,
             }
         if not config.base_url:
-            return {**TrustWalletBridge.unavailable_status(config.mode, "TWAK REST bridge baseUrl is not configured"), "enabled": True}
+            return {
+                **TrustWalletBridge.unavailable_status(
+                    config.mode,
+                    "TRUST_WALLET_AGENT_KIT_BASE_URL is not configured for the TWAK REST bridge.",
+                ),
+                "enabled": True,
+            }
         return await TrustWalletBridge.probe_trust_wallet_rest(config, expected_wallet)
 
     @staticmethod

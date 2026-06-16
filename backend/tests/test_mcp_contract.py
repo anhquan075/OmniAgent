@@ -2335,7 +2335,7 @@ def test_execute_trade_blocks_when_twak_rest_surface_is_not_configured(monkeypat
         },
     ))
     assert result["status"] == "blocked"
-    assert "TWAK REST bridge baseUrl is not configured" in result["simulation"]["reason"]
+    assert "TRUST_WALLET_AGENT_KIT_BASE_URL is not configured" in result["simulation"]["reason"]
     get_settings.cache_clear()
 
 
