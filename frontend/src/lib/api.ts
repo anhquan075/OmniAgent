@@ -5,15 +5,18 @@ export const getApiUrl = (path: string): string => {
 };
 
 let csrfToken: string | null = null;
+let sessionExpiresAt = 0;
 let sessionPromise: Promise<string> | null = null;
+const SESSION_REFRESH_GRACE_MS = 10_000;
 
 export const resetApiSession = () => {
   csrfToken = null;
+  sessionExpiresAt = 0;
   sessionPromise = null;
 };
 
 export const ensureApiSession = async (): Promise<string> => {
-  if (csrfToken) return csrfToken;
+  if (csrfToken && Date.now() < sessionExpiresAt - SESSION_REFRESH_GRACE_MS) return csrfToken;
   if (sessionPromise) return sessionPromise;
 
   sessionPromise = fetch(getApiUrl('/api/session'), {
@@ -26,6 +29,7 @@ export const ensureApiSession = async (): Promise<string> => {
       }
       const body = await res.json();
       csrfToken = String(body.csrfToken || '');
+      sessionExpiresAt = Number(body.expiresAt || 0);
       if (!csrfToken) {
         throw new Error('API session did not return a CSRF token');
       }
