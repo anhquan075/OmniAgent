@@ -88,6 +88,10 @@ class Settings(BaseSettings):
     wallet_password: str | None = Field(default=None, alias="WALLET_PASSWORD")
     trust_wallet_agent_kit_mode: str = "disabled"
     trust_wallet_agent_kit_config: str | None = None
+    trust_wallet_agent_kit_base_url: str | None = None
+    trust_wallet_agent_kit_api_key: str | None = None
+    trust_wallet_agent_kit_timeout_ms: int | None = None
+    trust_wallet_agent_kit_command: str | None = None
     tw_access_id: str | None = None
     tw_hmac_secret: str | None = None
     twak_agent_wallet: str | None = None

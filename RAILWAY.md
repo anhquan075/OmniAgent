@@ -23,7 +23,7 @@ Set these on the backend service:
 ```bash
 TRADE_LEDGER_PATH=/data/trade-ledger.jsonl
 TRUST_WALLET_AGENT_KIT_MODE=rest
-TRUST_WALLET_AGENT_KIT_CONFIG={"baseUrl":"http://${{twak-bridge.RAILWAY_PRIVATE_DOMAIN}}:${{twak-bridge.PORT}}"}
+TRUST_WALLET_AGENT_KIT_BASE_URL=http://${{twak-bridge.RAILWAY_PRIVATE_DOMAIN}}:${{twak-bridge.PORT}}
 TWAK_AGENT_WALLET=0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25
 ROBOT_FLEET_AGENT_WALLET=0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25
 BNB_TRADING_ENABLED=false
@@ -52,6 +52,7 @@ Keep `BNB_AUTONOMOUS_LOOP_EXECUTE=false` for proof/smoke mode. Set it to `true` 
 `BNB_BUNDLED_REGISTRATION_PROOF_ENABLED=true` is an explicit fallback for the packaged public registration receipt when the production ledger volume is empty and BSC RPC log lookup is rate-limited. Leave it false if the deployment must rely only on live RPC/TWAK registration status.
 `OPENROUTER_API_KEY` must be set only on the backend service. The browser should never receive OpenRouter or CMC keys.
 `deepseek/deepseek-v4-pro` is the current recommended cheap/reasoning model; use `deepseek/deepseek-v4-flash` only when cost is more important than strategy quality.
+`TRUST_WALLET_AGENT_KIT_CONFIG` is still supported for backward compatibility, but prefer the direct `TRUST_WALLET_AGENT_KIT_BASE_URL` variable. If both are set, the direct base URL wins.
 
 Also set the private CMC, TWAK, SDK, and x402 secrets from `backend/.env.example`.
 
