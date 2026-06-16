@@ -49,6 +49,7 @@ class Settings(BaseSettings):
         "cmc_get_price_snapshot,"
         "bnb_trade_ledger_summary,bnb_quote_trade,bnb_risk_check,"
         "bnb_simulate_trade,bnb_execute_trade,bnb_run_autonomous_cycle,bnb_live_preflight,bnb_get_trade_status,"
+        "bnb_import_trade_proof,"
         "bnb_live_proof_bundle,bnb_competition_register,bnb_emergency_pause"
     )
     agent_runtime_adapter: str = "fastapi-bnb-agent"

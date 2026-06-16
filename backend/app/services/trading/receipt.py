@@ -14,14 +14,29 @@ PANCAKE_SWAP_SELECTORS = {"0x38ed1739", "0x7ff36ab5", "0x18cbafe5"}
 class ReceiptProofService:
     @staticmethod
     async def get_trade_status(args: dict[str, object]) -> dict[str, object]:
-        tx_hash = str(args.get("txHash") or "")
+        tx_hash = ReceiptProofService.require_tx_hash(args.get("txHash"))
+        submission_proof = ReceiptProofService.find_submission_proof(tx_hash, str(args.get("tradeIntentId") or ""))
+        return await ReceiptProofService.receipt_status(args, tx_hash, submission_proof, record_valid_receipt=True)
+
+    @staticmethod
+    def require_tx_hash(value: object) -> str:
+        tx_hash = str(value or "")
         if not TX_RE.match(tx_hash):
             raise ValueError("A valid BSC transaction hash is required.")
+        return tx_hash
+
+    @staticmethod
+    async def receipt_status(
+        args: dict[str, object],
+        tx_hash: str,
+        submission_proof: dict[str, object] | None,
+        *,
+        record_valid_receipt: bool,
+    ) -> dict[str, object]:
         settings = get_settings()
         receipt = await ReceiptProofService.rpc_call("eth_getTransactionReceipt", [tx_hash])
         transaction = await ReceiptProofService.rpc_call("eth_getTransactionByHash", [tx_hash])
         explorer = settings.bnb_explorer_url.rstrip("/")
-        submission_proof = ReceiptProofService.find_submission_proof(tx_hash, str(args.get("tradeIntentId") or ""))
         if receipt is None:
             return {
                 "network": "bsc",
@@ -55,7 +70,7 @@ class ReceiptProofService:
             "submissionProof": submission_proof,
             "proof": proof,
         }
-        if success and proof["valid"]:
+        if record_valid_receipt and success and proof["valid"]:
             existing_event = TradeLedger.find_trade_event(tx_hash=tx_hash, event_type="trade_receipt_confirmed")
             payload = ReceiptPayloadService.receipt_payload(result, submission_proof, args)
             result["ledgerEvent"] = existing_event or TradeLedger.append_event({

@@ -22,6 +22,7 @@ from app.services.trading.proof_bundle import ProofBundleService
 from app.services.trading.receipt import ReceiptProofService
 from app.services.trading.registration import CompetitionRegistrationService
 from app.services.trading.risk import RiskCheckService
+from app.services.trading.trade_proof_import import TradeProofImportService
 from app.services.twak.bridge import TrustWalletBridge
 from app.services.wallet.agent_wallet import AgentWalletService
 from app.services.wallet.x402 import X402PaymentService
@@ -58,6 +59,7 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     "bnb_live_preflight": "Strict preflight for CMC, TWAK, SDK, registration, capital, and live flags.",
     "bnb_live_proof_bundle": "Read live readiness, latest ledger evidence, and BSC receipt proof in one bundle.",
     "bnb_get_trade_status": "Read BSC receipt and transaction proof for a submitted trade.",
+    "bnb_import_trade_proof": "Operator-only repair: import a real BSC trade tx after RPC receipt validation.",
     "bnb_competition_register": "Register the agent wallet with the BNB Hack competition contract.",
     "bnb_emergency_pause": "Report emergency pause state.",
 }
@@ -138,6 +140,7 @@ class FastApiBnbAgentAdapter:
             "bnb_live_preflight": LivePreflightService.get_live_preflight,
             "bnb_live_proof_bundle": ProofBundleService.get_live_proof_bundle,
             "bnb_get_trade_status": ReceiptProofService.get_trade_status,
+            "bnb_import_trade_proof": TradeProofImportService.import_trade_proof,
             "bnb_competition_register": CompetitionRegistrationService.register_competition,
             "bnb_emergency_pause": self.emergency_pause,
         }
