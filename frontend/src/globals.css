@@ -520,7 +520,7 @@ body:has(.robot-cockpit.quant-terminal) {
 
 .executed-trade-row {
   display: grid;
-  grid-template-columns: minmax(5.8rem, 0.68fr) minmax(7rem, 0.78fr) minmax(0, 1.14fr);
+  grid-template-columns: minmax(5.6rem, 0.7fr) minmax(7.8rem, 0.84fr) minmax(0, 1.26fr);
   max-width: 100%;
   min-width: 0;
   gap: 0.16rem 0.46rem;
@@ -530,6 +530,10 @@ body:has(.robot-cockpit.quant-terminal) {
   border-radius: 0.42rem;
   background: rgba(255, 255, 255, 0.033);
   padding: 0.36rem;
+}
+
+.executed-trade-row.is-wallet-read {
+  grid-template-columns: minmax(5.2rem, 0.62fr) minmax(8.2rem, 0.9fr) minmax(0, 1.48fr);
 }
 
 .executed-trade-row.is-confirmed {
@@ -565,12 +569,15 @@ body:has(.robot-cockpit.quant-terminal) {
   align-items: flex-start;
   justify-content: center;
   gap: 0.16rem;
+  overflow: hidden;
 }
 
 .executed-trade-main span,
 .executed-trade-meta span,
 .executed-trade-proof span,
 .executed-trade-proof a {
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   overflow: hidden;
   line-height: 1.12;
@@ -587,13 +594,25 @@ body:has(.robot-cockpit.quant-terminal) {
   line-height: 1.2;
 }
 
+.executed-trade-main small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .executed-trade-main strong {
   display: block;
+  min-width: 0;
+  overflow: hidden;
   color: rgba(255, 255, 255, 0.9);
   font-size: 0.78rem;
   font-weight: 780;
   line-height: 1.08;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .executed-trade-proof span,
@@ -601,6 +620,23 @@ body:has(.robot-cockpit.quant-terminal) {
   display: inline-flex;
   align-items: center;
   gap: 0.24rem;
+}
+
+.executed-trade-proof span.executed-trade-source {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-content: start;
+}
+
+.executed-trade-proof span.executed-trade-source span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.executed-trade-proof svg {
+  flex: 0 0 auto;
 }
 
 .executed-trade-proof a {
@@ -4365,6 +4401,10 @@ body:has(.robot-cockpit.quant-terminal) {
 
   .executed-trade-row {
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.82fr) minmax(0, 1fr);
+  }
+
+  .executed-trade-row.is-wallet-read {
+    grid-template-columns: minmax(0, 0.64fr) minmax(0, 0.92fr) minmax(0, 1.44fr);
   }
 
   .quant-operator-band {
