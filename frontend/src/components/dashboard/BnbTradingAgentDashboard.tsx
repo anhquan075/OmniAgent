@@ -188,7 +188,7 @@ export function BnbTradingAgentDashboard() {
         </div>
         <div className="quant-execution-stack" aria-label="Backend execution evidence">
           <ChainTxLog events={txLogEvents} />
-          <ExecutedTradeHistory history={state.executedTrades} loading={loading} />
+          <ExecutedTradeHistory history={state.executedTrades} walletLog={state.agentWalletLog} loading={loading} />
         </div>
       </div>
       <p className="quant-footer">snapshot {lastUpdated} / {signerValidated ? 'signer valid' : 'signer guarded'} / {walletLabel}</p>

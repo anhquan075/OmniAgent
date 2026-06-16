@@ -110,6 +110,11 @@ test.describe('BNB trading dashboard', () => {
     await expect(page.getByText('1 cycles').first()).toBeVisible();
     await expect(page.locator('.executed-trade-summary')).toContainText('Trades0');
     await expect(page.locator('.executed-trade-summary')).toContainText('Cycles1');
+    await expect(page.locator('.executed-trade-summary')).toContainText('Walletready');
+    const activityLog = page.locator('.executed-trade-list');
+    await expect(activityLog.getByText('agent wallet').first()).toBeVisible();
+    await expect(activityLog.getByText('bnb_get_wallet + bnb_trust_wallet_status').first()).toBeVisible();
+    await expect(activityLog.locator('a[href*="bscscan.com/address/"]')).toHaveCount(1);
     await expect(page.getByText('guarded cycle').first()).toBeVisible();
     await expect(page.locator('.executed-trade-list a[href*="bscscan.com/tx/"]')).toHaveCount(0);
     await expect(page.locator('.reasoning-advisory-card')).toHaveCount(4);
@@ -249,6 +254,23 @@ function mockedRuntimeSnapshot() {
   ];
   return {
     wallet: { walletAddress: '0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25' },
+    agentWalletLog: {
+      recordType: 'wallet',
+      executionKind: 'agent_wallet_read',
+      eventType: 'agent_wallet_read',
+      status: 'ready',
+      symbol: 'BSC',
+      side: 'agent wallet',
+      walletAddress: '0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25',
+      configuredWallet: '0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25',
+      expectedWallet: '0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25',
+      observedWallet: '0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25',
+      bridgeMode: 'rest',
+      walletValidated: true,
+      ready: true,
+      readSource: 'bnb_get_wallet + bnb_trust_wallet_status',
+      createdAt: '2026-06-16T11:34:02.257797+00:00',
+    },
     twakStatus: { ready: true },
     prices: { configured: true, reachable: true, symbols: { BNB: { priceUsd: 587, percentChange24h: -2.8, volume24h: 1200000000 } } },
     ledger: { events: [], control: {}, dailyCompliance: { progress: '0/7' }, pnl: { totalReturnPct: 0, maxDrawdownPct: 0, registrationPeriod: { totalReturnPct: 0 } } },

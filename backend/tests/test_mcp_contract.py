@@ -130,6 +130,8 @@ def test_mcp_session_and_cockpit_snapshot() -> None:
     assert "\"toolsUsed\"" in text
     assert "\"identityProof\"" in text
     assert "\"twakStatus\"" in text
+    assert "\"agentWalletLog\"" in text
+    assert "bnb_get_wallet + bnb_trust_wallet_status" in text
     assert "\"_meta\"" in text
 
 
