@@ -55,9 +55,17 @@ class TradeProofScoreService:
         receipt: dict[str, Any] | None,
     ) -> list[str]:
         blockers: list[str] = []
+        active_names = {
+            str(item.get("name") or "")
+            for item in (preflight or {}).get("blockers") or []
+            if isinstance(item, dict)
+        }
         for item in (preflight or {}).get("blockers") or []:
             if isinstance(item, dict):
-                blockers.append(str(item.get("name") or item.get("reason") or "preflight_blocker"))
+                name = str(item.get("name") or "")
+                if name == "funded_route" and "cmc_agent_hub_signal" in active_names:
+                    continue
+                blockers.append(name or str(item.get("reason") or "preflight_blocker"))
         proof = cls._receipt_proof(receipt)
         blockers.extend(str(reason) for reason in proof.get("reasons") or [])
         if isinstance(receipt, dict) and receipt.get("status") == "pending":

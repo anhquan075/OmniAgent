@@ -27,6 +27,25 @@ def test_score_hard_blocks_on_wallet_mismatch() -> None:
     assert score["status"] == "blocked"
 
 
+def test_score_dedupes_route_blocker_behind_cmc_signal() -> None:
+    score = TradeProofScoreService.score(
+        preflight={
+            "blockers": [
+                {"name": "cmc_agent_hub_signal", "reason": "missing sell BNB signal"},
+                {"name": "funded_route", "reason": "router-backed transaction is required"},
+            ],
+            "checks": [
+                {"name": "cmc_agent_hub_signal", "ok": False},
+                {"name": "funded_route", "ok": False},
+            ],
+        },
+    )
+
+    assert "cmc_agent_hub_signal" in score["hardBlockers"]
+    assert "funded_route" not in score["hardBlockers"]
+    assert score["checks"]["routerQuoteValid"] is False
+
+
 def test_digest_is_deterministic_and_scrubs_secrets() -> None:
     base = {
         "tradeIntentId": "intent-1",

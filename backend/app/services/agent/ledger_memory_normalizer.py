@@ -22,6 +22,14 @@ class LedgerMemoryNormalizer:
         ]
 
     @staticmethod
+    def blocker_names(blockers: list[object]) -> set[str]:
+        return {str(blocker.get("name") or "") for blocker in blockers if isinstance(blocker, dict)}
+
+    @staticmethod
+    def is_cascaded_route_blocker(blocker: dict[str, Any], blocker_names: set[str]) -> bool:
+        return blocker.get("name") == "funded_route" and "cmc_agent_hub_signal" in blocker_names
+
+    @staticmethod
     def preflight_clears_blocker(preflight: dict[str, Any], blocker: str) -> bool:
         if preflight.get("readyForLiveTrade") is not True:
             return False
