@@ -83,10 +83,11 @@ PORT=8787
 TWAK_ACCESS_ID=<sealed secret>
 TWAK_HMAC_SECRET=<sealed secret>
 WALLET_PASSWORD=<sealed secret, if the TWAK wallet requires one>
+TWAK_WALLET_JSON_B64=<base64 of encrypted ~/.twak/wallet.json, if the bridge has no persistent wallet volume>
 ```
 
 The bridge startup also accepts `TW_ACCESS_ID` / `TW_HMAC_SECRET` and maps them to TWAK's expected env names, but prefer `TWAK_*` on the bridge service. The backend service still uses `TW_ACCESS_ID` / `TW_HMAC_SECRET`; set the backend `TW_HMAC_SECRET` to the same value as bridge `TWAK_HMAC_SECRET`.
-The bridge `start.sh` maps Railway `WALLET_PASSWORD` to TWAK's `TWAK_WALLET_PASSWORD` at runtime so the secret is not passed as a command-line argument.
+The bridge `start.sh` maps Railway `WALLET_PASSWORD` to TWAK's `TWAK_WALLET_PASSWORD` at runtime so the secret is not passed as a command-line argument. If `TWAK_WALLET_JSON_B64` is set, `start.sh` decodes it into TWAK's encrypted `~/.twak/wallet.json` before starting the REST bridge.
 If `bnb_trust_wallet_status` reports `state: "unbound"`, the bridge is reachable but no local TWAK wallet is bound. Create or restore the TWAK wallet in the bridge service storage, set `WALLET_PASSWORD`, and confirm `twak wallet status --json` reports the same address configured in `TWAK_AGENT_WALLET` / `ROBOT_FLEET_AGENT_WALLET`.
 
 Do not expose a public Railway domain for this service. The backend should reach it only over Railway private networking.
