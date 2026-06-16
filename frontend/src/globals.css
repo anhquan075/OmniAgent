@@ -3984,6 +3984,61 @@ body:has(.robot-cockpit.quant-terminal) {
   gap: 0.34rem 0.46rem;
 }
 
+.reasoning-json-grid {
+  display: grid;
+  min-width: 0;
+  gap: 0.42rem;
+  margin-top: 0.55rem;
+}
+
+.reasoning-json-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(103, 232, 249, 0.12);
+  border-radius: 0.38rem;
+  background: rgba(4, 10, 14, 0.38);
+}
+
+.reasoning-json-card summary {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  min-width: 0;
+  cursor: pointer;
+  list-style: none;
+  padding: 0.42rem 0.5rem;
+  color: rgba(165, 243, 252, 0.78);
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.reasoning-json-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.reasoning-json-card summary span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reasoning-json-card pre {
+  max-height: 14rem;
+  min-width: 0;
+  overflow: auto;
+  margin: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.075);
+  padding: 0.48rem 0.55rem 0.58rem;
+  color: rgba(224, 242, 254, 0.72);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.58rem;
+  line-height: 1.42;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .reasoning-tool-detail {
   max-width: 100%;
   min-width: 0;
