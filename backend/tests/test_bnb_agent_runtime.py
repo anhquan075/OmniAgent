@@ -64,6 +64,10 @@ def test_runtime_snapshot_keeps_bnb_sdk_runtime_and_twak_executor(monkeypatch) -
     assert result["sdkRole"] == "runtime_core"
     assert result["executor"] == "twak"
     assert result["sdkExecutesTrades"] is False
+    assert result["sdkTradeSurface"]["ready"] is True  # type: ignore[index]
+    assert result["sdkTradeSurface"]["label"] == "SDK coordinated"  # type: ignore[index]
+    assert result["sdkTradeSurface"]["sdkExecutesTrades"] is False  # type: ignore[index]
+    assert result["sdkTradeSurface"]["tool"] == "bnb_execute_trade"  # type: ignore[index]
     assert result["sdkRuntime"]["facade"] == "BNBAgent"  # type: ignore[index]
     assert result["sdkRuntime"]["usesOfficialFacade"] is True  # type: ignore[index]
     assert result["sdkRuntime"]["coreRuntime"] is True  # type: ignore[index]

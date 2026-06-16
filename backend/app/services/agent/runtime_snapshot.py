@@ -47,7 +47,11 @@ class BnbAgentRuntimeService:
             "sdkRole": "runtime_core",
             "executor": "twak",
             "sdkExecutesTrades": False,
-            "executorBoundary": "BNB Agent SDK provides identity, profile, status, and memory surfaces; TWAK signs and submits trades.",
+            "sdkTradeSurface": BnbAgentRuntimeService.sdk_trade_surface(cockpit, sdk_status, sdk_runtime),
+            "executorBoundary": (
+                "BNB Agent SDK provides identity, profile, status, and memory surfaces; "
+                "TWAK signs and submits trades."
+            ),
             "sdkStatus": sdk_status,
             "sdkRuntime": sdk_runtime,
             "agentProfile": BnbAgentRuntimeService.agent_profile(cockpit, sdk_status, sdk_runtime),
@@ -78,6 +82,32 @@ class BnbAgentRuntimeService:
             "reason": advisor.get("reason"),
             "strategyDecision": strategy,
             "decision": decision,
+        }
+
+    @staticmethod
+    def sdk_trade_surface(
+        cockpit: dict[str, Any],
+        sdk_status: dict[str, Any],
+        sdk_runtime: dict[str, Any],
+    ) -> dict[str, object]:
+        twak_status = cockpit.get("twakStatus") if isinstance(cockpit.get("twakStatus"), dict) else {}
+        sdk_ready = bool(sdk_status.get("ready") or sdk_runtime.get("facadeInitialized"))
+        executor_ready = bool(twak_status.get("ready"))
+        ready = sdk_ready and executor_ready
+        return {
+            "ready": ready,
+            "status": "ready" if ready else "guarded",
+            "label": "SDK coordinated",
+            "sdkCoordinates": sdk_ready,
+            "sdkExecutesTrades": False,
+            "executor": "twak",
+            "executorReady": executor_ready,
+            "tool": "bnb_execute_trade",
+            "reason": (
+                None
+                if ready
+                else twak_status.get("reason") or sdk_runtime.get("reason") or sdk_status.get("reason")
+            ),
         }
 
     @staticmethod

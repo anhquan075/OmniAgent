@@ -3070,7 +3070,7 @@ body:has(.robot-cockpit.quant-terminal) {
   padding: 0.46rem;
 }
 
-.runtime-identity div {
+.runtime-identity-head {
   display: flex;
   min-width: 0;
   align-items: center;
@@ -3079,6 +3079,36 @@ body:has(.robot-cockpit.quant-terminal) {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.62rem;
   font-weight: 820;
+}
+
+.runtime-identity-links {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+}
+
+.runtime-identity-links a {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.24rem;
+  overflow: hidden;
+  border: 1px solid rgba(77, 219, 190, 0.13);
+  border-radius: 0.25rem;
+  background: rgba(10, 18, 24, 0.44);
+  padding: 0.18rem 0.34rem;
+  color: rgba(165, 243, 233, 0.84);
+  font-size: 0.55rem;
+  font-weight: 780;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runtime-identity-links a:hover {
+  border-color: rgba(77, 219, 190, 0.26);
+  color: rgba(213, 255, 246, 0.96);
 }
 
 .runtime-identity p,

@@ -5,6 +5,8 @@ export type EvidenceLink = {
   href: string;
 };
 
+type BscExplorer = "bscscan" | "bsctrace";
+
 export const MARKET_SIGNAL_KEY = ["cm", "cAgentHubSignal"].join("");
 const MARKET_HUB_KEY = ["cm", "cAgentHub"].join("");
 
@@ -32,20 +34,41 @@ export function shortHash(value: string) {
   return `${value.slice(0, 8)}...${value.slice(-6)}`;
 }
 
-export function bscTxLink(hash: unknown): EvidenceLink | null {
+const bscExplorerUrl = (explorer: BscExplorer, kind: "address" | "tx", value: string) => {
+  const host = explorer === "bsctrace" ? "bsctrace.com" : "bscscan.com";
+  return `https://${host}/${kind}/${value}`;
+};
+
+export function bscTxLink(
+  hash: unknown,
+  label?: string,
+  explorer: BscExplorer = "bscscan",
+): EvidenceLink | null {
   const txHash = typeof hash === "string" && /^0x[a-fA-F0-9]{64}$/.test(hash) ? hash : "";
-  return txHash ? { label: `BscScan ${shortHash(txHash)}`, href: `https://bscscan.com/tx/${txHash}` } : null;
+  const explorerLabel = explorer === "bsctrace" ? "BscTrace" : "BscScan";
+  return txHash
+    ? { label: label ?? `${explorerLabel} ${shortHash(txHash)}`, href: bscExplorerUrl(explorer, "tx", txHash) }
+    : null;
 }
 
-export function bscAddressLink(address: unknown, label = "BscScan wallet"): EvidenceLink | null {
+export function bscAddressLink(
+  address: unknown,
+  label = "BscScan wallet",
+  explorer: BscExplorer = "bscscan",
+): EvidenceLink | null {
   const value = typeof address === "string" && /^0x[a-fA-F0-9]{40}$/.test(address) ? address : "";
-  return value ? { label, href: `https://bscscan.com/address/${value}` } : null;
+  return value ? { label, href: bscExplorerUrl(explorer, "address", value) } : null;
 }
 
 export function safeEvidenceHref(href: string) {
   try {
     const url = new URL(href);
-    const trustedHosts = new Set(["bscscan.com", "coinmarketcap.com", "mcp.coinmarketcap.com"]);
+    const trustedHosts = new Set([
+      "bscscan.com",
+      "bsctrace.com",
+      "coinmarketcap.com",
+      "mcp.coinmarketcap.com",
+    ]);
     if (url.protocol !== "https:" || !trustedHosts.has(url.hostname)) return null;
     return url.toString();
   } catch {

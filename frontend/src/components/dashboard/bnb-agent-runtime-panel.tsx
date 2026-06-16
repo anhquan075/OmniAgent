@@ -1,5 +1,6 @@
-import { BadgeCheckIcon, KeyRoundIcon, ShieldCheckIcon } from "lucide-react";
+import { BadgeCheckIcon, ExternalLinkIcon, KeyRoundIcon, ShieldCheckIcon } from "lucide-react";
 import BrandMark from "./brand-mark";
+import { bscAddressLink, type EvidenceLink } from "./live-evidence-links";
 
 type Payload = Record<string, any>;
 
@@ -18,14 +19,29 @@ export function BnbAgentRuntimePanel({ runtime }: { runtime?: Payload }) {
   const profile = runtime?.agentProfile ?? {};
   const registration = runtime?.identityRegistration ?? {};
   const coreAgent = runtime?.coreAgent ?? {};
+  const tradeSurface = runtime?.sdkTradeSurface ?? {};
   const capabilities = Array.isArray(profile.capabilities) ? profile.capabilities : [];
   const initializedModules = Array.isArray(sdkRuntime.modulesInitialized) ? sdkRuntime.modulesInitialized : [];
   const moduleText = initializedModules.length ? initializedModules.join("+") : "syncing";
   const facadeLive = Boolean(sdkRuntime.facadeInitialized);
   const ready = Boolean(sdk.ready);
+  const walletLabel = short(profile.walletAddress);
+  const registry = sdk.registryAddress ?? profile.registryAddress;
+  const identityLinks = [
+    bscAddressLink(profile.walletAddress, `BscScan ${walletLabel}`),
+    bscAddressLink(profile.walletAddress, `BscTrace ${walletLabel}`, "bsctrace"),
+    bscAddressLink(registry, "BscScan registry"),
+  ].filter(Boolean) as EvidenceLink[];
+  const tradeSurfaceReady = Boolean(tradeSurface.ready);
+  const tradeSurfaceLabel = tradeSurfaceReady
+    ? text(tradeSurface.label, "coordinated")
+    : text(tradeSurface.status, "guarded");
 
   return (
-    <section className={`runtime-card bnb-runtime-panel ${ready ? "is-ready" : "is-guarded"}`} aria-label="BNB Agent runtime">
+    <section
+      className={`runtime-card bnb-runtime-panel ${ready ? "is-ready" : "is-guarded"}`}
+      aria-label="BNB Agent runtime"
+    >
       <div className="runtime-card-head">
         <span><BrandMark kind="bnb" /> BNB Agent Runtime</span>
         <b>{facadeLive ? "Core live" : ready ? "SDK ready" : "SDK guarded"}</b>
@@ -35,16 +51,35 @@ export function BnbAgentRuntimePanel({ runtime }: { runtime?: Payload }) {
         <RuntimeStat label="Modules" value={moduleText} good={initializedModules.includes("erc8004")} />
         <RuntimeStat label="SDK role" value={text(runtime?.sdkRole, "runtime_core")} />
         <RuntimeStat label="Executor" value={text(runtime?.executor, "twak")} good />
-        <RuntimeStat label="Agent core" value={coreAgent.called ? "OpenRouter" : "policy"} good={Boolean(coreAgent.ready)} />
-        <RuntimeStat label="SDK trades" value={runtime?.sdkExecutesTrades === false ? "no" : "guarded"} />
+        <RuntimeStat
+          label="Agent core"
+          value={coreAgent.called ? "OpenRouter" : "policy"}
+          good={Boolean(coreAgent.ready)}
+        />
+        <RuntimeStat
+          label="SDK trades"
+          value={tradeSurfaceLabel}
+          good={tradeSurfaceReady}
+        />
         <RuntimeStat label="Registry" value={short(sdk.registryAddress ?? profile.registryAddress)} />
       </div>
       <div className="runtime-identity">
-        <div>
+        <div className="runtime-identity-head">
           <KeyRoundIcon className="h-4 w-4" />
-          <span>{short(profile.walletAddress)}</span>
+          <span>{walletLabel}</span>
         </div>
-        <p>{text(profile.agentUriPreview, "Agent URI is generated when SDK profile inputs are ready.")}</p>
+        {identityLinks.length ? (
+          <div className="runtime-identity-links">
+            {identityLinks.map((link) => (
+              <a key={link.href} href={link.href} target="_blank" rel="noreferrer">
+                <ExternalLinkIcon className="h-3 w-3" />
+                {link.label}
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p>{text(registration.reason, "identity proof syncing")}</p>
+        )}
       </div>
       <div className="runtime-capability-list">
         {capabilities.slice(0, 6).map((item: Payload) => (
