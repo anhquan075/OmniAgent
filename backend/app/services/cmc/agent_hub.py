@@ -7,6 +7,8 @@ import httpx
 
 from app.core.settings import get_settings
 from app.services.cmc.prices import CMC_KEY_REASON
+from app.services.cmc.quota_guard import CmcQuotaGuard
+
 
 class CmcAgentHubClient:
     @staticmethod
@@ -22,6 +24,9 @@ class CmcAgentHubClient:
                 endpoint=endpoint,
                 reason=CMC_KEY_REASON,
             )
+        quota_block = CmcQuotaGuard.active()
+        if quota_block:
+            return CmcAgentHubClient.quota_status(endpoint, quota_block)
         try:
             initialize = await CmcAgentHubClient.mcp_request(endpoint, api_key, "initialize", {
                 "protocolVersion": "2025-06-18",
@@ -44,6 +49,10 @@ class CmcAgentHubClient:
                 session_id=session_id,
             )
         except (httpx.HTTPError, ValueError) as error:
+            reason = CmcQuotaGuard.reason_from_exception(error)
+            if reason:
+                quota_block = CmcQuotaGuard.remember(reason, settings.cmc_quota_cooldown_sec)
+                return CmcAgentHubClient.quota_status(endpoint, quota_block)
             return CmcAgentHubClient.status_payload(
                 configured=True,
                 reachable=False,
@@ -171,6 +180,11 @@ class CmcAgentHubClient:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "reason": reason,
         }
+
+    @staticmethod
+    def quota_status(endpoint: str, quota_block: dict[str, object]) -> dict[str, object]:
+        payload = CmcAgentHubClient.status_payload(configured=True, reachable=False, ready=False, endpoint=endpoint, reason=str(quota_block["reason"]))
+        return {**payload, **quota_block}
 
     @staticmethod
     def tool_summary(tool: dict[str, object]) -> dict[str, object]:

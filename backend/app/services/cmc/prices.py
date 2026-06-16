@@ -4,6 +4,7 @@ from typing import Any
 import httpx
 
 from app.core.settings import get_settings
+from app.services.cmc.quota_guard import CmcQuotaGuard
 
 CMC_KEY_REASON = (
     "CMC_AGENT_HUB_API_KEY, CMC_MCP_API_KEY, CMC_PRO_API_KEY, "
@@ -31,6 +32,9 @@ class CmcPriceService:
         cached = CmcPriceService.cached_snapshot(cache_key)
         if cached:
             return cached
+        quota_block = CmcQuotaGuard.active()
+        if quota_block:
+            return CmcPriceService.unreachable_snapshot(selected, quota_block)
 
         url = f"{settings.cmc_agent_hub_base_url.rstrip('/')}/v2/cryptocurrency/quotes/latest"
         try:
@@ -43,14 +47,11 @@ class CmcPriceService:
                 response.raise_for_status()
                 payload: dict[str, Any] = response.json()
         except httpx.HTTPError as error:
-            return {
-                "source": "coinmarketcap",
-                "configured": True,
-                "reachable": False,
-                "symbols": {symbol: {"symbol": symbol, "priceUsd": None} for symbol in selected},
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "reason": str(error),
-            }
+            reason = CmcQuotaGuard.reason_from_exception(error)
+            if reason:
+                quota_block = CmcQuotaGuard.remember(reason, settings.cmc_quota_cooldown_sec)
+                return CmcPriceService.unreachable_snapshot(selected, quota_block)
+            return CmcPriceService.unreachable_snapshot(selected, {"reason": str(error)})
 
         data = payload.get("data") or {}
         prices: dict[str, object] = {}
@@ -102,3 +103,14 @@ class CmcPriceService:
             _PRICE_CACHE.pop(cache_key, None)
             return None
         return {**payload, "cached": True}
+
+    @staticmethod
+    def unreachable_snapshot(symbols: list[str], fields: dict[str, object]) -> dict[str, object]:
+        return {
+            "source": "coinmarketcap",
+            "configured": True,
+            "reachable": False,
+            "symbols": {symbol: {"symbol": symbol, "priceUsd": None} for symbol in symbols},
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            **fields,
+        }

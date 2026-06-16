@@ -8,6 +8,7 @@ from app.core.logging import get_logger
 from app.core.settings import get_settings
 from app.services.cmc.prices import CMC_KEY_REASON
 from app.services.cmc.agent_hub import CmcAgentHubClient
+from app.services.cmc.quota_guard import CmcQuotaGuard
 
 logger = get_logger(__name__)
 
@@ -33,6 +34,18 @@ class CmcAgentHubToolClient:
             )
             CmcAgentHubToolClient.log_cmc_tool(payload)
             return payload
+        quota_block = CmcQuotaGuard.active()
+        if quota_block:
+            payload = CmcAgentHubToolClient.call_payload(
+                configured=True,
+                reachable=False,
+                ready=False,
+                endpoint=endpoint,
+                tool_name=tool_name,
+                reason=str(quota_block["reason"]),
+            )
+            CmcAgentHubToolClient.log_cmc_tool(payload)
+            return {**payload, **quota_block}
         try:
             initialize = await CmcAgentHubClient.mcp_request(endpoint, api_key, "initialize", {
                 "protocolVersion": "2025-06-18",
@@ -55,30 +68,37 @@ class CmcAgentHubToolClient:
                 session_id=session_id,
             )
         except (httpx.HTTPError, ValueError) as error:
+            reason = CmcQuotaGuard.reason_from_exception(error)
+            quota_block = CmcQuotaGuard.remember(reason, settings.cmc_quota_cooldown_sec) if reason else None
             payload = CmcAgentHubToolClient.call_payload(
                 configured=True,
                 reachable=False,
                 ready=False,
                 endpoint=endpoint,
                 tool_name=tool_name,
-                reason=str(error),
+                reason=str(quota_block["reason"] if quota_block else error),
             )
             CmcAgentHubToolClient.log_cmc_tool(payload)
-            return payload
+            return {**payload, **quota_block} if quota_block else payload
         parsed_content = CmcAgentHubToolClient.parse_tool_content(result)
         tool_error = CmcAgentHubToolClient.parsed_error_reason(parsed_content)
+        quota_block = (
+            CmcQuotaGuard.remember(tool_error, settings.cmc_quota_cooldown_sec)
+            if CmcQuotaGuard.is_quota_reason(tool_error)
+            else None
+        )
         payload = CmcAgentHubToolClient.call_payload(
             configured=True,
             reachable=True,
             ready=tool_error is None,
             endpoint=endpoint,
             tool_name=tool_name,
-            reason=tool_error,
+            reason=str(quota_block["reason"] if quota_block else tool_error) if tool_error else None,
             result=result,
             parsed_content=parsed_content,
         )
         CmcAgentHubToolClient.log_cmc_tool(payload)
-        return payload
+        return {**payload, **quota_block} if quota_block else payload
 
     @staticmethod
     def normalize_tool_name(value: object) -> str:
