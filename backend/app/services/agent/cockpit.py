@@ -11,6 +11,7 @@ from app.services.trading.registration_status import CompetitionRegistrationStat
 from app.services.trading.recovery_candidates import TradeRecoveryCandidateService
 from app.services.trading.trade_work_order import TradeWorkOrderService
 from app.services.twak.bridge import TrustWalletBridge
+from app.services.agent.wallet_log import AgentWalletLogService
 from app.services.wallet.agent_wallet import AgentWalletService
 from app.services.wallet.x402 import X402PaymentService
 class AgentCockpitService:
@@ -72,6 +73,7 @@ class AgentCockpitService:
             "network": "bsc",
             "wallet": wallet,
             "twakStatus": twak_status,
+            "agentWalletLog": AgentWalletLogService.build(wallet, twak_status),
             "sdkStatus": sdk_status,
             "paidStatus": paid_status,
             "prices": prices,

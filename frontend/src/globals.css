@@ -468,7 +468,7 @@ body:has(.robot-cockpit.quant-terminal) {
 
 .executed-trade-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.35rem;
   margin-bottom: 0.42rem;
 }
@@ -535,6 +535,11 @@ body:has(.robot-cockpit.quant-terminal) {
 .executed-trade-row.is-confirmed {
   border-color: rgba(16, 185, 129, 0.28);
   box-shadow: inset 2px 0 0 rgba(16, 185, 129, 0.7);
+}
+
+.executed-trade-row.is-ready {
+  border-color: rgba(91, 140, 255, 0.24);
+  box-shadow: inset 2px 0 0 rgba(91, 140, 255, 0.68);
 }
 
 .executed-trade-main,

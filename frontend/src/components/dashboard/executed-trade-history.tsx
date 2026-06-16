@@ -2,6 +2,7 @@ import {
   ExternalLinkIcon,
   HistoryIcon,
   ShieldCheckIcon,
+  WalletIcon,
 } from 'lucide-react';
 
 type Payload = Record<string, any>;
@@ -14,8 +15,16 @@ const shortHash = (hash: string) => (
   hash.length > 22 ? `${hash.slice(0, 10)}...${hash.slice(-8)}` : hash
 );
 
+const shortAddress = (address: string) => (
+  /^0x[a-fA-F0-9]{40}$/.test(address) ? `${address.slice(0, 6)}...${address.slice(-4)}` : text(address, 'wallet pending')
+);
+
 const bscTxUrl = (hash: string) => (
   /^0x[a-fA-F0-9]{64}$/.test(hash) ? `https://bscscan.com/tx/${hash}` : ''
+);
+
+const bscAddressUrl = (address: string) => (
+  /^0x[a-fA-F0-9]{40}$/.test(address) ? `https://bscscan.com/address/${address}` : ''
 );
 
 const formatAmount = (value: unknown) => {
@@ -44,8 +53,10 @@ const displayStatus = (status: unknown, fallback: string) => {
   return /blocked|waiting|paused/.test(value) ? 'guarded' : value;
 };
 
-export function ExecutedTradeHistory({ history, loading }: { history?: Payload; loading?: boolean }) {
+export function ExecutedTradeHistory({ history, walletLog, loading }: { history?: Payload; walletLog?: Payload; loading?: boolean }) {
   const trades = Array.isArray(history?.trades) ? history.trades : [];
+  const walletRows = walletLog && typeof walletLog === 'object' ? [walletLog] : [];
+  const rows = [...walletRows, ...trades];
   const total = Number(history?.total ?? trades.length);
   const unavailable = history?.status === 'unavailable';
   const visibleCycleCount = trades.filter((trade: Payload) => text(trade.recordType, '') === 'cycle').length;
@@ -57,9 +68,11 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
     ? 'offline'
     : total
       ? cycleCount === total ? `${total} cycles` : `${total} records`
+      : walletRows.length ? 'wallet read'
       : loading ? 'syncing' : 'empty';
   const confirmedCount = trades.filter((trade: Payload) => text(trade.status, '') === 'confirmed').length;
   const proofCount = trades.filter((trade: Payload) => trade.receiptProofValid === true).length;
+  const walletReadLabel = walletLog ? displayStatus(walletLog.status, walletLog.ready ? 'ready' : 'guarded') : loading ? 'syncing' : 'none';
 
   return (
     <section className="executed-trade-history-panel">
@@ -74,17 +87,27 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
         <span><small>Trades</small><strong>{tradeCount}</strong></span>
         <span><small>Proof</small><strong>{proofCount}</strong></span>
         <span><small>Cycles</small><strong>{cycleCount}</strong></span>
+        <span><small>Wallet</small><strong>{walletReadLabel}</strong></span>
       </div>
       <div className="executed-trade-list" aria-label="Backend agent activity">
-        {trades.length ? trades.map((trade: Payload, index: number) => {
+        {rows.length ? rows.map((trade: Payload, index: number) => {
           const hash = text(trade.txHash, '');
+          const isWalletRead = text(trade.recordType, '') === 'wallet';
           const isCycle = text(trade.recordType, hash ? 'trade' : 'cycle') === 'cycle';
-          const status = displayStatus(trade.status, isCycle ? 'guarded' : 'submitted');
+          const status = displayStatus(trade.status, isWalletRead || isCycle ? 'guarded' : 'submitted');
           const proofValid = trade.receiptProofValid === true;
           const explorerUrl = bscTxUrl(hash);
-          const proofLabel = isCycle
-            ? 'guarded cycle'
-            : proofValid
+          const observedWalletAddress = text(trade.observedWallet, '');
+          const expectedWalletAddress = text(trade.expectedWallet ?? trade.configuredWallet, '');
+          const walletUrl = bscAddressUrl(observedWalletAddress);
+          const showExpectedWallet = isWalletRead
+            && expectedWalletAddress
+            && expectedWalletAddress.toLowerCase() !== observedWalletAddress.toLowerCase();
+          const proofLabel = isWalletRead
+            ? text(trade.reason, trade.walletValidated ? 'wallet validated' : 'wallet read guarded')
+            : isCycle
+              ? 'guarded cycle'
+              : proofValid
               ? 'proof valid'
               : status === 'confirmed'
                 ? 'proof missing'
@@ -97,11 +120,11 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
             >
               <div className="executed-trade-main">
                 <span>
-                  <small>{text(trade.side, isCycle ? 'agent cycle' : 'backend trade')}</small>
-                  <strong>{text(trade.symbol, 'BSC')}</strong>
+                  <small>{text(trade.side, isWalletRead ? 'agent wallet' : isCycle ? 'agent cycle' : 'backend trade')}</small>
+                  <strong>{isWalletRead ? shortAddress(observedWalletAddress) : text(trade.symbol, 'BSC')}</strong>
                 </span>
                 <span>
-                  <small>{formatAmount(trade.amountUsd)}</small>
+                  <small>{isWalletRead ? text(trade.bridgeMode, 'rest') : formatAmount(trade.amountUsd)}</small>
                   <strong>{status}</strong>
                 </span>
               </div>
@@ -111,8 +134,10 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
               </div>
               <div className="executed-trade-proof">
                 <span>
-                  <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />
-                  {trade.cmcServerVerified
+                  {isWalletRead ? <WalletIcon className="h-3 w-3" aria-hidden="true" /> : <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />}
+                  {isWalletRead
+                    ? text(trade.readSource, 'agent wallet read')
+                    : trade.cmcServerVerified
                     ? text(trade.cmcTool, 'CMC verified')
                     : text(trade.bridgeMode, isCycle ? text(trade.eventType, 'cycle') : 'ledger')}
                 </span>
@@ -121,7 +146,13 @@ export function ExecutedTradeHistory({ history, loading }: { history?: Payload; 
                     {shortHash(hash)}
                     <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
                   </a>
+                ) : isWalletRead && walletUrl ? (
+                  <a href={walletUrl} target="_blank" rel="noreferrer" aria-label={`Open ${shortAddress(observedWalletAddress)} on BscScan`}>
+                    {shortAddress(observedWalletAddress)}
+                    <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
+                  </a>
                 ) : null}
+                {showExpectedWallet ? <span>expected {shortAddress(expectedWalletAddress)}</span> : null}
               </div>
             </article>
           );
