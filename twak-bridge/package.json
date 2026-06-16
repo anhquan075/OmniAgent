@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "start": "sh ./start.sh"
+    "start": "bash ./start.sh"
   },
   "dependencies": {
     "@trustwallet/cli": "0.17.0"
