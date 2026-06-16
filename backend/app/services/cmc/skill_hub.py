@@ -6,6 +6,7 @@ import httpx
 from app.core.settings import get_settings
 from app.services.cmc.agent_hub import CmcAgentHubClient
 from app.services.cmc.agent_hub_tools import CmcAgentHubToolClient
+from app.services.cmc.quota_guard import CmcQuotaGuard
 
 SKILL_HUB_KEY_REASON = (
     "CMC_SKILL_HUB_API_KEY, CMC_MCP_API_KEY, or CMC_AGENT_HUB_API_KEY is not configured"
@@ -21,10 +22,17 @@ class CmcSkillHubClient:
         endpoint = settings.cmc_skill_hub_mcp_url
         if not api_key:
             return CmcSkillHubClient.status_payload(False, False, False, endpoint, SKILL_HUB_KEY_REASON)
+        quota_block = CmcQuotaGuard.active()
+        if quota_block:
+            return {**CmcSkillHubClient.status_payload(True, False, False, endpoint, str(quota_block["reason"])), **quota_block}
         try:
             session_id = await CmcSkillHubClient.initialize_session(endpoint, api_key)
             tools = await CmcAgentHubClient.mcp_request(endpoint, api_key, "tools/list", {}, session_id=session_id)
         except (httpx.HTTPError, ValueError) as error:
+            reason = CmcQuotaGuard.reason_from_exception(error)
+            if reason:
+                quota_block = CmcQuotaGuard.remember(reason, settings.cmc_quota_cooldown_sec)
+                return {**CmcSkillHubClient.status_payload(True, False, False, endpoint, str(quota_block["reason"])), **quota_block}
             return CmcSkillHubClient.status_payload(True, False, False, endpoint, str(error))
         tool_rows = tools.get("tools") if isinstance(tools.get("tools"), list) else []
         tool_names = [str(tool.get("name")) for tool in tool_rows if isinstance(tool, dict) and tool.get("name")]
@@ -69,6 +77,9 @@ class CmcSkillHubClient:
         endpoint = settings.cmc_skill_hub_mcp_url
         if not api_key:
             return CmcSkillHubClient.call_payload(False, False, False, endpoint, tool_name, SKILL_HUB_KEY_REASON)
+        quota_block = CmcQuotaGuard.active()
+        if quota_block:
+            return {**CmcSkillHubClient.call_payload(True, False, False, endpoint, tool_name, str(quota_block["reason"])), **quota_block}
         try:
             session_id = await CmcSkillHubClient.initialize_session(endpoint, api_key, timeout_sec=timeout_sec)
             result = await CmcAgentHubClient.mcp_request(
@@ -80,17 +91,33 @@ class CmcSkillHubClient:
                 timeout_sec=timeout_sec,
             )
         except (httpx.HTTPError, ValueError) as error:
+            reason = CmcQuotaGuard.reason_from_exception(error)
+            if reason:
+                quota_block = CmcQuotaGuard.remember(reason, settings.cmc_quota_cooldown_sec)
+                return {**CmcSkillHubClient.call_payload(True, False, False, endpoint, tool_name, str(quota_block["reason"])), **quota_block}
             return CmcSkillHubClient.call_payload(True, False, False, endpoint, tool_name, str(error))
+        parsed_content = CmcAgentHubToolClient.parse_tool_content(result)
+        tool_error = CmcAgentHubToolClient.parsed_error_reason(parsed_content)
+        quota_block = (
+            CmcQuotaGuard.remember(tool_error, settings.cmc_quota_cooldown_sec)
+            if CmcQuotaGuard.is_quota_reason(tool_error)
+            else None
+        )
         return CmcSkillHubClient.call_payload(
             True,
             True,
-            True,
+            tool_error is None,
             endpoint,
             tool_name,
-            None,
+            str(quota_block["reason"] if quota_block else tool_error) if tool_error else None,
             result=result,
-            parsed_content=CmcAgentHubToolClient.parse_tool_content(result),
-        )
+            parsed_content=parsed_content,
+        ) if quota_block is None else {
+            **CmcSkillHubClient.call_payload(
+                True, True, False, endpoint, tool_name, str(quota_block["reason"]), result=result, parsed_content=parsed_content,
+            ),
+            **quota_block,
+        }
 
     @staticmethod
     async def initialize_session(endpoint: str, api_key: str, timeout_sec: int = 30) -> str | None:

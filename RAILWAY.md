@@ -41,6 +41,7 @@ BNB_STRATEGY_ADVISOR_ENABLED=true
 BNB_STRATEGY_REQUIRE_LLM_FOR_LIVE=false
 BNB_STRATEGY_MIN_CONFIDENCE=0.62
 BNB_STRATEGY_MAX_POSITION_PCT=0.35
+CMC_QUOTA_COOLDOWN_SEC=3600
 OPENROUTER_API_KEY=<backend-only-openrouter-key>
 OPENROUTER_MODEL=deepseek/deepseek-v4-pro
 API_TRUSTED_HOSTS=localhost,127.0.0.1,testserver,healthcheck.railway.app,*.up.railway.app,*.railway.internal
@@ -53,6 +54,7 @@ Keep `BNB_AUTONOMOUS_LOOP_EXECUTE=false` for proof/smoke mode. Set it to `true` 
 `OPENROUTER_API_KEY` must be set only on the backend service. The browser should never receive OpenRouter or CMC keys.
 `deepseek/deepseek-v4-pro` is the current recommended cheap/reasoning model; use `deepseek/deepseek-v4-flash` only when cost is more important than strategy quality.
 `TRUST_WALLET_AGENT_KIT_CONFIG` is still supported for backward compatibility, but prefer the direct `TRUST_WALLET_AGENT_KIT_BASE_URL` variable. If both are set, the direct base URL wins.
+`CMC_QUOTA_COOLDOWN_SEC` pauses CMC REST and MCP calls after a 429 or monthly-credit error so the backend does not repeatedly hit an exhausted key.
 
 Also set the private CMC, TWAK, SDK, and x402 secrets from `backend/.env.example`.
 
