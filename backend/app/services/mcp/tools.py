@@ -15,6 +15,7 @@ OPERATOR_TOOL_NAMES = {
     "bnb_emergency_pause",
     "bnb_execute_trade",
     "bnb_get_trade_status",
+    "bnb_import_trade_proof",
     "bnb_record_paid_signal_access",
     "bnb_run_autonomous_cycle",
     "cmc_agent_hub_call_tool",

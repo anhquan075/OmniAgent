@@ -151,10 +151,13 @@ def test_public_mcp_session_hides_and_rejects_operator_tools() -> None:
     assert "bnb_agent_cockpit_snapshot" in tool_names
     assert "bnb_execute_trade" not in tool_names
     assert "bnb_emergency_pause" not in tool_names
+    assert "bnb_import_trade_proof" not in tool_names
 
     response = call_mcp(client, csrf_token, "bnb_emergency_pause", {"enabled": True}, operator=False)
     assert response["error"]["code"] == -32004
     assert response["error"]["message"] == "Operator session is required for this tool"
+    import_response = call_mcp(client, csrf_token, "bnb_import_trade_proof", {"txHash": "0x" + "1" * 64}, operator=False)
+    assert import_response["error"]["code"] == -32004
 
 
 def test_dashboard_snapshot_is_session_scoped(monkeypatch) -> None:
@@ -1938,6 +1941,95 @@ def test_trade_status_accepts_twak_rest_executor_with_cmc_submission_proof(monke
     assert result["proof"]["expected"]["to"] == "twak_rest_executor"
     assert result["proof"]["bridgeMode"] == "rest"
     assert result["ledgerEvent"]["eventType"] == "trade_receipt_confirmed"
+    get_settings.cache_clear()
+
+
+def test_import_trade_proof_records_verified_router_receipt(monkeypatch, tmp_path) -> None:
+    tx_hash = "0x" + "8" * 64
+
+    async def fake_rpc_call(method: str, params: list[object]) -> object:
+        if method == "eth_getTransactionReceipt":
+            return {
+                "status": "0x1",
+                "blockNumber": "0x30",
+                "from": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
+                "to": "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            }
+        if method == "eth_getTransactionByHash":
+            return {
+                "from": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
+                "to": "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+                "input": "0x38ed1739" + "00" * 64,
+            }
+        raise AssertionError(method)
+
+    monkeypatch.setattr("app.services.trading.receipt.ReceiptProofService.rpc_call", fake_rpc_call)
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    monkeypatch.setenv("ROBOT_FLEET_AGENT_WALLET", "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25")
+    get_settings.cache_clear()
+
+    client = TestClient(app)
+    csrf_token = client.get("/api/session").json()["csrfToken"]
+    result = parsed_tool_result(call_mcp(
+        client,
+        csrf_token,
+        "bnb_import_trade_proof",
+        {"txHash": tx_hash, "symbol": "CAKE", "side": "buy", "amountUsd": 25},
+    ))
+
+    assert result["status"] == "imported"
+    assert result["imported"] is True
+    assert result["proof"]["valid"] is True
+    assert result["tradeExecutionEvent"]["eventType"] == "trade_executed"
+    assert result["latestReceiptStatus"]["ledgerEvent"]["eventType"] == "trade_receipt_confirmed"
+
+    ledger = parsed_tool_result(call_mcp(client, csrf_token, "bnb_trade_ledger_summary", {"limit": 5}))
+    assert ledger["dailyCompliance"]["submittedTradeCount"] == 1
+    assert ledger["dailyCompliance"]["tradeCount"] == 1
+    get_settings.cache_clear()
+
+
+def test_import_trade_proof_rejects_registration_tx_shape(monkeypatch, tmp_path) -> None:
+    tx_hash = "0x" + "7" * 64
+
+    async def fake_rpc_call(method: str, params: list[object]) -> object:
+        if method == "eth_getTransactionReceipt":
+            return {
+                "status": "0x1",
+                "blockNumber": "0x31",
+                "from": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
+                "to": "0x212c61b9b72c95d95bf29cf032f5e5635629aed5",
+            }
+        if method == "eth_getTransactionByHash":
+            return {
+                "from": "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25",
+                "to": "0x212c61b9b72c95d95bf29cf032f5e5635629aed5",
+                "input": "0x1aa3a008",
+            }
+        raise AssertionError(method)
+
+    monkeypatch.setattr("app.services.trading.receipt.ReceiptProofService.rpc_call", fake_rpc_call)
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    monkeypatch.setenv("ROBOT_FLEET_AGENT_WALLET", "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25")
+    get_settings.cache_clear()
+
+    client = TestClient(app)
+    csrf_token = client.get("/api/session").json()["csrfToken"]
+    result = parsed_tool_result(call_mcp(
+        client,
+        csrf_token,
+        "bnb_import_trade_proof",
+        {"txHash": tx_hash, "symbol": "CAKE", "side": "buy", "amountUsd": 25},
+    ))
+
+    assert result["status"] == "rejected"
+    assert result["imported"] is False
+    assert "router_mismatch" in result["proof"]["reasons"]
+    assert "unsupported_pancake_selector" in result["proof"]["reasons"]
+
+    ledger = parsed_tool_result(call_mcp(client, csrf_token, "bnb_trade_ledger_summary", {"limit": 5}))
+    assert ledger["dailyCompliance"]["submittedTradeCount"] == 0
+    assert ledger["dailyCompliance"]["tradeCount"] == 0
     get_settings.cache_clear()
 
 
