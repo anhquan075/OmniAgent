@@ -97,7 +97,14 @@ class TrustWalletBridge:
             "actions": actions,
             "requiredActions": ["swap"],
             "reason": TrustWalletBridge.rest_reason(
-                reachable, expected_wallet, observed_wallet, wallet_validated, actions_validated, wallet_state,
+                reachable,
+                expected_wallet,
+                observed_wallet,
+                wallet_validated,
+                actions_validated,
+                wallet_state,
+                probes,
+                str(config.base_url),
             ),
             "probes": probes,
         }
@@ -106,6 +113,8 @@ class TrustWalletBridge:
     async def probe_rest_actions(config: TrustWalletBridgeConfig) -> dict[str, object]:
         try:
             payload = await TrustWalletRestClient.list_rest_actions(str(config.base_url), config.api_key, config.hmac_secret, config.timeout_ms / 1000)
+        except httpx.HTTPStatusError as error:
+            return {"path": "/actions", "ok": False, "statusCode": error.response.status_code, "error": str(error)}
         except httpx.HTTPError as error:
             return {"path": "/actions", "ok": False, "statusCode": None, "error": str(error)}
         return {"path": "/actions", "ok": isinstance(payload.get("actions"), list), "statusCode": 200, "payload": payload}
@@ -121,6 +130,8 @@ class TrustWalletBridge:
                 arguments,
                 config.timeout_ms / 1000,
             )
+        except httpx.HTTPStatusError as error:
+            return {"path": f"/actions/{action}", "ok": False, "statusCode": error.response.status_code, "error": str(error)}
         except httpx.HTTPError as error:
             return {"path": f"/actions/{action}", "ok": False, "statusCode": None, "error": str(error)}
         return {"path": f"/actions/{action}", "ok": True, "statusCode": 200, "payload": payload}
@@ -159,8 +170,16 @@ class TrustWalletBridge:
         wallet_validated: bool,
         actions_validated: bool,
         wallet_state: str | None = None,
+        probes: list[dict[str, object]] | None = None,
+        base_url: str | None = None,
     ) -> str | None:
+        status_codes = [probe.get("statusCode") for probe in probes or [] if isinstance(probe.get("statusCode"), int)]
+        if any(status_code in {401, 403} for status_code in status_codes):
+            return "TWAK REST bridge rejected backend auth; set matching TW_HMAC_SECRET on backend and TWAK_HMAC_SECRET on bridge."
         if not reachable:
+            status_code = status_codes[0] if status_codes else None
+            if status_code == 404:
+                return f"TWAK REST bridge returned 404 for {base_url}; check TRUST_WALLET_AGENT_KIT_CONFIG baseUrl."
             return "TWAK REST bridge is not reachable"
         if expected_wallet and not observed_wallet and wallet_state == "unbound":
             return "TWAK REST bridge wallet is unbound; bind the local TWAK wallet or connect WalletConnect."
