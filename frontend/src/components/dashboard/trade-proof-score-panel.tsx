@@ -27,6 +27,11 @@ const DEFAULT_CHECK_KEYS = [
   "pnlDrawdownCompliant",
 ];
 
+const preflightCheckOk = (preflight: Payload, name: string) => {
+  const checks = Array.isArray(preflight.checks) ? preflight.checks : [];
+  return checks.some((item: Payload) => item?.name === name && item?.ok === true);
+};
+
 const inferCheck = (key: string, state: Payload) => {
   const signal = marketSignalFromState(state);
   const proof = state.liveProofBundle ?? {};
@@ -38,7 +43,7 @@ const inferCheck = (key: string, state: Payload) => {
   if (key === "cmcSignalVerified") return signal?.ready === true || signal?.serverVerified === true;
   if (key === "cmcPriceFresh") return state.prices?.configured === true || Boolean(state.prices?.symbols);
   if (key === "riskPolicyApproved") return preflight.readyForLiveTrade === true || state.policyStatus?.approved === true;
-  if (key === "routerQuoteValid") return preflight.readyForLiveTrade === true || Boolean(preflight.fundedStrategy?.symbol);
+  if (key === "routerQuoteValid") return preflight.readyForLiveTrade === true || preflightCheckOk(preflight, "funded_route");
   if (key === "twakWalletMatched") return signer.ready === true;
   if (key === "competitionRegistered") {
     return registration.receiptProof?.valid === true

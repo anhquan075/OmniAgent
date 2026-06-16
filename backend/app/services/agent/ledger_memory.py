@@ -89,10 +89,17 @@ class LedgerMemoryService:
     ) -> list[str]:
         reasons: list[str] = []
         blockers = preflight.get("blockers") if isinstance(preflight.get("blockers"), list) else []
+        blocker_names = LedgerMemoryNormalizer.blocker_names(blockers)
         for blocker in blockers[:4]:
             if isinstance(blocker, dict):
+                if LedgerMemoryNormalizer.is_cascaded_route_blocker(blocker, blocker_names):
+                    continue
                 reasons.extend(LedgerMemoryNormalizer.reason_parts(blocker.get("reason") or blocker.get("name") or "preflight guarded"))
         for blocker in LedgerMemoryNormalizer.active_hard_blockers(preflight, proof_bundle)[:4]:
+            if blocker in blocker_names:
+                continue
+            if blocker == "funded_route" and "cmc_agent_hub_signal" in blocker_names:
+                continue
             reasons.extend(LedgerMemoryNormalizer.reason_parts(blocker))
         for event in events:
             if event.get("eventType") != "trade_blocked":
