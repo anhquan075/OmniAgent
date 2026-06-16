@@ -1,19 +1,19 @@
-from datetime import datetime, timezone
 import json
 import re
 
 import httpx
 
-from app.core.logging import get_logger
 from app.core.settings import get_settings
+from app.services.cmc.payloads import agent_hub_call_payload, log_cmc_tool as log_cmc_tool_payload
 from app.services.cmc.prices import CMC_KEY_REASON
 from app.services.cmc.agent_hub import CmcAgentHubClient
 from app.services.cmc.quota_guard import CmcQuotaGuard
-
-logger = get_logger(__name__)
+from app.services.cmc.response_cache import CmcResponseCache
 
 TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_.:/-]{1,160}$")
 MAX_ARGUMENT_BYTES = 20_000
+_TOOL_CALL_CACHE = CmcResponseCache()
+
 
 class CmcAgentHubToolClient:
     @staticmethod
@@ -46,6 +46,11 @@ class CmcAgentHubToolClient:
             )
             CmcAgentHubToolClient.log_cmc_tool(payload)
             return {**payload, **quota_block}
+        cache_key = CmcResponseCache.key(endpoint, api_key, tool_name, arguments)
+        cached = _TOOL_CALL_CACHE.get(cache_key, settings.cmc_agent_hub_signal_cache_ttl_sec)
+        if cached:
+            CmcAgentHubToolClient.log_cmc_tool(cached)
+            return cached
         try:
             initialize = await CmcAgentHubClient.mcp_request(endpoint, api_key, "initialize", {
                 "protocolVersion": "2025-06-18",
@@ -97,6 +102,8 @@ class CmcAgentHubToolClient:
             result=result,
             parsed_content=parsed_content,
         )
+        if tool_error is None:
+            _TOOL_CALL_CACHE.set(cache_key, payload)
         CmcAgentHubToolClient.log_cmc_tool(payload)
         return {**payload, **quota_block} if quota_block else payload
 
@@ -162,37 +169,5 @@ class CmcAgentHubToolClient:
                 return value.strip()
         return None
 
-    @staticmethod
-    def call_payload(
-        *,
-        configured: bool,
-        reachable: bool,
-        ready: bool,
-        endpoint: str,
-        tool_name: str,
-        reason: str | None,
-        result: dict[str, object] | None = None,
-        parsed_content: object = None,
-    ) -> dict[str, object]:
-        return {
-            "source": "coinmarketcap-agent-hub-mcp",
-            "configured": configured,
-            "reachable": reachable,
-            "ready": ready,
-            "endpoint": endpoint,
-            "toolName": tool_name,
-            "result": result or {},
-            "parsedContent": parsed_content,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "reason": reason,
-        }
-
-    @staticmethod
-    def log_cmc_tool(payload: dict[str, object]) -> None:
-        logger.info(
-            "cmc_agent_hub_tool",
-            toolName=payload.get("toolName"),
-            ready=payload.get("ready"),
-            reachable=payload.get("reachable"),
-            reason=payload.get("reason"),
-        )
+    call_payload = staticmethod(agent_hub_call_payload)
+    log_cmc_tool = staticmethod(log_cmc_tool_payload)

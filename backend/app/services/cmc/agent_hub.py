@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 import json
 from typing import Any
 from uuid import uuid4
@@ -6,8 +5,12 @@ from uuid import uuid4
 import httpx
 
 from app.core.settings import get_settings
+from app.services.cmc.payloads import agent_hub_quota_status, agent_hub_status_payload, agent_hub_tool_summary
 from app.services.cmc.prices import CMC_KEY_REASON
 from app.services.cmc.quota_guard import CmcQuotaGuard
+from app.services.cmc.response_cache import CmcResponseCache
+
+_STATUS_CACHE = CmcResponseCache()
 
 
 class CmcAgentHubClient:
@@ -27,6 +30,10 @@ class CmcAgentHubClient:
         quota_block = CmcQuotaGuard.active()
         if quota_block:
             return CmcAgentHubClient.quota_status(endpoint, quota_block)
+        cache_key = CmcResponseCache.key(endpoint, api_key, "tools/list")
+        cached = _STATUS_CACHE.get(cache_key, settings.cmc_agent_hub_status_cache_ttl_sec)
+        if cached:
+            return cached
         try:
             initialize = await CmcAgentHubClient.mcp_request(endpoint, api_key, "initialize", {
                 "protocolVersion": "2025-06-18",
@@ -61,13 +68,9 @@ class CmcAgentHubClient:
                 reason=str(error),
             )
         tool_rows = tools.get("tools") if isinstance(tools.get("tools"), list) else []
-        tool_names = [
-            str(tool.get("name"))
-            for tool in tool_rows
-            if isinstance(tool, dict) and tool.get("name")
-        ]
+        tool_names = [str(tool.get("name")) for tool in tool_rows if isinstance(tool, dict) and tool.get("name")]
         tool_summaries = [CmcAgentHubClient.tool_summary(tool) for tool in tool_rows if isinstance(tool, dict)]
-        return CmcAgentHubClient.status_payload(
+        payload = CmcAgentHubClient.status_payload(
             configured=True,
             reachable=True,
             ready=bool(tool_names),
@@ -77,6 +80,8 @@ class CmcAgentHubClient:
             toolCount=len(tool_names),
             reason=None if tool_names else "CMC Agent Hub MCP returned no tools.",
         )
+        _STATUS_CACHE.set(cache_key, payload)
+        return payload
 
     @staticmethod
     async def mcp_request(
@@ -156,41 +161,6 @@ class CmcAgentHubClient:
                 return payload if isinstance(payload, dict) else {}
         raise ValueError("CMC Agent Hub MCP returned an unsupported response format.")
 
-    @staticmethod
-    def status_payload(
-        *,
-        configured: bool,
-        reachable: bool,
-        ready: bool,
-        endpoint: str,
-        reason: str | None,
-        tools: list[str] | None = None,
-        toolSummaries: list[dict[str, object]] | None = None,
-        toolCount: int = 0,
-    ) -> dict[str, object]:
-        return {
-            "source": "coinmarketcap-agent-hub-mcp",
-            "configured": configured,
-            "reachable": reachable,
-            "ready": ready,
-            "endpoint": endpoint,
-            "tools": tools or [],
-            "toolSummaries": toolSummaries or [],
-            "toolCount": toolCount,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "reason": reason,
-        }
-
-    @staticmethod
-    def quota_status(endpoint: str, quota_block: dict[str, object]) -> dict[str, object]:
-        payload = CmcAgentHubClient.status_payload(configured=True, reachable=False, ready=False, endpoint=endpoint, reason=str(quota_block["reason"]))
-        return {**payload, **quota_block}
-
-    @staticmethod
-    def tool_summary(tool: dict[str, object]) -> dict[str, object]:
-        schema = tool.get("inputSchema")
-        return {
-            "name": str(tool.get("name") or ""),
-            "description": str(tool.get("description") or "")[:600],
-            "inputSchema": schema if isinstance(schema, dict) else {},
-        }
+    status_payload = staticmethod(agent_hub_status_payload)
+    quota_status = staticmethod(agent_hub_quota_status)
+    tool_summary = staticmethod(agent_hub_tool_summary)
