@@ -124,6 +124,28 @@ def test_live_competition_status_unlocks_live_execution_without_jsonl(monkeypatc
     get_settings.cache_clear()
 
 
+def test_live_competition_status_uses_bundled_hash_for_audit_display(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    monkeypatch.setenv("BNB_BUNDLED_REGISTRATION_PROOF_ENABLED", "false")
+    get_settings.cache_clear()
+
+    proof = CompetitionRegistrationStatusService.status_registration_proof(
+        REGISTERED_WALLET,
+        {
+            "registered": True,
+            "participant": REGISTERED_WALLET,
+            "competitionContractAddress": COMPETITION_CONTRACT,
+            "chainId": 56,
+        },
+    )
+
+    assert proof is not None
+    assert proof["txHash"] == "0xc9e4e4ca69156d20da4f8b5f343ee1354dfac72c40363d8e6d32b51f712c3cf4"
+    assert proof["receiptProof"]["valid"] is True
+    assert not CompetitionRegistrationService.has_stored_registration_proof(REGISTERED_WALLET)
+    get_settings.cache_clear()
+
+
 def test_live_competition_status_rejects_another_wallet(monkeypatch) -> None:
     monkeypatch.setenv("BNB_COMPETITION_CONTRACT_ADDRESS", COMPETITION_CONTRACT)
     get_settings.cache_clear()

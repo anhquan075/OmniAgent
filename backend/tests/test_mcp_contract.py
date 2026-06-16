@@ -338,9 +338,10 @@ def test_competition_readiness_exposes_wallet_registration_proof(monkeypatch, tm
     )
 
     assert result["registered"] is True
-    assert result["registrationTxHash"] is None
+    assert result["registrationTxHash"] == "0x" + "c" * 64
     assert result["registrationProof"]["source"] == "competition-status"
     assert result["registrationProof"]["statusProof"]["valid"] is True
+    assert result["registrationProof"]["receiptProof"]["valid"] is True
     assert result["registrationProof"]["walletAddress"] == "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25"
     assert result["registrationProof"]["competitionContractAddress"] == "0x212c61b9b72c95d95bf29cf032f5e5635629aed5"
     assert result["registrationProof"]["chainId"] == 56
