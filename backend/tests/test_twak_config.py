@@ -70,6 +70,51 @@ def test_direct_bridge_runtime_env_overrides_json(monkeypatch) -> None:
     assert config.command == "env-twak"
 
 
+def test_official_twak_env_names_configure_credentials(monkeypatch) -> None:
+    monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_MODE", "rest")
+    monkeypatch.setenv("TWAK_ACCESS_ID", "docs-access-id")
+    monkeypatch.setenv("TWAK_HMAC_SECRET", "docs-hmac-secret")
+    monkeypatch.setenv("TWAK_WALLET_PASSWORD", "docs-wallet-password")
+
+    config = TrustWalletConfigService.get_trust_wallet_bridge_config()
+    settings = get_settings()
+
+    assert config.access_id == "docs-access-id"
+    assert config.hmac_secret == "docs-hmac-secret"
+    assert settings.wallet_password == "docs-wallet-password"
+
+
+def test_legacy_twak_env_names_still_configure_credentials(monkeypatch) -> None:
+    monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_MODE", "rest")
+    monkeypatch.setenv("TW_ACCESS_ID", "legacy-access-id")
+    monkeypatch.setenv("TW_HMAC_SECRET", "legacy-hmac-secret")
+    monkeypatch.setenv("WALLET_PASSWORD", "legacy-wallet-password")
+
+    config = TrustWalletConfigService.get_trust_wallet_bridge_config()
+    settings = get_settings()
+
+    assert config.access_id == "legacy-access-id"
+    assert config.hmac_secret == "legacy-hmac-secret"
+    assert settings.wallet_password == "legacy-wallet-password"
+
+
+def test_official_twak_env_names_take_precedence(monkeypatch) -> None:
+    monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_MODE", "rest")
+    monkeypatch.setenv("TW_ACCESS_ID", "legacy-access-id")
+    monkeypatch.setenv("TW_HMAC_SECRET", "legacy-hmac-secret")
+    monkeypatch.setenv("WALLET_PASSWORD", "legacy-wallet-password")
+    monkeypatch.setenv("TWAK_ACCESS_ID", "docs-access-id")
+    monkeypatch.setenv("TWAK_HMAC_SECRET", "docs-hmac-secret")
+    monkeypatch.setenv("TWAK_WALLET_PASSWORD", "docs-wallet-password")
+
+    config = TrustWalletConfigService.get_trust_wallet_bridge_config()
+    settings = get_settings()
+
+    assert config.access_id == "docs-access-id"
+    assert config.hmac_secret == "docs-hmac-secret"
+    assert settings.wallet_password == "docs-wallet-password"
+
+
 def test_private_railway_bridge_url_defaults_to_http(monkeypatch) -> None:
     monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_MODE", "rest")
     monkeypatch.setenv(

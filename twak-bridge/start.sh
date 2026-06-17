@@ -42,7 +42,7 @@ if [[ -n "${WALLET_PASSWORD:-}" ]]; then
 fi
 
 if [[ -z "${TWAK_WALLET_PASSWORD:-}" ]]; then
-  echo "WALLET_PASSWORD or TWAK_WALLET_PASSWORD must be set to unlock the TWAK bridge wallet." >&2
+  echo "TWAK_WALLET_PASSWORD or WALLET_PASSWORD must be set to unlock the TWAK bridge wallet." >&2
   exit 1
 fi
 
