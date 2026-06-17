@@ -57,6 +57,8 @@ export function buildAgentOutputReasoning({
       "reason",
       "serverVerified",
       "timestamp",
+      "semanticValidation",
+      "requiredTradeSignal",
     ]),
     advisory: pick(research, ["mode", "canExecute", "executor", "finalAdvisory", "safetyBoundary", "panels"]),
     receipt: pick(proofBundle.latestReceiptStatus, ["status", "txHash", "blockNumber", "proof", "submissionProof"]),

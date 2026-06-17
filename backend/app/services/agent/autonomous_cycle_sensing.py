@@ -50,6 +50,8 @@ class AutonomousCycleSensing:
             tool_args=tool_args,
             tool_reason=tool_reason,
             resolution=resolution,
+            symbol=symbol,
+            side=side,
             execute=execute,
             stages=stages,
         )
@@ -67,6 +69,8 @@ class AutonomousCycleSensing:
         tool_args: dict[str, object],
         tool_reason: str | None,
         resolution: str,
+        symbol: str,
+        side: str,
         execute: bool,
         stages: list[dict[str, object]],
     ) -> dict[str, object] | None:
@@ -75,12 +79,23 @@ class AutonomousCycleSensing:
                 "toolName": tool_name,
                 "arguments": tool_args,
             })
-            signal = {**signal, "resolution": resolution}
+            semantic_validation = CmcSignalConfigService.signal_semantic_validation(
+                signal,
+                symbol=symbol,
+                side=side,
+            )
+            signal = {
+                **signal,
+                "resolution": resolution,
+                "semanticValidation": semantic_validation,
+                "requiredTradeSignal": semantic_validation["requiredTradeSignal"],
+                "reason": signal.get("reason") or semantic_validation.get("reason"),
+            }
             stages.append({
                 "stage": "sense_agent_hub",
-                "state": "completed" if signal.get("ready") else "blocked",
+                "state": "completed" if signal.get("ready") and semantic_validation.get("ready") else "blocked",
                 "tool": "cmc_agent_hub_call_tool",
-                "note": "cmc_agent_hub_tool_ready" if signal.get("ready") else str(
+                "note": "cmc_agent_hub_tool_ready" if signal.get("ready") and semantic_validation.get("ready") else str(
                     signal.get("reason") or "cmc_agent_hub_tool_unavailable"
                 ),
             })

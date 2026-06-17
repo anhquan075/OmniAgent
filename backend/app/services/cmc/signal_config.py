@@ -27,6 +27,9 @@ class CmcSignalConfigService:
         freshness = CmcSignalConfigService.signal_freshness_blocker(signal)
         if freshness:
             return freshness
+        semantic_validation = signal.get("semanticValidation")
+        if isinstance(semantic_validation, dict) and semantic_validation.get("ready") is False:
+            return str(semantic_validation.get("reason") or "CMC Agent Hub signal semantics are not ready.")
         semantics = CmcSignalConfigService.signal_semantics_blocker(signal, symbol=symbol, side=side)
         if semantics:
             return semantics
@@ -124,6 +127,27 @@ class CmcSignalConfigService:
         expected_symbol = str(symbol or "").upper()
         suffix = f" for {expected_symbol}" if expected_symbol else ""
         return f"CMC Agent Hub signal must include a {expected_side} trade signal{suffix}."
+
+    @staticmethod
+    def signal_semantic_validation(
+        signal: dict[str, object],
+        *,
+        symbol: str | None,
+        side: str | None,
+    ) -> dict[str, object]:
+        expected_side = str(side or "").lower()
+        expected_symbol = str(symbol or "").upper()
+        requirement = {
+            "symbol": expected_symbol,
+            "side": expected_side,
+            "label": " ".join(item for item in (expected_side, expected_symbol, "trade signal") if item),
+        }
+        reason = CmcSignalConfigService.signal_semantics_blocker(signal, symbol=symbol, side=side)
+        return {
+            "ready": reason is None,
+            "reason": reason,
+            "requiredTradeSignal": requirement,
+        }
 
     @staticmethod
     def contains_trade_side(value: object, expected_side: str) -> bool:

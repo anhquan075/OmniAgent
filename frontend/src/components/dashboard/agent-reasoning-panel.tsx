@@ -13,6 +13,8 @@ import {
   MARKET_HUB_KEY,
   MARKET_SIGNAL_KEY,
   safeVisibleText,
+  signalGateLabel,
+  signalGateReason,
   SIGNER_SERVER_KEY,
   strategyLabel,
   text,
@@ -55,9 +57,10 @@ export function AgentReasoningPanel({
     : [];
   const proofSignal = proofBundle.latestReceiptStatus?.submissionProof?.[MARKET_SIGNAL_KEY]
     ?? proofBundle.latestSubmission?.payload?.[MARKET_SIGNAL_KEY];
-  const marketSignal = cycle[MARKET_SIGNAL_KEY] ?? state[MARKET_SIGNAL_KEY] ?? proofSignal;
+  const marketSignal = cycle[MARKET_SIGNAL_KEY] ?? state[MARKET_SIGNAL_KEY] ?? preflight[MARKET_SIGNAL_KEY] ?? proofSignal;
   const marketProof = marketSignal ?? cycle[MARKET_HUB_KEY] ?? state[MARKET_HUB_KEY];
-  const marketToolReady = marketProof?.ready === true;
+  const signalBlocker = signalGateReason(preflight, marketSignal);
+  const marketToolReady = marketProof?.ready === true && !signalBlocker;
   const marketReady = hasLivePrice(state.prices) || marketToolReady;
   const policyReady = preflight.readyForLiveTrade === true || proofScore.checks?.riskPolicyApproved === true || risk.guardrailsPass === true;
   const signerReady = server.walletBound === true || state.wallet?.twakServer?.walletBound === true || state.twakStatus?.walletValidated === true || state.twakStatus?.ready === true;
@@ -66,15 +69,16 @@ export function AgentReasoningPanel({
   const actionReady = !offline && loopEnabled;
   const fallbackTrace = [
     `backend loop ${text(backendLoop.phase ?? backendLoop.state, loopEnabled ? "monitoring" : "syncing")}${loopDryRun ? " / dry run" : ""}`,
+    signalBlocker ? `agent hub: ${signalBlocker}` : "",
     preflight.readyForLiveTrade ? "policy precheck ready for backend gate" : `policy precheck guarded: ${blockerLabel(preflight.blockers)}`,
     proofScore.hardBlockers?.length ? `proof blockers: ${proofScore.hardBlockers.slice(0, 3).join(", ")}` : "proof bundle watching BSC evidence",
-  ];
+  ].filter(Boolean);
   const agentLogTrace = [...stageTrace, ...strategyTrace, ...reasoning].filter(Boolean);
   const trace = agentLogTrace.length ? agentLogTrace : fallbackTrace;
   const rows = [
     { label: "market", value: marketReady ? "market live" : "market sync", ok: marketReady },
-    { label: "agent hub", value: marketSignal ? (marketToolReady ? "tool call" : "tool sync") : "monitoring", ok: marketToolReady },
-    { label: "strategy", value: strategyLabel(strategyDecision), ok: strategyDecision.action && strategyDecision.action !== "hold" },
+    { label: "agent hub", value: signalGateLabel(marketSignal, signalBlocker), ok: marketToolReady },
+    { label: "strategy", value: strategyLabel(strategyDecision, signalBlocker), ok: strategyDecision.action && strategyDecision.action !== "hold" && !signalBlocker },
     { label: "policy", value: policyReady ? "pass" : "guarded", ok: policyReady },
     { label: "signer", value: signerReady ? "bound" : text(server.state, "dry"), ok: signerReady },
     { label: "action", value: loopDryRun ? "dry run" : decision({ offline, paused, riskPass: policyReady, canExecute: simulation.canExecute === true || preflight.readyForLiveTrade === true }), ok: actionReady },

@@ -27,6 +27,34 @@ describe("agent reasoning json", () => {
     expect(prettyJson(output)).toContain('\n  "status": "blocked"');
   });
 
+  it("keeps semantic validation from live preflight market signal", () => {
+    const output = buildAgentOutputReasoning({
+      state: {
+        livePreflight: {
+          status: "blocked",
+          cmcAgentHubSignal: {
+            ready: true,
+            toolName: "crypto.signal.test",
+            semanticValidation: {
+              ready: false,
+              reason: "CMC Agent Hub signal must include a sell trade signal for BNB.",
+            },
+            requiredTradeSignal: { symbol: "BNB", side: "sell" },
+          },
+        },
+      },
+      rows: [{ label: "agent hub", value: "needs sell BNB", ok: false }],
+      trace: ["agent hub: CMC Agent Hub signal must include a sell trade signal for BNB."],
+      readyCount: 0,
+      offline: false,
+      paused: false,
+    });
+
+    expect(output.marketSignal.semanticValidation.ready).toBe(false);
+    expect(output.marketSignal.requiredTradeSignal.side).toBe("sell");
+    expect(prettyJson(output)).toContain('"requiredTradeSignal"');
+  });
+
   it("builds an mcp call log from cycle stages and snapshot tools", () => {
     const log = buildMcpCallLog({
       cycle: {
