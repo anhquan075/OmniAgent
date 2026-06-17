@@ -2,7 +2,7 @@ from functools import lru_cache
 import os
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -87,15 +87,24 @@ class Settings(BaseSettings):
     bnb_agent_public_endpoint: str = "https://omniagent.example/.well-known/agent-card.json"
     bnb_token_allowlist: str = "BNB,USDT,USDC,CAKE,TWT"
     private_key: str | None = Field(default=None, alias="PRIVATE_KEY")
-    wallet_password: str | None = Field(default=None, alias="WALLET_PASSWORD")
+    wallet_password: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("TWAK_WALLET_PASSWORD", "WALLET_PASSWORD"),
+    )
     trust_wallet_agent_kit_mode: str = "disabled"
     trust_wallet_agent_kit_config: str | None = None
     trust_wallet_agent_kit_base_url: str | None = None
     trust_wallet_agent_kit_api_key: str | None = None
     trust_wallet_agent_kit_timeout_ms: int | None = None
     trust_wallet_agent_kit_command: str | None = None
-    tw_access_id: str | None = None
-    tw_hmac_secret: str | None = None
+    tw_access_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("TWAK_ACCESS_ID", "TW_ACCESS_ID"),
+    )
+    tw_hmac_secret: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("TWAK_HMAC_SECRET", "TW_HMAC_SECRET"),
+    )
     twak_agent_wallet: str | None = None
     robot_fleet_agent_wallet: str | None = None
     cmc_agent_hub_api_key: str | None = None
