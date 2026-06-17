@@ -2649,7 +2649,7 @@ def test_autonomous_cycle_invokes_configured_cmc_agent_hub_tool(monkeypatch, tmp
             "toolName": "crypto.signal.test",
             "arguments": {"symbol": "CAKE", "side": "buy", "amountUsd": 10.0},
         }
-        return {"ready": True, "parsedContent": [{"signal": "hold"}]}
+        return {"ready": True, "parsedContent": [{"signal": "buy"}]}
 
     monkeypatch.setattr("app.services.trading.pancake.PancakeRouterService.get_amounts_out", fake_amounts_out)
     monkeypatch.setattr("app.services.cmc.prices.CmcPriceService.get_price_snapshot", fake_price_snapshot)
@@ -2670,8 +2670,53 @@ def test_autonomous_cycle_invokes_configured_cmc_agent_hub_tool(monkeypatch, tmp
         {"symbol": "CAKE", "side": "buy", "amountUsd": 10, "slippageBps": 20, "signalSource": "cmc"},
     ))
     assert "cmc_agent_hub_call_tool" in result["toolsUsed"]
-    assert result["cmcAgentHubSignal"]["parsedContent"] == [{"signal": "hold"}]
+    assert result["cmcAgentHubSignal"]["parsedContent"] == [{"signal": "buy"}]
     assert any(stage["stage"] == "sense_agent_hub" and stage["state"] == "completed" for stage in result["stages"])
+    get_settings.cache_clear()
+
+
+def test_autonomous_cycle_holds_on_missing_cmc_trade_side(monkeypatch, tmp_path) -> None:
+    async def fake_price_snapshot(symbols: list[str] | None = None) -> dict[str, object]:
+        return {
+            "source": "coinmarketcap",
+            "configured": True,
+            "reachable": True,
+            "symbols": {symbol: {"symbol": symbol, "priceUsd": 1} for symbol in (symbols or [])},
+        }
+
+    async def fake_agent_hub_tool(args: dict[str, object]) -> dict[str, object]:
+        assert args == {
+            "toolName": "crypto.signal.test",
+            "arguments": {"symbol": "BNB", "side": "sell", "amountUsd": 0.25},
+        }
+        return {"ready": True, "parsedContent": [{"summary": "BNB market context only; no trade call."}]}
+
+    monkeypatch.setattr("app.services.cmc.prices.CmcPriceService.get_price_snapshot", fake_price_snapshot)
+    monkeypatch.setattr("app.services.cmc.agent_hub_tools.CmcAgentHubToolClient.call_cmc_agent_hub_tool", fake_agent_hub_tool)
+    monkeypatch.setenv("TRADE_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    monkeypatch.setenv("ROBOT_FLEET_AGENT_WALLET", "0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25")
+    monkeypatch.setenv("TRUST_WALLET_AGENT_KIT_MODE", "rest")
+    monkeypatch.setenv("CMC_AGENT_HUB_SIGNAL_TOOL", "crypto.signal.test")
+    get_settings.cache_clear()
+    client = TestClient(app)
+    csrf_token = client.get("/api/session").json()["csrfToken"]
+    result = parsed_tool_result(call_mcp(
+        client,
+        csrf_token,
+        "bnb_run_autonomous_cycle",
+        {"symbol": "BNB", "side": "sell", "amountUsd": 0.25, "slippageBps": 20, "signalSource": "cmc"},
+    ))
+
+    reason = "CMC Agent Hub signal must include a sell trade signal for BNB."
+    assert result["status"] == "blocked"
+    assert result["strategyDecision"]["decision"]["action"] == "hold"
+    assert reason in result["strategyDecision"]["decision"]["rationale"]
+    assert result["cmcAgentHubSignal"]["semanticValidation"]["ready"] is False
+    assert result["cmcAgentHubSignal"]["semanticValidation"]["reason"] == reason
+    assert result["cmcAgentHubSignal"]["requiredTradeSignal"]["side"] == "sell"
+    assert any(stage["stage"] == "sense_agent_hub" and stage["state"] == "blocked" for stage in result["stages"])
+    assert result["quote"] == {}
+    assert "bnb_quote_trade" not in result["toolsUsed"]
     get_settings.cache_clear()
 
 

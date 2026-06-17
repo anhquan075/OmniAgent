@@ -134,6 +134,8 @@ class AutonomousTradingAgent:
             execute and get_settings().bnb_trading_enabled,
             cmc_signal_tool,
             cmc_agent_hub_signal,
+            symbol=symbol,
+            side=side,
         )
         if live_cmc_blocker:
             execution = {

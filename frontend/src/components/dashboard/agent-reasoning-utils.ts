@@ -17,10 +17,36 @@ export function signalLabel(signal: Payload) {
   return "ready";
 }
 
-export function strategyLabel(strategyDecision: Payload) {
-  if (!strategyDecision.action) return "standby";
+export function strategyLabel(strategyDecision: Payload, signalBlocker?: string) {
+  if (!strategyDecision.action) return signalBlocker ? "signal gated" : "standby";
   const confidence = Math.round(Number(strategyDecision.confidence ?? 0) * 100);
   return `${strategyDecision.action} ${confidence}%`;
+}
+
+export function signalGateReason(preflight: Payload, signal: Payload | undefined) {
+  const semantic = signal?.semanticValidation;
+  if (semantic?.ready === false && semantic.reason) return safeVisibleText(String(semantic.reason));
+  const blocker = Array.isArray(preflight.blockers)
+    ? preflight.blockers.find((item: Payload) => item?.name === MARKET_SIGNAL_KEY)
+    : undefined;
+  const snakeBlocker = Array.isArray(preflight.blockers)
+    ? preflight.blockers.find((item: Payload) => item?.name === "cmc_agent_hub_signal")
+    : undefined;
+  if (blocker?.reason || snakeBlocker?.reason) return safeVisibleText(String(blocker?.reason ?? snakeBlocker?.reason));
+  if (signal?.ready === false && signal.reason) return safeVisibleText(String(signal.reason));
+  return "";
+}
+
+export function signalGateLabel(signal: Payload | undefined, blockerReason: string) {
+  if (!signal) return "tool sync";
+  if (blockerReason) {
+    const required = signal.requiredTradeSignal ?? signal.semanticValidation?.requiredTradeSignal;
+    const side = text(required?.side, "");
+    const symbol = text(required?.symbol, "");
+    return side && symbol ? `needs ${side} ${symbol}` : "signal gated";
+  }
+  if (signal.ready === true) return "tool call";
+  return "tool sync";
 }
 
 export function blockerLabel(blockers: unknown) {

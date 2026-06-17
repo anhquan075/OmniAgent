@@ -72,6 +72,10 @@ class TradingStrategyDecisionService:
         signal = context.get("cmcAgentHubSignal")
         if not isinstance(signal, dict) or signal.get("ready") is not True:
             risks.append("cmc_agent_hub_signal_not_ready")
+        else:
+            semantic_validation = signal.get("semanticValidation")
+            if isinstance(semantic_validation, dict) and semantic_validation.get("ready") is False:
+                reasons.append(str(semantic_validation.get("reason") or "cmc_agent_hub_signal_not_ready"))
         tactical = context.get("tacticalSignal") if isinstance(context.get("tacticalSignal"), dict) else {}
         if tactical.get("ready"):
             tactical_type = str(tactical.get("type") or "neutral")

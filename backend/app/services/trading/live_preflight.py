@@ -73,6 +73,11 @@ class LivePreflightService:
             amount_usd=float(strategy.get("amountUsd") or 1),
         )
         if not tool_name:
+            semantic_validation = CmcSignalConfigService.signal_semantic_validation(
+                {},
+                symbol=str(strategy.get("symbol") or "CAKE"),
+                side=str(strategy.get("side") or "buy"),
+            )
             return {
                 "source": "coinmarketcap-agent-hub-mcp",
                 "configured": False,
@@ -82,10 +87,25 @@ class LivePreflightService:
                 "result": {},
                 "parsedContent": None,
                 "resolution": resolution,
+                "semanticValidation": semantic_validation,
+                "requiredTradeSignal": semantic_validation["requiredTradeSignal"],
                 "reason": reason or "Set CMC_AGENT_HUB_SIGNAL_TOOL before live trading.",
             }
         signal = await CmcAgentHubToolClient.call_cmc_agent_hub_tool({"toolName": tool_name, "arguments": signal_args})
-        return {**signal, "serverVerified": True, "resolution": resolution}
+        semantic_validation = CmcSignalConfigService.signal_semantic_validation(
+            signal,
+            symbol=str(strategy.get("symbol") or "CAKE"),
+            side=str(strategy.get("side") or "buy"),
+        )
+        semantic_reason = semantic_validation.get("reason")
+        return {
+            **signal,
+            "serverVerified": True,
+            "resolution": resolution,
+            "semanticValidation": semantic_validation,
+            "requiredTradeSignal": semantic_validation["requiredTradeSignal"],
+            "reason": signal.get("reason") or semantic_reason,
+        }
 
     @staticmethod
     def build_checks(
