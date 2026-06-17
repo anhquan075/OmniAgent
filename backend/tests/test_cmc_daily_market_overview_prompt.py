@@ -10,11 +10,11 @@ def test_daily_market_overview_system_prompt_matches_skill_contract() -> None:
     assert "Call find_skill exactly once" in prompt
     assert "Call execute_skill exactly once" in prompt
     assert "Do not retry on failure" in prompt
-    assert "Target Telegram Markdown" in prompt
+    assert "Target: Telegram markdown" in prompt
     assert "**TL;DR**" in prompt
     assert "**Details**" in prompt
-    assert "exactly one line containing ———" in prompt
-    assert "Return the exact error_code and reason" in prompt
+    assert "separated by one `———` divider" in prompt
+    assert "state the exact error_code and reason" in prompt
 
 
 def test_daily_market_overview_exposes_prompt_without_mutating_skill_params(monkeypatch) -> None:

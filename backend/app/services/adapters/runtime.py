@@ -14,6 +14,7 @@ from app.services.cmc.agent_hub_tools import CmcAgentHubToolClient
 from app.services.cmc.daily_market_overview import CmcDailyMarketOverviewService
 from app.services.cmc.prices import CmcPriceService
 from app.services.cmc.skill_hub import CmcSkillHubClient
+from app.services.cmc.skill_prompt_catalog import CmcSkillPromptCatalog
 from app.services.shared.ledger import TradeLedger
 from app.services.trading.execution import TradeExecutionService
 from app.services.trading.live_preflight import LivePreflightService
@@ -48,6 +49,7 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     "cmc_skill_hub_status": "Validate CMC Skill Hub MCP connectivity and find/execute tool discovery.",
     "cmc_skill_hub_find_skill": "Find CoinMarketCap Skill Hub strategy skills by query.",
     "cmc_skill_hub_execute_skill": "Execute a CoinMarketCap Skill Hub strategy skill through MCP.",
+    "cmc_skill_prompt_catalog": "List curated CMC Skill Hub system prompts from the Skills Marketplace.",
     "cmc_daily_market_overview": "Run the CMC daily_market_overview skill once and render a Telegram markdown report.",
     "cmc_get_price_snapshot": "Read CoinMarketCap price snapshot.",
     "bnb_trade_ledger_summary": "Read append-only BNB trade ledger summary.",
@@ -129,6 +131,7 @@ class FastApiBnbAgentAdapter:
             "cmc_skill_hub_status": lambda _: CmcSkillHubClient.get_cmc_skill_hub_status(),
             "cmc_skill_hub_find_skill": CmcSkillHubClient.find_cmc_skill,
             "cmc_skill_hub_execute_skill": CmcSkillHubClient.execute_cmc_skill,
+            "cmc_skill_prompt_catalog": CmcSkillPromptCatalog.list_prompts,
             "cmc_daily_market_overview": CmcDailyMarketOverviewService.run,
             "cmc_get_price_snapshot": self.price_snapshot,
             "bnb_trade_ledger_summary": self.ledger,
