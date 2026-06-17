@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.services.cmc.market_report_formatter import CmcMarketReportFormatter
+from app.services.cmc.daily_market_overview_prompt import DAILY_MARKET_OVERVIEW_SYSTEM_PROMPT
 from app.services.cmc.skill_hub import CmcSkillHubClient
 from app.services.cmc.skill_result_parser import CmcSkillResultParser
 from app.services.cmc.skill_schema import CmcSkillSchemaValidator
@@ -79,6 +80,7 @@ class CmcDailyMarketOverviewService:
             "uniqueName": unique_name,
             "inputSchema": input_schema or {},
             "parameters": parameters,
+            "systemPrompt": DAILY_MARKET_OVERVIEW_SYSTEM_PROMPT,
             "ready": True,
             "timestamp": timestamp,
             **normalized,
@@ -168,6 +170,7 @@ class CmcDailyMarketOverviewService:
             "error_code": error_code,
             "errorCode": error_code,
             "reason": str(reason or error_code),
+            "systemPrompt": DAILY_MARKET_OVERVIEW_SYSTEM_PROMPT,
             "timestamp": timestamp,
             "rawSkillOutput": raw,
             **extra,
