@@ -31,7 +31,9 @@ the receipt through a dashboard, public proof endpoint, and verifier script.
 It is built as a Casper-only demo for the
 [Casper Agentic Buildathon](https://dorahacks.io/hackathon/casper-agentic-buildathon/detail).
 
-![OmniAgent Casper architecture](frontend/public/imgs/omniagent-casper-architecture.png)
+The architecture diagram below is a self-generated raster PNG, not an SVG.
+
+![Self-generated OmniAgent Casper architecture PNG](frontend/public/imgs/omniagent-casper-architecture.png)
 
 ## High-Level Design
 
