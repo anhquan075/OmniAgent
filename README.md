@@ -1,23 +1,45 @@
 <p align="center">
   <a href="https://dorahacks.io/hackathon/casper-agentic-buildathon/detail">
-    <img src="frontend/public/imgs/logo.svg" alt="OmniAgent Casper proof console" width="420" />
+    <img src="frontend/public/imgs/logo.png" alt="OmniAgent Casper proof console" width="460" />
   </a>
 </p>
 
 <p align="center">
+  <a href="frontend/public/imgs/omniagent-mascot.png"><img alt="OmniAgent ghost mascot" src="frontend/public/imgs/omniagent-mascot.png" width="26" /></a>
   <a href="https://dorahacks.io/hackathon/casper-agentic-buildathon/detail"><img alt="Casper Agentic Buildathon" src="https://img.shields.io/badge/Casper-Agentic%20Buildathon-D7352E?logo=casper&logoColor=white" /></a>
   <a href="contracts/casper-decision-proof"><img alt="Native Casper contract" src="https://img.shields.io/badge/Contract-Native%20Casper%20Rust-2B6CB0?logo=rust&logoColor=white" /></a>
-  <a href="frontend/public/imgs/logo.svg"><img alt="OmniAgent logo" src="https://img.shields.io/badge/Logo-OmniAgent%20Casper-D7352E" /></a>
+  <a href="https://testnet.cspr.live/contract/5a82529f9ba05e716933384ddc9862710ba9a0fd3a7347ab1e8c6e60b1a4c861"><img alt="Casper Testnet proof" src="https://img.shields.io/badge/Testnet-Casper%20Proof-D7352E" /></a>
 </p>
 
 # OmniAgent Casper
 
-OmniAgent is a Casper-only AI agent demo built for the [Casper Agentic Buildathon](https://dorahacks.io/hackathon/casper-agentic-buildathon/detail).
+OmniAgent Casper is a verifiable AI agent for **RWA collateral risk decisions**
+on Casper Testnet. It answers a practical financing question:
 
-It produces verifiable decision receipts for **RWA collateral/NAV risk gates**.
-The judge story: "Should this tokenized collateral remain financeable?" The
-agent reads public RWA evidence, runs proposer/critic/policy guardrails, writes
-a Casper Testnet receipt, and shows readback/replay proof.
+> Should this tokenized collateral remain financeable after fresh public market
+> evidence changes its risk profile?
+
+The project exists because DeFi credit and RWA financing workflows need more
+than an AI recommendation. They need a replayable trail: source evidence,
+agent reasoning, deterministic policy gates, a Casper transaction, contract
+readback, and a public verifier that does not require private keys or internal
+operator access.
+
+OmniAgent reads public RWA evidence, runs a proposer/critic/policy-gate agent
+loop, writes a decision receipt to a native Casper Rust contract, and exposes
+the receipt through a dashboard, public proof endpoint, and verifier script.
+It is built as a Casper-only demo for the
+[Casper Agentic Buildathon](https://dorahacks.io/hackathon/casper-agentic-buildathon/detail).
+
+![OmniAgent Casper architecture](frontend/public/imgs/omniagent-casper-architecture.png)
+
+## High-Level Design
+
+1. Public RWA evidence is normalized into a source hash and risk score.
+2. The agent runtime proposes an action, critiques it, and applies a deterministic policy gate.
+3. FastAPI exposes the Casper MCP tools, dashboard API, public proof API, and verifier inputs.
+4. The Casper Testnet contract stores the latest proof digest and per-decision receipt.
+5. The dashboard and verifier replay the receipt path without exposing signer paths, operator tokens, or raw runtime logs.
 
 - **Backend runtime:** `fastapi-casper-agent`
 - **MCP tool family:** `casper_*`
@@ -112,7 +134,7 @@ Open [http://localhost:5173](http://localhost:5173).
 | Explorer | `https://testnet.cspr.live` |
 | Decision log | Dashboard receipt stream via `/api/dashboard/receipts` |
 
-## Contract Links
+## Contract Source
 
 - [Casper decision proof contract source](contracts/casper-decision-proof)
 - [Contract build and entrypoint notes](contracts/casper-decision-proof/README.md)
@@ -132,37 +154,6 @@ Only claim stack items backed by code or verifier evidence:
 | Odra Framework | Not used | Contract is native Casper Rust, not Odra. |
 | CSPR.cloud | Optional REST integration | Used when `CASPER_CSPR_CLOUD_API_KEY` is set for account balance and fallback block-height probes. |
 | CSPR.click / CSPR.trade | Not used | No production dependency or live integration is claimed. |
-
-## Frontend Branding & Typography
-
-The proof console ships with a full Casper-themed brand system.
-
-**Favicon & logo (Casper theme):**
-
-| Asset | Purpose |
-|------|---------|
-| `frontend/public/favicon.svg` | Crisp Casper mark, preferred by modern browsers |
-| `frontend/public/favicon.png` / `favicon.ico` | Generated PNG/ICO fallbacks for legacy browsers and OS surfaces |
-| `frontend/public/imgs/casper-icon.svg` | In-app Casper mark used in the top bar, hero, and agent loop |
-| `frontend/public/imgs/logo.svg` / `logo.png` | Casper lockup (mark + "OmniAgent / CASPER PROOF CONSOLE" wordmark) |
-
-- Brand accent: Casper red `#D7352E` / `#e63f37`, exposed via the `--casper-red` / `--casper-red-soft` design tokens in `src/styles/casper-tokens.css`.
-- `index.html` declares `theme-color` = Casper red and prefers the SVG favicon, with PNG/ICO/apple-touch-icon fallbacks.
-
-**Typography:**
-
-- Type family: [Geist Variable](https://fontsource.org/fonts/geist) (`@fontsource-variable/geist`), set on `:root` in `src/styles/casper-tokens.css`.
-- Rich-text surface: [`@tailwindcss/typography`](https://github.com/tailwindlabs/tailwindcss-typography) is enabled via `@plugin` in `src/globals.css`.
-- The Casper-themed prose layer lives in `src/styles/casper-typography.css`; apply `prose prose-invert casper-prose` to any narrative/markdown container (used on the AI rationale blockquote in `src/components/dashboard/ai-output-panel.tsx`).
-
-Rebuild the raster favicon/logo from the source SVGs (requires `rsvg-convert` and ImageMagick `magick`):
-
-```bash
-rsvg-convert -w 512 -h 512 frontend/public/favicon.svg -o frontend/public/favicon.png
-rsvg-convert -w 256 -h 256 frontend/public/favicon.svg -o /tmp/casper-favicon-256.png
-magick /tmp/casper-favicon-256.png -define icon:auto-resize=64,48,32,16 frontend/public/favicon.ico
-rsvg-convert -w 720 -h 192 frontend/public/imgs/logo.svg -o frontend/public/imgs/logo.png
-```
 
 ## Key Environment Variables
 
@@ -208,3 +199,16 @@ Build the Casper contract directly:
 ```bash
 cargo +nightly-2025-03-01 build --manifest-path contracts/casper-decision-proof/Cargo.toml --release --target wasm32v1-none
 ```
+
+## Casper Testnet & Blockchain Links
+
+| Item | Link |
+|------|------|
+| Casper Testnet explorer | [testnet.cspr.live](https://testnet.cspr.live/) |
+| Casper Testnet RPC | [node.testnet.casper.network/rpc](https://node.testnet.casper.network/rpc) |
+| Decision contract | [5a82529f9ba05e716933384ddc9862710ba9a0fd3a7347ab1e8c6e60b1a4c861](https://testnet.cspr.live/contract/5a82529f9ba05e716933384ddc9862710ba9a0fd3a7347ab1e8c6e60b1a4c861) |
+| Contract package | [46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea](https://testnet.cspr.live/contract-package/46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea) |
+| Contract install deploy | [0444471ab96e840e25d69f525341ee95f014137ebda3e3c0a838eb46b31267f1](https://testnet.cspr.live/deploy/0444471ab96e840e25d69f525341ee95f014137ebda3e3c0a838eb46b31267f1) |
+| Demo decision deploy | [ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736](https://testnet.cspr.live/deploy/ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736) |
+| Contract source | [contracts/casper-decision-proof](contracts/casper-decision-proof) |
+| Receipt verifier | [scripts/verify-casper-receipt.sh](scripts/verify-casper-receipt.sh) |

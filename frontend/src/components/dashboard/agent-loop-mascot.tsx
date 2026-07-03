@@ -27,7 +27,7 @@ export default function AgentLoopMascot({ bundle, refreshedAt, isLoading, error 
         <span className="loop-track" aria-hidden="true" />
         <span className="loop-scanline" aria-hidden="true" />
         <div className="loop-core">
-          <img src="/imgs/casper-icon.svg" alt="Casper autonomous agent mascot" width="74" height="74" />
+          <img src="/imgs/casper-icon.png" alt="OmniAgent autonomous mascot" width="74" height="74" />
           <b>OmniAgent</b>
           <small>{status}</small>
         </div>
