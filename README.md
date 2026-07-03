@@ -1,16 +1,82 @@
-# OmniAgent
+<p align="center">
+  <a href="https://dorahacks.io/hackathon/casper-agentic-buildathon/detail">
+    <img src="frontend/public/imgs/logo.svg" alt="OmniAgent Casper proof console" width="420" />
+  </a>
+</p>
 
-OmniAgent is a BSC mainnet autonomous trading agent built for [BNB Hack Track 1: Autonomous Trading Agents](https://dorahacks.io/hackathon/bnbhack-twt-cmc/detail). It reads live market signals from the CoinMarketCap Agent Hub, runs them through a deterministic strategy reinforced by an optional LLM advisor, and executes guarded swaps on PancakeSwap V2 through the Trust Wallet Agent Kit — all without human intervention. The goal wasn't to build the most profitable bot. It was to build one that could be trusted to run unsupervised, produce verifiable evidence of every decision, and fail safely when something goes wrong. See [docs/problem-and-approach.md](docs/problem-and-approach.md) for the full reasoning behind the design.
+<p align="center">
+  <a href="https://dorahacks.io/hackathon/casper-agentic-buildathon/detail"><img alt="Casper Agentic Buildathon" src="https://img.shields.io/badge/Casper-Agentic%20Buildathon-D7352E?logo=casper&logoColor=white" /></a>
+  <a href="contracts/casper-decision-proof"><img alt="Native Casper contract" src="https://img.shields.io/badge/Contract-Native%20Casper%20Rust-2B6CB0?logo=rust&logoColor=white" /></a>
+  <a href="frontend/public/imgs/logo.svg"><img alt="OmniAgent logo" src="https://img.shields.io/badge/Logo-OmniAgent%20Casper-D7352E" /></a>
+</p>
 
-**Live proof**: wallet `0x047fCCc4B2c0058EcfcF331ca7590F227886Fd25` registered with the BNB Hack contract in tx [`0xc9e4e4...`](https://bscscan.com/tx/0xc9e4e4ca69156d20da4f8b5f343ee1354dfac72c40363d8e6d32b51f712c3cf4) (block 102615129), then submitted the first TWAK-signed trade tx [`0x6a1ab4...`](https://bscscan.com/tx/0x6a1ab4dd0275f0e51756bdb6b18c7805b0e022a95c8c8f70707b09cf839063f9) (block 102780454, `proof.valid=true`).
+# OmniAgent Casper
 
-> **Live trading is disabled by default.** Set `BNB_TRADING_ENABLED=true` to enable real BSC transactions (`settings.py:53`).
+OmniAgent is a Casper-only AI agent demo built for the [Casper Agentic Buildathon](https://dorahacks.io/hackathon/casper-agentic-buildathon/detail).
 
----
+It produces verifiable decision receipts for **RWA collateral/NAV risk gates**.
+The judge story: "Should this tokenized collateral remain financeable?" The
+agent reads public RWA evidence, runs proposer/critic/policy guardrails, writes
+a Casper Testnet receipt, and shows readback/replay proof.
+
+- **Backend runtime:** `fastapi-casper-agent`
+- **MCP tool family:** `casper_*`
+- **On-chain component:** [contracts/casper-decision-proof](contracts/casper-decision-proof)
+- **Frontend:** a Casper proof cockpit for decision traces, policy gates, deploy status, readback checks, judge packet, and recovery actions
+
+## Safety Model (Dry Run vs Live Submit)
+
+Live Casper submission is **off by default**.
+
+## Autonomous Agent Loop
+
+The agent can run autonomously — continuously fetching live RWA evidence and
+writing Casper decision receipts every N seconds without manual intervention.
+
+Enable the loop via environment variables:
+
+```bash
+CASPER_AGENT_LOOP_ENABLED=true \
+CASPER_AGENT_LOOP_INTERVAL_SEC=60 \
+CASPER_AGENT_LOOP_DRY_RUN=true \
+rtk uv --project backend run uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+- `CASPER_AGENT_LOOP_ENABLED` — starts the background asyncio loop on boot
+- `CASPER_AGENT_LOOP_INTERVAL_SEC` — seconds between cycles (default: 60)
+- `CASPER_AGENT_LOOP_DRY_RUN` — if true, writes local ledger entries only; if false, submits live Casper transactions (requires `CASPER_LIVE_SUBMIT_ENABLED=true`)
+
+The loop fetches live US Treasury 10-Year yield from the public fiscaldata.treasury.gov API, falling back to a static fixture if the API is unreachable. Loop status is visible in the dashboard and via `GET /api/dashboard/loop`.
+
+- Dry runs are safe and write decisions into the dashboard decision log.
+- Live submission is allowed only when all runtime proof gates pass and live-submit is explicitly enabled.
+- Configured live submission runs `casper-client`, probes Casper state, captures a Casper Testnet transaction hash, and records it in the dashboard proof log.
+- When live submit returns a deploy hash, the loop can poll confirmation and attach readback evidence automatically.
+
+Live mode requires:
+
+1. A funded Casper Testnet account
+2. A signer path outside git
+3. Deployed decision contract hash and package hash
+4. `casper-client` available on PATH or via `CASPER_CLIENT_PATH`
+5. The explicit live-submit command flag
+
+## Full Casper Network Integration
+
+OmniAgent is discoverable and independently verifiable as a Casper network agent:
+
+- Public agent card: `GET /.well-known/casper-agent-card.json`
+- Dashboard/API actions: `POST /api/cycle/run`, `POST /api/loop/start`, `POST /api/loop/stop`, and `POST /api/readback/record`
+- Read-only JSON-RPC fallback for state root, `latest_proof_digest`, and decision receipt reads when `casper-client` is unavailable
+- Optional CSPR.cloud REST probe for account balance, plus latest block height when used as the fallback probe
+- Autonomous loop path: submit -> poll deploy status -> read contract state -> verify digest and receipt
+- Additive contract query entry point: `get_decision_receipt(decision_id: String) -> String`
+
+Signing and submission still require `casper-client`; JSON-RPC and CSPR.cloud are read-only support paths.
 
 ## Quick Start
 
-Install dependencies and copy the env templates:
+### 1) Install dependencies
 
 ```bash
 pnpm install
@@ -19,97 +85,126 @@ cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 ```
 
-Fill in your BSC RPC URL, CMC API key, and Trust Wallet Agent Kit credentials in `backend/.env`. Then start the TWAK REST bridge and the backend:
+### 2) Start backend (safe mode)
 
 ```bash
-twak serve --rest --host localhost --port 8787
-BNB_TRADING_ENABLED=false ALLOW_AGENT_RUN=false \
-  rtk uv --project backend run python -m uvicorn app.main:app --host localhost --port 8000
+OMNIAGENT_SKIP_ENV_FILE=true \
+CASPER_LIVE_SUBMIT_ENABLED=false \
+rtk uv --project backend run uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Start the frontend:
+### 3) Start frontend
 
 ```bash
 rtk pnpm -C frontend run dev
 ```
 
-The dashboard opens at `http://localhost:3000`. All actions run dry-run by default — no real trades until you explicitly enable live mode.
+Open [http://localhost:5173](http://localhost:5173).
 
----
-
-## How It Works
-
-Each autonomous cycle runs five stages (`autonomous_cycle.py:26-60`):
-
-1. **SENSE** — fetches a live price snapshot from CMC and checks wallet/TWAK status
-2. **STRATEGY** — runs a deterministic momentum check (Heikin-Ashi signal when OHLC data is available) and optionally consults an OpenRouter LLM advisor; the LLM can only reduce or hold, never escalate
-3. **QUOTE** — calls `getAmountsOut` on the PancakeSwap V2 router (`0x10ED43C718714eb63d5aA57B78B54704E256024E`) via raw `eth_call`
-4. **RISK** — checks daily trade count, drawdown limits ($25 max trade, 30% max drawdown), and the 9-check live preflight gate
-5. **SIGN** — submits the swap calldata to TWAK at `localhost:8787`, waits for a BSC tx hash, and records a proof bundle
-
-The proof layer produces an 8-check scorecard and a 7-state trade work order FSM. The score is explanatory only — hard blockers decide readiness, not the number.
-
----
-
-## Active Network
+## Runtime Overview
 
 | Item | Value |
 |------|-------|
-| Chain | BNB Smart Chain mainnet |
-| Chain ID | `56` |
-| Explorer | `https://bscscan.com` |
-| DEX | PancakeSwap V2 |
-| Tokens | BNB, WBNB, USDT, USDC, CAKE, TWT |
-| Competition contract | `0x212c61b9b72c95d95bf29cf032f5e5635629aed5` |
+| Network | Casper Testnet |
+| Contract | [casper-decision-proof](contracts/casper-decision-proof) |
+| Adapter | `fastapi-casper-agent` |
+| MCP tools | `casper_agent_cockpit_snapshot`, `casper_get_account`, `casper_runtime_snapshot`, `casper_live_preflight`, `casper_run_autonomous_cycle`, `casper_live_proof_bundle`, `casper_get_deploy_status`, `casper_get_decision_receipt`, `casper_verify_decision_receipt`, `casper_record_decision`, `casper_record_readback` |
+| Explorer | `https://testnet.cspr.live` |
+| Decision log | Dashboard receipt stream via `/api/dashboard/receipts` |
 
----
+## Contract Links
+
+- [Casper decision proof contract source](contracts/casper-decision-proof)
+- [Contract build and entrypoint notes](contracts/casper-decision-proof/README.md)
+- Dashboard contract links: set `CASPER_DECISION_CONTRACT_HASH` and `CASPER_DECISION_CONTRACT_PACKAGE_HASH` to embed Casper Testnet contract/package links in the proof console.
+
+## Buildathon Technology Stack
+
+Only claim stack items backed by code or verifier evidence:
+
+| Stack item | Status | Evidence |
+|------|------|------|
+| Native Casper Rust SDK | Used | Contract uses `casper-contract` and `casper-types` in `contracts/casper-decision-proof`. |
+| Casper MCP Server | Used as local MCP tool surface | Backend exposes the `casper_*` tool family through the project MCP route. |
+| JavaScript/TypeScript SDK | Used for frontend, not Casper JS SDK | Vite/React/TypeScript proof cockpit in `frontend/`. |
+| Python SDK | Used for backend runtime, not Casper Python SDK | FastAPI backend, JSON-RPC probes, and `casper-client` orchestration in `backend/`. |
+| x402 Facilitator | Readiness only | `CASPER_X402_EVIDENCE_URL` and `CASPER_X402_RECEIPT` fail closed unless real endpoint and receipt exist. |
+| Odra Framework | Not used | Contract is native Casper Rust, not Odra. |
+| CSPR.cloud | Optional REST integration | Used when `CASPER_CSPR_CLOUD_API_KEY` is set for account balance and fallback block-height probes. |
+| CSPR.click / CSPR.trade | Not used | No production dependency or live integration is claimed. |
+
+## Frontend Branding & Typography
+
+The proof console ships with a full Casper-themed brand system.
+
+**Favicon & logo (Casper theme):**
+
+| Asset | Purpose |
+|------|---------|
+| `frontend/public/favicon.svg` | Crisp Casper mark, preferred by modern browsers |
+| `frontend/public/favicon.png` / `favicon.ico` | Generated PNG/ICO fallbacks for legacy browsers and OS surfaces |
+| `frontend/public/imgs/casper-icon.svg` | In-app Casper mark used in the top bar, hero, and agent loop |
+| `frontend/public/imgs/logo.svg` / `logo.png` | Casper lockup (mark + "OmniAgent / CASPER PROOF CONSOLE" wordmark) |
+
+- Brand accent: Casper red `#D7352E` / `#e63f37`, exposed via the `--casper-red` / `--casper-red-soft` design tokens in `src/styles/casper-tokens.css`.
+- `index.html` declares `theme-color` = Casper red and prefers the SVG favicon, with PNG/ICO/apple-touch-icon fallbacks.
+
+**Typography:**
+
+- Type family: [Geist Variable](https://fontsource.org/fonts/geist) (`@fontsource-variable/geist`), set on `:root` in `src/styles/casper-tokens.css`.
+- Rich-text surface: [`@tailwindcss/typography`](https://github.com/tailwindlabs/tailwindcss-typography) is enabled via `@plugin` in `src/globals.css`.
+- The Casper-themed prose layer lives in `src/styles/casper-typography.css`; apply `prose prose-invert casper-prose` to any narrative/markdown container (used on the AI rationale blockquote in `src/components/dashboard/ai-output-panel.tsx`).
+
+Rebuild the raster favicon/logo from the source SVGs (requires `rsvg-convert` and ImageMagick `magick`):
+
+```bash
+rsvg-convert -w 512 -h 512 frontend/public/favicon.svg -o frontend/public/favicon.png
+rsvg-convert -w 256 -h 256 frontend/public/favicon.svg -o /tmp/casper-favicon-256.png
+magick /tmp/casper-favicon-256.png -define icon:auto-resize=64,48,32,16 frontend/public/favicon.ico
+rsvg-convert -w 720 -h 192 frontend/public/imgs/logo.svg -o frontend/public/imgs/logo.png
+```
 
 ## Key Environment Variables
 
-| Variable | Required | Purpose |
-|----------|----------|---------|
-| `BNB_RPC_URL` | Yes | BSC mainnet RPC endpoint |
-| `BNB_TRADING_ENABLED` | No (default `false`) | Enable real BSC transactions |
-| `CMC_AGENT_HUB_API_KEY` | Yes | CoinMarketCap Agent Hub MCP |
-| `TW_ACCESS_ID` | Yes | Trust Wallet Agent Kit access ID |
-| `TW_HMAC_SECRET` | Yes | Trust Wallet Agent Kit HMAC secret |
-| `TRUST_WALLET_AGENT_KIT_BASE_URL` | Yes | TWAK REST bridge URL |
-| `OPENROUTER_API_KEY` | No | LLM advisor (deepseek/deepseek-v4-pro) |
+| Variable | Purpose |
+|----------|---------|
+| `CASPER_NETWORK` | Casper network name (default: `casper-test`) |
+| `CASPER_RPC_URL` | Casper RPC endpoint |
+| `CASPER_NODE_ADDRESS` | Optional Casper client node address; falls back to `CASPER_RPC_URL` |
+| `CASPER_ACCOUNT_PUBLIC_KEY` | Funded Casper Testnet account public key |
+| `CASPER_SECRET_KEY_PATH` | Local signer path (must stay outside git) |
+| `CASPER_DECISION_CONTRACT_HASH` | Deployed decision contract hash |
+| `CASPER_DECISION_CONTRACT_PACKAGE_HASH` | Deployed decision contract package hash |
+| `CASPER_LIVE_SUBMIT_ENABLED` | Enables guarded live-submit prerequisite validation |
+| `CASPER_CLIENT_PATH` | Casper CLI binary, default `casper-client` |
+| `CASPER_TRANSACTION_COMMAND` | Casper CLI decision-call command, default `put-deploy` |
+| `CASPER_TRANSACTION_WASM_PATH` | Optional compiled Wasm path for contract install/session mode |
+| `CASPER_DECISION_LEDGER_PATH` | Optional runtime backing store for the dashboard decision log |
+| `CASPER_AGENT_LOOP_AUTO_READBACK` | Enables best-effort deploy polling and readback after loop submits |
+| `CASPER_AGENT_LOOP_POLL_MAX_RETRIES` | Max deploy-status polling attempts after submit |
+| `CASPER_CSPR_CLOUD_API_KEY` | Optional CSPR.cloud API key for balance and fallback block-height probes |
+| `CASPER_MIN_BALANCE_CSPR` | Warning threshold for low CSPR account balance |
+| `CASPER_X402_EVIDENCE_URL` | Optional real x402 evidence endpoint |
+| `CASPER_X402_RECEIPT` | Optional x402 receipt metadata; leave empty rather than faking receipts |
 
-Never commit secrets. Use `backend/.env` locally; use deployment secrets in production.
-`TRUST_WALLET_AGENT_KIT_CONFIG` JSON is still supported for compatibility, but direct TWAK env vars take precedence.
+## Verification
 
----
-
-## Running Live
-
-The live trading runbook is in [docs/bnb-hack-live-trading-runbook.md](docs/bnb-hack-live-trading-runbook.md). The short version: configure env, start TWAK, run the readiness check, then run a single guarded cycle:
+Run the full buildathon stack verifier when you need a release-quality check:
 
 ```bash
-rtk uv --project backend run python backend/scripts/check-bnb-mainnet-readiness.py --live
-rtk uv --project backend run python backend/scripts/run-bnb-live-cycle.py \
-  --i-understand-this-trades-real-bsc-mainnet
+scripts/verify-casper-buildathon-stack.sh
 ```
 
-Both scripts refuse to submit unless `bnb_live_preflight` returns `readyForLiveTrade=true`. CMC Agent Hub MCP signal is mandatory before any real trade.
+It validates backend compile/tests, contract check/release build, frontend unit/e2e tests/build, safe backend boot, dashboard proof APIs, readiness, dry-run MCP decision cycle, and tracked-source secret hygiene.
 
----
+Verify a single receipt without `casper-client`:
 
-## Documentation
+```bash
+scripts/verify-casper-receipt.sh <decision_id> --use-rpc
+```
 
-| File | What it covers |
-|------|---------------|
-| [docs/problem-and-approach.md](docs/problem-and-approach.md) | Why this project exists, the safety problem, and the design decisions |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Full system architecture: C4 diagrams, sequence flows, FSM states, risk gates |
-| [docs/bnb-hack-submission.md](docs/bnb-hack-submission.md) | Competition submission: sponsor usage, safety model, live proof evidence |
-| [docs/bnb-hack-live-trading-runbook.md](docs/bnb-hack-live-trading-runbook.md) | Step-by-step runbook for the live trading window |
-| [docs/bnb-agent-skill.md](docs/bnb-agent-skill.md) | ERC-8004 on-chain identity registration via BNB AI Agent SDK |
-| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | How to set up locally, run tests, and contribute |
+Build the Casper contract directly:
 
----
-
-## Competition
-
-BNB Hack Track 1: Autonomous Trading Agents — [DoraHacks submission page](https://dorahacks.io/hackathon/bnbhack-twt-cmc/detail).
-
-Sponsor stack: BNB Chain (BSC mainnet, chain ID 56), CoinMarketCap (Agent Hub MCP + Skill Hub), Trust Wallet (Agent Kit execution), BNB AI Agent SDK (ERC-8004 identity), PancakeSwap V2 (DEX routing).
+```bash
+cargo +nightly-2025-03-01 build --manifest-path contracts/casper-decision-proof/Cargo.toml --release --target wasm32v1-none
+```

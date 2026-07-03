@@ -1,1 +1,1 @@
-"""Agent, ledger, market, and MCP tool services."""
+"""Casper runtime, ledger, and MCP tool services."""

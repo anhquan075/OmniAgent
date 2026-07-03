@@ -1,0 +1,392 @@
+/* ══════════════════════════════════════════════════════════
+   OmniAgent — Comprehensive Responsive Overrides
+   Breakpoints: 1340 / 1180 / 1024 / 760 / 620 / 520 / 400
+   ══════════════════════════════════════════════════════════ */
+
+/* ── 1340px: stack activity console ── */
+@media (max-width: 1340px) {
+  .agent-activity-console,
+  .agent-stream-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── 1180px: stack hero + workbench, collapse metrics ── */
+@media (max-width: 1180px) {
+  .agent-hero,
+  .agent-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .command-status {
+    border-top: 1px solid rgba(230, 63, 55, 0.35);
+    border-left: 0;
+    padding-top: 20px;
+    padding-left: 0;
+  }
+
+  .casper-proof-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .casper-proof-metrics span:nth-child(3) {
+    border-left: 0;
+  }
+
+  .casper-proof-metrics span:nth-child(n + 3) {
+    border-top: 1px solid var(--color-glass-border);
+  }
+}
+
+/* ── 1024px: tablet — reduce hero, scale fonts, lifecycle 3-col ── */
+@media (max-width: 1024px) {
+  .agent-hero {
+    min-height: auto;
+    padding: 26px 28px;
+  }
+
+  .agent-command h2 {
+    font-size: 2.2rem;
+  }
+
+  .agent-command p {
+    font-size: 0.95rem;
+  }
+
+  .command-status b {
+    font-size: 1.35rem;
+  }
+
+  .hero-proof-mark img {
+    width: 60px;
+    height: 60px;
+  }
+
+  .casper-proof-lifecycle {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .casper-proof-lifecycle span {
+    min-height: 64px;
+    padding: 12px 8px 12px 14px;
+  }
+
+  .casper-proof-lifecycle span:nth-child(n + 4) {
+    border-top: 1px solid var(--color-glass-border);
+  }
+
+  .signal-stat {
+    min-height: 68px;
+    padding: 12px 12px 12px 0;
+  }
+}
+
+/* ── 760px: tablet portrait — topbar stacks, signal 2-col, ops full-width ── */
+@media (max-width: 760px) {
+  .agent-topbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    padding: 4px 0 12px;
+  }
+
+  .agent-actions {
+    justify-content: flex-start;
+  }
+
+  .agent-actions > *,
+  .judge-actions button {
+    flex: 1 1 160px;
+  }
+
+  .agent-hero {
+    padding: 20px;
+    border-radius: var(--radius-lg);
+  }
+
+  .agent-command {
+    gap: 16px;
+  }
+
+  .agent-command h2 {
+    font-size: 1.8rem;
+  }
+
+  .agent-command p {
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .hero-proof-mark {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+
+  .hero-proof-mark img {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+  }
+
+  .signal-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .signal-stat:nth-child(3) {
+    border-left: 0;
+  }
+
+  .signal-stat:nth-child(n + 3) {
+    border-top: 1px solid var(--color-glass-border);
+  }
+
+  .signal-stat {
+    min-height: 62px;
+    padding: 10px 10px 10px 0;
+  }
+
+  .signal-stat b {
+    font-size: 0.95rem;
+  }
+
+  .agent-ops-rail {
+    gap: 10px;
+  }
+
+  .bento-card,
+  .agent-loop-mascot,
+  .mcp-log-panel,
+  .ai-output-panel {
+    border-radius: var(--radius-md);
+  }
+
+  .loop-visual {
+    min-height: 210px;
+  }
+}
+
+/* ── 620px: mobile landscape — proof panels stack, lifecycle scrolls ── */
+@media (max-width: 620px) {
+  .agent-loop-mascot {
+    padding: 16px;
+  }
+
+  .loop-visual {
+    min-height: 200px;
+  }
+
+  .loop-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .loop-core {
+    width: 120px;
+    min-height: 130px;
+    padding: 14px 10px;
+  }
+
+  .loop-core img {
+    width: 56px;
+    height: 56px;
+  }
+
+  .mcp-log-panel,
+  .ai-output-panel {
+    padding: 16px;
+  }
+
+  .ai-decision-strip span + span {
+    padding-left: 0;
+  }
+
+  /* Scrollable lifecycle instead of cramped wrapping */
+  .casper-proof-lifecycle {
+    grid-template-columns: repeat(6, minmax(110px, 1fr));
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+  }
+
+  .casper-proof-lifecycle span {
+    scroll-snap-align: start;
+  }
+
+  .casper-proof-metrics,
+  .judge-grid,
+  .agent-role-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ── 520px: mobile — single-column everything, compact ── */
+@media (max-width: 520px) {
+  .agent-identity {
+    align-items: flex-start;
+  }
+
+  .agent-actions button,
+  .status-pill,
+  .chain-proof-link,
+  .chain-proof-missing,
+  .casper-proof-rpc {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .agent-hero {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .agent-command h2 {
+    font-size: 1.55rem;
+  }
+
+  .command-status {
+    padding-top: 14px;
+  }
+
+  .command-status b {
+    font-size: 1.2rem;
+  }
+
+  .signal-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .signal-stat,
+  .signal-stat + .signal-stat {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .signal-stat + .signal-stat {
+    border-top: 1px solid var(--color-glass-border);
+  }
+
+  .casper-proof-panel,
+  .ops-section,
+  .agent-loop-mascot,
+  .mcp-log-panel,
+  .ai-output-panel {
+    padding: 14px;
+  }
+
+  .casper-proof-metrics,
+  .casper-proof-lifecycle,
+  .judge-grid,
+  .agent-role-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .casper-proof-metrics span,
+  .casper-proof-metrics span + span,
+  .casper-proof-lifecycle span + span {
+    border-left: 0;
+  }
+
+  .casper-proof-metrics span + span,
+  .casper-proof-lifecycle span + span {
+    border-top: 1px solid var(--color-glass-border);
+  }
+
+  .casper-proof-receipt,
+  .casper-proof-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .casper-proof-head b {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .agent-ops-rail {
+    gap: 8px;
+  }
+
+  .casper-proof-blockers {
+    gap: 6px;
+  }
+
+  .casper-proof-blockers span {
+    font-size: 0.76rem;
+    padding: 5px 10px;
+  }
+
+  .judge-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .agent-mark {
+    width: 40px;
+    height: 40px;
+  }
+
+  .agent-mark img {
+    width: 26px;
+    height: 26px;
+  }
+
+  .agent-identity h1 {
+    font-size: 1.15rem;
+  }
+}
+
+/* ── 400px: tiny phone — ultra-compact, hide orbs ── */
+@media (max-width: 400px) {
+  .agent-hero {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .agent-command h2 {
+    font-size: 1.35rem;
+  }
+
+  .agent-command p {
+    font-size: 0.82rem;
+  }
+
+  .command-status b {
+    font-size: 1.05rem;
+  }
+
+  .signal-stat {
+    min-height: 54px;
+    padding: 8px 8px 8px 0;
+  }
+
+  .signal-stat b {
+    font-size: 0.85rem;
+    margin-top: 4px;
+  }
+
+  .signal-stat small {
+    font-size: 0.68rem;
+  }
+
+  .panel-head h3 {
+    font-size: 0.85rem;
+  }
+
+  .check-list b,
+  .recovery-list b {
+    font-size: 0.82rem;
+  }
+
+  /* Hide ambient orbs on very small screens */
+  .casper-shell .pointer-events-none.fixed {
+    display: none;
+  }
+
+  /* Live badge: hide text, keep dot */
+  .live-badge {
+    font-size: 0 !important;
+    gap: 0;
+  }
+}
+

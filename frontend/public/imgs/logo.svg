@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" role="img" aria-labelledby="ttl dsc">
+  <title id="ttl">OmniAgent Casper</title>
+  <desc id="dsc">OmniAgent Casper proof console logo lockup.</desc>
+  <!-- Casper mark -->
+  <rect x="16" y="16" width="64" height="64" rx="16" fill="#D7352E"/>
+  <path fill="#fff" d="M49.2 29.5c8.4 0 15.8 4.6 19.6 11.4l-8.4 4.9c-2.1-4-6.3-6.7-11.2-6.7-7.1 0-12.8 5.7-12.8 12.8s5.7 12.8 12.8 12.8c4.9 0 9.1-2.7 11.2-6.7l8.4 4.9C65 69.7 57.6 74.3 49.2 74.3 36.9 74.3 27 64.3 27 52s9.9-22.5 22.2-22.5Z"/>
+  <path fill="#D7352E" d="M50 42.8c3 0 5.6 1.6 7 4l-7.4 4.3h12.8V38.3l-4.2 7.2A14.8 14.8 0 0 0 50 42.8Z"/>
+  <!-- Wordmark -->
+  <text x="100" y="52" font-family="'Geist Variable', ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="30" font-weight="700" fill="#fff8ef">OmniAgent</text>
+  <text x="100" y="74" font-family="'Geist Variable', ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="13" font-weight="650" fill="#e63f37" letter-spacing="2">CASPER PROOF CONSOLE</text>
+</svg>

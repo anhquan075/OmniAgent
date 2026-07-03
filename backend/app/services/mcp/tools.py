@@ -5,32 +5,21 @@ from pydantic import create_model
 from app.core.settings import get_settings
 from app.models.tool_result import ToolResult
 from app.services.adapters.runtime import DynamicAgentAdapterRegistry, RuntimeTool, TOOL_DESCRIPTIONS
+from app.services.casper.tools import CASPER_OPERATOR_TOOL_NAMES
+
 
 ToolPayload = dict[str, Any]
 McpTool = RuntimeTool
-
-OPERATOR_TOOL_NAMES = {
-    "bnb_agent_sdk_register_identity",
-    "bnb_competition_register",
-    "bnb_emergency_pause",
-    "bnb_execute_trade",
-    "bnb_get_trade_status",
-    "bnb_import_trade_proof",
-    "bnb_record_paid_signal_access",
-    "bnb_run_autonomous_cycle",
-    "cmc_agent_hub_call_tool",
-    "cmc_skill_hub_execute_skill",
-}
+OPERATOR_TOOL_NAMES = set(CASPER_OPERATOR_TOOL_NAMES)
 
 
 class McpToolRegistry:
     @classmethod
     def list_tools(cls, *, operator: bool = True) -> list[ToolPayload]:
-        settings = get_settings()
-        allowed_tools = settings.allowed_tools
+        allowed_tools = get_settings().allowed_tools
         if not operator:
             allowed_tools = allowed_tools - OPERATOR_TOOL_NAMES
-        return cls._adapter(None).list_tools(allowed_tools)
+        return DynamicAgentAdapterRegistry.list_tools(allowed_tools)
 
     @classmethod
     async def call_tool(cls, name: str, args: ToolPayload) -> ToolResult:
@@ -49,6 +38,5 @@ class McpToolRegistry:
 
     @classmethod
     def _adapter(cls, adapter_id: object) -> object:
-        settings = get_settings()
-        selected = str(adapter_id or settings.agent_runtime_adapter or "").strip()
-        return DynamicAgentAdapterRegistry.resolve(selected or DynamicAgentAdapterRegistry.default_adapter_id())
+        selected = str(adapter_id or get_settings().agent_runtime_adapter or "").strip()
+        return DynamicAgentAdapterRegistry.resolve(selected or None)

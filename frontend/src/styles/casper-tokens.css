@@ -1,0 +1,93 @@
+/* ═══════════════════════════════════════════════════════════════
+   OmniAgent — Agentic Bento · Casper Network Palette
+   Enhanced with glass morphism & bento grid tokens
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: dark;
+  font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+
+  /* ── Casper brand surfaces ── */
+  --color-casper-bg: #120b0a;
+  --color-casper-bg-raised: #1c1110;
+  --color-casper-surface: #201513;
+  --color-casper-surface-raised: #241816;
+
+  /* ── Casper warm cream / red accents ── */
+  --color-casper-red: #e63f37;
+  --color-casper-red-soft: #ff776d;
+  --color-casper-red-glow: rgba(230, 63, 55, 0.22);
+  --color-casper-red-dim: rgba(230, 63, 55, 0.08);
+  --color-casper-cream: #fff8ef;
+  --color-casper-cream-dim: rgba(255, 248, 239, 0.06);
+
+  /* ── Glass panel tokens ── */
+  --color-glass: rgba(31, 19, 17, 0.72);
+  --color-glass-strong: rgba(43, 25, 22, 0.88);
+  --color-glass-border: rgba(255, 246, 235, 0.1);
+  --color-glass-border-strong: rgba(255, 246, 235, 0.18);
+
+  /* ── Status — Casper-friendly tones ── */
+  --color-status-ok: #9fdfc2;
+  --color-status-ok-bg: rgba(159, 223, 194, 0.1);
+  --color-status-ok-border: rgba(159, 223, 194, 0.25);
+  --color-status-warn: #e6bf69;
+  --color-status-warn-bg: rgba(230, 191, 105, 0.1);
+  --color-status-warn-border: rgba(230, 191, 105, 0.25);
+  --color-status-danger: #ff9d8f;
+  --color-status-danger-bg: rgba(230, 63, 55, 0.12);
+  --color-status-danger-border: rgba(230, 63, 55, 0.3);
+
+  /* ── Text hierarchy ── */
+  --color-casper-text: #fff8ef;
+  --color-casper-muted: #c8b9ad;
+  --color-casper-faint: #8f7f73;
+
+  /* ── Shadows & glows ── */
+  --surface-shadow: rgba(38, 13, 10, 0.5);
+  --shadow-card: 0 2px 10px rgba(38, 13, 10, 0.55), 0 0 0 1px var(--color-glass-border);
+  --shadow-card-hover: 0 6px 28px rgba(38, 13, 10, 0.65), 0 0 0 1px var(--color-glass-border-strong);
+  --shadow-glow-red: 0 0 45px var(--color-casper-red-glow);
+
+  /* ── Radii ── */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-full: 9999px;
+  --radius-control: 10px;
+  --radius-panel: 14px;
+
+  /* ── Glass blur ── */
+  --blur-glass: 18px;
+  --blur-glass-heavy: 36px;
+  --surface-panel-blur: 18px;
+
+  /* ── Focus ring ── */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 3px;
+  --focus-ring-color: var(--color-casper-red-soft);
+
+  /* ── Transitions ── */
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Legacy shorthand aliases ── */
+  --bg: var(--color-casper-bg);
+  --bg-2: var(--color-casper-bg-raised);
+  --panel: var(--color-glass);
+  --panel-strong: var(--color-glass-strong);
+  --line: var(--color-glass-border);
+  --line-strong: var(--color-glass-border-strong);
+  --text: var(--color-casper-text);
+  --muted: var(--color-casper-muted);
+  --faint: var(--color-casper-faint);
+  --casper-red: var(--color-casper-red);
+  --casper-red-soft: var(--color-casper-red-soft);
+  --green: var(--color-status-ok);
+  --amber: var(--color-status-warn);
+  --danger: var(--color-status-danger);
+  --shadow: var(--surface-shadow);
+}
+
+

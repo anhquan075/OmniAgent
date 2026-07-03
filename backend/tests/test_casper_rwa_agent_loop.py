@@ -1,0 +1,109 @@
+from app.services.casper.guardrails import CasperGuardrailService
+from app.services.casper.rwa_evidence import CasperRwaEvidenceService
+from app.services.casper.x402 import CasperX402EvidenceService
+
+
+def source_fixture() -> dict[str, object]:
+    return {
+        "id": "treasury-yield-10y",
+        "label": "US 10Y Treasury yield",
+        "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates",
+        "observedAt": "2026-07-02T12:00:00+00:00",
+        "observedValue": 4.82,
+        "threshold": 4.5,
+        "unit": "percent",
+    }
+
+
+def test_rwa_evidence_normalizes_sources_and_hashes_stably() -> None:
+    bundle = CasperRwaEvidenceService.build_evidence_bundle({"evidence": [source_fixture()]})
+    duplicate = CasperRwaEvidenceService.build_evidence_bundle({"evidence": [source_fixture()]})
+
+    assert bundle["scenario"] == "rwa-collateral-nav-risk-receipt"
+    assert bundle["status"] == "ready"
+    assert bundle["sourceHash"].startswith("sha256:")
+    assert bundle["sourceHash"] == duplicate["sourceHash"]
+    assert bundle["riskScore"] >= 70
+    assert bundle["recommendedAction"] == "haircut"
+    assert bundle["sources"][0]["status"] == "observed"
+    assert bundle["riskFactors"][0]["code"] == "threshold_breach"
+
+
+def test_rwa_evidence_fails_closed_without_real_observation() -> None:
+    bundle = CasperRwaEvidenceService.build_evidence_bundle({})
+
+    assert bundle["status"] == "blocked"
+    assert bundle["recommendedAction"] == "block"
+    assert "rwa_evidence_missing" in bundle["hardBlockers"]
+    assert bundle["sources"][0]["status"] == "missing_observation"
+
+
+def test_guardrails_hash_role_outputs_and_block_unsafe_rebalance() -> None:
+    evidence = CasperRwaEvidenceService.build_evidence_bundle({"evidence": [source_fixture()]})
+
+    guardrails = CasperGuardrailService.evaluate(
+        {
+            "evidenceBundle": evidence,
+            "proposedAction": "rebalance",
+            "rationale": "Rebalance into higher-yield collateral.",
+        }
+    )
+
+    assert guardrails["status"] == "blocked"
+    assert guardrails["guardrailHash"].startswith("sha256:")
+    assert [role["agentRole"] for role in guardrails["roles"]] == [
+        "proposer",
+        "critic",
+        "policy_gate",
+    ]
+    assert "high_risk_rebalance_blocked" in guardrails["policyGate"]["reasonCodes"]
+    assert all(role["rationaleHash"].startswith("sha256:") for role in guardrails["roles"])
+
+
+def test_x402_readiness_is_explicit_when_not_configured(monkeypatch) -> None:
+    monkeypatch.delenv("CASPER_X402_EVIDENCE_URL", raising=False)
+    monkeypatch.delenv("CASPER_X402_RECEIPT", raising=False)
+
+    readiness = CasperX402EvidenceService.get_readiness({})
+
+    assert readiness["status"] == "unavailable"
+    assert readiness["receipt"] is None
+    assert "x402_evidence_endpoint_missing" in readiness["hardBlockers"]
+
+
+def test_x402_requires_endpoint_and_receipt_to_be_ready(monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_X402_EVIDENCE_URL", "https://example.com/x402/rwa")
+    monkeypatch.delenv("CASPER_X402_RECEIPT", raising=False)
+
+    readiness = CasperX402EvidenceService.get_readiness({})
+
+    assert readiness["status"] == "unavailable"
+    assert "x402_receipt_missing" in readiness["hardBlockers"]
+
+
+def test_x402_normalizes_public_receipt_metadata(monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_X402_EVIDENCE_URL", "https://example.com/x402/rwa")
+    monkeypatch.setenv(
+        "CASPER_X402_RECEIPT",
+        (
+            '{"receiptId":"paid-1","provider":"x402","resourceUrl":"https://example.com/x402/rwa",'
+            '"paidAt":"2026-07-03T14:40:00+00:00","amount":"0.01","currency":"USDC"}'
+        ),
+    )
+
+    readiness = CasperX402EvidenceService.get_readiness({})
+
+    assert readiness["status"] == "ready"
+    assert readiness["receipt"]["receiptId"] == "paid-1"
+    assert readiness["receipt"]["receiptHash"].startswith("sha256:")
+    assert "CASPER_X402_RECEIPT" not in str(readiness)
+
+
+def test_x402_rejects_token_like_receipt(monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_X402_EVIDENCE_URL", "https://example.com/x402/rwa")
+    monkeypatch.setenv("CASPER_X402_RECEIPT", '{"receiptId":"paid-1","token":"secret-token"}')
+
+    readiness = CasperX402EvidenceService.get_readiness({})
+
+    assert readiness["status"] == "unavailable"
+    assert "x402_receipt_invalid" in readiness["hardBlockers"]

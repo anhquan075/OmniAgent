@@ -16,12 +16,11 @@ export default defineConfig({
     ['list'],
   ],
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://127.0.0.1:5174',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    headless: false,
+    headless: true,
     actionTimeout: 10000,
-    // Inject wagmi mock sessionStorage BEFORE app loads to bypass wallet modal
     launchOptions: {
       args: ['--disable-web-security'],
     },
@@ -31,20 +30,29 @@ export default defineConfig({
   expect: {
     timeout: 10000,
   },
-  webServer: {
-    command: 'VITE_PLAYWRIGHT=true VITE_API_URL=http://localhost:8000 VITE_DEFAULT_NETWORK=bsc pnpm run dev',
-    url: 'http://localhost:5173',
-    timeout: 120000,
-    reuseExistingServer: true,
-    cwd: resolve(__dirname, '.'),
-  },
+  webServer: [
+    {
+      command: 'OMNIAGENT_SKIP_ENV_FILE=true CASPER_LIVE_SUBMIT_ENABLED=false CASPER_AGENT_LOOP_ENABLED=false CASPER_DECISION_LEDGER_PATH=playwright-casper-dashboard-log rtk uv --project . run uvicorn app.main:app --host 127.0.0.1 --port 8020',
+      url: 'http://127.0.0.1:8020/api/health',
+      timeout: 120000,
+      reuseExistingServer: false,
+      cwd: resolve(__dirname, '../backend'),
+    },
+    {
+      command: 'VITE_PLAYWRIGHT=true VITE_API_URL=http://127.0.0.1:8020 VITE_DEFAULT_NETWORK=casper-test pnpm exec vite --host 127.0.0.1 --port 5174',
+      url: 'http://127.0.0.1:5174',
+      timeout: 120000,
+      reuseExistingServer: false,
+      cwd: resolve(__dirname, '.'),
+    },
+  ],
 
   projects: [
     {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        headless: false,
+        headless: true,
       },
     },
   ],

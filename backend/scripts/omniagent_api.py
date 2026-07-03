@@ -14,6 +14,7 @@ DEFAULT_API_URL = "http://127.0.0.1:8000"
 @dataclass
 class ApiClient:
     base_url: str = os.getenv("OMNIAGENT_API_URL", DEFAULT_API_URL)
+    operator_token: str | None = os.getenv("API_OPERATOR_TOKEN") or None
 
     async def health(self) -> dict[str, Any]:
         async with httpx.AsyncClient(base_url=self.base_url, timeout=20) as client:
@@ -23,7 +24,8 @@ class ApiClient:
 
     async def tool(self, name: str, arguments: dict[str, Any] | None = None, timeout: float = 60) -> dict[str, Any]:
         async with httpx.AsyncClient(base_url=self.base_url, timeout=timeout) as client:
-            session = await client.get("/api/session")
+            headers = {"X-Operator-Token": self.operator_token} if self.operator_token else None
+            session = await client.get("/api/session", headers=headers)
             session.raise_for_status()
             csrf = str(session.json()["csrfToken"])
             payload = {

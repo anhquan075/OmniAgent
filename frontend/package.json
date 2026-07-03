@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "check:active-surface": "python3 ../scripts/check-active-bnb-surface.py",
     "preview": "node server.mjs",
     "test": "vitest",
     "test:ui": "vitest --ui",

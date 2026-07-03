@@ -4,12 +4,10 @@ from pydantic import BaseModel, ConfigDict, Field
 class ToolResult(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
-    network: str = "bsc"
+    network: str = "casper"
     meta: dict[str, object] = Field(
         default_factory=lambda: {
-            "executedBy": "agent_wallet",
-            "userWallet": None,
-            "walletConnected": False,
+            "executedBy": "casper_agent",
         },
         alias="_meta",
     )
