@@ -26,10 +26,9 @@ def create_session(response: Response, operator_token: str | None = None) -> dic
     settings = get_settings()
     csrf_token = secrets.token_urlsafe(48)
     expires_at = int(time.time() * 1000) + settings.api_session_ttl_ms
-    operator = bool(
-        settings.api_operator_token
-        and operator_token
-        and secrets.compare_digest(operator_token, settings.api_operator_token)
+    operator = (
+        not settings.api_operator_token
+        or bool(operator_token and secrets.compare_digest(operator_token, settings.api_operator_token))
     )
     session = ApiSession(csrf_token=csrf_token, expires_at=expires_at, operator=operator)
     response.set_cookie(
@@ -104,4 +103,14 @@ def require_session(
         raise HTTPException(status_code=401, detail="Valid frontend session is required")
     if request.method not in {"GET", "HEAD"} and csrf_token != session.csrf_token:
         raise HTTPException(status_code=403, detail="Valid CSRF token is required")
+    return session
+
+
+def require_operator(
+    request: Request,
+    csrf_token: str | None = Header(default=None, alias="X-CSRF-Token"),
+) -> ApiSession:
+    session = require_session(request, csrf_token)
+    if not session.operator:
+        raise HTTPException(status_code=403, detail="Operator session is required for this action")
     return session

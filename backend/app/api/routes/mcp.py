@@ -12,9 +12,9 @@ async def mcp_info() -> dict[str, object]:
     return {
         "name": "omni-agent-fastapi-mcp-server",
         "version": "0.1.0",
-        "description": "OmniAgent BSC MCP Server",
+        "description": "OmniAgent Casper MCP Server",
         "tools": len(McpToolRegistry.list_tools(operator=False)),
-        "_meta": {"mode": "agent_wallet", "userWallet": None, "walletConnected": False},
+        "_meta": {"mode": "casper_agent"},
     }
 
 
@@ -29,7 +29,7 @@ async def mcp_call(request: Request, session: ApiSession = Depends(require_sessi
             "id": request_id,
             "result": {
                 "tools": McpToolRegistry.list_tools(operator=session.operator),
-                "_meta": {"mode": "agent_wallet", "userWallet": None, "walletConnected": False},
+                "_meta": {"mode": "casper_agent"},
             },
         }
     if method != "tools/call":

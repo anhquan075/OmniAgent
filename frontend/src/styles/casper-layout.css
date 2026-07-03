@@ -1,0 +1,270 @@
+/* ═══════════════════════════════════════════════════
+   OmniAgent — Bento Grid Layout · Casper Network
+   ═══════════════════════════════════════════════════ */
+
+/* ── Glass card base ── */
+.bento-card {
+  position: relative;
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--color-glass), var(--color-glass-strong));
+  backdrop-filter: blur(var(--blur-glass));
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: all 0.35s var(--ease-smooth);
+}
+
+.bento-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at top left, rgba(255, 248, 239, 0.03) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.bento-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-glass-border-strong);
+  transform: translateY(-2px);
+}
+
+.bento-card.accent-red {
+  border-color: rgba(230, 63, 55, 0.25);
+}
+.bento-card.accent-red:hover {
+  border-color: rgba(230, 63, 55, 0.4);
+  box-shadow: var(--shadow-card-hover), 0 0 35px var(--color-casper-red-glow);
+}
+
+/* ── Hero: full-width bento banner ── */
+.agent-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  gap: 28px;
+  align-items: stretch;
+  min-height: 260px;
+  border: 1px solid rgba(230, 63, 55, 0.18);
+  border-radius: var(--radius-xl);
+  padding: 32px 36px;
+  background:
+    radial-gradient(ellipse 100% 100% at 0% 50%, var(--color-casper-red-dim) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 80% at 100% 50%, rgba(255, 248, 239, 0.03) 0%, transparent 55%),
+    linear-gradient(135deg, var(--color-glass), var(--color-glass-strong));
+  backdrop-filter: blur(var(--blur-glass));
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  position: relative;
+  transition: all 0.4s var(--ease-smooth);
+}
+
+.agent-hero:hover {
+  border-color: rgba(230, 63, 55, 0.3);
+  box-shadow: var(--shadow-card-hover), var(--shadow-glow-red);
+}
+
+.agent-command {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 22px;
+  position: relative;
+  z-index: 1;
+}
+
+.agent-command h2 {
+  max-width: 760px;
+  margin: 8px 0 0;
+  font-size: 2.8rem;
+  font-weight: 780;
+  line-height: 1.08;
+  background: linear-gradient(135deg, var(--color-casper-text) 0%, var(--color-casper-muted) 60%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-wrap: balance;
+}
+
+.agent-command p {
+  max-width: 620px;
+  margin: 8px 0 0;
+  color: var(--color-casper-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.command-status {
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+  gap: 8px;
+  border-left: 1px solid rgba(230, 63, 55, 0.35);
+  padding-left: 22px;
+  position: relative;
+  z-index: 1;
+}
+
+.command-status b,
+.command-status span {
+  display: block;
+}
+
+.command-status b {
+  color: var(--color-casper-red-soft);
+  font-size: 1.55rem;
+  font-weight: 750;
+  line-height: 1.1;
+  text-transform: capitalize;
+}
+
+.command-status span {
+  color: var(--color-casper-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.signal-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 960px;
+  border-top: 1px solid var(--color-glass-border);
+  border-bottom: 1px solid var(--color-glass-border);
+  background: var(--color-casper-cream-dim);
+  border-radius: var(--radius-sm);
+}
+
+.signal-stat {
+  min-width: 0;
+  min-height: 80px;
+  padding: 14px 16px 14px 0;
+}
+
+.signal-stat + .signal-stat {
+  border-left: 1px solid var(--color-glass-border);
+  padding-left: 16px;
+}
+
+.signal-stat b {
+  display: block;
+  margin-top: 8px;
+  color: var(--color-casper-text);
+  font-size: 1.05rem;
+  font-weight: 650;
+  line-height: 1.2;
+  text-transform: capitalize;
+}
+
+/* ── BENTO WORKBENCH ── */
+.agent-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(290px, 0.7fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.agent-ops-rail {
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.agent-ops-rail,
+.casper-proof-panel {
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--color-glass), var(--color-glass-strong));
+  backdrop-filter: blur(var(--blur-glass));
+  box-shadow: var(--shadow-card);
+  transition: all 0.35s var(--ease-smooth);
+}
+
+.agent-ops-rail:hover,
+.casper-proof-panel:hover {
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-glass-border-strong);
+}
+
+.ops-section {
+  padding: 20px;
+}
+
+.ops-section + .ops-section {
+  border-top: 1px solid var(--color-glass-border);
+}
+
+.casper-proof-panel {
+  min-height: 100%;
+  padding: 22px;
+}
+
+.panel-head {
+  margin-bottom: 12px;
+  color: var(--color-cyan-soft);
+}
+
+.panel-head svg {
+  color: var(--color-cyan);
+  flex-shrink: 0;
+}
+
+.check-list,
+.recovery-list,
+.casper-proof-lifecycle,
+.judge-grid,
+.agent-role-strip,
+.casper-proof-blockers,
+.casper-proof-metrics {
+  display: grid;
+  gap: 8px;
+}
+
+.check-list span,
+.recovery-list span,
+.casper-proof-lifecycle span,
+.judge-grid span,
+.agent-role-strip span,
+.casper-proof-blockers span,
+.casper-proof-metrics span {
+  min-width: 0;
+  padding: 8px 0;
+}
+
+.check-list b,
+.recovery-list b,
+.casper-proof-lifecycle b,
+.judge-grid b,
+.agent-role-strip b,
+.casper-proof-metrics b,
+.casper-proof-blockers span {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-transform: capitalize;
+}
+
+.check-list span,
+.recovery-list span {
+  border-left: 2px solid var(--color-glass-border-strong);
+  padding-left: 12px;
+  border-radius: 0 4px 4px 0;
+  transition: border-color 0.25s var(--ease-smooth);
+}
+
+.check-list span:hover,
+.recovery-list span:hover {
+  border-left-color: var(--color-cyan);
+}
+
+.recovery-list small {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}

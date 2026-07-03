@@ -1,0 +1,85 @@
+from fastapi.testclient import TestClient
+
+from app.core.settings import get_settings
+from app.main import create_app
+
+
+def csrf_headers(client: TestClient, operator_token: str | None = None) -> dict[str, str]:
+    headers = {"X-Operator-Token": operator_token} if operator_token else {}
+    response = client.get("/api/session", headers=headers)
+    assert response.status_code == 200
+    return {"X-CSRF-Token": response.json()["csrfToken"]}
+
+
+def test_session_is_operator_when_no_operator_token_configured(monkeypatch) -> None:
+    monkeypatch.delenv("API_OPERATOR_TOKEN", raising=False)
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+
+    response = client.get("/api/session")
+
+    assert response.status_code == 200
+    assert response.json()["operator"] is True
+
+
+def test_operator_token_still_protects_direct_actions(monkeypatch) -> None:
+    monkeypatch.setenv("API_OPERATOR_TOKEN", "operator-secret")
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    headers = csrf_headers(client)
+
+    response = client.post("/api/cycle/run", json={"submit": False}, headers=headers)
+
+    assert response.status_code == 403
+
+
+def test_direct_cycle_endpoint_runs_without_script(monkeypatch) -> None:
+    monkeypatch.delenv("API_OPERATOR_TOKEN", raising=False)
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    captured: dict[str, object] = {}
+
+    def fake_cycle(args: dict[str, object]) -> dict[str, object]:
+        captured.update(args)
+        return {"network": "casper", "status": "dry_run_blocked", "submitted": False}
+
+    monkeypatch.setattr(
+        "app.api.routes.dashboard.CasperAgentRuntimeService.run_autonomous_cycle",
+        fake_cycle,
+    )
+
+    response = client.post(
+        "/api/cycle/run",
+        json={"decisionId": "dashboard-test", "submit": False},
+        headers=csrf_headers(client),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "dry_run_blocked"
+    assert captured == {"decisionId": "dashboard-test", "submit": False}
+
+
+def test_direct_readback_endpoint_runs_without_script(monkeypatch) -> None:
+    monkeypatch.delenv("API_OPERATOR_TOKEN", raising=False)
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    captured: dict[str, object] = {}
+
+    def fake_readback(args: dict[str, object]) -> dict[str, object]:
+        captured.update(args)
+        return {"network": "casper", "status": "verified", "verified": True}
+
+    monkeypatch.setattr(
+        "app.api.routes.dashboard.CasperReadbackService.record_readback",
+        fake_readback,
+    )
+
+    response = client.post(
+        "/api/readback/record",
+        json={"decisionId": "dashboard-test"},
+        headers=csrf_headers(client),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["verified"] is True
+    assert captured == {"decisionId": "dashboard-test"}

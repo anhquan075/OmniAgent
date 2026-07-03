@@ -34,6 +34,10 @@ frontend/dist/
 frontend/.turbo/
 backend/.venv/
 backend_fastapi/.venv/
+.claude/skills/.venv/
+.agents/skills/.venv/
+**/skills/**/__pycache__/
+**/skills/**/*.pyc
 backend/.pytest_cache/
 backend_fastapi/.pytest_cache/
 backend/.ruff_cache/
@@ -43,6 +47,10 @@ backend_fastapi/**/__pycache__/
 backend/**/*.pyc
 backend_fastapi/**/*.pyc
 backend/data/*.jsonl
+backend/data/*.sqlite3
+backend/data/*.sqlite3-*
+backend/data/casper-decision-log*
+backend/playwright-casper-dashboard-log*
 backend_fastapi/data/*.jsonl
 
 # Logs
@@ -58,6 +66,12 @@ pnpm-debug.log*
 .idea/
 .vscode/
 
+# Local agent tooling
+.agents/
+.claude/skills/*
+!.claude/skills/solidity-sage/
+!.claude/skills/solidity-sage/**
+
 # Claude local settings (personal permissions, not for repo)
 .claude/settings.local.json
 
@@ -69,9 +83,19 @@ pnpm-debug.log*
 .npm/
 .pnpm-store/
 target/
-plans/
+
+# Planning and generated docs
+/plans/
+/plans/**/tmp/
 .chats/
-docs/
+/docs/
+!/docs/
+!/docs/README.md
+!/docs/ARCHITECTURE.md
+!/docs/problem-and-approach.md
+!/docs/casper-agentic-demo-script.md
+/docs/journals/
+/docs/reports/
 # Build outputs
 dist/
 *.log

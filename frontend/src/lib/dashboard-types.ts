@@ -1,32 +1,25 @@
-export type TradeProofScore = {
+export type CasperProofScore = {
   score: number;
-  maxScore: number;
-  status: string;
+  total: number;
+  status?: string;
   hardBlocked: boolean;
   hardBlockers: string[];
   checks: Record<string, boolean>;
 };
 
-export type RecoveryCandidate = {
-  id: string;
-  type: string;
-  label: string;
-  reason: string;
-  safeNextAction: string;
-  canSubmitLiveTrade: boolean;
+export type CasperRecoveryCandidate = {
+  blocker: string;
+  action: string;
 };
 
-export type TradeWorkOrderLifecycle = {
-  id: string;
+export type CasperLifecycleStep = {
   state: string;
-  terminal: boolean;
-  hardBlockers: string[];
-  steps: Array<Record<string, string>>;
+  status: string;
 };
 
-export type ProofBundlePayload = Record<string, any> & {
-  workOrderLifecycle?: TradeWorkOrderLifecycle;
-  proofScore?: TradeProofScore;
-  recoveryCandidates?: RecoveryCandidate[];
+export type CasperProofBundlePayload = Record<string, any> & {
+  lifecycle?: CasperLifecycleStep[];
+  proofScore?: CasperProofScore;
+  recoveryCandidates?: CasperRecoveryCandidate[];
   proofDigest?: string;
 };

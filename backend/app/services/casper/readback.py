@@ -1,0 +1,137 @@
+from datetime import datetime, timezone
+from typing import Any
+
+from app.core.settings import get_settings
+from app.services.casper.ledger import CasperDecisionLedger
+from app.services.casper.receipt import CasperDecisionReceiptService
+from app.services.casper.submitter import CasperCliSubmitter
+
+
+class CasperReadbackService:
+    @staticmethod
+    def record_readback(args: dict[str, Any]) -> dict[str, Any]:
+        decision = CasperReadbackService.target_decision(args)
+        expected = str(decision.get("proofDigest") or "")
+        deploy_hash = str(
+            args.get("deployHash")
+            or args.get("deploy_hash")
+            or args.get("transactionHash")
+            or args.get("transaction_hash")
+            or decision.get("deployHash")
+            or decision.get("transactionHash")
+            or ""
+        )
+        hard_blockers = CasperReadbackService.input_blockers(decision, expected, deploy_hash)
+        deploy_status: dict[str, Any] = {}
+        chain_readback: dict[str, Any] = {}
+        receipt_readback: dict[str, Any] = {}
+        observed = ""
+        observed_receipt = ""
+        expected_receipt = CasperDecisionReceiptService.receipt_value(decision) if decision else ""
+        if not hard_blockers:
+            if CasperCliSubmitter.is_client_available():
+                deploy_status = CasperCliSubmitter.get_transaction_status(deploy_hash)
+                hard_blockers.extend(deploy_status.get("hardBlockers") or [])
+            else:
+                deploy_status = {
+                    "status": "not_checked",
+                    "source": "casper_json_rpc_readback",
+                    "hardBlockers": [],
+                }
+        if not hard_blockers:
+            chain_readback = CasperCliSubmitter.query_latest_proof_digest()
+            hard_blockers.extend(chain_readback.get("hardBlockers") or [])
+            observed = str(chain_readback.get("proofDigest") or "")
+        if not hard_blockers and observed != expected:
+            hard_blockers.append(CasperReadbackService.blocker(expected, observed))
+        if not hard_blockers and expected_receipt:
+            receipt_readback = CasperCliSubmitter.query_decision_receipt(str(decision.get("decisionId")))
+            hard_blockers.extend(receipt_readback.get("hardBlockers") or [])
+            observed_receipt = str(receipt_readback.get("decisionReceipt") or "")
+        if not hard_blockers and expected_receipt and observed_receipt != expected_receipt:
+            hard_blockers.append("casper_decision_receipt_mismatch")
+        readback = {
+            "proofDigest": observed or None,
+            "decisionReceipt": observed_receipt or None,
+            "receiptVerified": bool(expected_receipt and observed_receipt == expected_receipt),
+            "source": chain_readback.get("source", "casper_client_query_global_state"),
+            "transactionHash": deploy_hash or None,
+            "stateRootHash": chain_readback.get("stateRootHash"),
+            "cliCommand": chain_readback.get("cliCommand"),
+            "receiptStateRootHash": receipt_readback.get("stateRootHash"),
+            "receiptCliCommand": receipt_readback.get("cliCommand"),
+            "observedAt": datetime.now(timezone.utc).isoformat(),
+        }
+        verified = bool(expected and observed == expected and readback["receiptVerified"] and not hard_blockers)
+        updated = {
+            **decision,
+            "readback": readback,
+            "deployStatus": deploy_status,
+            "deployConfirmed": deploy_status.get("status") == "confirmed",
+        }
+        event = CasperDecisionLedger.append_event({
+            "eventType": "casper_decision_readback_verified" if verified else "casper_decision_readback_blocked",
+            "action": str(updated.get("action") or "observe"),
+            "payload": {
+                "decision": updated,
+                "hardBlockers": hard_blockers,
+                "readbackVerified": verified,
+            },
+        })
+        return {
+            "network": "casper",
+            "status": "verified" if verified else "blocked",
+            "verified": verified,
+            "decision": updated,
+            "readback": readback,
+            "expectedProofDigest": expected or None,
+            "observedProofDigest": observed or None,
+            "hardBlockers": hard_blockers,
+            "ledgerEvent": event,
+        }
+
+    @staticmethod
+    def target_decision(args: dict[str, Any]) -> dict[str, Any]:
+        decision_id = str(args.get("decisionId") or args.get("decision_id") or "")
+        deploy_hash = str(
+            args.get("deployHash")
+            or args.get("deploy_hash")
+            or args.get("transactionHash")
+            or args.get("transaction_hash")
+            or ""
+        )
+        ledger = CasperDecisionLedger.get_ledger_summary(limit=20)
+        for event in ledger["events"]:
+            payload = event.get("payload") if isinstance(event, dict) else None
+            decision = payload.get("decision") if isinstance(payload, dict) else None
+            if isinstance(decision, dict):
+                if decision_id and str(decision.get("decisionId")) != decision_id:
+                    continue
+                if deploy_hash and deploy_hash not in {
+                    str(decision.get("deployHash") or ""),
+                    str(decision.get("transactionHash") or ""),
+                }:
+                    continue
+                return dict(decision)
+        return {}
+
+    @staticmethod
+    def input_blockers(decision: dict[str, Any], expected: str, deploy_hash: str) -> list[str]:
+        blockers: list[str] = []
+        if not decision:
+            blockers.append("casper_decision_missing")
+        if not expected:
+            blockers.append("casper_readback_expected_digest_missing")
+        if not deploy_hash:
+            blockers.append("casper_deploy_hash_missing")
+        if not get_settings().casper_decision_contract_hash:
+            blockers.append("casper_decision_contract_hash_missing")
+        return blockers
+
+    @staticmethod
+    def blocker(expected: str, observed: str) -> str:
+        if not expected:
+            return "casper_readback_expected_digest_missing"
+        if not observed:
+            return "casper_readback_missing"
+        return "casper_readback_digest_mismatch"

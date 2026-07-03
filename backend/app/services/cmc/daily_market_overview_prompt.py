@@ -1,3 +1,0 @@
-from app.services.cmc.skill_prompt_catalog import CmcSkillPromptCatalog
-
-DAILY_MARKET_OVERVIEW_SYSTEM_PROMPT = CmcSkillPromptCatalog.prompt_for("daily_market_overview")

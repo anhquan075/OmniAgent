@@ -1,7 +1,7 @@
 from typing import Any, Protocol
 
 
-class LedgerService(Protocol):
+class CasperLedgerService(Protocol):
     @staticmethod
     def append_event(event: dict[str, Any]) -> dict[str, Any]: ...
 
@@ -9,9 +9,12 @@ class LedgerService(Protocol):
     def get_ledger_summary(limit: int = 20) -> dict[str, Any]: ...
 
 
-class PriceService(Protocol):
+class CasperRuntimeService(Protocol):
     @staticmethod
-    async def get_price_snapshot(symbols: list[str]) -> dict[str, Any]: ...
+    def get_runtime_snapshot(args: dict[str, Any] | None = None) -> dict[str, Any]: ...
+
+    @staticmethod
+    def run_autonomous_cycle(args: dict[str, Any]) -> dict[str, Any]: ...
 
 
 class ToolRegistryService(Protocol):
@@ -20,13 +23,3 @@ class ToolRegistryService(Protocol):
 
     @staticmethod
     async def call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]: ...
-
-
-class WalletBridgeService(Protocol):
-    @staticmethod
-    async def get_trust_wallet_status() -> dict[str, Any]: ...
-
-
-class TradingAgentService(Protocol):
-    @staticmethod
-    async def run_autonomous_cycle(args: dict[str, Any]) -> dict[str, Any]: ...

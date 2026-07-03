@@ -1,0 +1,190 @@
+.agent-main-stack,
+.agent-activity-console,
+.agent-stream-grid,
+.agent-loop-mascot,
+.mcp-log-panel,
+.ai-output-panel {
+  min-width: 0;
+}
+
+.agent-main-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.agent-activity-console {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.agent-stream-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.88fr);
+  gap: 18px;
+}
+
+.agent-loop-mascot,
+.mcp-log-panel,
+.ai-output-panel {
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  background: linear-gradient(135deg, var(--color-glass), var(--color-glass-strong));
+  backdrop-filter: blur(var(--blur-glass));
+  box-shadow: var(--shadow-card);
+  transition: all 0.35s var(--ease-smooth);
+}
+
+.agent-loop-mascot:hover,
+.mcp-log-panel:hover,
+.ai-output-panel:hover {
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-glass-border-strong);
+}
+
+.agent-loop-mascot {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loop-visual {
+  position: relative;
+  display: grid;
+  min-height: 250px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-md);
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 248, 239, 0.04) 0 1px, transparent 1px 38px),
+    repeating-linear-gradient(0deg, rgba(230, 63, 55, 0.04) 0 1px, transparent 1px 38px),
+    var(--color-casper-cream-dim);
+}
+
+.loop-track,
+.loop-scanline {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.loop-track {
+  width: min(78%, 228px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(230, 63, 55, 0.38);
+  background: conic-gradient(from 90deg, transparent 0 36%, rgba(230, 63, 55, 0.6), transparent 66% 100%);
+  opacity: 0.72;
+  animation: agent-loop-rotate 12s linear infinite;
+}
+
+.loop-scanline {
+  width: min(58%, 168px);
+  aspect-ratio: 1;
+  border: 1px dashed rgba(255, 248, 239, 0.25);
+  animation: agent-loop-rotate 18s linear infinite reverse;
+}
+
+.loop-core {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  width: 142px;
+  min-height: 154px;
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-md);
+  padding: 18px 14px;
+  text-align: center;
+  background: var(--color-glass-strong);
+  backdrop-filter: blur(var(--blur-glass));
+  animation: mascot-breathe 3.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite alternate;
+}
+
+.loop-core img {
+  display: block;
+  width: 74px;
+  height: 74px;
+  border-radius: var(--radius-panel);
+}
+
+.loop-core b,
+.loop-steps b,
+.ai-decision-strip b,
+.ai-role-list b {
+  color: var(--text);
+  line-height: 1.2;
+  text-transform: capitalize;
+}
+
+.loop-core small,
+.loop-steps span,
+.loop-live-line,
+.ai-decision-strip small,
+.ai-role-list small,
+.ai-proof-hashes small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.loop-steps,
+.mcp-log-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.loop-steps {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.loop-steps li {
+  min-width: 0;
+  border-left: 2px solid var(--color-glass-border-strong);
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: var(--color-casper-cream-dim);
+}
+
+.loop-steps li.is-active {
+  border-color: var(--casper-red-soft);
+  background: rgba(230, 63, 55, 0.12);
+}
+
+.loop-steps b,
+.loop-steps span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.loop-live-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  border-top: 1px solid var(--color-glass-border);
+  padding-top: 12px;
+}
+
+.loop-live-line b {
+  margin-left: auto;
+  color: var(--casper-red-soft);
+  font-size: 0.8rem;
+}
+
+@keyframes agent-loop-rotate {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes mascot-breathe {
+  to { transform: translateY(-3px) scale(1.015); }
+}
+
+
