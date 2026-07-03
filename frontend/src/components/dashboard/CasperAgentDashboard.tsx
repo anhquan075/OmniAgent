@@ -62,7 +62,7 @@ export default function CasperAgentDashboard() {
       <header className="agent-topbar animate-in">
         <div className="agent-identity">
           <span className="agent-mark">
-            <img src="/imgs/casper-icon.svg" alt="Casper network" width="32" height="32" />
+            <img src="/imgs/casper-icon.png" alt="OmniAgent mascot" width="32" height="32" />
           </span>
           <div>
             <p>OmniAgent</p>
@@ -100,7 +100,7 @@ export default function CasperAgentDashboard() {
 
         <aside className="command-status" aria-label="Current proof status">
           <div className="hero-proof-mark" aria-hidden="true">
-            <img src="/imgs/casper-icon.svg" alt="" width="76" height="76" />
+            <img src="/imgs/casper-icon.png" alt="" width="76" height="76" />
             <span>Testnet proof desk</span>
           </div>
           <small>runtime state</small>

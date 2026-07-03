@@ -13,14 +13,14 @@ test('dashboard shows Casper proof surface', async ({ page }) => {
 
   expect(snapshot.network).toBe('casper');
   expect(snapshot.casperAgentRuntime.network).toBe('casper');
-  await expect(page.getByAltText('Casper network')).toBeVisible();
+  await expect(page.getByAltText('OmniAgent mascot')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Casper proof console' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'OmniAgent receipt console' })).toBeVisible();
   await expect(page.getByText('Casper Testnet')).toBeVisible();
   await expect(page.getByText('Decision receipt proof')).toBeVisible();
   await expect(page.getByText('Judge packet')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Autonomous loop' })).toBeVisible();
-  await expect(page.getByAltText('Casper autonomous agent mascot')).toBeVisible();
+  await expect(page.getByAltText('OmniAgent autonomous mascot')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'MCP activity log' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'AI output' })).toBeVisible();
   await expect(page.getByText('Replay command')).toBeVisible();
@@ -159,9 +159,9 @@ test('dashboard stays responsive across judge viewports', async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto('/');
 
-    await expect(page.getByAltText('Casper network')).toBeVisible();
+    await expect(page.getByAltText('OmniAgent mascot')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'OmniAgent receipt console' })).toBeAttached();
-    await expect(page.getByAltText('Casper autonomous agent mascot')).toBeAttached();
+    await expect(page.getByAltText('OmniAgent autonomous mascot')).toBeAttached();
     await expect(page.getByRole('heading', { name: 'MCP activity log' })).toBeAttached();
     await expect(page.getByText('Judge packet')).toBeAttached();
     await expect(page.locator('[data-proof-link="deploy"]')).toBeAttached();

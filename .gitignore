@@ -94,6 +94,7 @@ target/
 !/docs/ARCHITECTURE.md
 !/docs/problem-and-approach.md
 !/docs/casper-agentic-demo-script.md
+!/docs/railway-deployment.md
 /docs/journals/
 /docs/reports/
 # Build outputs
