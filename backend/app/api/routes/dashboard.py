@@ -1,4 +1,6 @@
 import asyncio
+from datetime import UTC, datetime
+from itertools import count
 import json
 
 from fastapi import APIRouter, Depends, Request
@@ -15,6 +17,7 @@ from app.services.casper.runtime import CasperAgentRuntimeService
 
 router = APIRouter()
 DASHBOARD_STREAM_INTERVAL_SEC = 1.0
+_stream_sequence = count(1)
 
 
 async def _json_body(request: Request) -> dict[str, object]:
@@ -74,6 +77,20 @@ def _sse_event(event: str, payload: dict[str, object]) -> str:
     return f"event: {event}\ndata: {data}\n\n"
 
 
+def _with_stream_meta(payload: dict[str, object]) -> dict[str, object]:
+    return {
+        **payload,
+        "streamMeta": {
+            "transport": "sse",
+            "event": "dashboard_snapshot",
+            "sequence": next(_stream_sequence),
+            "emittedAt": datetime.now(UTC).isoformat(),
+            "intervalSec": DASHBOARD_STREAM_INTERVAL_SEC,
+            "channels": ("mcp_activity_log", "ai_output", "proof_bundle"),
+        },
+    }
+
+
 @router.get("/dashboard/snapshot", dependencies=[Depends(require_session)])
 async def dashboard_snapshot(limit: int = 10) -> dict[str, object]:
     return await _dashboard_snapshot_payload(limit)
@@ -86,7 +103,8 @@ async def dashboard_stream(request: Request, limit: int = 8, once: bool = False)
     async def events():
         while not await request.is_disconnected():
             try:
-                yield _sse_event("dashboard_snapshot", await _dashboard_snapshot_payload(selected_limit))
+                payload = await _dashboard_snapshot_payload(selected_limit)
+                yield _sse_event("dashboard_snapshot", _with_stream_meta(payload))
             except Exception as exc:
                 yield _sse_event("dashboard_error", {"message": str(exc)[:200]})
             if once:

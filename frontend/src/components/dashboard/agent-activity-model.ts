@@ -17,6 +17,13 @@ export type AiRoleOutput = {
   traceHash: string;
 };
 
+export type StreamPanelStatus = {
+  label: string;
+  sequence: string;
+  emittedAt: string;
+  isLive: boolean;
+};
+
 const DEFAULT_TOOLS = [
   'casper_rwa_evidence',
   'casper_guardrails',
@@ -104,6 +111,19 @@ export const evidenceSourceUrl = (bundle?: Payload) => {
   return safeHttpsUrl(source?.url);
 };
 
+export const streamPanelStatus = (streamMeta?: Payload, nowMs = Date.now()): StreamPanelStatus => {
+  const sequence = proofText(streamMeta?.sequence, '');
+  const transport = proofText(streamMeta?.transport, '').toLowerCase();
+  const emittedAt = streamTime(streamMeta?.emittedAt);
+  const isLive = transport === 'sse' && Boolean(sequence) && isFreshStreamEvent(streamMeta, nowMs);
+  return {
+    label: isLive ? 'live' : sequence ? 'stale' : 'snapshot',
+    sequence: sequence ? `#${sequence}` : 'pending',
+    emittedAt,
+    isLive,
+  };
+};
+
 export const safeHttpsUrl = (value: unknown) => {
   const raw = typeof value === 'string' ? value.trim() : '';
   if (!raw) return '';
@@ -173,4 +193,22 @@ function shortText(value: unknown, limit: number) {
 
 function formatConfidence(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? `${Math.round(value * 100)}%` : proofText(value);
+}
+
+function streamTime(value: unknown) {
+  const raw = proofText(value, '');
+  if (!raw) return 'pending';
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw.slice(0, 19);
+  return `${date.toISOString().slice(11, 19)} UTC`;
+}
+
+function isFreshStreamEvent(streamMeta?: Payload, nowMs = Date.now()) {
+  const emittedAtMs = Date.parse(proofText(streamMeta?.emittedAt, ''));
+  if (!Number.isFinite(emittedAtMs)) return false;
+  const rawInterval = Number(streamMeta?.intervalSec);
+  const intervalSec = Number.isFinite(rawInterval) && rawInterval > 0 ? rawInterval : 1;
+  const staleAfterMs = Math.max(5_000, intervalSec * 4_000);
+  const ageMs = nowMs - emittedAtMs;
+  return ageMs >= -30_000 && ageMs <= staleAfterMs;
 }

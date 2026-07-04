@@ -41,6 +41,28 @@ def test_agent_card_includes_mcp_tools(monkeypatch) -> None:
     assert card["mcpTools"] == ["casper_record_decision", "casper_record_readback"]
     assert "record_decision" in card["capabilities"]
     assert "verify_receipt" in card["capabilities"]
+    assert "stream_mcp_activity" in card["capabilities"]
+    assert "stream_ai_output" in card["capabilities"]
+
+
+def test_agent_card_includes_discovery_protocols_and_use_case(monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_SECRET_KEY_PATH", "/Users/me/private.pem")
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+
+    response = client.get("/.well-known/casper-agent-card.json")
+    card = response.json()
+
+    protocol_ids = {protocol["id"] for protocol in card["protocols"]}
+    assert {"mcp", "a2a-discovery", "casper-public-proof", "dashboard-sse"} <= protocol_ids
+    assert card["endpoints"]["publicProof"] == "/api/public/proof"
+    assert "competitiveAnalysis" not in card["endpoints"]
+    assert card["useCase"]["id"] == "rwa-collateral-nav-risk-receipt"
+    assert "Casper Testnet contract receipt" in card["techStack"]
+    assert card["trustSummary"]["status"] in {"insufficient_data", "measured"}
+    assert "rwa-collateral-risk" in {skill["id"] for skill in card["skills"]}
+    assert "competitive_analysis" not in card["capabilities"]
+    assert "private.pem" not in response.text
 
 
 def test_agent_card_includes_loop_config(monkeypatch) -> None:

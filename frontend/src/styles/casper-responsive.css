@@ -37,6 +37,16 @@
     grid-template-columns: 1fr;
   }
 
+  .loop-status-panel {
+    height: auto;
+    overflow: visible;
+  }
+
+  .loop-status-content {
+    overflow: visible;
+    padding-right: 0;
+  }
+
   .command-status {
     border-top: 1px solid rgba(230, 63, 55, 0.35);
     border-left: 0;
@@ -322,6 +332,15 @@
   .casper-proof-head b {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .flight-tabs button {
+    min-width: 0;
+    justify-content: center;
+    gap: 6px;
+    padding-inline: 8px;
+    line-height: 1.15;
+    white-space: normal;
   }
 
   .agent-ops-rail {

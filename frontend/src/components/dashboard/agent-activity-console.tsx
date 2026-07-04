@@ -6,6 +6,8 @@ import McpActivityLog from './mcp-activity-log';
 type AgentActivityConsoleProps = {
   runtime?: Payload;
   bundle?: Payload;
+  streamMeta?: Payload;
+  streamClockMs?: number;
   refreshedAt?: string;
   isLoading?: boolean;
   error?: string | null;
@@ -14,6 +16,8 @@ type AgentActivityConsoleProps = {
 export default function AgentActivityConsole({
   runtime,
   bundle,
+  streamMeta,
+  streamClockMs,
   refreshedAt,
   isLoading,
   error,
@@ -24,8 +28,8 @@ export default function AgentActivityConsole({
     <div className="agent-activity-console">
       <AgentLoopMascot bundle={bundle} refreshedAt={refreshedAt} isLoading={isLoading} error={error} />
       <div className="agent-stream-grid">
-        <McpActivityLog rows={rows} />
-        <AiOutputPanel bundle={bundle} />
+        <McpActivityLog rows={rows} streamMeta={streamMeta} streamClockMs={streamClockMs} />
+        <AiOutputPanel bundle={bundle} streamMeta={streamMeta} streamClockMs={streamClockMs} />
       </div>
     </div>
   );

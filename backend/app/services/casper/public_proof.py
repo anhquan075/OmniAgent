@@ -49,8 +49,11 @@ class CasperPublicProofService:
             "contractPackageHash": settings.casper_decision_contract_package_hash,
             "contractLinks": CasperPublicProofService._contract_links(settings),
             "decisionReceipt": receipt,
+            "evidenceGraph": CasperPublicProofService._evidence_graph(decision),
+            "policyTemplate": CasperPublicProofService._policy_template(decision),
             "readback": CasperPublicProofService._readback(decision),
             "x402": CasperPublicProofService._x402(decision),
+            "trustSummary": bundle.get("trustSummary"),
             "llmTrace": CasperPublicProofService._llm_trace(decision),
             "liveProof": CasperPublicProofService._live_proof(settings, decision, receipt),
             "verifier": {
@@ -125,8 +128,50 @@ class CasperPublicProofService:
     def _x402_receipt(receipt: dict[str, Any] | None) -> dict[str, Any] | None:
         if not receipt:
             return None
-        allowed = ("receiptId", "provider", "resourceUrl", "paidAt", "amount", "currency", "receiptHash")
+        allowed = (
+            "receiptId",
+            "provider",
+            "resourceUrl",
+            "paidAt",
+            "amount",
+            "currency",
+            "network",
+            "paymentIdentifier",
+            "requestHash",
+            "sourceHash",
+            "seller",
+            "buyer",
+            "signatureHash",
+            "bindingStatus",
+            "receiptHash",
+        )
         return {key: receipt.get(key) for key in allowed if receipt.get(key) is not None}
+
+    @staticmethod
+    def _evidence_graph(decision: dict[str, Any]) -> dict[str, Any] | None:
+        evidence = decision.get("evidenceBundle") if isinstance(decision.get("evidenceBundle"), dict) else {}
+        graph = evidence.get("evidenceGraph") if isinstance(evidence.get("evidenceGraph"), dict) else None
+        if not graph:
+            return None
+        return {
+            "scenario": graph.get("scenario"),
+            "graphDigest": graph.get("graphDigest"),
+            "sourceCount": graph.get("sourceCount"),
+            "observedSourceCount": graph.get("observedSourceCount"),
+            "staleSourceCount": graph.get("staleSourceCount"),
+            "missingSourceCount": graph.get("missingSourceCount"),
+        }
+
+    @staticmethod
+    def _policy_template(decision: dict[str, Any]) -> dict[str, Any] | None:
+        template = decision.get("policyTemplate") if isinstance(decision.get("policyTemplate"), dict) else None
+        if not template:
+            return None
+        return {
+            "id": template.get("id"),
+            "label": template.get("label"),
+            "templateHash": template.get("templateHash"),
+        }
 
     @staticmethod
     def _llm_trace(decision: dict[str, Any]) -> dict[str, Any]:

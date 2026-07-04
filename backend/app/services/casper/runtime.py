@@ -46,6 +46,7 @@ class CasperAgentRuntimeService:
     def run_autonomous_cycle(args: dict[str, Any]) -> dict[str, Any]:
         evidence_args = {**args}
         evidence = CasperRwaEvidenceService.build_evidence_bundle(evidence_args)
+        evidence_args["evidenceBundle"] = evidence
         action = str(args.get("action") or evidence["recommendedAction"])
         rationale = str(
             args.get("rationale")
@@ -53,10 +54,11 @@ class CasperAgentRuntimeService:
         )
         guardrails = CasperGuardrailService.evaluate({
             "evidenceBundle": evidence,
+            "policyTemplate": args.get("policyTemplate") or args.get("policy_template"),
             "proposedAction": action,
             "rationale": rationale,
         })
-        x402 = CasperX402EvidenceService.get_readiness(args)
+        x402 = CasperX402EvidenceService.get_readiness(evidence_args)
         decision_args = {
             "decisionId": args.get("decisionId") or "casper-autonomous-demo",
             "action": action,
@@ -67,6 +69,7 @@ class CasperAgentRuntimeService:
             "threshold": args.get("threshold", 0.7),
             "evidenceBundle": evidence,
             "guardrails": guardrails,
+            "policyTemplate": guardrails.get("policyTemplate"),
             "x402": x402,
             "submit": bool(args.get("submit")),
             "iUnderstandThisSubmitsCasperTestnet": bool(

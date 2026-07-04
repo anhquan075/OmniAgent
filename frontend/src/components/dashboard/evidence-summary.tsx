@@ -13,9 +13,12 @@ export function EvidenceSummary({ evidence, x402 }: { evidence?: Payload; x402?:
   const factors: Payload[] = Array.isArray(evidence?.riskFactors) ? evidence.riskFactors : [];
   const primarySource = sources[0] ?? {};
   const primaryFactor = factors[0] ?? {};
+  const sourceFreshness = freshnessLabel(primarySource);
   const sourceHash = proofText(evidence?.sourceHash, '');
   const x402Verified = hasX402Receipt(x402);
   const x402Status = x402Verified ? 'verified' : proofText(x402?.status, 'unavailable');
+  const x402Binding = proofText(x402?.receipt?.bindingStatus, '');
+  const x402Display = x402Verified || !x402Binding ? x402Status : `${x402Status} · ${x402Binding}`;
 
   const copyHash = () => {
     if (!navigator.clipboard || !sourceHash) return;
@@ -50,6 +53,10 @@ export function EvidenceSummary({ evidence, x402 }: { evidence?: Payload; x402?:
           <small>Observed</small>
           <b>{proofText(primarySource.observedValue, '—')} {proofText(primarySource.unit, '')}</b>
         </span>
+        <span className="evidence-field" data-evidence-field="freshness">
+          <small>Freshness</small>
+          <b>{sourceFreshness}</b>
+        </span>
         <span className="evidence-field" data-evidence-field="threshold">
           <small>Threshold</small>
           <b>{proofText(primarySource.threshold, '—')} {proofText(primarySource.unit, '')}</b>
@@ -60,7 +67,7 @@ export function EvidenceSummary({ evidence, x402 }: { evidence?: Payload; x402?:
         </span>
         <span className="evidence-field" data-evidence-field="x402">
           <small>x402</small>
-          <b className={x402Verified ? 'is-ok' : 'is-blocked'}>{x402Verified ? proofLabel(x402Status) : 'unavailable'}</b>
+          <b className={x402Verified ? 'is-ok' : 'is-blocked'}>{proofLabel(x402Display)}</b>
         </span>
       </div>
       <div className="evidence-hash-row">
@@ -77,6 +84,15 @@ export function EvidenceSummary({ evidence, x402 }: { evidence?: Payload; x402?:
       </div>
     </div>
   );
+}
+
+function freshnessLabel(source: Payload) {
+  const freshness = source?.freshness && typeof source.freshness === 'object' ? source.freshness : {};
+  const status = proofLabel(freshness.status || source.status || 'pending', { stripCasperPrefix: true });
+  const age = typeof freshness.ageHours === 'number' && Number.isFinite(freshness.ageHours)
+    ? `${freshness.ageHours}h`
+    : '';
+  return age ? `${status} · ${age}` : status;
 }
 
 export default EvidenceSummary;

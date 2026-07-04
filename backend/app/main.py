@@ -8,7 +8,9 @@ from app.api.main import api_router
 from app.core.logging import configure_logging
 from app.core.security_middleware import RequestSecurityMiddleware
 from app.core.settings import get_settings
+from app.services.casper.ledger import CasperDecisionLedger
 from app.services.casper.loop import agent_loop, loop_state
+from app.services.casper.trust import CasperTrustService
 
 import structlog
 
@@ -78,7 +80,81 @@ def create_app() -> FastAPI:
             "rpcUrl": settings.casper_rpc_url,
             "explorerUrl": settings.casper_explorer_url,
             "mcpTools": sorted(settings.allowed_tools),
-            "capabilities": ["record_decision", "readback", "verify_receipt", "autonomous_loop"],
+            "protocols": [
+                {
+                    "id": "mcp",
+                    "name": "Model Context Protocol",
+                    "endpoint": "/api/mcp",
+                    "authentication": "session",
+                },
+                {
+                    "id": "a2a-discovery",
+                    "name": "A2A-style Agent Card",
+                    "endpoint": "/.well-known/casper-agent-card.json",
+                    "authentication": "public",
+                },
+                {
+                    "id": "casper-public-proof",
+                    "name": "Public proof packet",
+                    "endpoint": "/api/public/proof",
+                    "authentication": "public",
+                },
+                {
+                    "id": "dashboard-sse",
+                    "name": "Dashboard server-sent event stream",
+                    "endpoint": "/api/dashboard/stream?limit=8",
+                    "authentication": "session",
+                    "channels": ["mcp_activity_log", "ai_output", "proof_bundle"],
+                },
+            ],
+            "endpoints": {
+                "publicProof": "/api/public/proof",
+                "mcp": "/api/mcp",
+                "dashboardStream": "/api/dashboard/stream?limit=8",
+            },
+            "useCase": {
+                "id": "rwa-collateral-nav-risk-receipt",
+                "title": "Verifiable RWA collateral risk decisioning",
+                "description": (
+                    "Autonomous backend loop evaluates public RWA evidence, applies "
+                    "proposer/critic/policy guardrails, writes a decision receipt to Casper, "
+                    "and verifies readback before exposing public proof."
+                ),
+            },
+            "techStack": [
+                "FastAPI autonomous runtime",
+                "MCP tool registry",
+                "OpenRouter-compatible AI trace adapter",
+                "Casper Testnet contract receipt",
+                "Server-sent dashboard stream",
+                "React proof cockpit",
+            ],
+            "trustSummary": CasperTrustService.get_trust_summary(
+                CasperDecisionLedger.get_ledger_summary(limit=25)["events"],
+            ),
+            "skills": [
+                {
+                    "id": "rwa-collateral-risk",
+                    "name": "RWA collateral risk decisioning",
+                    "inputs": ["public RWA evidence", "policy thresholds"],
+                    "outputs": ["decision receipt", "proof digest", "readback verification"],
+                },
+                {
+                    "id": "casper-receipt-verification",
+                    "name": "Casper receipt verification",
+                    "inputs": ["decision id", "contract hash", "expected proof digest"],
+                    "outputs": ["verified readback", "explorer link"],
+                },
+            ],
+            "capabilities": [
+                "record_decision",
+                "readback",
+                "verify_receipt",
+                "autonomous_loop",
+                "public_proof",
+                "stream_mcp_activity",
+                "stream_ai_output",
+            ],
             "agentLoop": {
                 "enabled": settings.casper_agent_loop_enabled,
                 "intervalSec": settings.casper_agent_loop_interval_sec,

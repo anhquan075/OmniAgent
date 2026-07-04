@@ -5,15 +5,18 @@
 - Keep the public proof packet schema stable and versioned.
 - Record a short demo that replays the exact proof artifact and public endpoint.
 - Add one more RWA evidence source behind the same source-hash pipeline.
+- Turn the evidence graph digest into the primary public proof anchor for source freshness and provenance.
 - Document a signer rotation and live-submit runbook.
 
 ## 60 Days
 
 - Add a real paid evidence provider when an x402 receipt source is available.
+- Promote x402 from configured to verified only after receipt binding checks pass.
 - Expand public verifier checks for account, contract package, decision id, and
   receipt dictionary values.
 - Publish a reusable proof-receipt template for other Casper agents.
 - Add dashboard comparison for latest proof artifact vs public endpoint.
+- Use receipt-history trust metrics as the first reputation primitive for partner agents.
 
 ## 90 Days
 

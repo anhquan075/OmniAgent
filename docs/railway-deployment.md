@@ -125,7 +125,7 @@ The autonomous loop uses the public fiscaldata.treasury.gov Treasury API for evi
 | `CASPER_CSPR_CLOUD_URL` | Defaults to `https://api.testnet.cspr.cloud` |
 | `CASPER_MIN_BALANCE_CSPR` | Low-balance warning threshold, default `50` |
 | `CASPER_X402_EVIDENCE_URL` | Real x402 evidence endpoint, if available |
-| `CASPER_X402_RECEIPT` | Real x402 receipt metadata; leave empty rather than faking a receipt |
+| `CASPER_X402_RECEIPT` | Real x402 receipt metadata; leave empty rather than faking a receipt. To mark paid evidence verified, receipt metadata must be public-safe and bound to the evidence request through `resourceUrl`, `sourceHash`, or `requestHash`. |
 | `CASPER_LLM_TRACE_ENABLED` | Enable OpenRouter-backed LLM trace metadata |
 | `CASPER_LLM_TRACE_PROVIDER` | Trace provider label, default `openrouter` |
 | `CASPER_LLM_TRACE_MODEL` | Trace model label, default `deepseek/deepseek-v4-flash` |
@@ -138,6 +138,8 @@ The autonomous loop uses the public fiscaldata.treasury.gov Treasury API for evi
 | `CASPER_LLM_TRACE_CAPTURE` | Legacy manual capture; leave empty for no-mock demos |
 
 If an OpenRouter key has been pasted into chat or logs, rotate it before deploying. The backend only labels roles as `traceSource: llm` after a successful OpenRouter response; missing keys or provider failures fall back to deterministic trace labels.
+
+The public proof endpoint exposes additive evidence graph and trust summary fields. These are safe for judges and integrators, but they depend on the dashboard ledger, so mount `/data` when you need restart-stable trust metrics.
 
 ## Frontend Variables
 

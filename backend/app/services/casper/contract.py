@@ -54,6 +54,9 @@ class CasperDecisionContractService:
             payload["evidenceBundle"] = evidence
         if guardrails:
             payload["guardrails"] = guardrails
+        policy_template = args.get("policyTemplate")
+        if isinstance(policy_template, dict):
+            payload["policyTemplate"] = policy_template
         if isinstance(args.get("x402"), dict):
             payload["x402"] = args["x402"]
         payload["proofDigest"] = CasperDecisionContractService.proof_digest(payload)

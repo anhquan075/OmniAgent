@@ -80,6 +80,9 @@ def test_autonomous_cycle_builds_rwa_guardrail_receipt(tmp_path, monkeypatch) ->
     assert result["decision"]["decisionId"] == "rwa-cycle-001"
     assert result["decision"]["evidenceBundle"]["status"] == "ready"
     assert result["decision"]["guardrails"]["guardrailHash"].startswith("sha256:")
+    assert result["decision"]["policyTemplate"]["id"] == "rwa-collateral-v1"
+    assert result["decision"]["policyTemplate"]["templateHash"].startswith("sha256:")
+    assert result["decision"]["evidenceBundle"]["evidenceGraph"]["graphDigest"].startswith("sha256:")
     assert result["decision"]["sourceHash"] == result["decision"]["evidenceBundle"]["sourceHash"]
     assert result["decision"]["x402"]["status"] == "unavailable"
     assert result["cycle"]["toolsUsed"] == [

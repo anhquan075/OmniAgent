@@ -1,6 +1,7 @@
 import AgentActivityConsole from './agent-activity-console';
 import LoopStatusPanel from './loop-status';
 import PolicyGateSummary from './policy-gate-summary';
+import ProofOutcomePanel from './proof-outcome-panel';
 import ReceiptFlowTimeline from './receipt-flow-timeline';
 import RecoveryQueue from './recovery-queue';
 import type { Payload, SourceState } from './flight-deck-model';
@@ -8,6 +9,8 @@ import type { Payload, SourceState } from './flight-deck-model';
 export default function CockpitTab({
   runtime,
   bundle,
+  streamMeta,
+  streamClockMs,
   refreshedAt,
   sourceState,
   isLoading,
@@ -15,6 +18,8 @@ export default function CockpitTab({
 }: {
   runtime?: Payload;
   bundle?: Payload;
+  streamMeta?: Payload;
+  streamClockMs?: number;
   refreshedAt: string;
   sourceState: SourceState;
   isLoading?: boolean;
@@ -22,12 +27,15 @@ export default function CockpitTab({
 }) {
   return (
     <div className="cockpit-tab">
+      <ProofOutcomePanel bundle={sourceState === 'live' ? bundle : {}} sourceState={sourceState} />
       <ReceiptFlowTimeline bundle={bundle} sourceState={sourceState} />
       <div className="cockpit-grid">
         <div className="cockpit-primary">
           <AgentActivityConsole
             runtime={runtime}
             bundle={sourceState === 'live' ? bundle : {}}
+            streamMeta={streamMeta}
+            streamClockMs={streamClockMs}
             refreshedAt={refreshedAt}
             isLoading={isLoading}
             error={error}

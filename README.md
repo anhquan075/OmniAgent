@@ -86,7 +86,7 @@ Live mode requires:
 5. `CASPER_LIVE_SUBMIT_ENABLED=true`
 6. The explicit live-submit command flag when running the script path
 7. Optional: `CASPER_CSPR_CLOUD_API_KEY` if you want CSPR.cloud-backed balance/block probes instead of Casper RPC/CLI only
-8. Optional: real `CASPER_X402_EVIDENCE_URL` and `CASPER_X402_RECEIPT` if you want to claim x402 settlement evidence
+8. Optional: real `CASPER_X402_EVIDENCE_URL` and `CASPER_X402_RECEIPT` if you want to claim verified paid-evidence receipt metadata
 
 ## Full Casper Network Integration
 
@@ -138,6 +138,8 @@ Open [http://localhost:5173](http://localhost:5173).
 | MCP tools | `casper_agent_cockpit_snapshot`, `casper_get_account`, `casper_runtime_snapshot`, `casper_live_preflight`, `casper_run_autonomous_cycle`, `casper_live_proof_bundle`, `casper_get_deploy_status`, `casper_get_decision_receipt`, `casper_verify_decision_receipt`, `casper_record_decision`, `casper_record_readback` |
 | Explorer | `https://testnet.cspr.live` |
 | Decision log | Dashboard receipt stream via `/api/dashboard/receipts` |
+| Evidence graph | Deterministic source graph with per-source hashes, freshness, and graph digest |
+| Receipt trust | Public-safe aggregate readback, policy-block, stale-evidence, and paid-evidence metrics |
 
 ## Contract Source
 
@@ -155,7 +157,7 @@ Only claim stack items backed by code or verifier evidence:
 | Casper MCP Server | Used as local MCP tool surface | Backend exposes the `casper_*` tool family through the project MCP route. |
 | JavaScript/TypeScript SDK | Used for frontend, not Casper JS SDK | Vite/React/TypeScript proof cockpit in `frontend/`. |
 | Python SDK | Used for backend runtime, not Casper Python SDK | FastAPI backend, JSON-RPC probes, and `casper-client` orchestration in `backend/`. |
-| x402 Facilitator | Readiness only | `CASPER_X402_EVIDENCE_URL` and `CASPER_X402_RECEIPT` fail closed unless real endpoint and receipt exist. |
+| x402 Facilitator | Verified receipt only | `CASPER_X402_EVIDENCE_URL` and `CASPER_X402_RECEIPT` fail closed unless receipt metadata is public-safe and bound to the evidence request/source. |
 | Odra Framework | Not used | Contract is native Casper Rust, not Odra. |
 | CSPR.cloud | Optional REST integration | Used when `CASPER_CSPR_CLOUD_API_KEY` is set for account balance and fallback block-height probes. |
 | CSPR.click / CSPR.trade | Not used | No production dependency or live integration is claimed. |
@@ -182,7 +184,7 @@ Only claim stack items backed by code or verifier evidence:
 | `CASPER_CSPR_CLOUD_API_KEY` | Optional CSPR.cloud API key for balance and fallback block-height probes |
 | `CASPER_MIN_BALANCE_CSPR` | Warning threshold for low CSPR account balance |
 | `CASPER_X402_EVIDENCE_URL` | Optional real x402 evidence endpoint |
-| `CASPER_X402_RECEIPT` | Optional x402 receipt metadata; leave empty rather than faking receipts |
+| `CASPER_X402_RECEIPT` | Optional x402 receipt metadata with public fields such as `receiptId`, `provider`, `resourceUrl`, `paidAt`, `amount`, `currency`, and optional binding fields like `sourceHash` or `requestHash`; leave empty rather than faking receipts |
 | `CASPER_LLM_TRACE_ENABLED` | Enables public-safe OpenRouter trace metadata when provider evidence is captured |
 | `CASPER_LLM_TRACE_PROVIDER` | Public provider label, defaults to `openrouter` |
 | `CASPER_LLM_TRACE_MODEL` | Public model label, defaults to `deepseek/deepseek-v4-flash` |
@@ -217,6 +219,13 @@ The artifact is intentionally status-gated. It may be `blocked` or
 `ready_for_live_submit` when live Casper credentials/readback are unavailable;
 it should only be `live_verified` after the deploy and dictionary receipt
 readback match.
+
+The public proof packet now includes additive proof-hardening fields:
+
+- `evidenceGraph` — public summary of source count, freshness state, and graph digest.
+- `policyTemplate` — deterministic policy template id and hash.
+- `trustSummary` — aggregate receipt-history metrics with insufficient-data labeling.
+- `x402.status == verified` only when public receipt metadata is present and bound; `configured` and `unavailable` are not paid-evidence claims.
 
 Verify a single receipt without `casper-client`:
 

@@ -72,6 +72,7 @@ class CasperRwaEvidenceService:
         sources = CasperRwaEvidenceService.normalize_sources(raw_sources)
         blockers = CasperRwaEvidenceService.blockers(sources)
         factors = CasperRwaEvidenceService.risk_factors(sources)
+        evidence_graph = CasperRwaEvidenceService.evidence_graph(sources, factors)
         risk_score = max([factor["severity"] for factor in factors] or [0])
         status = "blocked" if blockers else "ready"
         action = "block" if blockers else CasperRwaEvidenceService.recommended_action(risk_score)
@@ -80,6 +81,7 @@ class CasperRwaEvidenceService:
             "scenario": SCENARIO_NAME,
             "status": status,
             "sources": sources,
+            "evidenceGraph": evidence_graph,
             "riskFactors": factors,
             "riskScore": risk_score,
             "recommendedAction": action,
@@ -92,8 +94,9 @@ class CasperRwaEvidenceService:
         }
         bundle["sourceHash"] = sha256_json({
             "scenario": bundle["scenario"],
-            "sources": sources,
+            "sources": CasperRwaEvidenceService.hashable_sources(sources),
             "riskFactors": factors,
+            "evidenceGraphDigest": evidence_graph["graphDigest"],
             "policyThresholds": bundle["policyThresholds"],
         })
         return bundle
@@ -124,7 +127,69 @@ class CasperRwaEvidenceService:
             normalized["status"] = "missing_observation"
         elif CasperRwaEvidenceService.is_stale(observed_at):
             normalized["status"] = "stale_observation"
+        normalized["freshness"] = CasperRwaEvidenceService.freshness(observed_at)
+        normalized["sourceHash"] = sha256_json(CasperRwaEvidenceService.hashable_source(normalized))
         return normalized
+
+    @staticmethod
+    def hashable_sources(sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [CasperRwaEvidenceService.hashable_source(source) for source in sources]
+
+    @staticmethod
+    def hashable_source(source: dict[str, Any]) -> dict[str, Any]:
+        payload = {
+            key: value
+            for key, value in source.items()
+            if key not in {"sourceHash", "freshness"}
+        }
+        freshness = source.get("freshness")
+        if isinstance(freshness, dict):
+            payload["freshnessStatus"] = freshness.get("status")
+            payload["maxAgeHours"] = freshness.get("maxAgeHours")
+        return payload
+
+    @staticmethod
+    def evidence_graph(sources: list[dict[str, Any]], factors: list[dict[str, Any]]) -> dict[str, Any]:
+        nodes = [
+            {
+                "id": source["id"],
+                "type": "source",
+                "status": source["status"],
+                "sourceHash": source.get("sourceHash"),
+                "freshnessStatus": (source.get("freshness") or {}).get("status"),
+            }
+            for source in sources
+        ]
+        factor_nodes = [
+            {
+                "id": f"risk:{factor['sourceId']}:{factor['code']}",
+                "type": "risk_factor",
+                "code": factor["code"],
+                "severity": factor["severity"],
+            }
+            for factor in factors
+        ]
+        edges = [
+            {
+                "from": source["id"],
+                "to": f"risk:{factor['sourceId']}:{factor['code']}",
+                "relationship": "contributes_to",
+            }
+            for source in sources
+            for factor in factors
+            if factor["sourceId"] == source["id"]
+        ]
+        graph = {
+            "scenario": SCENARIO_NAME,
+            "sourceCount": len(sources),
+            "observedSourceCount": sum(1 for source in sources if source["status"] == "observed"),
+            "staleSourceCount": sum(1 for source in sources if source["status"] == "stale_observation"),
+            "missingSourceCount": sum(1 for source in sources if source["status"] == "missing_observation"),
+            "nodes": nodes + factor_nodes,
+            "edges": edges,
+        }
+        graph["graphDigest"] = sha256_json(graph)
+        return graph
 
     @staticmethod
     def blockers(sources: list[dict[str, Any]]) -> list[str]:
@@ -179,3 +244,18 @@ class CasperRwaEvidenceService:
             observed = observed.replace(tzinfo=timezone.utc)
         age_hours = (datetime.now(timezone.utc) - observed.astimezone(timezone.utc)).total_seconds() / 3600
         return age_hours > 36
+
+    @staticmethod
+    def freshness(value: str) -> dict[str, Any]:
+        try:
+            observed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return {"status": "missing", "ageHours": None}
+        if observed.tzinfo is None:
+            observed = observed.replace(tzinfo=timezone.utc)
+        age_hours = (datetime.now(timezone.utc) - observed.astimezone(timezone.utc)).total_seconds() / 3600
+        return {
+            "status": "fresh" if age_hours <= 36 else "stale",
+            "ageHours": round(age_hours, 2),
+            "maxAgeHours": 36,
+        }
