@@ -2,7 +2,7 @@
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px;
   background: rgba(9, 18, 20, 0.82);
 }
 
@@ -10,8 +10,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
 .flight-panel-head h2 {
@@ -31,7 +31,7 @@
 .evidence-provenance ol {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -43,10 +43,10 @@
 .recovery-list span {
   display: grid;
   min-width: 0;
-  gap: 6px;
+  gap: 4px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 8px;
+  padding: 7px;
   color: var(--muted);
 }
 
@@ -60,7 +60,7 @@
 .recovery-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .policy-gate-summary p,
@@ -69,7 +69,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   color: var(--muted);
 }
 

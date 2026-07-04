@@ -26,19 +26,23 @@ def test_stop_loop_sets_running_false() -> None:
 def test_get_loop_status_returns_all_fields() -> None:
     status = get_loop_status()
     for field in ["running", "intervalSec", "dryRun", "cycleInProgress", "lastCycleAt",
-                   "nextCycleAt", "cycleCount", "errorCount", "lastError", "lastDecisionId"]:
+                   "nextCycleAt", "cycleCount", "errorCount", "lastError", "lastDecisionId",
+                   "automationOwner", "liveSubmitEnabled", "autoReadback"]:
         assert field in status
 
 
 def test_loop_status_network_is_casper() -> None:
     status = get_loop_status()
     assert status["network"] == "casper"
+    assert status["automationOwner"] == "backend"
 
 
 def test_start_loop_resets_consecutive_errors() -> None:
     start_loop()
+    assert get_loop_status()["nextCycleAt"]
     stop_loop()
     assert get_loop_status()["running"] is False
+    assert get_loop_status()["nextCycleAt"] is None
 
 
 def test_loop_default_is_live_not_dry_run() -> None:

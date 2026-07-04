@@ -1,6 +1,6 @@
 import asyncio
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import structlog
@@ -39,8 +39,12 @@ loop_state = LoopState()
 
 
 def get_loop_status() -> dict[str, Any]:
+    settings = get_settings()
     return {
         "network": "casper",
+        "automationOwner": "backend",
+        "liveSubmitEnabled": settings.casper_live_submit_enabled,
+        "autoReadback": settings.casper_agent_loop_auto_readback,
         "running": loop_state.running,
         "intervalSec": loop_state.interval_sec,
         "dryRun": loop_state.dry_run,
@@ -63,11 +67,13 @@ def start_loop(interval_sec: int = 60, dry_run: bool = False) -> dict[str, Any]:
     loop_state.interval_sec = interval_sec
     loop_state.dry_run = dry_run
     loop_state.consecutive_errors = 0
+    loop_state.next_cycle_at = datetime.now(timezone.utc).isoformat()
     return get_loop_status()
 
 
 def stop_loop() -> dict[str, Any]:
     loop_state.running = False
+    loop_state.next_cycle_at = None
     return get_loop_status()
 
 
@@ -97,6 +103,7 @@ async def auto_readback(decision_id: str, deploy_hash: str) -> dict[str, Any] | 
 async def agent_loop() -> None:
     logger.info("casper_agent_loop_started", interval=loop_state.interval_sec, dry_run=loop_state.dry_run)
     while loop_state.running:
+        loop_state.next_cycle_at = None
         loop_state.cycle_in_progress = True
         try:
             evidence = await fetch_treasury_yield()
@@ -166,5 +173,9 @@ async def agent_loop() -> None:
                 break
         finally:
             loop_state.cycle_in_progress = False
+            if loop_state.running:
+                loop_state.next_cycle_at = (
+                    datetime.now(timezone.utc) + timedelta(seconds=loop_state.interval_sec)
+                ).isoformat()
         await asyncio.sleep(loop_state.interval_sec)
     logger.info("casper_agent_loop_stopped")

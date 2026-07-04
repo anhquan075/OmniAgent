@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any
 
-from app.core.settings import REPO_ROOT, get_settings
+from app.core.settings import BACKEND_ROOT, REPO_ROOT, get_settings
 from app.services.casper.account import CasperAccountService
 from app.services.casper.cli_command import CasperCliCommand
 from app.services.casper.cspr_cloud import CsprCloudClient
@@ -112,6 +112,9 @@ class CasperPreflightService:
     @staticmethod
     def is_outside_repo(path: object) -> bool:
         try:
-            return not Path(path).resolve().is_relative_to(REPO_ROOT.resolve())
+            repo_root = REPO_ROOT.resolve()
+            if repo_root == Path(repo_root.anchor):
+                repo_root = BACKEND_ROOT.resolve()
+            return not Path(path).resolve().is_relative_to(repo_root)
         except (OSError, RuntimeError, ValueError):
             return False
