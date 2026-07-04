@@ -70,6 +70,11 @@ class Settings(BaseSettings):
     casper_decision_ledger_path: Path = BACKEND_ROOT / "data" / "casper-decision-log"
     casper_x402_evidence_url: str | None = None
     casper_x402_receipt: str | None = None
+    casper_x402_facilitator_url: str = "https://x402.org/facilitator"
+    casper_x402_network: str = "eip155:84532"
+    casper_x402_price: str = "$0.001"
+    casper_x402_currency: str = "USDC"
+    casper_x402_pay_to_address: str | None = None
     casper_llm_trace_enabled: bool = False
     casper_llm_trace_provider: str = "openrouter"
     casper_llm_trace_model: str = "deepseek/deepseek-v4-flash"
