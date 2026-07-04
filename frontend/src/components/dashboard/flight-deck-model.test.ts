@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   hasX402Receipt,
   lifecycleRows,
+  outcomeSummary,
   proofLinks,
   selectedReceiptProofState,
+  trustRows,
   utcTime,
 } from './flight-deck-model';
 
@@ -34,10 +36,11 @@ describe('flight deck model', () => {
     ]);
   });
 
-  it('requires public x402 receipt metadata for verified state', () => {
+  it('requires verified public x402 receipt metadata for verified state', () => {
     expect(hasX402Receipt({ status: 'ready', endpoint: 'https://example.invalid/x402' })).toBe(false);
-    expect(hasX402Receipt({ receipt: { receiptId: 'paid-1' } })).toBe(true);
-    expect(hasX402Receipt({ receipt: { receiptHash: 'sha256:abc' } })).toBe(true);
+    expect(hasX402Receipt({ status: 'configured', receipt: { receiptId: 'paid-1' } })).toBe(false);
+    expect(hasX402Receipt({ status: 'verified', receipt: { receiptId: 'paid-1' } })).toBe(true);
+    expect(hasX402Receipt({ status: 'verified', receipt: { receiptHash: 'sha256:abc' } })).toBe(true);
   });
 
   it('attaches latest deploy and readback only to the matching receipt', () => {
@@ -67,5 +70,27 @@ describe('flight deck model', () => {
       contract: 'https://testnet.cspr.live/contract/contract-hash',
       package: 'https://testnet.cspr.live/contract-package/package-hash',
     });
+  });
+
+  it('summarizes cockpit outcome and trust metrics', () => {
+    expect(outcomeSummary({
+      status: 'live_verified',
+      readback: { verified: true },
+      latestDecision: {
+        action: 'approve',
+        riskScore: 22,
+        policyGate: 'approved',
+        policyTemplate: { id: 'rwa-collateral-v1' },
+        evidenceBundle: { evidenceGraph: { graphDigest: 'sha256:graph' } },
+        x402: { status: 'verified', receipt: { receiptHash: 'sha256:x402' } },
+      },
+    })).toMatchObject({
+      action: 'approve',
+      riskScore: '22',
+      policyGate: 'approved',
+      readback: 'verified',
+      paidEvidence: 'verified',
+    });
+    expect(trustRows({ trustSummary: { sampleSize: 3, verifiedReadbackRate: 0.667 } })[1].value).toBe('67%');
   });
 });

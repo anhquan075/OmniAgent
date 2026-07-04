@@ -6,6 +6,7 @@ export type DashboardSnapshot = {
   casperAgentRuntime?: Payload;
   casperProofBundle?: Payload;
   backendHealth?: Payload;
+  streamMeta?: Payload;
 };
 
 export const fallbackSnapshot: DashboardSnapshot = {

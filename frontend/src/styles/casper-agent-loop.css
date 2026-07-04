@@ -18,7 +18,7 @@
   grid-template-columns: minmax(210px, 0.48fr) minmax(0, 1.52fr);
   gap: 8px;
   align-items: stretch;
-  height: var(--cockpit-card-row-height);
+  height: 100%;
   min-height: 0;
 }
 
@@ -175,10 +175,17 @@
 .loop-live-line {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
   min-height: 26px;
   border-top: 1px solid var(--color-glass-border);
   padding-top: 6px;
+}
+
+.loop-live-line span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .loop-live-line b {

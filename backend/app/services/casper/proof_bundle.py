@@ -4,6 +4,7 @@ from app.services.casper.contract import CasperDecisionContractService
 from app.services.casper.ledger import CasperDecisionLedger
 from app.services.casper.preflight import CasperPreflightService
 from app.services.casper.receipt import CasperDecisionReceiptService
+from app.services.casper.trust import CasperTrustService
 
 
 class CasperProofBundleService:
@@ -37,6 +38,7 @@ class CasperProofBundleService:
             "deployStatus": deploy_status,
             "readback": readback,
             "proofScore": proof_score,
+            "trustSummary": CasperTrustService.get_trust_summary(ledger["events"]),
             "recoveryCandidates": CasperProofBundleService.recovery_candidates(blockers),
             "ledger": {
                 "configured": True,
@@ -166,6 +168,10 @@ class CasperProofBundleService:
             or bool(((decision or {}).get("materialityGate") or {}).get("passed")),
             "decisionReceiptPresent": bool((decision or {}).get("decisionReceipt")),
             "evidenceSourceHashPresent": bool(((decision or {}).get("evidenceBundle") or {}).get("sourceHash")),
+            "evidenceGraphDigestPresent": bool(
+                (((decision or {}).get("evidenceBundle") or {}).get("evidenceGraph") or {}).get("graphDigest")
+            ),
+            "x402PaidEvidenceVerified": ((decision or {}).get("x402") or {}).get("status") == "verified",
             "guardrailHashPresent": bool((decision or {}).get("guardrailHash")),
         }
         return {

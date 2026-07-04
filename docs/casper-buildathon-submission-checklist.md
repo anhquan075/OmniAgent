@@ -37,8 +37,9 @@ scripts/verify-casper-receipt.sh <decision_id> --use-rpc
 
 ## Evidence-Gated Claims
 
-- x402 is shipped only when `x402.status == ready` and a real receipt hash is in
-  the proof artifact.
+- x402 paid evidence is shipped only when `x402.status == verified` and public
+  receipt metadata is bound through `resourceUrl`, `sourceHash`, or
+  `requestHash` in the proof artifact.
 - LLM-backed trace is shipped only when role `traceSource == llm`.
 - Live Casper proof is shipped only when the proof artifact status is
   `live_verified` and readback is verified.

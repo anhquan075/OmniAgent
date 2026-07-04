@@ -12,6 +12,7 @@ export default function CasperAgentDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshedAt, setRefreshedAt] = useState('');
+  const [streamClockMs, setStreamClockMs] = useState(() => Date.now());
   const hasLiveSnapshotRef = useRef(false);
 
   const applySnapshot = useCallback((nextSnapshot: DashboardSnapshot) => {
@@ -87,12 +88,18 @@ export default function CasperAgentDashboard() {
     };
   }, [applySnapshot, loadSnapshot]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setStreamClockMs(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const runtime = snapshot.casperAgentRuntime ?? fallbackSnapshot.casperAgentRuntime ?? {};
   const loopStatus = runtime?.loopStatus ?? {};
   const bundle = snapshot.casperProofBundle ?? fallbackSnapshot.casperProofBundle ?? {};
   const health = snapshot.backendHealth ?? fallbackSnapshot.backendHealth ?? {};
   const sourceState = error ? 'fallback' : refreshedAt ? 'live' : loading ? 'loading' : 'fallback';
   const liveBundle = sourceState === 'live' ? bundle : {};
+  const streamMeta = sourceState === 'live' ? snapshot.streamMeta : undefined;
 
   return (
     <div className="casper-dashboard">
@@ -107,6 +114,8 @@ export default function CasperAgentDashboard() {
         cockpit={<CockpitTab
           runtime={{ ...runtime, loopStatus }}
           bundle={liveBundle}
+          streamMeta={streamMeta}
+          streamClockMs={streamClockMs}
           refreshedAt={refreshedAt}
           sourceState={sourceState}
           isLoading={loading}

@@ -1,3 +1,5 @@
+import json
+
 from fastapi.testclient import TestClient
 
 from app.core.settings import get_settings
@@ -131,3 +133,9 @@ def test_dashboard_stream_emits_snapshot_events(monkeypatch) -> None:
 
     assert lines[0] == "event: dashboard_snapshot"
     assert '"decisionId":"stream-3"' in lines[1]
+    payload = json.loads(lines[1].removeprefix("data: "))
+    assert payload["streamMeta"]["transport"] == "sse"
+    assert payload["streamMeta"]["event"] == "dashboard_snapshot"
+    assert payload["streamMeta"]["intervalSec"] == 1.0
+    assert "mcp_activity_log" in payload["streamMeta"]["channels"]
+    assert "ai_output" in payload["streamMeta"]["channels"]

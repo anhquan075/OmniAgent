@@ -6,6 +6,7 @@ import {
   evidenceSourceUrl,
   mcpActivityRows,
   normalizedLifecycle,
+  streamPanelStatus,
 } from './agent-activity-model';
 
 const bundle = {
@@ -94,5 +95,35 @@ describe('agent activity model', () => {
     expect(evidenceSourceUrl(withUrl('javascript:alert(1)'))).toBe('');
     expect(evidenceSourceUrl(withUrl('data:text/html,proof'))).toBe('');
     expect(evidenceSourceUrl(withUrl('http://example.invalid/evidence'))).toBe('');
+  });
+
+  it('formats SSE stream metadata for live MCP and AI panels', () => {
+    expect(streamPanelStatus({
+      transport: 'sse',
+      sequence: 42,
+      emittedAt: '2026-07-04T08:31:09.000Z',
+      intervalSec: 1,
+    }, Date.parse('2026-07-04T08:31:10.000Z'))).toMatchObject({
+      label: 'live',
+      sequence: '#42',
+      emittedAt: '08:31:09 UTC',
+      isLive: true,
+    });
+    expect(streamPanelStatus({
+      transport: 'sse',
+      sequence: 42,
+      emittedAt: '2026-07-04T08:31:09.000Z',
+      intervalSec: 1,
+    }, Date.parse('2026-07-04T08:31:20.000Z'))).toMatchObject({
+      label: 'stale',
+      sequence: '#42',
+      isLive: false,
+    });
+    expect(streamPanelStatus()).toMatchObject({
+      label: 'snapshot',
+      sequence: 'pending',
+      emittedAt: 'pending',
+      isLive: false,
+    });
   });
 });

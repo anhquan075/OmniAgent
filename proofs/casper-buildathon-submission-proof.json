@@ -12,6 +12,14 @@
   },
   "demoUrl": null,
   "deployHash": null,
+  "evidenceGraph": {
+    "graphDigest": null,
+    "missingSourceCount": null,
+    "observedSourceCount": null,
+    "scenario": "rwa-collateral-nav-risk-receipt",
+    "sourceCount": null,
+    "staleSourceCount": null
+  },
   "explorerUrl": null,
   "generatedFrom": "dashboard-proof-log",
   "guardrailHash": "sha256:ebefc17e8ec020352cc8a3a034cfb1be683912dcd7cb3ab63db14925bd9e9b88",
@@ -53,6 +61,11 @@
     ]
   },
   "network": "casper",
+  "policyTemplate": {
+    "id": "rwa-collateral-v1",
+    "label": "RWA collateral financing gate",
+    "templateHash": null
+  },
   "policyGate": "approved",
   "proofDigest": "sha256:96ded7c44d0b84602a2be98351b17931325b8fe350f119ca5d49ecd8b8d9d12d",
   "readback": {
@@ -66,6 +79,21 @@
   "sourceHash": "sha256:f332807f9fbaa6c722f2a426ddcde57e69e1b720902889dd60389bb5a6796145",
   "status": "blocked",
   "timestamp": "2026-07-03T17:21:35.148760+00:00",
+  "trustSummary": {
+    "components": {
+      "paidEvidenceVerifiedDecisions": 0,
+      "policyBlockedDecisions": 0,
+      "staleEvidenceDecisions": 0,
+      "verifiedReadbacks": 0
+    },
+    "minSampleSize": 3,
+    "paidEvidenceVerifiedRate": null,
+    "policyBlockedRate": null,
+    "sampleSize": 0,
+    "staleEvidenceRate": null,
+    "status": "insufficient_data",
+    "verifiedReadbackRate": null
+  },
   "verifier": {
     "liveProofCommand": "scripts/verify-casper-live-proof.sh --proof-file proofs/casper-buildathon-submission-proof.json",
     "proofFile": "proofs/casper-buildathon-submission-proof.json",

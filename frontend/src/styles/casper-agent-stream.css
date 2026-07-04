@@ -14,6 +14,57 @@
   padding: 10px;
 }
 
+.mcp-log-panel .panel-head,
+.ai-output-panel .panel-head {
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.mcp-log-panel .panel-head h3,
+.ai-output-panel .panel-head h3 {
+  margin-right: auto;
+}
+
+.stream-live-meta {
+  display: inline-grid;
+  justify-items: end;
+  gap: 1px;
+  min-width: 86px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 6px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.stream-live-meta b,
+.stream-live-meta small {
+  display: block;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.stream-live-meta b {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.stream-live-meta small {
+  font-size: 0.66rem;
+}
+
+.stream-live-meta.is-live {
+  border-color: var(--color-status-ok-border);
+  color: var(--green);
+  background: rgba(159, 223, 194, 0.08);
+}
+
+.stream-live-meta.is-live b {
+  color: var(--green);
+}
+
 .mcp-log-panel:hover,
 .ai-output-panel:hover {
   box-shadow: var(--shadow-card-hover);

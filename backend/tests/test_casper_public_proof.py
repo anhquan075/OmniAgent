@@ -23,8 +23,24 @@ def _decision_event(decision_id: str = "public-proof-001") -> dict[str, object]:
                 "deployHash": "d" * 64,
                 "explorerUrl": "https://testnet.cspr.live/deploy/" + "d" * 64,
                 "decisionReceipt": {"receiptValue": "public-proof-001|haircut|72"},
+                "evidenceBundle": {
+                    "sourceHash": "sha256:" + "b" * 64,
+                    "evidenceGraph": {
+                        "scenario": "rwa-collateral-nav-risk-receipt",
+                        "graphDigest": "sha256:" + "2" * 64,
+                        "sourceCount": 1,
+                        "observedSourceCount": 1,
+                        "staleSourceCount": 0,
+                        "missingSourceCount": 0,
+                    },
+                },
+                "policyTemplate": {
+                    "id": "rwa-collateral-v1",
+                    "label": "RWA collateral financing gate",
+                    "templateHash": "sha256:" + "3" * 64,
+                },
                 "x402": {
-                    "status": "ready",
+                    "status": "verified",
                     "receipt": {
                         "receiptId": "x402-1",
                         "provider": "x402",
@@ -32,6 +48,7 @@ def _decision_event(decision_id: str = "public-proof-001") -> dict[str, object]:
                         "paidAt": "2026-07-03T14:40:00+00:00",
                         "amount": "0.01",
                         "currency": "USDC",
+                        "bindingStatus": "bound",
                         "receiptHash": "sha256:" + "e" * 64,
                     },
                 },
@@ -74,7 +91,11 @@ def test_public_proof_serializer_is_allowlisted_and_redacts_private_values(monke
     assert proof["accountPublicKey"].startswith("01")
     assert proof["contractHash"] == "hash-contract"
     assert proof["contractPackageHash"] == "hash-package"
+    assert proof["evidenceGraph"]["graphDigest"].startswith("sha256:")
+    assert proof["policyTemplate"]["id"] == "rwa-collateral-v1"
     assert proof["x402"]["receipt"]["receiptHash"].startswith("sha256:")
+    assert proof["x402"]["receipt"]["bindingStatus"] == "bound"
+    assert proof["trustSummary"]["sampleSize"] == 1
     assert proof["llmTrace"]["roles"][0]["traceSource"] == "deterministic"
     assert "secret.pem" not in proof_text
     assert "ledgerPath" not in proof_text

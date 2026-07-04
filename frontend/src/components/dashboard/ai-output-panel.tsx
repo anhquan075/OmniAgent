@@ -1,17 +1,36 @@
 import { BrainCircuitIcon, ExternalLinkIcon } from 'lucide-react';
 
-import { aiDecisionSummary, aiRoleOutputs, evidenceSourceUrl, type Payload } from './agent-activity-model';
+import {
+  aiDecisionSummary,
+  aiRoleOutputs,
+  evidenceSourceUrl,
+  streamPanelStatus,
+  type Payload,
+} from './agent-activity-model';
 
-export default function AiOutputPanel({ bundle }: { bundle?: Payload }) {
+export default function AiOutputPanel({
+  bundle,
+  streamMeta,
+  streamClockMs,
+}: {
+  bundle?: Payload;
+  streamMeta?: Payload;
+  streamClockMs?: number;
+}) {
   const summary = aiDecisionSummary(bundle);
   const roles = aiRoleOutputs(bundle);
   const evidenceUrl = evidenceSourceUrl(bundle);
+  const stream = streamPanelStatus(streamMeta, streamClockMs);
 
   return (
     <section className="ai-output-panel" aria-label="AI output">
       <div className="panel-head">
         <BrainCircuitIcon className="h-4 w-4" />
         <h3>AI output</h3>
+        <span className={`stream-live-meta ${stream.isLive ? 'is-live' : ''}`}>
+          <b>{stream.label}</b>
+          <small>{stream.sequence} · {stream.emittedAt}</small>
+        </span>
       </div>
 
       <div className="ai-output-scroll">

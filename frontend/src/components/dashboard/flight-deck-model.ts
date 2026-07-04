@@ -17,6 +17,17 @@ export type ReceiptRow = {
   eventType?: string;
 };
 
+export type OutcomeSummary = {
+  action: string;
+  riskScore: string;
+  policyGate: string;
+  proofStatus: string;
+  readback: string;
+  evidenceGraph: string;
+  paidEvidence: string;
+  template: string;
+};
+
 const completeStatuses = new Set(['complete', 'approved', 'confirmed', 'verified', 'ready', 'live_verified']);
 
 export const decisionFromBundle = (bundle?: Payload): Payload => (
@@ -73,7 +84,33 @@ export const policyRows = (bundle?: Payload) => {
 
 export const hasX402Receipt = (x402?: Payload) => {
   const receipt = x402?.receipt;
-  return Boolean(receipt && typeof receipt === 'object' && (receipt.receiptHash || receipt.receiptId));
+  return x402?.status === 'verified' && Boolean(receipt && typeof receipt === 'object' && (receipt.receiptHash || receipt.receiptId));
+};
+
+export const outcomeSummary = (bundle?: Payload): OutcomeSummary => {
+  const decision = decisionFromBundle(bundle);
+  const evidenceGraph = decision.evidenceBundle?.evidenceGraph ?? {};
+  const x402 = decision.x402 ?? {};
+  return {
+    action: proofLabel(decision.action, { stripCasperPrefix: true }),
+    riskScore: proofText(decision.riskScore, 'pending'),
+    policyGate: proofLabel(decision.policyGate, { stripCasperPrefix: true }),
+    proofStatus: proofLabel(bundle?.status, { stripCasperPrefix: true }),
+    readback: bundle?.readback?.verified ? 'verified' : proofLabel(bundle?.readback?.status, { stripCasperPrefix: true }),
+    evidenceGraph: proofText(evidenceGraph.graphDigest, 'pending'),
+    paidEvidence: hasX402Receipt(x402) ? 'verified' : proofLabel(x402.status, { stripCasperPrefix: true }) || 'unavailable',
+    template: proofLabel(decision.policyTemplate?.id, { stripCasperPrefix: true }) || 'rwa collateral v1',
+  };
+};
+
+export const trustRows = (bundle?: Payload) => {
+  const trust = bundle?.trustSummary && typeof bundle.trustSummary === 'object' ? bundle.trustSummary : {};
+  return [
+    { label: 'Samples', value: proofText(trust.sampleSize, '0') },
+    { label: 'Readback', value: formatRate(trust.verifiedReadbackRate) },
+    { label: 'Blocked', value: formatRate(trust.policyBlockedRate) },
+    { label: 'Paid evidence', value: formatRate(trust.paidEvidenceVerifiedRate) },
+  ];
 };
 
 export const proofLinks = (runtime?: Payload, bundle?: Payload) => {
@@ -100,3 +137,7 @@ export const selectedReceiptProofState = (receipt?: ReceiptRow, bundle?: Payload
     readback: matchesLatest ? bundle?.readback ?? {} : {},
   };
 };
+
+function formatRate(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? `${Math.round(value * 100)}%` : 'pending';
+}

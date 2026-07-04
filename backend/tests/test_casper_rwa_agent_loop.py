@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from app.services.casper.guardrails import CasperGuardrailService
+from app.services.casper.hashing import sha256_json
 from app.services.casper.rwa_evidence import CasperRwaEvidenceService
 from app.services.casper.x402 import CasperX402EvidenceService
 
@@ -30,10 +31,21 @@ def test_rwa_evidence_normalizes_sources_and_hashes_stably() -> None:
     assert bundle["status"] == "ready"
     assert bundle["sourceHash"].startswith("sha256:")
     assert bundle["sourceHash"] == duplicate["sourceHash"]
+    assert bundle["evidenceGraph"]["graphDigest"].startswith("sha256:")
+    assert bundle["evidenceGraph"]["observedSourceCount"] == 1
+    assert bundle["sources"][0]["sourceHash"].startswith("sha256:")
+    assert bundle["sources"][0]["freshness"]["status"] == "fresh"
     assert bundle["riskScore"] >= 70
     assert bundle["recommendedAction"] == "haircut"
     assert bundle["sources"][0]["status"] == "observed"
     assert bundle["riskFactors"][0]["code"] == "threshold_breach"
+
+
+def test_rwa_source_hash_ignores_live_age_counter() -> None:
+    source = CasperRwaEvidenceService.normalize_source(source_fixture())
+    source["freshness"]["ageHours"] = 12.34
+
+    assert sha256_json(CasperRwaEvidenceService.hashable_source(source)) == source["sourceHash"]
 
 
 def test_rwa_evidence_fails_closed_without_real_observation() -> None:
@@ -100,10 +112,64 @@ def test_x402_normalizes_public_receipt_metadata(monkeypatch) -> None:
 
     readiness = CasperX402EvidenceService.get_readiness({})
 
-    assert readiness["status"] == "ready"
+    assert readiness["status"] == "verified"
     assert readiness["receipt"]["receiptId"] == "paid-1"
+    assert readiness["receipt"]["bindingStatus"] == "bound"
     assert readiness["receipt"]["receiptHash"].startswith("sha256:")
     assert "CASPER_X402_RECEIPT" not in str(readiness)
+
+
+def test_x402_rejects_unbound_receipt(monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_X402_EVIDENCE_URL", "https://example.com/x402/rwa")
+    monkeypatch.setenv(
+        "CASPER_X402_RECEIPT",
+        (
+            '{"receiptId":"paid-1","provider":"x402","resourceUrl":"https://example.com/other",'
+            '"paidAt":"2026-07-03T14:40:00+00:00","amount":"0.01","currency":"USDC"}'
+        ),
+    )
+
+    readiness = CasperX402EvidenceService.get_readiness({"sourceHash": "sha256:expected"})
+
+    assert readiness["status"] == "configured"
+    assert readiness["receipt"]["bindingStatus"] == "unbound"
+    assert "x402_receipt_unbound" in readiness["hardBlockers"]
+
+
+def test_x402_rejects_mismatched_source_hash_even_when_url_matches(monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_X402_EVIDENCE_URL", "https://example.com/x402/rwa")
+    monkeypatch.setenv(
+        "CASPER_X402_RECEIPT",
+        (
+            '{"receiptId":"paid-1","provider":"x402","resourceUrl":"https://example.com/x402/rwa",'
+            '"paidAt":"2026-07-03T14:40:00+00:00","amount":"0.01","currency":"USDC",'
+            '"sourceHash":"sha256:wrong"}'
+        ),
+    )
+
+    readiness = CasperX402EvidenceService.get_readiness({"sourceHash": "sha256:expected"})
+
+    assert readiness["status"] == "configured"
+    assert readiness["receipt"]["bindingStatus"] == "unbound"
+    assert "x402_receipt_unbound" in readiness["hardBlockers"]
+
+
+def test_x402_rejects_mismatched_request_hash_even_when_url_matches(monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_X402_EVIDENCE_URL", "https://example.com/x402/rwa")
+    monkeypatch.setenv(
+        "CASPER_X402_RECEIPT",
+        (
+            '{"receiptId":"paid-1","provider":"x402","resourceUrl":"https://example.com/x402/rwa",'
+            '"paidAt":"2026-07-03T14:40:00+00:00","amount":"0.01","currency":"USDC",'
+            '"requestHash":"sha256:wrong"}'
+        ),
+    )
+
+    readiness = CasperX402EvidenceService.get_readiness({"requestHash": "sha256:expected"})
+
+    assert readiness["status"] == "configured"
+    assert readiness["receipt"]["bindingStatus"] == "unbound"
+    assert "x402_receipt_unbound" in readiness["hardBlockers"]
 
 
 def test_x402_rejects_token_like_receipt(monkeypatch) -> None:
