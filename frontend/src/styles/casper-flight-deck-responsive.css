@@ -37,6 +37,10 @@
   .flight-title {
     grid-column: span 2;
   }
+
+  .loop-status-panel {
+    height: auto;
+  }
 }
 
 @media (max-width: 900px) {
@@ -56,6 +60,24 @@
   .agent-activity-console,
   .agent-stream-grid {
     grid-template-columns: 1fr;
+  }
+
+  .agent-activity-console {
+    height: auto;
+  }
+
+  .agent-loop-mascot,
+  .mcp-log-panel,
+  .ai-output-panel,
+  .loop-status-panel {
+    overflow: visible;
+  }
+
+  .mcp-log-list,
+  .ai-output-scroll,
+  .loop-status-content {
+    overflow: visible;
+    padding-right: 0;
   }
 }
 

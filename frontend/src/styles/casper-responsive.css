@@ -3,11 +3,30 @@
    Breakpoints: 1340 / 1180 / 1024 / 760 / 620 / 520 / 400
    ══════════════════════════════════════════════════════════ */
 
-/* ── 1340px: stack activity console ── */
-@media (max-width: 1340px) {
+/* ── 900px: stack activity console ── */
+@media (max-width: 900px) {
   .agent-activity-console,
   .agent-stream-grid {
     grid-template-columns: 1fr;
+  }
+
+  .agent-activity-console,
+  .loop-status-panel {
+    height: auto;
+  }
+
+  .agent-loop-mascot,
+  .mcp-log-panel,
+  .ai-output-panel,
+  .loop-status-panel {
+    overflow: visible;
+  }
+
+  .mcp-log-list,
+  .ai-output-scroll,
+  .loop-status-content {
+    overflow: visible;
+    padding-right: 0;
   }
 }
 

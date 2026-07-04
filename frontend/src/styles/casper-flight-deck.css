@@ -186,10 +186,11 @@
 
 .cockpit-grid,
 .receipt-ledger-tab {
+  --cockpit-card-row-height: clamp(410px, 38dvh, 460px);
   display: grid;
   grid-template-columns: minmax(0, 1.54fr) minmax(300px, 0.46fr);
   gap: 8px;
-  align-items: stretch;
+  align-items: start;
 }
 
 .cockpit-primary,
