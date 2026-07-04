@@ -1,15 +1,32 @@
+import asyncio
 from datetime import datetime, timezone
 from typing import Any
 
 import httpx
+import structlog
 
 from app.services.casper.hashing import sha256_json
 
+
+logger = structlog.get_logger(__name__)
 
 TREASURY_API_URL = (
     "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/"
     "accounting/od/avg_interest_rates"
 )
+TREASURY_FETCH_ATTEMPTS = 3
+TREASURY_FETCH_BACKOFF_SEC = 0.75
+TREASURY_QUERY_PARAMS = {
+    "fields": "record_date,security_desc,avg_interest_rate_amt",
+    "filter": "security_desc:eq:Treasury Notes",
+    "sort": "-record_date",
+    "page[number]": "1",
+    "page[size]": "5",
+}
+TREASURY_REQUEST_HEADERS = {
+    "Accept": "application/json",
+    "User-Agent": "OmniAgent-Casper-Proof/1.0",
+}
 
 
 SCENARIO_NAME = "rwa-collateral-nav-risk-receipt"
@@ -28,17 +45,17 @@ async def fetch_treasury_yield() -> list[dict[str, Any]]:
     No API key is required. Demo runtime must fail closed instead of
     substituting static evidence when this public API is unavailable.
     """
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(TREASURY_API_URL, params={
-                "fields": "record_date,security_desc,avg_interest_rate_amt",
-                "filter": "security_desc:eq:Treasury Notes",
-                "sort": "-record_date",
-                "page[number]": "1",
-                "page[size]": "5",
-            })
+    last_error: Exception | None = None
+    for attempt in range(1, TREASURY_FETCH_ATTEMPTS + 1):
+        try:
+            async with httpx.AsyncClient(
+                timeout=10.0,
+                headers=TREASURY_REQUEST_HEADERS,
+            ) as client:
+                resp = await client.get(TREASURY_API_URL, params=TREASURY_QUERY_PARAMS)
             resp.raise_for_status()
             data = resp.json()
+            last_error = None
             records = data.get("data", [])
             for record in records:
                 sec_desc = str(record.get("security_desc", ""))
@@ -60,8 +77,25 @@ async def fetch_treasury_yield() -> list[dict[str, Any]]:
                         "source": "live_treasury_api",
                         "sourceRecordDate": record.get("record_date"),
                     }]
-    except Exception as exc:
-        raise RuntimeError(f"treasury_yield_unavailable: {exc}") from exc
+            break
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code < 500:
+                raise RuntimeError(f"treasury_yield_unavailable: {exc}") from exc
+            last_error = exc
+        except (httpx.TimeoutException, httpx.TransportError) as exc:
+            last_error = exc
+        except Exception as exc:
+            raise RuntimeError(f"treasury_yield_unavailable: {exc}") from exc
+        if last_error is not None and attempt < TREASURY_FETCH_ATTEMPTS:
+            logger.warning(
+                "treasury_yield_fetch_retry",
+                attempt=attempt,
+                attempts=TREASURY_FETCH_ATTEMPTS,
+                error=str(last_error)[:200],
+            )
+            await asyncio.sleep(TREASURY_FETCH_BACKOFF_SEC * attempt)
+    if last_error is not None:
+        raise RuntimeError(f"treasury_yield_unavailable: {last_error}") from last_error
     raise RuntimeError("treasury_yield_unavailable: 10-year yield not found")
 
 
