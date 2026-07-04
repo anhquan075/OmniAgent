@@ -151,6 +151,7 @@ class CasperPublicProofService:
             "promptHash",
             "outputHash",
             "modelClaimHash",
+            "modelGenerationHash",
             "rationaleHash",
         )
         return {key: role.get(key) for key in allowed if role.get(key) is not None}

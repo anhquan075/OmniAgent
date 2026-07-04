@@ -1,13 +1,11 @@
-from app.services.casper.rwa_evidence import (
-    CasperRwaEvidenceService,
-    default_evidence_fixture,
-    fetch_treasury_yield,
-    TREASURY_API_URL,
-)
+import pytest
+
+from app.services.casper.rwa_evidence import CasperRwaEvidenceService, fetch_treasury_yield, TREASURY_API_URL
+from tests.casper_evidence_fixtures import sample_treasury_evidence
 
 
-def test_default_fixture_still_works() -> None:
-    fixture = default_evidence_fixture()
+def test_sample_treasury_evidence_still_works() -> None:
+    fixture = sample_treasury_evidence()
     assert len(fixture) == 1
     assert fixture[0]["id"] == "us-treasury-10y-yield"
     assert fixture[0]["observedValue"] == 4.52
@@ -18,10 +16,7 @@ def test_treasury_api_url_is_correct() -> None:
     assert "avg_interest_rates" in TREASURY_API_URL
 
 
-async def test_fetch_treasury_yield_falls_back_on_error(monkeypatch) -> None:
-    async def fake_get(*args, **kwargs):
-        raise ConnectionError("network error")
-
+async def test_fetch_treasury_yield_fails_closed_on_error(monkeypatch) -> None:
     class FakeClient:
         def __init__(self, *a, **kw): pass
         async def __aenter__(self): return self
@@ -30,13 +25,11 @@ async def test_fetch_treasury_yield_falls_back_on_error(monkeypatch) -> None:
             raise ConnectionError("network error")
 
     monkeypatch.setattr("app.services.casper.rwa_evidence.httpx.AsyncClient", FakeClient)
-    result = await fetch_treasury_yield()
-    assert len(result) == 1
-    assert result[0]["source"] == "static_fallback"
-    assert result[0]["observedValue"] == 4.52
+    with pytest.raises(RuntimeError, match="treasury_yield_unavailable"):
+        await fetch_treasury_yield()
 
 
-async def test_fetch_treasury_yield_falls_back_on_empty_response(monkeypatch) -> None:
+async def test_fetch_treasury_yield_fails_closed_on_empty_response(monkeypatch) -> None:
     class FakeResponse:
         def raise_for_status(self): pass
         def json(self): return {"data": []}
@@ -48,8 +41,8 @@ async def test_fetch_treasury_yield_falls_back_on_empty_response(monkeypatch) ->
         async def get(self, *a, **kw): return FakeResponse()
 
     monkeypatch.setattr("app.services.casper.rwa_evidence.httpx.AsyncClient", FakeClient)
-    result = await fetch_treasury_yield()
-    assert result[0]["source"] == "static_fallback"
+    with pytest.raises(RuntimeError, match="10-year yield not found"):
+        await fetch_treasury_yield()
 
 
 async def test_fetch_treasury_yield_parses_live_data(monkeypatch) -> None:
@@ -70,7 +63,7 @@ async def test_fetch_treasury_yield_parses_live_data(monkeypatch) -> None:
     assert result[0]["observedValue"] == 4.25
 
 
-async def test_fetch_treasury_yield_falls_back_on_timeout(monkeypatch) -> None:
+async def test_fetch_treasury_yield_fails_closed_on_timeout(monkeypatch) -> None:
     import httpx
 
     class FakeClient:
@@ -81,12 +74,12 @@ async def test_fetch_treasury_yield_falls_back_on_timeout(monkeypatch) -> None:
             raise httpx.TimeoutException("timeout")
 
     monkeypatch.setattr("app.services.casper.rwa_evidence.httpx.AsyncClient", FakeClient)
-    result = await fetch_treasury_yield()
-    assert result[0]["source"] == "static_fallback"
+    with pytest.raises(RuntimeError, match="treasury_yield_unavailable"):
+        await fetch_treasury_yield()
 
 
 def test_evidence_bundle_with_live_source_tag() -> None:
-    fixture = default_evidence_fixture()
+    fixture = sample_treasury_evidence()
     fixture[0]["source"] = "live_treasury_api"
     bundle = CasperRwaEvidenceService.build_evidence_bundle({"evidence": fixture})
     assert bundle["status"] == "ready"

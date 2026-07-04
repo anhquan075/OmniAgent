@@ -84,9 +84,9 @@ Set these on the `backend` service.
 | `CASPER_PAYMENT_AMOUNT_MOTES` | `25000000000` |
 | `CASPER_GAS_PRICE_TOLERANCE` | `10` |
 
-### Safe demo mode
+### Local no-submit mode
 
-Use this mode when you want Railway to show the dashboard and autonomous receipts without submitting Casper transactions:
+Use this mode only for local smoke checks. It is not the no-mock recorded demo path because it does not submit Casper transactions:
 
 | Variable | Value |
 |----------|-------|
@@ -99,7 +99,7 @@ Use this mode when you want Railway to show the dashboard and autonomous receipt
 
 ### Guarded live-submit mode
 
-Use this mode only for the live proof window:
+Use this mode for the recorded no-mock demo:
 
 | Variable | Value |
 |----------|-------|
@@ -115,6 +115,8 @@ Use this mode only for the live proof window:
 
 Mount a Railway volume on the backend at `/data` for live mode. The current code expects `CASPER_SECRET_KEY_PATH` to be a filesystem path, not the PEM contents. Keep the signer out of git and use a restricted, funded Testnet account.
 
+The autonomous loop uses the public fiscaldata.treasury.gov Treasury API for evidence. There is no API key for that source; if it is unavailable, the loop records an error and does not substitute static evidence.
+
 ### Optional backend variables
 
 | Variable | Use |
@@ -124,10 +126,18 @@ Mount a Railway volume on the backend at `/data` for live mode. The current code
 | `CASPER_MIN_BALANCE_CSPR` | Low-balance warning threshold, default `50` |
 | `CASPER_X402_EVIDENCE_URL` | Real x402 evidence endpoint, if available |
 | `CASPER_X402_RECEIPT` | Real x402 receipt metadata; leave empty rather than faking a receipt |
-| `CASPER_LLM_TRACE_ENABLED` | Enable LLM trace metadata when real trace capture is configured |
-| `CASPER_LLM_TRACE_PROVIDER` | Trace provider label |
-| `CASPER_LLM_TRACE_MODEL` | Trace model label |
-| `CASPER_LLM_TRACE_CAPTURE` | Trace capture payload or reference |
+| `CASPER_LLM_TRACE_ENABLED` | Enable OpenRouter-backed LLM trace metadata |
+| `CASPER_LLM_TRACE_PROVIDER` | Trace provider label, default `openrouter` |
+| `CASPER_LLM_TRACE_MODEL` | Trace model label, default `deepseek/deepseek-v4-flash` |
+| `OPENROUTER_API_KEY` | Rotated OpenRouter key stored as a Railway secret |
+| `OPENROUTER_MODEL` | Primary model, default `deepseek/deepseek-v4-flash` |
+| `OPENROUTER_FALLBACK_MODEL` | Fallback model, default `deepseek/deepseek-v4-pro` |
+| `OPENROUTER_SITE_URL` | Optional OpenRouter attribution URL |
+| `OPENROUTER_APP_TITLE` | Optional OpenRouter app title |
+| `OPENROUTER_TIMEOUT_SEC` | OpenRouter timeout seconds, default `10` |
+| `CASPER_LLM_TRACE_CAPTURE` | Legacy manual capture; leave empty for no-mock demos |
+
+If an OpenRouter key has been pasted into chat or logs, rotate it before deploying. The backend only labels roles as `traceSource: llm` after a successful OpenRouter response; missing keys or provider failures fall back to deterministic trace labels.
 
 ## Frontend Variables
 

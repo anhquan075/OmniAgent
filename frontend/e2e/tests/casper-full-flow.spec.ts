@@ -15,7 +15,9 @@ test('operator can run the Casper dashboard flow without scripts', async ({ page
 
   expect(cycle.status()).toBe(200);
   expect(decisionId).toMatch(/^dashboard-\d+$/);
-  await expect(page.getByText('cycle recorded')).toBeVisible();
+  expect(cycle.request().postDataJSON()?.submit).toBe(true);
+  expect(cycle.request().postDataJSON()?.iUnderstandThisSubmitsCasperTestnet).toBe(true);
+  await expect(page.getByText('cycle requested')).toBeVisible();
   await expect(page.getByText(decisionId).first()).toBeVisible();
 
   const verifyResponse = page.waitForResponse(response => (
@@ -39,6 +41,7 @@ test('operator can run the Casper dashboard flow without scripts', async ({ page
   const start = await startResponse;
 
   expect(start.status()).toBe(200);
+  expect(new URL(start.url()).searchParams.get('dry_run')).toBe('false');
   await expect(page.getByText('loop started')).toBeVisible();
   await expect(page.locator('.loop-badge.is-running')).toBeVisible();
 

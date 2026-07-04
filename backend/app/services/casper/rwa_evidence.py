@@ -22,8 +22,8 @@ REFERENCE_SOURCE = {
 async def fetch_treasury_yield() -> list[dict[str, Any]]:
     """Fetch live US Treasury 10-Year yield from fiscaldata.treasury.gov.
 
-    Falls back to default_evidence_fixture() on any error (timeout, parse,
-    network). No API key required.
+    No API key is required. Demo runtime must fail closed instead of
+    substituting static evidence when this public API is unavailable.
     """
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -49,31 +49,9 @@ async def fetch_treasury_yield() -> list[dict[str, Any]]:
                         "unit": "percent",
                         "source": "live_treasury_api",
                     }]
-    except Exception:
-        pass
-    fixture = default_evidence_fixture()
-    fixture[0]["source"] = "static_fallback"
-    return fixture
-
-
-def default_evidence_fixture() -> list[dict[str, Any]]:
-    """Concrete RWA collateral/NAV risk fixture for the demo scenario.
-
-    Judge story: 'Should this tokenized collateral remain financeable?'
-    The agent reads the US Treasury 10-Year yield as a proxy for collateral
-    haircut triggers. Below threshold → approve. Above → haircut or block.
-    """
-    return [
-        {
-            "id": "us-treasury-10y-yield",
-            "label": "US Treasury 10-Year Yield",
-            "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates",
-            "observedAt": datetime.now(timezone.utc).isoformat(),
-            "observedValue": 4.52,
-            "threshold": 5.00,
-            "unit": "percent",
-        }
-    ]
+    except Exception as exc:
+        raise RuntimeError(f"treasury_yield_unavailable: {exc}") from exc
+    raise RuntimeError("treasury_yield_unavailable: 10-year yield not found")
 
 
 class CasperRwaEvidenceService:

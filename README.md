@@ -62,7 +62,7 @@ Enable the loop via environment variables:
 ```bash
 CASPER_AGENT_LOOP_ENABLED=true \
 CASPER_AGENT_LOOP_INTERVAL_SEC=60 \
-CASPER_AGENT_LOOP_DRY_RUN=true \
+CASPER_AGENT_LOOP_DRY_RUN=false \
 rtk uv --project backend run uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
@@ -70,9 +70,9 @@ rtk uv --project backend run uvicorn app.main:app --host 127.0.0.1 --port 8000
 - `CASPER_AGENT_LOOP_INTERVAL_SEC` — seconds between cycles (default: 60)
 - `CASPER_AGENT_LOOP_DRY_RUN` — if true, writes local ledger entries only; if false, submits live Casper transactions (requires `CASPER_LIVE_SUBMIT_ENABLED=true`)
 
-The loop fetches live US Treasury 10-Year yield from the public fiscaldata.treasury.gov API, falling back to a static fixture if the API is unreachable. Loop status is visible in the dashboard and via `GET /api/dashboard/loop`.
+The loop fetches live US Treasury 10-Year yield from the public fiscaldata.treasury.gov API. If that API is unreachable or does not return a 10-Year observation, the loop fails closed and records the error instead of substituting static evidence. Loop status is visible in the dashboard and via `GET /api/dashboard/loop`.
 
-- Dry runs are safe and write decisions into the dashboard decision log.
+- Dry runs are local-only proof checks; do not use them as the recorded demo path.
 - Live submission is allowed only when all runtime proof gates pass and live-submit is explicitly enabled.
 - Configured live submission runs `casper-client`, probes Casper state, captures a Casper Testnet transaction hash, and records it in the dashboard proof log.
 - When live submit returns a deploy hash, the loop can poll confirmation and attach readback evidence automatically.
@@ -83,7 +83,10 @@ Live mode requires:
 2. A signer path outside git
 3. Deployed decision contract hash and package hash
 4. `casper-client` available on PATH or via `CASPER_CLIENT_PATH`
-5. The explicit live-submit command flag
+5. `CASPER_LIVE_SUBMIT_ENABLED=true`
+6. The explicit live-submit command flag when running the script path
+7. Optional: `CASPER_CSPR_CLOUD_API_KEY` if you want CSPR.cloud-backed balance/block probes instead of Casper RPC/CLI only
+8. Optional: real `CASPER_X402_EVIDENCE_URL` and `CASPER_X402_RECEIPT` if you want to claim x402 settlement evidence
 
 ## Full Casper Network Integration
 
@@ -180,10 +183,16 @@ Only claim stack items backed by code or verifier evidence:
 | `CASPER_MIN_BALANCE_CSPR` | Warning threshold for low CSPR account balance |
 | `CASPER_X402_EVIDENCE_URL` | Optional real x402 evidence endpoint |
 | `CASPER_X402_RECEIPT` | Optional x402 receipt metadata; leave empty rather than faking receipts |
-| `CASPER_LLM_TRACE_ENABLED` | Enables public-safe model trace metadata when real model evidence is captured |
-| `CASPER_LLM_TRACE_PROVIDER` | Public provider label for the captured trace |
-| `CASPER_LLM_TRACE_MODEL` | Public model label for the captured trace |
-| `CASPER_LLM_TRACE_CAPTURE` | Optional JSON capture whose public fields are hashed before exposure |
+| `CASPER_LLM_TRACE_ENABLED` | Enables public-safe OpenRouter trace metadata when provider evidence is captured |
+| `CASPER_LLM_TRACE_PROVIDER` | Public provider label, defaults to `openrouter` |
+| `CASPER_LLM_TRACE_MODEL` | Public model label, defaults to `deepseek/deepseek-v4-flash` |
+| `OPENROUTER_API_KEY` | Rotated OpenRouter key stored only in env/Railway secrets |
+| `OPENROUTER_MODEL` | Primary model, default `deepseek/deepseek-v4-flash` |
+| `OPENROUTER_FALLBACK_MODEL` | Fallback model, default `deepseek/deepseek-v4-pro` |
+| `OPENROUTER_SITE_URL` | Optional OpenRouter app/site attribution header |
+| `OPENROUTER_APP_TITLE` | Optional OpenRouter title header, default `OmniAgent Casper Demo` |
+| `OPENROUTER_TIMEOUT_SEC` | OpenRouter request timeout, default `10` |
+| `CASPER_LLM_TRACE_CAPTURE` | Legacy manual capture; leave empty for no-mock demos |
 
 ## Verification
 
@@ -193,7 +202,7 @@ Run the full buildathon stack verifier when you need a release-quality check:
 scripts/verify-casper-buildathon-stack.sh
 ```
 
-It validates backend compile/tests, contract check/release build, frontend unit/e2e tests/build, safe backend boot, dashboard proof APIs, readiness, dry-run MCP decision cycle, and tracked-source secret hygiene.
+It validates backend compile/tests, contract check/release build, frontend unit/e2e tests/build, safe backend boot, dashboard proof APIs, readiness, local no-submit MCP cycle behavior, and tracked-source secret hygiene.
 
 Generate or refresh the judge proof artifact from a running backend:
 

@@ -5,7 +5,7 @@ from app.services.casper.contract import CasperDecisionContractService
 from app.services.casper.guardrails import CasperGuardrailService
 from app.services.casper.preflight import CasperPreflightService
 from app.services.casper.proof_bundle import CasperProofBundleService
-from app.services.casper.rwa_evidence import CasperRwaEvidenceService, default_evidence_fixture
+from app.services.casper.rwa_evidence import CasperRwaEvidenceService
 from app.services.casper.x402 import CasperX402EvidenceService
 
 
@@ -45,8 +45,6 @@ class CasperAgentRuntimeService:
     @staticmethod
     def run_autonomous_cycle(args: dict[str, Any]) -> dict[str, Any]:
         evidence_args = {**args}
-        if not evidence_args.get("evidence") and not evidence_args.get("sources"):
-            evidence_args["evidence"] = default_evidence_fixture()
         evidence = CasperRwaEvidenceService.build_evidence_bundle(evidence_args)
         action = str(args.get("action") or evidence["recommendedAction"])
         rationale = str(
