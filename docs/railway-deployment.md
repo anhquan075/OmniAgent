@@ -126,6 +126,11 @@ The autonomous loop uses the public fiscaldata.treasury.gov Treasury API for evi
 | `CASPER_MIN_BALANCE_CSPR` | Low-balance warning threshold, default `50` |
 | `CASPER_X402_EVIDENCE_URL` | Real x402 evidence endpoint, if available |
 | `CASPER_X402_RECEIPT` | Real x402 receipt metadata; leave empty rather than faking a receipt. To mark paid evidence verified, receipt metadata must be public-safe and bound to the evidence request through `resourceUrl`, `sourceHash`, or `requestHash`. |
+| `CASPER_X402_FACILITATOR_URL` | x402 facilitator base URL. For hackathon/testnet use `https://x402.org/facilitator`; the browser URL itself may 404, while `/verify` and `/settle` are API routes. |
+| `CASPER_X402_NETWORK` | x402 payment network, default `eip155:84532` for Base Sepolia. |
+| `CASPER_X402_PRICE` | x402 evidence price, default `$0.001`. |
+| `CASPER_X402_CURRENCY` | Public receipt currency label, default `USDC`. |
+| `CASPER_X402_PAY_TO_ADDRESS` | EVM address that receives Base Sepolia x402 test payments. Required before `/api/x402/rwa-evidence` becomes payment-protected. |
 | `CASPER_LLM_TRACE_ENABLED` | Enable OpenRouter-backed LLM trace metadata |
 | `CASPER_LLM_TRACE_PROVIDER` | Trace provider label, default `openrouter` |
 | `CASPER_LLM_TRACE_MODEL` | Trace model label, default `deepseek/deepseek-v4-flash` |

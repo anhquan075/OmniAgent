@@ -11,6 +11,10 @@ from app.core.settings import get_settings
 from app.services.casper.ledger import CasperDecisionLedger
 from app.services.casper.loop import agent_loop, loop_state
 from app.services.casper.trust import CasperTrustService
+from app.services.casper.x402_endpoint import (
+    CasperX402EvidenceEndpointService,
+    X402_EVIDENCE_ROUTE_PATH,
+)
 
 import structlog
 
@@ -48,15 +52,24 @@ def create_app() -> FastAPI:
     configure_logging()
     settings = get_settings()
     app = FastAPI(title="OmniAgent Casper FastAPI", version="0.1.0", lifespan=casper_lifespan)
+    app.include_router(api_router, prefix="/api")
+    CasperX402EvidenceEndpointService.register_payment_middleware(app, settings)
+    app.add_middleware(RequestSecurityMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["Content-Type", "X-CSRF-Token", "X-Operator-Token"],
+        allow_headers=[
+            "Content-Type",
+            "X-CSRF-Token",
+            "X-Operator-Token",
+            "Payment-Signature",
+            "X-Payment",
+            "Payment",
+        ],
+        expose_headers=["Payment-Response", "X-Payment-Response"],
     )
-    app.add_middleware(RequestSecurityMiddleware)
-    app.include_router(api_router, prefix="/api")
 
     @app.get("/health")
     @app.get("/api/health")
@@ -100,6 +113,15 @@ def create_app() -> FastAPI:
                     "authentication": "public",
                 },
                 {
+                    "id": "x402-paid-evidence",
+                    "name": "x402 paid evidence URL",
+                    "endpoint": X402_EVIDENCE_ROUTE_PATH,
+                    "authentication": "x402",
+                    "status": CasperX402EvidenceEndpointService.setup_status(settings).get("status"),
+                    "paymentNetwork": settings.casper_x402_network,
+                    "price": settings.casper_x402_price,
+                },
+                {
                     "id": "dashboard-sse",
                     "name": "Dashboard server-sent event stream",
                     "endpoint": "/api/dashboard/stream?limit=8",
@@ -109,6 +131,8 @@ def create_app() -> FastAPI:
             ],
             "endpoints": {
                 "publicProof": "/api/public/proof",
+                "x402Evidence": X402_EVIDENCE_ROUTE_PATH,
+                "x402Setup": "/api/x402/setup",
                 "mcp": "/api/mcp",
                 "dashboardStream": "/api/dashboard/stream?limit=8",
             },
