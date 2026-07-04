@@ -51,7 +51,7 @@ class CasperPublicProofService:
             "decisionReceipt": receipt,
             "evidenceGraph": CasperPublicProofService._evidence_graph(decision),
             "policyTemplate": CasperPublicProofService._policy_template(decision),
-            "readback": CasperPublicProofService._readback(decision),
+            "readback": CasperPublicProofService._readback(decision, bundle.get("readback")),
             "x402": CasperPublicProofService._x402(decision),
             "trustSummary": bundle.get("trustSummary"),
             "llmTrace": CasperPublicProofService._llm_trace(decision),
@@ -104,11 +104,12 @@ class CasperPublicProofService:
         }
 
     @staticmethod
-    def _readback(decision: dict[str, Any]) -> dict[str, Any]:
+    def _readback(decision: dict[str, Any], bundle_readback: object = None) -> dict[str, Any]:
+        bundle = bundle_readback if isinstance(bundle_readback, dict) else {}
         readback = decision.get("readback") if isinstance(decision.get("readback"), dict) else {}
         return {
-            "verified": readback.get("verified") is True,
-            "proofDigest": readback.get("proofDigest"),
+            "verified": bundle.get("verified") is True or readback.get("verified") is True,
+            "proofDigest": bundle.get("observedProofDigest") or readback.get("proofDigest"),
             "receiptVerified": readback.get("receiptVerified"),
             "decisionReceipt": readback.get("decisionReceipt"),
         }
