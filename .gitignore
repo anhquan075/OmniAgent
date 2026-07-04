@@ -83,6 +83,7 @@ pnpm-debug.log*
 .npm/
 .pnpm-store/
 target/
+backend/verifier-casper-dashboard-log-*
 
 # Planning and generated docs
 /plans/
@@ -94,6 +95,8 @@ target/
 !/docs/ARCHITECTURE.md
 !/docs/problem-and-approach.md
 !/docs/casper-agentic-demo-script.md
+!/docs/casper-buildathon-submission-checklist.md
+!/docs/casper-launch-roadmap.md
 !/docs/railway-deployment.md
 /docs/journals/
 /docs/reports/
