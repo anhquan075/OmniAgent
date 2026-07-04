@@ -10,20 +10,21 @@
 .agent-main-stack {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .agent-activity-console {
   display: grid;
-  grid-template-columns: minmax(240px, 0.62fr) minmax(0, 1.38fr);
-  gap: 12px;
-  align-items: stretch;
+  grid-template-columns: minmax(210px, 0.48fr) minmax(0, 1.52fr);
+  gap: 8px;
+  align-items: start;
 }
 
 .agent-stream-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.84fr);
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 0.8fr);
+  gap: 8px;
+  align-items: start;
 }
 
 .agent-loop-mascot,
@@ -31,7 +32,7 @@
 .ai-output-panel {
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-lg);
-  padding: 12px;
+  padding: 10px;
   background: linear-gradient(135deg, var(--color-glass), var(--color-glass-strong));
   backdrop-filter: blur(var(--blur-glass));
   box-shadow: var(--shadow-card);
@@ -48,13 +49,15 @@
 .agent-loop-mascot {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+  align-self: start;
 }
 
 .loop-visual {
   position: relative;
   display: grid;
-  min-height: 180px;
+  height: 124px;
+  min-height: 124px;
   place-items: center;
   overflow: hidden;
   border: 1px solid var(--color-glass-border);
@@ -73,7 +76,7 @@
 }
 
 .loop-track {
-  width: min(72%, 176px);
+  width: min(68%, 132px);
   aspect-ratio: 1;
   border: 1px solid rgba(230, 63, 55, 0.38);
   background: conic-gradient(from 90deg, transparent 0 36%, rgba(230, 63, 55, 0.6), transparent 66% 100%);
@@ -82,7 +85,7 @@
 }
 
 .loop-scanline {
-  width: min(54%, 132px);
+  width: min(52%, 104px);
   aspect-ratio: 1;
   border: 1px dashed rgba(255, 248, 239, 0.25);
   animation: agent-loop-rotate 18s linear infinite reverse;
@@ -93,11 +96,11 @@
   display: grid;
   justify-items: center;
   gap: 7px;
-  width: 118px;
-  min-height: 128px;
+  width: 104px;
+  min-height: 104px;
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-md);
-  padding: 14px 10px;
+  padding: 10px 8px;
   text-align: center;
   background: var(--color-glass-strong);
   backdrop-filter: blur(var(--blur-glass));
@@ -106,8 +109,8 @@
 
 .loop-core img {
   display: block;
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-panel);
 }
 
@@ -135,7 +138,7 @@
 .loop-steps,
 .mcp-log-list {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -149,7 +152,7 @@
   min-width: 0;
   border-left: 2px solid var(--color-glass-border-strong);
   border-radius: 6px;
-  padding: 8px;
+  padding: 6px;
   background: var(--color-casper-cream-dim);
 }
 
@@ -168,9 +171,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 30px;
+  min-height: 26px;
   border-top: 1px solid var(--color-glass-border);
-  padding-top: 8px;
+  padding-top: 6px;
 }
 
 .loop-live-line b {
@@ -186,4 +189,3 @@
 @keyframes mascot-breathe {
   to { transform: translateY(-3px) scale(1.015); }
 }
-

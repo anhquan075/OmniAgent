@@ -83,3 +83,19 @@ def test_direct_readback_endpoint_runs_without_script(monkeypatch) -> None:
     assert response.status_code == 200
     assert response.json()["verified"] is True
     assert captured == {"decisionId": "dashboard-test"}
+
+
+def test_loop_start_uses_backend_settings_defaults(monkeypatch) -> None:
+    monkeypatch.delenv("API_OPERATOR_TOKEN", raising=False)
+    monkeypatch.setenv("CASPER_AGENT_LOOP_INTERVAL_SEC", "300")
+    monkeypatch.setenv("CASPER_AGENT_LOOP_DRY_RUN", "false")
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+
+    headers = csrf_headers(client)
+    response = client.post("/api/loop/start", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["intervalSec"] == 300
+    assert response.json()["dryRun"] is False
+    client.post("/api/loop/stop", headers=headers)

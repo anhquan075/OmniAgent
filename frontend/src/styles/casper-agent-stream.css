@@ -2,14 +2,14 @@
 .ai-output-panel {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-lg);
   background: linear-gradient(135deg, var(--color-glass), var(--color-glass-strong));
   backdrop-filter: blur(var(--blur-glass));
   box-shadow: var(--shadow-card);
   transition: all 0.35s var(--ease-smooth);
-  padding: 20px;
+  padding: 10px;
 }
 
 .mcp-log-panel:hover,
@@ -21,7 +21,7 @@
 .mcp-log-list li {
   min-width: 0;
   border-top: 1px solid var(--line);
-  padding-top: 10px;
+  padding-top: 8px;
 }
 
 .mcp-log-list li > div {
@@ -52,11 +52,11 @@
 }
 
 .mcp-log-list pre {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   white-space: pre-wrap;
   color: var(--muted);
   font-size: 0.75rem;
-  line-height: 1.45;
+  line-height: 1.35;
 }
 
 .ai-decision-strip {
@@ -68,7 +68,7 @@
 
 .ai-decision-strip span {
   min-width: 0;
-  padding: 12px 10px 12px 0;
+  padding: 8px 8px 8px 0;
 }
 
 .ai-decision-strip small,
@@ -80,7 +80,7 @@
 }
 
 .ai-decision-strip b {
-  margin-top: 7px;
+  margin-top: 4px;
   overflow-wrap: anywhere;
 }
 
@@ -91,23 +91,23 @@
 .ai-output-panel blockquote {
   margin: 0;
   border-left: 2px solid var(--casper-red);
-  padding: 2px 0 2px 12px;
+  padding: 2px 0 2px 10px;
   color: var(--text);
-  line-height: 1.55;
+  line-height: 1.4;
   text-wrap: pretty;
 }
 
 .ai-role-list,
 .ai-proof-hashes {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .ai-role-list span,
 .ai-proof-hashes span {
   min-width: 0;
   border-top: 1px solid var(--line);
-  padding-top: 10px;
+  padding-top: 8px;
 }
 
 .ai-role-list span {
@@ -159,4 +159,3 @@
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);
 }
-

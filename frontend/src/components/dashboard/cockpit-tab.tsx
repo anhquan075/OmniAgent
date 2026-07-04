@@ -12,11 +12,6 @@ export default function CockpitTab({
   sourceState,
   isLoading,
   error,
-  actionStatus,
-  actionBusy,
-  onRunCycle,
-  onStart,
-  onStop,
 }: {
   runtime?: Payload;
   bundle?: Payload;
@@ -24,11 +19,6 @@ export default function CockpitTab({
   sourceState: SourceState;
   isLoading?: boolean;
   error?: string | null;
-  actionStatus?: string;
-  actionBusy?: boolean;
-  onRunCycle: () => void;
-  onStart: () => void;
-  onStop: () => void;
 }) {
   return (
     <div className="cockpit-tab">
@@ -45,14 +35,7 @@ export default function CockpitTab({
           <PolicyGateSummary bundle={sourceState === 'live' ? bundle : {}} />
         </div>
         <aside className="cockpit-side">
-          <LoopStatusPanel
-            loopStatus={runtime?.loopStatus}
-            actionStatus={actionStatus}
-            actionBusy={actionBusy}
-            onRunCycle={onRunCycle}
-            onStart={onStart}
-            onStop={onStop}
-          />
+          <LoopStatusPanel loopStatus={runtime?.loopStatus} />
           <RecoveryQueue bundle={sourceState === 'live' ? bundle : {}} sourceState={sourceState} />
         </aside>
       </div>

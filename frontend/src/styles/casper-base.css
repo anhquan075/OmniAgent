@@ -128,7 +128,6 @@ a {
 /* ── Buttons & pills: glass style ── */
 .agent-actions button,
 .judge-actions button,
-.loop-actions button,
 .status-pill,
 .chain-proof-link,
 .chain-proof-missing,
@@ -152,14 +151,12 @@ a {
 }
 
 .agent-actions button,
-.judge-actions button,
-.loop-actions button {
+.judge-actions button {
   cursor: pointer;
 }
 
 .agent-actions button:hover,
 .judge-actions button:hover,
-.loop-actions button:hover,
 .chain-proof-link:hover,
 .casper-proof-rpc:hover {
   border-color: var(--color-glass-border-strong);
@@ -170,7 +167,6 @@ a {
 
 .agent-actions button:active,
 .judge-actions button:active,
-.loop-actions button:active,
 .chain-proof-link:active,
 .casper-proof-rpc:active {
   transform: translateY(0);
@@ -267,4 +263,3 @@ a {
     transition-duration: 0.01ms !important;
   }
 }
-

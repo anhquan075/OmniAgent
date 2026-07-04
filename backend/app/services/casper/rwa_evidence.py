@@ -6,7 +6,10 @@ import httpx
 from app.services.casper.hashing import sha256_json
 
 
-TREASURY_API_URL = "https://api.fiscaldata.treasury.gov/api/v1/accounting/od/avg_interest_rates"
+TREASURY_API_URL = (
+    "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/"
+    "accounting/od/avg_interest_rates"
+)
 
 
 SCENARIO_NAME = "rwa-collateral-nav-risk-receipt"
@@ -28,26 +31,34 @@ async def fetch_treasury_yield() -> list[dict[str, Any]]:
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(TREASURY_API_URL, params={
+                "fields": "record_date,security_desc,avg_interest_rate_amt",
+                "filter": "security_desc:eq:Treasury Notes",
                 "sort": "-record_date",
-                "page_number": "1",
-                "page_size": "5",
+                "page[number]": "1",
+                "page[size]": "5",
             })
             resp.raise_for_status()
             data = resp.json()
             records = data.get("data", [])
             for record in records:
                 sec_desc = str(record.get("security_desc", ""))
-                if "10-Year" in sec_desc or "10 Year" in sec_desc:
-                    rate = float(record["avg_interest_rate"])
+                if "10-Year" in sec_desc or "10 Year" in sec_desc or sec_desc == "Treasury Notes":
+                    rate = float(record.get("avg_interest_rate_amt") or record["avg_interest_rate"])
+                    label = (
+                        "US Treasury 10-Year Yield"
+                        if "10-Year" in sec_desc or "10 Year" in sec_desc
+                        else "US Treasury Notes Average Interest Rate"
+                    )
                     return [{
-                        "id": "us-treasury-10y-yield",
-                        "label": "US Treasury 10-Year Yield",
+                        "id": "us-treasury-notes-average-interest-rate",
+                        "label": label,
                         "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates",
                         "observedAt": datetime.now(timezone.utc).isoformat(),
                         "observedValue": rate,
                         "threshold": 5.00,
                         "unit": "percent",
                         "source": "live_treasury_api",
+                        "sourceRecordDate": record.get("record_date"),
                     }]
     except Exception as exc:
         raise RuntimeError(f"treasury_yield_unavailable: {exc}") from exc

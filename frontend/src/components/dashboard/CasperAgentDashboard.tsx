@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { apiFetch } from '../../lib/api';
-import { useCasperDashboardActions } from './casper-dashboard-actions';
 import { fallbackSnapshot, type DashboardSnapshot, type Payload } from './dashboard-fallback';
 import CockpitTab from './cockpit-tab';
 import FlightDeckShell from './flight-deck-shell';
@@ -35,7 +34,6 @@ export default function CasperAgentDashboard() {
     const interval = window.setInterval(() => void loadSnapshot({ silent: true }), 8_000);
     return () => window.clearInterval(interval);
   }, [loadSnapshot]);
-  const { actionBusy, actionStatus, runCycle, startLoop, stopLoop } = useCasperDashboardActions(loadSnapshot);
 
   const runtime = snapshot.casperAgentRuntime ?? fallbackSnapshot.casperAgentRuntime ?? {};
   const loopStatus = runtime?.loopStatus ?? {};
@@ -61,11 +59,6 @@ export default function CasperAgentDashboard() {
           sourceState={sourceState}
           isLoading={loading}
           error={error}
-          actionStatus={actionStatus}
-          actionBusy={actionBusy}
-          onRunCycle={runCycle}
-          onStart={startLoop}
-          onStop={stopLoop}
         />}
         proof={<ProofPacketTab runtime={runtime} bundle={liveBundle} sourceState={sourceState} />}
         ledger={<ReceiptLedgerTab bundle={liveBundle} refreshKey={refreshedAt} />}

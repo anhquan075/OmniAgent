@@ -163,7 +163,8 @@
   }
 
   .loop-visual {
-    min-height: 210px;
+    height: 150px;
+    min-height: 150px;
   }
 }
 
@@ -174,7 +175,8 @@
   }
 
   .loop-visual {
-    min-height: 200px;
+    height: 144px;
+    min-height: 144px;
   }
 
   .loop-steps {
@@ -182,19 +184,19 @@
   }
 
   .loop-core {
-    width: 120px;
-    min-height: 130px;
-    padding: 14px 10px;
+    width: 104px;
+    min-height: 104px;
+    padding: 10px 8px;
   }
 
   .loop-core img {
-    width: 56px;
-    height: 56px;
+    width: 44px;
+    height: 44px;
   }
 
   .mcp-log-panel,
   .ai-output-panel {
-    padding: 16px;
+    padding: 12px;
   }
 
   .ai-decision-strip span + span {
@@ -271,7 +273,7 @@
   .agent-loop-mascot,
   .mcp-log-panel,
   .ai-output-panel {
-    padding: 14px;
+    padding: 12px;
   }
 
   .casper-proof-metrics,
@@ -389,4 +391,3 @@
     gap: 0;
   }
 }
-

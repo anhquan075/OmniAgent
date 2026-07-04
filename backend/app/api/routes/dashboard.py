@@ -101,8 +101,16 @@ async def readback_record(request: Request) -> dict[str, object]:
 
 
 @router.post("/loop/start", dependencies=[Depends(require_operator)])
-async def loop_start(request: Request, interval_sec: int = 60, dry_run: bool = True) -> dict[str, object]:
-    status = start_loop(interval_sec=interval_sec, dry_run=dry_run)
+async def loop_start(
+    request: Request,
+    interval_sec: int | None = None,
+    dry_run: bool | None = None,
+) -> dict[str, object]:
+    settings = get_settings()
+    status = start_loop(
+        interval_sec=interval_sec or settings.casper_agent_loop_interval_sec,
+        dry_run=settings.casper_agent_loop_dry_run if dry_run is None else dry_run,
+    )
     task = getattr(request.app.state, "loop_task", None)
     if task is None or task.done():
         request.app.state.loop_task = asyncio.create_task(agent_loop())
