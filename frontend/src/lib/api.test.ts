@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { apiFetch, resetApiSession } from './api';
+import { apiEventSource, apiFetch, resetApiSession } from './api';
 
 const jsonResponse = (body: object, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -56,6 +56,36 @@ describe('apiFetch', () => {
       '/api/dashboard/snapshot?limit=10',
       '/api/session',
       '/api/dashboard/snapshot?limit=10',
+    ]);
+  });
+
+  it('initializes a frontend session before opening dashboard event streams', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ csrfToken: 'stream-token', expiresAt: 60_000 }));
+    const sources: Array<{ url: string; init?: EventSourceInit }> = [];
+    class FakeEventSource {
+      url: string;
+
+      init?: EventSourceInit;
+
+      constructor(url: string, init?: EventSourceInit) {
+        this.url = url;
+        this.init = init;
+        sources.push({ url, init });
+      }
+
+      close = vi.fn();
+    }
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('EventSource', FakeEventSource as unknown as typeof EventSource);
+
+    const source = await apiEventSource('/api/dashboard/stream?limit=8');
+
+    expect(source).toBeInstanceOf(FakeEventSource);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/session');
+    expect(sources).toEqual([
+      { url: '/api/dashboard/stream?limit=8', init: { withCredentials: true } },
     ]);
   });
 });

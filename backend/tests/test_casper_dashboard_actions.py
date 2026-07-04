@@ -99,3 +99,35 @@ def test_loop_start_uses_backend_settings_defaults(monkeypatch) -> None:
     assert response.json()["intervalSec"] == 300
     assert response.json()["dryRun"] is False
     client.post("/api/loop/stop", headers=headers)
+
+
+def test_dashboard_stream_emits_snapshot_events(monkeypatch) -> None:
+    monkeypatch.delenv("API_OPERATOR_TOKEN", raising=False)
+    get_settings.cache_clear()
+
+    async def fake_snapshot(limit: int = 10) -> dict[str, object]:
+        return {
+            "network": "casper",
+            "casperAgentRuntime": {"loopStatus": {"running": True}},
+            "casperProofBundle": {"latestDecision": {"decisionId": f"stream-{limit}"}},
+        }
+
+    monkeypatch.setattr(
+        "app.api.routes.dashboard._dashboard_snapshot_payload",
+        fake_snapshot,
+    )
+
+    client = TestClient(create_app())
+    client.get("/api/session")
+
+    with client.stream("GET", "/api/dashboard/stream?limit=3&once=true") as response:
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/event-stream")
+        lines = []
+        for line in response.iter_lines():
+            lines.append(line)
+            if line == "":
+                break
+
+    assert lines[0] == "event: dashboard_snapshot"
+    assert '"decisionId":"stream-3"' in lines[1]

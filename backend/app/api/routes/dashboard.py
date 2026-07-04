@@ -1,6 +1,8 @@
 import asyncio
+import json
 
 from fastapi import APIRouter, Depends, Request
+from fastapi.responses import StreamingResponse
 
 from app.core.security import require_session, require_operator
 from app.core.settings import get_settings
@@ -12,6 +14,7 @@ from app.services.casper.runtime import CasperAgentRuntimeService
 
 
 router = APIRouter()
+DASHBOARD_STREAM_INTERVAL_SEC = 1.0
 
 
 async def _json_body(request: Request) -> dict[str, object]:
@@ -44,8 +47,7 @@ def _receipt_from_event(event: dict[str, object]) -> dict[str, object | None]:
     }
 
 
-@router.get("/dashboard/snapshot", dependencies=[Depends(require_session)])
-async def dashboard_snapshot(limit: int = 10) -> dict[str, object]:
+async def _dashboard_snapshot_payload(limit: int = 10) -> dict[str, object]:
     selected_limit = max(1, min(limit, 25))
     runtime, proof_bundle = await asyncio.gather(
         asyncio.to_thread(CasperAgentRuntimeService.get_runtime_snapshot, {"limit": selected_limit}),
@@ -65,6 +67,41 @@ async def dashboard_snapshot(limit: int = 10) -> dict[str, object]:
             "adapter": settings.agent_runtime_adapter,
         },
     }
+
+
+def _sse_event(event: str, payload: dict[str, object]) -> str:
+    data = json.dumps(payload, default=str, separators=(",", ":"))
+    return f"event: {event}\ndata: {data}\n\n"
+
+
+@router.get("/dashboard/snapshot", dependencies=[Depends(require_session)])
+async def dashboard_snapshot(limit: int = 10) -> dict[str, object]:
+    return await _dashboard_snapshot_payload(limit)
+
+
+@router.get("/dashboard/stream", dependencies=[Depends(require_session)])
+async def dashboard_stream(request: Request, limit: int = 8, once: bool = False) -> StreamingResponse:
+    selected_limit = max(1, min(limit, 25))
+
+    async def events():
+        while not await request.is_disconnected():
+            try:
+                yield _sse_event("dashboard_snapshot", await _dashboard_snapshot_payload(selected_limit))
+            except Exception as exc:
+                yield _sse_event("dashboard_error", {"message": str(exc)[:200]})
+            if once:
+                break
+            await asyncio.sleep(DASHBOARD_STREAM_INTERVAL_SEC)
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("/dashboard/receipts", dependencies=[Depends(require_session)])

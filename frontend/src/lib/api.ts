@@ -72,3 +72,10 @@ export const apiFetch = async (path: string, init: RequestInit = {}) => {
   resetApiSession();
   return request();
 };
+
+export const apiEventSource = async (path: string): Promise<EventSource> => {
+  if (path.startsWith('/api/') && path !== '/api/session') {
+    await ensureApiSession();
+  }
+  return new EventSource(getApiUrl(path), { withCredentials: true });
+};
