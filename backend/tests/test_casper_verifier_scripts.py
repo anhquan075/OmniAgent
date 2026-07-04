@@ -5,10 +5,12 @@ def test_stack_verifier_uses_dashboard_proof_log() -> None:
     verifier = Path(__file__).resolve().parents[2] / "scripts" / "verify-casper-buildathon-stack.sh"
     text = verifier.read_text(encoding="utf-8")
 
-    assert "proofs/casper-buildathon-submission-proof.json" not in text
+    assert "proofs/casper-buildathon-submission-proof.json" in text
+    assert "git ls-files --error-unmatch proofs/casper-buildathon-submission-proof.json" in text
     assert "plans/260702-1411-casper-agentic-buildathon-gap-closure" not in text
     assert "dashboard proof log" in text
     assert "/api/dashboard/receipts" in text
+    assert "/api/public/proof" in text
     assert "ledgerPath" in text
 
 
@@ -17,7 +19,7 @@ def test_live_proof_verifier_requires_receipt_dictionary() -> None:
     text = verifier.read_text(encoding="utf-8")
 
     assert "CASPER_DECISION_RECEIPT is missing" in text
-    assert "proofs/casper-buildathon-submission-proof.json" not in text
+    assert "proofs/casper-buildathon-submission-proof.json" in text
     assert "latest_decision_receipt" in text
     assert "get-dictionary-item" in text
     assert "--dictionary-name decision_receipts" in text

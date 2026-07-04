@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from app.core.settings import get_settings
 from app.services.casper.cli_command import CasperCliCommand
 from app.services.casper.contract import CasperDecisionContractService
@@ -14,7 +16,7 @@ def evidence_bundle() -> dict[str, object]:
                     "id": "treasury-yield-10y",
                     "label": "US 10Y Treasury yield",
                     "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates",
-                    "observedAt": "2026-07-02T12:00:00+00:00",
+                    "observedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
                     "observedValue": 4.2,
                     "threshold": 4.5,
                     "unit": "percent",

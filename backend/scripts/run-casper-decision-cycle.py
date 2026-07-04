@@ -9,6 +9,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
+from app.services.casper.public_proof import CasperPublicProofService  # noqa: E402
 from omniagent_api import ApiClient  # noqa: E402
 from script_logging import configure_script_logging, get_script_logger  # noqa: E402
 
@@ -45,6 +46,19 @@ async def run(args: argparse.Namespace) -> int:
         deployHash=result.get("deployHash"),
         scenario=(result.get("cycle") or {}).get("evidence", {}).get("scenario"),
     )
+    if args.write_proof:
+        proof = await client.get_json("/api/public/proof", timeout=90)
+        if args.demo_url:
+            proof["demoUrl"] = args.demo_url
+        if args.video_url:
+            proof["videoUrl"] = args.video_url
+        written = CasperPublicProofService.write_public_proof(proof, Path(args.write_proof))
+        logger.info(
+            "casper_public_proof_written",
+            path=str(written),
+            status=proof.get("status"),
+            decisionId=proof.get("decisionId"),
+        )
     return 0
 
 
@@ -56,6 +70,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--action", default="", help="Override action (default: evidence-derived).")
     parser.add_argument("--rationale", default="", help="Override rationale (default: evidence-derived).")
     parser.add_argument("--operator-token", default=None)
+    parser.add_argument("--write-proof", default="", help="Write sanitized public proof artifact JSON.")
+    parser.add_argument("--demo-url", default="", help="Optional public demo URL to include in written proof.")
+    parser.add_argument("--video-url", default="", help="Optional demo video URL to include in written proof.")
     parser.add_argument(LIVE_CASPER_FLAG, action="store_true")
     return parser
 

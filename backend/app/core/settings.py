@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     casper_explorer_url: str = "https://testnet.cspr.live"
     casper_account_public_key: str | None = None
     casper_secret_key_path: str | None = None
+    casper_contract_install_deploy_hash: str | None = None
     casper_decision_contract_hash: str | None = None
     casper_decision_contract_package_hash: str | None = None
     casper_live_submit_enabled: bool = False

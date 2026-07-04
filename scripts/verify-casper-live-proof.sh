@@ -26,6 +26,9 @@ Required values can be provided as environment variables or options:
 
 Optional:
   --proof-file <path>  Read the same fields from a local JSON file.
+
+Recommended proof file:
+  proofs/casper-buildathon-submission-proof.json
 USAGE
 }
 

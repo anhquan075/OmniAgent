@@ -1,0 +1,85 @@
+{
+  "accountPublicKey": null,
+  "action": "approve",
+  "contractHash": null,
+  "contractLinks": {},
+  "contractPackageHash": null,
+  "createdAt": "2026-07-03T17:21:35.148760+00:00",
+  "decisionId": "rwa-collateral-submission-20260704-001",
+  "decisionReceipt": {
+    "receiptHash": "sha256:ffb21c53662bb478ad36cf79b38ba35c22cbe3099f85218cb4efea78c39f83dc",
+    "receiptValue": "rwa-collateral-submission-20260704-001|approve|22|sha256:96ded7c44d0b84602a2be98351b17931325b8fe350f119ca5d49ecd8b8d9d12d|sha256:d561b44b5a6aed1b8274031bf206834394bf5a859df2b2a8f2e359cc7bb22a99|sha256:f332807f9fbaa6c722f2a426ddcde57e69e1b720902889dd60389bb5a6796145|2026-07-03T17:21:35.148760+00:00|approved||sha256:ebefc17e8ec020352cc8a3a034cfb1be683912dcd7cb3ab63db14925bd9e9b88"
+  },
+  "demoUrl": null,
+  "deployHash": null,
+  "explorerUrl": null,
+  "generatedFrom": "dashboard-proof-log",
+  "guardrailHash": "sha256:ebefc17e8ec020352cc8a3a034cfb1be683912dcd7cb3ab63db14925bd9e9b88",
+  "liveProof": {
+    "contractHash": null,
+    "contractInstallDeployHash": null,
+    "contractPackageHash": null,
+    "decisionDeployHash": null,
+    "decisionId": "rwa-collateral-submission-20260704-001",
+    "decisionReceipt": "rwa-collateral-submission-20260704-001|approve|22|sha256:96ded7c44d0b84602a2be98351b17931325b8fe350f119ca5d49ecd8b8d9d12d|sha256:d561b44b5a6aed1b8274031bf206834394bf5a859df2b2a8f2e359cc7bb22a99|sha256:f332807f9fbaa6c722f2a426ddcde57e69e1b720902889dd60389bb5a6796145|2026-07-03T17:21:35.148760+00:00|approved||sha256:ebefc17e8ec020352cc8a3a034cfb1be683912dcd7cb3ab63db14925bd9e9b88",
+    "proofDigest": "sha256:96ded7c44d0b84602a2be98351b17931325b8fe350f119ca5d49ecd8b8d9d12d"
+  },
+  "llmTrace": {
+    "roles": [
+      {
+        "agentRole": "proposer",
+        "outputHash": "sha256:2a8286723227a0bf0d7032a5bbb61075f0d3dd009620c84288b12ad4001feff7",
+        "promptHash": "sha256:88444bfc3d23c9cbcd53c22efa1a81d12f84a933a50355974da420de94823d6e",
+        "rationaleHash": "sha256:d561b44b5a6aed1b8274031bf206834394bf5a859df2b2a8f2e359cc7bb22a99",
+        "traceSource": "deterministic",
+        "verdict": "proposed"
+      },
+      {
+        "agentRole": "critic",
+        "outputHash": "sha256:337c22b34fcd1adeafe0f5a2a95fc2ce9715053f8d7865b70de202e84e9f711a",
+        "promptHash": "sha256:8c6a45fe6c35043abc0e7ebe754afc673aaf68a31ffb89845e122e167687123b",
+        "rationaleHash": "sha256:92d3824df0fb740fbc97cbdfc26eab4a8e83e52579ea25dc35fbbc74ac99fe18",
+        "traceSource": "deterministic",
+        "verdict": "passed"
+      },
+      {
+        "agentRole": "policy_gate",
+        "outputHash": "sha256:79042f0ccd55bb574b6b0574f80f6bd873dd5ca6d4a37a4e0d81e431fd00b989",
+        "promptHash": "sha256:ee92e44c46a8bcd3450191a016c44e4d1cf5a94a08a6886a16fe5ef3fdf29ba9",
+        "rationaleHash": "sha256:135b7289c5993dfe672e6753709723b6fa2c4a74e5243b9079eae809eca3b8d6",
+        "traceSource": "deterministic",
+        "verdict": "approved"
+      }
+    ]
+  },
+  "network": "casper",
+  "policyGate": "approved",
+  "proofDigest": "sha256:96ded7c44d0b84602a2be98351b17931325b8fe350f119ca5d49ecd8b8d9d12d",
+  "readback": {
+    "decisionReceipt": null,
+    "proofDigest": null,
+    "receiptVerified": null,
+    "verified": false
+  },
+  "riskScore": 22,
+  "scenario": "rwa-collateral-nav-risk-receipt",
+  "sourceHash": "sha256:f332807f9fbaa6c722f2a426ddcde57e69e1b720902889dd60389bb5a6796145",
+  "status": "blocked",
+  "timestamp": "2026-07-03T17:21:35.148760+00:00",
+  "verifier": {
+    "liveProofCommand": "scripts/verify-casper-live-proof.sh --proof-file proofs/casper-buildathon-submission-proof.json",
+    "proofFile": "proofs/casper-buildathon-submission-proof.json",
+    "source": "scripts/verify-casper-receipt.sh",
+    "usesDashboardReceiptEndpoint": true,
+    "usesPublicProofEndpoint": true
+  },
+  "videoUrl": "https://www.youtube.com/watch?v=-blqn4a2sf4",
+  "x402": {
+    "endpoint": null,
+    "hardBlockers": [
+      "x402_evidence_endpoint_missing"
+    ],
+    "receipt": null,
+    "status": "unavailable"
+  }
+}

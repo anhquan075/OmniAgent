@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from app.services.casper.contract import CasperDecisionContractService
 from app.services.casper.runtime import CasperAgentRuntimeService
 from app.services.mcp.tools import McpToolRegistry
@@ -12,6 +14,7 @@ def test_casper_runtime_snapshot_reports_fail_closed_state() -> None:
     assert snapshot["preflight"]["liveSubmitEnabled"] is False
     assert "casper_account_missing" in snapshot["preflight"]["hardBlockers"]
     assert snapshot["proofBundle"]["status"] == "blocked"
+    assert snapshot["tooling"]["odraRequiredForContractBuild"] is False
 
 
 def test_public_tool_listing_hides_casper_write_tools() -> None:
@@ -54,7 +57,7 @@ def test_autonomous_cycle_builds_rwa_guardrail_receipt(tmp_path, monkeypatch) ->
                     "id": "treasury-yield-10y",
                     "label": "US 10Y Treasury yield",
                     "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates",
-                    "observedAt": "2026-07-02T12:00:00+00:00",
+                    "observedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
                     "observedValue": 4.82,
                     "threshold": 4.5,
                     "unit": "percent",

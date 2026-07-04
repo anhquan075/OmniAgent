@@ -1,6 +1,12 @@
+from datetime import datetime, timezone
+
 from app.services.casper.guardrails import CasperGuardrailService
 from app.services.casper.rwa_evidence import CasperRwaEvidenceService
 from app.services.casper.x402 import CasperX402EvidenceService
+
+
+def fresh_observed_at() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
 def source_fixture() -> dict[str, object]:
@@ -8,7 +14,7 @@ def source_fixture() -> dict[str, object]:
         "id": "treasury-yield-10y",
         "label": "US 10Y Treasury yield",
         "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates",
-        "observedAt": "2026-07-02T12:00:00+00:00",
+        "observedAt": fresh_observed_at(),
         "observedValue": 4.82,
         "threshold": 4.5,
         "unit": "percent",
@@ -16,8 +22,9 @@ def source_fixture() -> dict[str, object]:
 
 
 def test_rwa_evidence_normalizes_sources_and_hashes_stably() -> None:
-    bundle = CasperRwaEvidenceService.build_evidence_bundle({"evidence": [source_fixture()]})
-    duplicate = CasperRwaEvidenceService.build_evidence_bundle({"evidence": [source_fixture()]})
+    source = source_fixture()
+    bundle = CasperRwaEvidenceService.build_evidence_bundle({"evidence": [source]})
+    duplicate = CasperRwaEvidenceService.build_evidence_bundle({"evidence": [source.copy()]})
 
     assert bundle["scenario"] == "rwa-collateral-nav-risk-receipt"
     assert bundle["status"] == "ready"
