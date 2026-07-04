@@ -63,19 +63,61 @@ async def test_fetch_treasury_yield_parses_live_data(monkeypatch) -> None:
     assert result[0]["observedValue"] == 4.25
 
 
-async def test_fetch_treasury_yield_fails_closed_on_timeout(monkeypatch) -> None:
+async def test_fetch_treasury_yield_retries_transient_transport_error(monkeypatch) -> None:
     import httpx
 
+    class FakeResponse:
+        def raise_for_status(self): pass
+        def json(self):
+            return {"data": [{
+                "record_date": "2026-05-31",
+                "security_desc": "Treasury Notes",
+                "avg_interest_rate_amt": "3.248",
+            }]}
+
     class FakeClient:
+        attempts = 0
+
         def __init__(self, *a, **kw): pass
         async def __aenter__(self): return self
         async def __aexit__(self, *a): pass
         async def get(self, *a, **kw):
-            raise httpx.TimeoutException("timeout")
+            FakeClient.attempts += 1
+            if FakeClient.attempts == 1:
+                raise httpx.RemoteProtocolError("Server disconnected without sending a response.")
+            return FakeResponse()
+
+    async def no_sleep(*a, **kw): pass
 
     monkeypatch.setattr("app.services.casper.rwa_evidence.httpx.AsyncClient", FakeClient)
+    monkeypatch.setattr("app.services.casper.rwa_evidence.asyncio.sleep", no_sleep)
+
+    result = await fetch_treasury_yield()
+
+    assert FakeClient.attempts == 2
+    assert result[0]["observedValue"] == 3.248
+
+
+async def test_fetch_treasury_yield_fails_closed_on_timeout(monkeypatch) -> None:
+    import httpx
+
+    class FakeClient:
+        attempts = 0
+
+        def __init__(self, *a, **kw): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): pass
+        async def get(self, *a, **kw):
+            FakeClient.attempts += 1
+            raise httpx.TimeoutException("timeout")
+
+    async def no_sleep(*a, **kw): pass
+
+    monkeypatch.setattr("app.services.casper.rwa_evidence.httpx.AsyncClient", FakeClient)
+    monkeypatch.setattr("app.services.casper.rwa_evidence.asyncio.sleep", no_sleep)
     with pytest.raises(RuntimeError, match="treasury_yield_unavailable"):
         await fetch_treasury_yield()
+    assert FakeClient.attempts == 3
 
 
 def test_evidence_bundle_with_live_source_tag() -> None:
