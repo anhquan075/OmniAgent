@@ -63,8 +63,9 @@ def _decision_event(decision_id: str = "public-proof-001") -> dict[str, object]:
                     ]
                 },
                 "readback": {
-                    "verified": True,
                     "proofDigest": "sha256:" + "a" * 64,
+                    "source": "casper_json_rpc_query_global_state",
+                    "stateRootHash": "state-root",
                     "receiptVerified": True,
                     "decisionReceipt": "public-proof-001|haircut|72",
                 },
@@ -95,6 +96,7 @@ def test_public_proof_serializer_is_allowlisted_and_redacts_private_values(monke
     assert proof["policyTemplate"]["id"] == "rwa-collateral-v1"
     assert proof["x402"]["receipt"]["receiptHash"].startswith("sha256:")
     assert proof["x402"]["receipt"]["bindingStatus"] == "bound"
+    assert proof["readback"]["verified"] is True
     assert proof["trustSummary"]["sampleSize"] == 1
     assert proof["llmTrace"]["roles"][0]["traceSource"] == "deterministic"
     assert "secret.pem" not in proof_text
