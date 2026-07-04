@@ -27,8 +27,9 @@ export default function AiOutputPanel({ bundle }: { bundle?: Payload }) {
           <span key={role.role}>
             <small>{role.role}</small>
             <b>{role.verdict}</b>
-            <em>{role.confidence}</em>
+            <em>{role.confidence} · {role.traceSource}</em>
             <code>{role.summary}</code>
+            {role.traceHash ? <code>{role.traceHash}</code> : null}
           </span>
         ))}
       </div>

@@ -17,11 +17,11 @@ test('operator can run the Casper dashboard flow without scripts', async ({ page
   expect(decisionId).toMatch(/^dashboard-\d+$/);
   await expect(page.getByText('cycle recorded')).toBeVisible();
   await expect(page.getByText(decisionId).first()).toBeVisible();
-  await expect(page.locator('[data-page-decision-log]')).toContainText(decisionId);
 
   const verifyResponse = page.waitForResponse(response => (
     response.url().includes('/api/mcp') && response.request().method() === 'POST'
   ));
+  await page.getByRole('button', { name: 'Proof Packet' }).click();
   await page.getByRole('button', { name: 'Verify receipt' }).click();
   const verify = await verifyResponse;
   const verifyRequest = verify.request().postDataJSON();
@@ -31,6 +31,7 @@ test('operator can run the Casper dashboard flow without scripts', async ({ page
   expect(verifyRequest.params.arguments.decisionId).toBe(decisionId);
   await expect(page.locator('[data-verify-status]')).toContainText(/chain verified|local verified|mismatch/);
 
+  await page.getByRole('button', { name: 'Cockpit' }).click();
   const startResponse = page.waitForResponse(response => (
     response.url().includes('/api/loop/start') && response.request().method() === 'POST'
   ));

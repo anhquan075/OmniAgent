@@ -1,0 +1,200 @@
+.flight-deck {
+  display: grid;
+  grid-template-columns: 224px minmax(0, 1fr);
+  min-height: calc(100dvh - 16px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: rgba(7, 13, 15, 0.92);
+}
+
+.flight-rail {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 16px;
+  min-width: 0;
+  border-right: 1px solid var(--color-glass-border);
+  padding: 18px 12px;
+  background: rgba(5, 12, 14, 0.96);
+}
+
+.flight-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.flight-brand img {
+  width: 56px;
+  height: 56px;
+}
+
+.flight-brand b,
+.flight-brand span,
+.flight-status-item b,
+.live-submit-guard b {
+  display: block;
+}
+
+.flight-brand b {
+  font-size: 1.1rem;
+}
+
+.flight-brand span {
+  color: var(--casper-red-soft);
+  font-size: 1.32rem;
+  font-weight: 760;
+}
+
+.flight-tabs {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.flight-tabs button,
+.flight-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--text);
+  background: transparent;
+  cursor: pointer;
+}
+
+.flight-tabs button.is-active,
+.flight-tabs button:hover {
+  border-color: rgba(230, 63, 55, 0.45);
+  background: rgba(230, 63, 55, 0.18);
+  color: var(--casper-red-soft);
+}
+
+.flight-rail-status {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--muted);
+}
+
+.flight-rail-status span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.flight-rail-status .is-ok { background: var(--green); }
+.flight-rail-status .is-blocked { background: var(--danger); }
+
+.flight-main {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.flight-status-strip {
+  display: grid;
+  grid-template-columns: minmax(210px, 1.2fr) repeat(4, minmax(126px, 0.8fr)) minmax(150px, 0.75fr) 42px;
+  align-items: stretch;
+  min-height: 86px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(5, 12, 14, 0.72);
+}
+
+.flight-title,
+.flight-status-item,
+.live-submit-guard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  border-right: 1px solid var(--line);
+  padding: 12px 14px;
+}
+
+.flight-title {
+  display: block;
+}
+
+.flight-title h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.35rem;
+  font-weight: 760;
+  line-height: 1.15;
+}
+
+.flight-title small,
+.flight-status-item small,
+.live-submit-guard small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.flight-status-item b,
+.live-submit-guard b {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.flight-status-item span,
+.live-submit-guard span {
+  min-width: 0;
+}
+
+.flight-status-item svg,
+.live-submit-guard svg {
+  flex: 0 0 auto;
+}
+
+.flight-status-item em {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-style: normal;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.flight-status-item.is-ok svg,
+.live-submit-guard.is-live svg { color: var(--green); }
+.flight-status-item.is-warn svg,
+.live-submit-guard.is-guarded svg { color: var(--casper-red-soft); }
+
+.flight-refresh {
+  justify-content: center;
+  border-radius: 0;
+  border-left: 0;
+}
+
+.flight-tab-panel {
+  min-width: 0;
+  padding: 10px;
+}
+
+.cockpit-tab,
+.proof-packet-tab {
+  display: grid;
+  gap: 10px;
+}
+
+.cockpit-grid,
+.receipt-ledger-tab {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.34fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.cockpit-primary,
+.cockpit-side {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}

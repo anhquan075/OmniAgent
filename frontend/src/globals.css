@@ -4,6 +4,9 @@
 @import './styles/casper-tokens.css';
 @import './styles/casper-base.css';
 @import './styles/casper-layout.css';
+@import './styles/casper-flight-deck.css';
+@import './styles/casper-flight-deck-panels.css';
+@import './styles/casper-flight-deck-responsive.css';
 @import './styles/casper-proof.css';
 @import './styles/casper-agent-loop.css';
 @import './styles/casper-agent-stream.css';

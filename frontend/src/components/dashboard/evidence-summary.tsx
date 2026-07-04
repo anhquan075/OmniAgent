@@ -2,6 +2,7 @@ import { ExternalLinkIcon, ShieldCheckIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import { proofLabel, proofText } from './proof-labels';
+import { hasX402Receipt } from './flight-deck-model';
 
 type Payload = Record<string, any>;
 
@@ -13,7 +14,8 @@ export function EvidenceSummary({ evidence, x402 }: { evidence?: Payload; x402?:
   const primarySource = sources[0] ?? {};
   const primaryFactor = factors[0] ?? {};
   const sourceHash = proofText(evidence?.sourceHash, '');
-  const x402Status = proofText(x402?.status, 'unavailable');
+  const x402Verified = hasX402Receipt(x402);
+  const x402Status = x402Verified ? 'verified' : proofText(x402?.status, 'unavailable');
 
   const copyHash = () => {
     if (!navigator.clipboard || !sourceHash) return;
@@ -58,7 +60,7 @@ export function EvidenceSummary({ evidence, x402 }: { evidence?: Payload; x402?:
         </span>
         <span className="evidence-field" data-evidence-field="x402">
           <small>x402</small>
-          <b className={x402Status === 'ready' ? 'is-ok' : 'is-blocked'}>{proofLabel(x402Status)}</b>
+          <b className={x402Verified ? 'is-ok' : 'is-blocked'}>{x402Verified ? proofLabel(x402Status) : 'unavailable'}</b>
         </span>
       </div>
       <div className="evidence-hash-row">

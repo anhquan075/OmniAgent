@@ -29,7 +29,7 @@ const bundle = {
       guardrailHash: 'sha256:guard',
       roles: [
         { agentRole: 'proposer', verdict: 'proposed', confidence: 0.86, reasonCodes: ['risk_score_72'] },
-        { agentRole: 'policy_gate', verdict: 'approved', confidence: 0.94, reasonCodes: ['policy_approved'] },
+        { agentRole: 'policy_gate', verdict: 'approved', confidence: 0.94, reasonCodes: ['policy_approved'], traceSource: 'llm', outputHash: 'sha256:trace' },
       ],
     },
   },
@@ -62,6 +62,7 @@ describe('agent activity model', () => {
       proofDigest: 'sha256:proof',
     });
     expect(aiRoleOutputs(bundle).map(role => role.role)).toEqual(['proposer', 'policy gate']);
+    expect(aiRoleOutputs(bundle)[1]).toMatchObject({ traceSource: 'llm', traceHash: 'sha256:trace' });
     expect(normalizedLifecycle(bundle)).toEqual([{ state: 'readback', status: 'verified', complete: true }]);
   });
 
@@ -72,6 +73,16 @@ describe('agent activity model', () => {
 
     expect(rows).toHaveLength(6);
     expect(rows.map(row => row.tool)).toContain('casper_record_readback');
+  });
+
+  it('labels fallback role output as deterministic', () => {
+    const roles = aiRoleOutputs({ latestDecision: { policyGate: 'blocked', proofDigest: 'sha256:fallback' } });
+
+    expect(roles[0]).toMatchObject({
+      role: 'policy gate',
+      traceSource: 'deterministic',
+      traceHash: 'sha256:fallback',
+    });
   });
 
   it('only exposes https evidence links', () => {
