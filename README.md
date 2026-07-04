@@ -31,6 +31,25 @@ the receipt through a dashboard, public proof endpoint, and verifier script.
 It is built as a Casper-only demo for the
 [Casper Agentic Buildathon](https://dorahacks.io/hackathon/casper-agentic-buildathon/detail).
 
+## Current Public Deployment
+
+Last verified: 2026-07-04.
+
+| Surface | URL / Status |
+|---------|--------------|
+| Frontend proof console | [https://omniyield.app](https://omniyield.app) |
+| Backend public proof | [https://omniagent-production.up.railway.app/api/public/proof](https://omniagent-production.up.railway.app/api/public/proof) |
+| Agent card | [https://omniagent-production.up.railway.app/.well-known/casper-agent-card.json](https://omniagent-production.up.railway.app/.well-known/casper-agent-card.json) |
+| Paywalled x402 evidence | [https://omniagent-production.up.railway.app/api/x402/rwa-evidence](https://omniagent-production.up.railway.app/api/x402/rwa-evidence) |
+| x402 status | `verified`, `bindingStatus=bound`, `hardBlockers=[]` |
+| x402 receipt hash | `sha256:9b8479d9e5370962efa0dd028dd87e9adb9af225e1002bf43eb84f453c59645f` |
+| Autonomous loop | Backend-owned loop enabled; live Casper submit and readback run every 300 seconds |
+
+The x402 payment rail uses Base Sepolia USDC through the testnet x402
+facilitator because the current facilitator path is EVM/Solana-based. Casper
+remains the proof network: decision receipts, proof digests, contract readback,
+and the public verifier are anchored to Casper Testnet.
+
 The architecture diagram below is a self-generated raster PNG, not an SVG.
 
 ![Self-generated OmniAgent Casper architecture PNG](frontend/public/imgs/omniagent-casper-architecture.png)
@@ -50,7 +69,10 @@ The architecture diagram below is a self-generated raster PNG, not an SVG.
 
 ## Safety Model (Dry Run vs Live Submit)
 
-Live Casper submission is **off by default**.
+Live Casper submission is **off by default** in local/source configuration.
+The public Railway deployment intentionally runs guarded live-submit mode with
+the backend-owned autonomous loop enabled; the frontend displays loop state and
+operator controls but does not drive the recurring execution loop.
 
 ## Autonomous Agent Loop
 
@@ -86,7 +108,7 @@ Live mode requires:
 5. `CASPER_LIVE_SUBMIT_ENABLED=true`
 6. The explicit live-submit command flag when running the script path
 7. Optional: `CASPER_CSPR_CLOUD_API_KEY` if you want CSPR.cloud-backed balance/block probes instead of Casper RPC/CLI only
-8. Optional: real `CASPER_X402_EVIDENCE_URL` and `CASPER_X402_RECEIPT` if you want to claim verified paid-evidence receipt metadata
+8. Optional for self-hosted deployments, required for paid-evidence claims: real `CASPER_X402_EVIDENCE_URL` and public-safe `CASPER_X402_RECEIPT`
 
 ## Full Casper Network Integration
 
@@ -157,7 +179,7 @@ Only claim stack items backed by code or verifier evidence:
 | Casper MCP Server | Used as local MCP tool surface | Backend exposes the `casper_*` tool family through the project MCP route. |
 | JavaScript/TypeScript SDK | Used for frontend, not Casper JS SDK | Vite/React/TypeScript proof cockpit in `frontend/`. |
 | Python SDK | Used for backend runtime, not Casper Python SDK | FastAPI backend, JSON-RPC probes, and `casper-client` orchestration in `backend/`. |
-| x402 Facilitator | Verified receipt only | `CASPER_X402_EVIDENCE_URL` and `CASPER_X402_RECEIPT` fail closed unless receipt metadata is public-safe and bound to the evidence request/source. |
+| x402 Facilitator | Verified paid evidence | Public deployment has a successful paid x402 request and `CASPER_X402_RECEIPT` bound by `resourceUrl`; self-hosted deployments fail closed unless receipt metadata is public-safe and bound. |
 | Odra Framework | Not used | Contract is native Casper Rust, not Odra. |
 | CSPR.cloud | Optional REST integration | Used when `CASPER_CSPR_CLOUD_API_KEY` is set for account balance and fallback block-height probes. |
 | CSPR.click / CSPR.trade | Not used | No production dependency or live integration is claimed. |
@@ -183,8 +205,8 @@ Only claim stack items backed by code or verifier evidence:
 | `CASPER_AGENT_LOOP_POLL_MAX_RETRIES` | Max deploy-status polling attempts after submit |
 | `CASPER_CSPR_CLOUD_API_KEY` | Optional CSPR.cloud API key for balance and fallback block-height probes |
 | `CASPER_MIN_BALANCE_CSPR` | Warning threshold for low CSPR account balance |
-| `CASPER_X402_EVIDENCE_URL` | Optional real x402 evidence endpoint |
-| `CASPER_X402_RECEIPT` | Optional x402 receipt metadata with public fields such as `receiptId`, `provider`, `resourceUrl`, `paidAt`, `amount`, `currency`, and optional binding fields like `sourceHash` or `requestHash`; leave empty rather than faking receipts |
+| `CASPER_X402_EVIDENCE_URL` | Real x402 evidence endpoint; public deployment uses `/api/x402/rwa-evidence` |
+| `CASPER_X402_RECEIPT` | Public x402 receipt metadata with fields such as `receiptId`, `provider`, `resourceUrl`, `paidAt`, `amount`, `currency`, and optional binding fields like `sourceHash` or `requestHash`; leave empty rather than faking receipts |
 | `CASPER_LLM_TRACE_ENABLED` | Enables public-safe OpenRouter trace metadata when provider evidence is captured |
 | `CASPER_LLM_TRACE_PROVIDER` | Public provider label, defaults to `openrouter` |
 | `CASPER_LLM_TRACE_MODEL` | Public model label, defaults to `deepseek/deepseek-v4-flash` |
@@ -241,7 +263,9 @@ scripts/verify-casper-live-proof.sh --proof-file proofs/casper-buildathon-submis
 
 Public replay surfaces:
 
-- Proof endpoint: `GET /api/public/proof`
+- Frontend proof console: [https://omniyield.app](https://omniyield.app)
+- Backend proof endpoint: [https://omniagent-production.up.railway.app/api/public/proof](https://omniagent-production.up.railway.app/api/public/proof)
+- Paywalled x402 evidence endpoint: [https://omniagent-production.up.railway.app/api/x402/rwa-evidence](https://omniagent-production.up.railway.app/api/x402/rwa-evidence)
 - Proof artifact: [proofs/casper-buildathon-submission-proof.json](proofs/casper-buildathon-submission-proof.json)
 - Demo video: [YouTube](https://www.youtube.com/watch?v=-blqn4a2sf4)
 - Submission checklist: [docs/casper-buildathon-submission-checklist.md](docs/casper-buildathon-submission-checklist.md)
