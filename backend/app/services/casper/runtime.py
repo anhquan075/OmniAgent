@@ -24,7 +24,7 @@ class CasperAgentRuntimeService:
             "proofBundle": proof_bundle,
             "tooling": {
                 "casperClientRequiredForLiveSubmit": True,
-                "odraRequiredForContractBuild": True,
+                "odraRequiredForContractBuild": False,
                 "dryRunAvailable": True,
             },
             "agentProfile": {

@@ -1,11 +1,13 @@
 from typing import Any
 
+from app.services.casper.hashing import sha256_text
 from app.services.casper.ledger import CasperDecisionLedger
 
 
 class CasperDecisionReceiptService:
     @staticmethod
     def receipt_from_decision(decision: dict[str, Any]) -> dict[str, Any]:
+        receipt_value = CasperDecisionReceiptService.receipt_value(decision)
         return {
             "network": "casper",
             "receiptId": str(decision.get("receiptId") or decision.get("decisionId") or ""),
@@ -21,7 +23,8 @@ class CasperDecisionReceiptService:
             "agentAccountHash": decision.get("agentAccountHash"),
             "deployHash": decision.get("deployHash"),
             "transactionHash": decision.get("transactionHash"),
-            "receiptValue": CasperDecisionReceiptService.receipt_value(decision),
+            "receiptValue": receipt_value,
+            "receiptHash": sha256_text(receipt_value),
             "readbackVerified": bool((decision.get("readback") or {}).get("proofDigest") == decision.get("proofDigest"))
             if isinstance(decision.get("readback"), dict)
             else False,

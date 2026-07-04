@@ -22,6 +22,13 @@ class ApiClient:
             response.raise_for_status()
             return response.json()
 
+    async def get_json(self, path: str, timeout: float = 60) -> dict[str, Any]:
+        async with httpx.AsyncClient(base_url=self.base_url, timeout=timeout) as client:
+            response = await client.get(path)
+            response.raise_for_status()
+            payload = response.json()
+            return payload if isinstance(payload, dict) else {}
+
     async def tool(self, name: str, arguments: dict[str, Any] | None = None, timeout: float = 60) -> dict[str, Any]:
         async with httpx.AsyncClient(base_url=self.base_url, timeout=timeout) as client:
             headers = {"X-Operator-Token": self.operator_token} if self.operator_token else None

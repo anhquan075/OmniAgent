@@ -8,6 +8,7 @@ BACKEND_LOG="${TMPDIR:-/tmp}/omniagent-casper-backend-${BACKEND_PORT}.log"
 SESSION_JAR="${TMPDIR:-/tmp}/omniagent-casper-session-${BACKEND_PORT}.cookies"
 SNAPSHOT_JSON="${TMPDIR:-/tmp}/omniagent-casper-dashboard-snapshot-${BACKEND_PORT}.json"
 RECEIPTS_JSON="${TMPDIR:-/tmp}/omniagent-casper-dashboard-receipts-${BACKEND_PORT}.json"
+PUBLIC_PROOF_JSON="${TMPDIR:-/tmp}/omniagent-casper-public-proof-${BACKEND_PORT}.json"
 OPERATOR_TOKEN="local-casper-verifier-token"
 BACKEND_PID=""
 
@@ -15,7 +16,7 @@ cleanup() {
   if [[ -n "${BACKEND_PID}" ]]; then
     kill "${BACKEND_PID}" >/dev/null 2>&1 || true
   fi
-  rm -f "${SESSION_JAR}" "${SNAPSHOT_JSON}" "${RECEIPTS_JSON}"
+  rm -f "${SESSION_JAR}" "${SNAPSHOT_JSON}" "${RECEIPTS_JSON}" "${PUBLIC_PROOF_JSON}"
 }
 trap cleanup EXIT
 
@@ -89,20 +90,41 @@ echo "[casper] dashboard proof log"
 curl -fsS -c "${SESSION_JAR}" "${BACKEND_URL}/api/session" >/dev/null
 curl -fsS -b "${SESSION_JAR}" "${BACKEND_URL}/api/dashboard/snapshot?limit=8" -o "${SNAPSHOT_JSON}"
 curl -fsS -b "${SESSION_JAR}" "${BACKEND_URL}/api/dashboard/receipts?limit=10" -o "${RECEIPTS_JSON}"
+curl -fsS "${BACKEND_URL}/api/public/proof" -o "${PUBLIC_PROOF_JSON}"
 rtk node -e '
 const fs = require("fs");
-const [snapshotPath, receiptsPath] = process.argv.slice(1);
+const [snapshotPath, receiptsPath, publicProofPath] = process.argv.slice(1);
 const snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
 const receipts = JSON.parse(fs.readFileSync(receiptsPath, "utf8"));
+const proof = JSON.parse(fs.readFileSync(publicProofPath, "utf8"));
 const snapshotText = JSON.stringify(snapshot);
 const receiptsText = JSON.stringify(receipts);
+const proofText = JSON.stringify(proof);
 if (snapshot.network !== "casper") throw new Error("dashboard snapshot is not Casper-scoped");
 if (!snapshot.casperProofBundle?.ledger?.configured) throw new Error("dashboard proof log is not configured");
 if (!Array.isArray(receipts.receipts) || receipts.receipts.length < 1) throw new Error("dashboard receipts did not render the dry-run log");
 if (!receipts.receipts.some((receipt) => receipt.decisionId && receipt.proofDigest)) throw new Error("dashboard log is missing receipt proof fields");
+if (proof.scenario !== "rwa-collateral-nav-risk-receipt") throw new Error("public proof scenario mismatch");
+if (proof.status === "live_verified" && proof.readback?.verified !== true) throw new Error("public proof overclaims live verification");
+if (/CASPER_SECRET_KEY_PATH|API_OPERATOR_TOKEN|secret\.pem|\.env/.test(proofText)) throw new Error("public proof leaked private material");
 if (/proofs\/|plans\/|ledgerPath/.test(snapshotText + receiptsText)) throw new Error("dashboard leaked internal artifact paths");
 console.log(`dashboard log receipts: ${receipts.receipts.length}`);
-' "${SNAPSHOT_JSON}" "${RECEIPTS_JSON}"
+' "${SNAPSHOT_JSON}" "${RECEIPTS_JSON}" "${PUBLIC_PROOF_JSON}"
+
+echo "[casper] tracked proof artifact"
+git ls-files --error-unmatch proofs/casper-buildathon-submission-proof.json >/dev/null || {
+  echo "Tracked proof artifact missing from git index." >&2
+  exit 1
+}
+test -f proofs/casper-buildathon-submission-proof.json
+rtk node -e '
+const fs = require("fs");
+const proof = JSON.parse(fs.readFileSync("proofs/casper-buildathon-submission-proof.json", "utf8"));
+const text = JSON.stringify(proof);
+if (proof.scenario !== "rwa-collateral-nav-risk-receipt") throw new Error("tracked proof scenario mismatch");
+if (proof.status === "live_verified" && proof.readback?.verified !== true) throw new Error("tracked proof overclaims live verification");
+if (/CASPER_SECRET_KEY_PATH|API_OPERATOR_TOKEN|secret\.pem|\.env/.test(text)) throw new Error("tracked proof leaked private material");
+'
 
 echo "[casper] tracked secret hygiene"
 if git ls-files | rg '(^|/)\.env($|\.)' | rg -v '\.env\.example$' >/dev/null; then

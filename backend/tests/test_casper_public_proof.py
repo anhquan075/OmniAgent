@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import pytest
 
 from app.core.settings import get_settings
 from app.main import create_app
@@ -95,3 +96,33 @@ def test_public_proof_endpoint_requires_no_private_session(monkeypatch, tmp_path
     assert body["decisionId"] == "public-endpoint-001"
     assert "ledgerPath" not in response.text
     assert "operator" not in response.text.lower()
+
+
+def test_public_proof_writer_rejects_private_material(tmp_path) -> None:
+    path = tmp_path / "proof.json"
+    proof = {
+        "network": "casper",
+        "scenario": "rwa-collateral-nav-risk-receipt",
+        "status": "blocked",
+        "debug": "CASPER_SECRET_KEY_PATH=/Users/me/secret.pem",
+    }
+
+    with pytest.raises(ValueError):
+        CasperPublicProofService.write_public_proof(proof, path)
+
+    assert not path.exists()
+
+
+def test_public_proof_writer_creates_sanitized_artifact(tmp_path) -> None:
+    path = tmp_path / "proof.json"
+    proof = {
+        "network": "casper",
+        "scenario": "rwa-collateral-nav-risk-receipt",
+        "status": "blocked",
+        "decisionId": "public-proof-001",
+    }
+
+    CasperPublicProofService.write_public_proof(proof, path)
+
+    assert path.read_text(encoding="utf-8").endswith("\n")
+    assert "public-proof-001" in path.read_text(encoding="utf-8")

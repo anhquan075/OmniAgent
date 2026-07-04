@@ -75,6 +75,9 @@ def test_casper_decision_cycle_real_submit_requires_flag() -> None:
             decision_id="demo",
             action="",
             rationale="",
+            write_proof="",
+            demo_url="",
+            video_url="",
             i_understand_this_submits_casper_testnet=False,
         )))
     except RuntimeError as error:
@@ -105,6 +108,14 @@ def test_casper_decision_cycle_dry_run_uses_mcp_without_live_submit(monkeypatch)
                 return {"status": "dry_run_blocked", "submitted": False, "cycle": {"evidence": {"scenario": "rwa-collateral-nav-risk-receipt"}}}
             raise AssertionError(f"unexpected tool call: {name}")
 
+        async def get_json(self, path: str, timeout: float = 60) -> dict[str, object]:
+            return {
+                "network": "casper",
+                "scenario": "rwa-collateral-nav-risk-receipt",
+                "status": "blocked",
+                "decisionId": "demo",
+            }
+
     monkeypatch.setattr(module, "ApiClient", FakeClient)
 
     code = asyncio.run(module.run(SimpleNamespace(
@@ -114,6 +125,9 @@ def test_casper_decision_cycle_dry_run_uses_mcp_without_live_submit(monkeypatch)
         decision_id="demo",
         action="",
         rationale="",
+        write_proof="",
+        demo_url="",
+        video_url="",
         i_understand_this_submits_casper_testnet=False,
     )))
 
