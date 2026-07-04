@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
-from app.services.casper.rwa_evidence import CasperRwaEvidenceService, default_evidence_fixture
+from app.services.casper.rwa_evidence import CasperRwaEvidenceService
+from tests.casper_evidence_fixtures import sample_treasury_evidence
 
 
 def fresh_timestamp(hours_ago: float = 0) -> str:
@@ -22,7 +23,7 @@ def source(**overrides) -> dict[str, object]:
 
 
 def test_default_fixture_produces_ready_evidence() -> None:
-    bundle = CasperRwaEvidenceService.build_evidence_bundle({"evidence": default_evidence_fixture()})
+    bundle = CasperRwaEvidenceService.build_evidence_bundle({"evidence": sample_treasury_evidence()})
     assert bundle["scenario"] == "rwa-collateral-nav-risk-receipt"
     assert bundle["status"] == "ready"
     assert bundle["sources"][0]["id"] == "us-treasury-10y-yield"

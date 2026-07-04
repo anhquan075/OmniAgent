@@ -4,14 +4,18 @@ from typing import Any
 
 from app.core.settings import get_settings
 from app.services.casper.hashing import sha256_json, sha256_text
+from app.services.casper.openrouter_trace import OpenRouterTraceClient
 
 
 class CasperLlmTraceService:
     @staticmethod
     def annotate_roles(roles: list[dict[str, Any]], args: dict[str, Any]) -> list[dict[str, Any]]:
         enabled = CasperLlmTraceService._trace_enabled()
-        capture = CasperLlmTraceService._capture()
-        source = "llm" if enabled else "deterministic"
+        capture = OpenRouterTraceClient.fetch_role_claims(args, roles) if enabled else {}
+        if not capture:
+            capture = CasperLlmTraceService._capture()
+        meta = capture.get("_meta") if isinstance(capture.get("_meta"), dict) else {}
+        source = "llm" if enabled and meta.get("provider") == "openrouter" else "deterministic"
         for role in roles:
             role_name = str(role.get("agentRole") or "unknown")
             role_capture = capture.get(role_name) if isinstance(capture.get(role_name), dict) else {}
@@ -24,9 +28,11 @@ class CasperLlmTraceService:
                     "evidenceBundle": args.get("evidenceBundle") or {},
                 }
             )
-            if enabled:
-                role["traceProvider"] = os.getenv("CASPER_LLM_TRACE_PROVIDER") or get_settings().casper_llm_trace_provider
-                role["modelName"] = os.getenv("CASPER_LLM_TRACE_MODEL") or get_settings().casper_llm_trace_model
+            if source == "llm":
+                role["traceProvider"] = str(meta.get("provider") or CasperLlmTraceService._provider())
+                role["modelName"] = str(meta.get("model") or CasperLlmTraceService._model())
+                if meta.get("generationHash"):
+                    role["modelGenerationHash"] = str(meta["generationHash"])
                 if public_claims:
                     role["modelClaimHash"] = sha256_json(public_claims)
             role["outputHash"] = CasperLlmTraceService._output_hash(role)
@@ -49,6 +55,14 @@ class CasperLlmTraceService:
         except ValueError:
             return {"captureErrorHash": sha256_text(raw)}
         return parsed if isinstance(parsed, dict) else {}
+
+    @staticmethod
+    def _provider() -> str:
+        return os.getenv("CASPER_LLM_TRACE_PROVIDER") or get_settings().casper_llm_trace_provider
+
+    @staticmethod
+    def _model() -> str:
+        return os.getenv("OPENROUTER_MODEL") or os.getenv("CASPER_LLM_TRACE_MODEL") or get_settings().casper_llm_trace_model
 
     @staticmethod
     def _public_claims(capture: dict[str, Any]) -> dict[str, str]:

@@ -30,12 +30,13 @@ export function useCasperDashboardActions(loadSnapshot: (options?: { silent?: bo
   const runCycle = useCallback(() => {
     void postAction('/api/cycle/run', {
       decisionId: `dashboard-${Date.now()}`,
-      submit: false,
-    }, 'cycle recorded');
+      submit: true,
+      iUnderstandThisSubmitsCasperTestnet: true,
+    }, 'cycle requested');
   }, [postAction]);
 
   const startLoop = useCallback(() => {
-    void postAction('/api/loop/start?interval_sec=60&dry_run=true', undefined, 'loop started');
+    void postAction('/api/loop/start?interval_sec=60&dry_run=false', undefined, 'loop started');
   }, [postAction]);
 
   const stopLoop = useCallback(() => {

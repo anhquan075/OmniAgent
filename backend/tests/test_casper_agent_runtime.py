@@ -47,6 +47,16 @@ def test_autonomous_cycle_forwards_live_submit_acknowledgement(monkeypatch) -> N
     assert captured[-1]["iUnderstandThisSubmitsCasperTestnet"] is True
 
 
+def test_autonomous_cycle_without_evidence_fails_closed() -> None:
+    result = CasperAgentRuntimeService.run_autonomous_cycle({"decisionId": "missing-evidence"})
+
+    evidence = result["decision"]["evidenceBundle"]
+    assert evidence["status"] == "blocked"
+    assert evidence["recommendedAction"] == "block"
+    assert "rwa_evidence_missing" in evidence["hardBlockers"]
+    assert result["decision"]["policyGate"] == "blocked"
+
+
 def test_autonomous_cycle_builds_rwa_guardrail_receipt(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("CASPER_DECISION_LEDGER_PATH", str(tmp_path / "dashboard-log"))
     result = CasperAgentRuntimeService.run_autonomous_cycle(
