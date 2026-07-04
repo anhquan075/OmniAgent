@@ -166,6 +166,7 @@ Only claim stack items backed by code or verifier evidence:
 | `CASPER_NODE_ADDRESS` | Optional Casper client node address; falls back to `CASPER_RPC_URL` |
 | `CASPER_ACCOUNT_PUBLIC_KEY` | Funded Casper Testnet account public key |
 | `CASPER_SECRET_KEY_PATH` | Local signer path (must stay outside git) |
+| `CASPER_CONTRACT_INSTALL_DEPLOY_HASH` | Optional contract install deploy hash for live proof verification |
 | `CASPER_DECISION_CONTRACT_HASH` | Deployed decision contract hash |
 | `CASPER_DECISION_CONTRACT_PACKAGE_HASH` | Deployed decision contract package hash |
 | `CASPER_LIVE_SUBMIT_ENABLED` | Enables guarded live-submit prerequisite validation |
@@ -179,6 +180,10 @@ Only claim stack items backed by code or verifier evidence:
 | `CASPER_MIN_BALANCE_CSPR` | Warning threshold for low CSPR account balance |
 | `CASPER_X402_EVIDENCE_URL` | Optional real x402 evidence endpoint |
 | `CASPER_X402_RECEIPT` | Optional x402 receipt metadata; leave empty rather than faking receipts |
+| `CASPER_LLM_TRACE_ENABLED` | Enables public-safe model trace metadata when real model evidence is captured |
+| `CASPER_LLM_TRACE_PROVIDER` | Public provider label for the captured trace |
+| `CASPER_LLM_TRACE_MODEL` | Public model label for the captured trace |
+| `CASPER_LLM_TRACE_CAPTURE` | Optional JSON capture whose public fields are hashed before exposure |
 
 ## Verification
 
@@ -190,11 +195,39 @@ scripts/verify-casper-buildathon-stack.sh
 
 It validates backend compile/tests, contract check/release build, frontend unit/e2e tests/build, safe backend boot, dashboard proof APIs, readiness, dry-run MCP decision cycle, and tracked-source secret hygiene.
 
+Generate or refresh the judge proof artifact from a running backend:
+
+```bash
+PYTHONPATH=backend rtk uv --project backend run python backend/scripts/run-casper-decision-cycle.py \
+  --api-url http://127.0.0.1:8000 \
+  --dry-run \
+  --write-proof proofs/casper-buildathon-submission-proof.json
+```
+
+The artifact is intentionally status-gated. It may be `blocked` or
+`ready_for_live_submit` when live Casper credentials/readback are unavailable;
+it should only be `live_verified` after the deploy and dictionary receipt
+readback match.
+
 Verify a single receipt without `casper-client`:
 
 ```bash
 scripts/verify-casper-receipt.sh <decision_id> --use-rpc
 ```
+
+Verify a live proof packet when live values are present:
+
+```bash
+scripts/verify-casper-live-proof.sh --proof-file proofs/casper-buildathon-submission-proof.json
+```
+
+Public replay surfaces:
+
+- Proof endpoint: `GET /api/public/proof`
+- Proof artifact: [proofs/casper-buildathon-submission-proof.json](proofs/casper-buildathon-submission-proof.json)
+- Demo video: [YouTube](https://www.youtube.com/watch?v=-blqn4a2sf4)
+- Submission checklist: [docs/casper-buildathon-submission-checklist.md](docs/casper-buildathon-submission-checklist.md)
+- Launch roadmap: [docs/casper-launch-roadmap.md](docs/casper-launch-roadmap.md)
 
 Build the Casper contract directly:
 
@@ -204,6 +237,11 @@ cargo +nightly-2025-03-01 build --manifest-path contracts/casper-decision-proof/
 
 ## Casper Testnet & Blockchain Links
 
+The proof artifact is the source of truth for the current submission packet.
+Static links below are Casper Testnet references; treat a deploy link as current
+proof only when the same hash appears in
+`proofs/casper-buildathon-submission-proof.json`.
+
 | Item | Link |
 |------|------|
 | Casper Testnet explorer | [testnet.cspr.live](https://testnet.cspr.live/) |
@@ -211,6 +249,6 @@ cargo +nightly-2025-03-01 build --manifest-path contracts/casper-decision-proof/
 | Decision contract | [5a82529f9ba05e716933384ddc9862710ba9a0fd3a7347ab1e8c6e60b1a4c861](https://testnet.cspr.live/contract/5a82529f9ba05e716933384ddc9862710ba9a0fd3a7347ab1e8c6e60b1a4c861) |
 | Contract package | [46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea](https://testnet.cspr.live/contract-package/46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea) |
 | Contract install deploy | [0444471ab96e840e25d69f525341ee95f014137ebda3e3c0a838eb46b31267f1](https://testnet.cspr.live/deploy/0444471ab96e840e25d69f525341ee95f014137ebda3e3c0a838eb46b31267f1) |
-| Demo decision deploy | [ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736](https://testnet.cspr.live/deploy/ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736) |
+| Reference demo decision deploy | [ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736](https://testnet.cspr.live/deploy/ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736) |
 | Contract source | [contracts/casper-decision-proof](contracts/casper-decision-proof) |
 | Receipt verifier | [scripts/verify-casper-receipt.sh](scripts/verify-casper-receipt.sh) |
