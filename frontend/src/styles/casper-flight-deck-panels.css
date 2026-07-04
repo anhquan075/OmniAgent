@@ -1,0 +1,199 @@
+.flight-panel {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(9, 18, 20, 0.82);
+}
+
+.flight-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.flight-panel-head h2 {
+  margin: 0;
+  color: var(--text);
+  font-weight: 760;
+}
+
+.flight-panel-head span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.receipt-flow-timeline ol,
+.evidence-provenance ol {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.receipt-flow-timeline li,
+.evidence-provenance li,
+.policy-grid span,
+.recovery-list span {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  color: var(--muted);
+}
+
+.receipt-flow-timeline li.is-complete,
+.evidence-provenance li.is-complete,
+.policy-grid .is-ok { border-color: var(--color-status-ok-border); color: var(--green); }
+.receipt-flow-timeline li.is-blocked,
+.policy-grid .is-blocked { border-color: var(--color-status-danger-border); color: var(--casper-red-soft); }
+
+.policy-grid,
+.recovery-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.policy-gate-summary p,
+.x402-proof,
+.receipt-inspector p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  color: var(--muted);
+}
+
+.judge-packet,
+.raw-evidence-preview {
+  overflow: hidden;
+}
+
+.raw-evidence-preview pre {
+  max-height: 280px;
+  overflow: auto;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.x402-proof {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.x402-proof b,
+.x402-proof span { min-width: 0; overflow-wrap: anywhere; }
+
+.receipt-ledger-table {
+  overflow: auto;
+}
+
+.receipt-ledger-empty { display: grid; gap: 4px; }
+
+.receipt-ledger-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.receipt-ledger-controls button,
+.receipt-ledger-controls input {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.receipt-ledger-controls button {
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.receipt-ledger-controls button.is-active {
+  border-color: rgba(230, 63, 55, 0.5);
+  color: var(--casper-red-soft);
+}
+
+.receipt-ledger-controls input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.receipt-ledger-table table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+.receipt-ledger-table th,
+.receipt-ledger-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 8px;
+  text-align: left;
+}
+
+.receipt-ledger-table th {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.receipt-ledger-row {
+  color: var(--text);
+  background: transparent;
+}
+
+.receipt-ledger-row.is-selected,
+.receipt-ledger-row:hover {
+  background: rgba(230, 63, 55, 0.12);
+}
+
+.receipt-ledger-row button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
+.receipt-inspector dl {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+.receipt-inspector div {
+  min-width: 0;
+}
+
+.receipt-inspector dt {
+  color: var(--muted);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+}
+
+.receipt-inspector dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}

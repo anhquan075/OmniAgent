@@ -13,6 +13,8 @@ export type AiRoleOutput = {
   verdict: string;
   confidence: string;
   summary: string;
+  traceSource: string;
+  traceHash: string;
 };
 
 const DEFAULT_TOOLS = [
@@ -77,10 +79,12 @@ export const aiRoleOutputs = (bundle?: Payload): AiRoleOutput[] => {
   const roles = Array.isArray(decision.guardrails?.roles) ? decision.guardrails.roles : [];
   if (!roles.length) {
     return [{
-      role: 'policy_gate',
+      role: proofLabel('policy_gate', { stripCasperPrefix: true }),
       verdict: proofLabel(decision.policyGate, { stripCasperPrefix: true }),
       confidence: proofText(decision.materialityGate?.confidence),
       summary: proofText(decision.rationale, 'waiting for autonomous cycle output'),
+      traceSource: 'deterministic',
+      traceHash: proofText(decision.guardrailHash ?? decision.proofDigest, ''),
     }];
   }
   return roles.slice(0, 3).map((role: Payload) => ({
@@ -88,6 +92,8 @@ export const aiRoleOutputs = (bundle?: Payload): AiRoleOutput[] => {
     verdict: proofLabel(role.verdict, { stripCasperPrefix: true }),
     confidence: formatConfidence(role.confidence),
     summary: arrayOfStrings(role.reasonCodes).slice(0, 3).map(item => proofLabel(item)).join(' · ') || 'ready',
+    traceSource: proofLabel(role.traceSource || 'deterministic'),
+    traceHash: proofText(role.outputHash ?? role.modelClaimHash ?? role.promptHash),
   }));
 };
 

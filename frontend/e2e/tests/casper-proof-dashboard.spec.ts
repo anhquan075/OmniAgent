@@ -1,105 +1,58 @@
 import { expect, test } from '@playwright/test';
 
-import { linkedSnapshot } from '../fixtures/casper-dashboard-snapshot';
+import { routePublicProof, routeReceipts, routeSnapshot } from '../fixtures/casper-flight-deck';
 
-test('dashboard shows Casper proof surface', async ({ page }) => {
+test('dashboard shows Casper Receipt Flight Deck shell', async ({ page }) => {
   const snapshotResponse = page.waitForResponse(response => (
     response.url().includes('/api/dashboard/snapshot') && response.status() === 200
   ));
   await page.goto('/');
   const snapshot = await (await snapshotResponse).json();
-  const account = snapshot.casperAgentRuntime.account ?? {};
-  const signalStrip = page.getByLabel('Casper runtime signals');
 
   expect(snapshot.network).toBe('casper');
   expect(snapshot.casperAgentRuntime.network).toBe('casper');
   await expect(page.getByAltText('OmniAgent mascot')).toBeVisible();
+  await expect(page.getByText('Receipt Flight Deck').first()).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Casper proof console' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'OmniAgent receipt console' })).toBeVisible();
-  await expect(page.getByText('Casper Testnet')).toBeVisible();
-  await expect(page.getByText('Decision receipt proof')).toBeVisible();
-  await expect(page.getByText('Judge packet')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Autonomous loop' })).toBeVisible();
-  await expect(page.getByAltText('OmniAgent autonomous mascot')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Cockpit' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('button', { name: 'Proof Packet' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Receipt Ledger' })).toBeVisible();
+  await expect(page.getByLabel('Receipt flow timeline')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Agent loop' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'MCP activity log' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'AI output' })).toBeVisible();
-  await expect(page.getByText('Replay command')).toBeVisible();
-  await expect(page.getByText('Receipt digest', { exact: true })).toBeVisible();
-  await expect(page.getByText('Account').first()).toBeVisible();
-  await expect(signalStrip).toContainText(account.configured ? 'configured' : 'missing');
-  await expect(signalStrip).toContainText(account.contract?.hash ? 'configured' : 'missing');
-  await expect(page.getByText('Casper explorer')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Policy gates summary' })).toBeVisible();
   await expect(page.getByText(/local fallback:/)).toHaveCount(0);
   await expect(page.getByText(['AI decision', 'agent'].join(' '))).toHaveCount(0);
   await expect(page.getByText(new RegExp(['Senti', 'nel'].join('')))).toHaveCount(0);
 });
 
-test('dashboard embeds explorer links for proof values', async ({ page }) => {
-  await page.route('**/api/dashboard/snapshot?limit=8', route => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify(linkedSnapshot),
-  }));
-  await page.route('**/api/dashboard/receipts**', route => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({
-      network: 'casper',
-      receipts: [
-        { decisionId: 'rwa-collateral-demo-001', action: 'approve', riskScore: 22, timestamp: '2026-07-03T10:00:00+00:00' },
-        {
-          decisionId: 'casper-live-20260702-receipt-001',
-          action: 'haircut',
-          riskScore: 72,
-          timestamp: '2026-07-02T14:44:03+00:00',
-          deployHash: 'ddef65a6',
-          proofDigest: 'sha256:95c27f7aeffaf7f994b8edc824547a8f9142d5c8159368f020912627eac6158f',
-          policyGate: 'approved',
-          eventType: 'casper_decision_submitted',
-        },
-      ],
-      count: 2,
-    }),
-  }));
-
+test('proof packet exposes judge links without treating x402 endpoint as settlement proof', async ({ page }) => {
+  await routeSnapshot(page);
+  await routePublicProof(page);
   await page.goto('/');
+  await page.getByRole('button', { name: 'Proof Packet' }).click();
 
   const deployUrl = 'https://testnet.cspr.live/deploy/ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736';
-  await expect(page.getByRole('link', { name: 'Open deploy proof on Casper explorer' })).toHaveAttribute('href', deployUrl);
+  await expect(page.getByRole('heading', { name: 'Judge packet' })).toBeVisible();
   await expect(page.locator('[data-proof-link="decision-id"]')).toHaveAttribute('href', deployUrl);
-  await expect(page.locator('[data-proof-link="deploy"]')).toHaveAttribute('href', deployUrl);
+  await expect(page.locator('[data-proof-link="deploy-hash"]')).toHaveAttribute('href', deployUrl);
   await expect(page.locator('[data-proof-link="account"]')).toHaveAttribute('href', /\/account\/0203a586/);
   await expect(page.locator('[data-proof-link="contract"]')).toHaveAttribute('href', /\/contract\/5a82529f/);
   await expect(page.locator('[data-proof-link="package"]')).toHaveAttribute('href', /\/contract-package\/46cf5754/);
-  await expect(page.locator('[data-proof-link="decision-id"]')).toHaveAttribute('aria-label', 'Open decision receipt deploy proof on Casper explorer');
-  await expect(page.getByRole('link', { name: 'Open deploy proof on Casper explorer' })).toHaveAttribute('aria-label', 'Open deploy proof on Casper explorer');
   await expect(page.getByRole('button', { name: 'Copy replay command' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Copy receipt digest' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Verify receipt' })).toBeVisible();
-  await expect(page.locator('.judge-actions .copy-status')).toBeAttached();
-  await expect(page.getByText('Evidence summary')).toBeVisible();
-  await expect(page.locator('[data-evidence-field="scenario"]')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Public proof' })).toHaveAttribute('href', '/api/public/proof');
+  await expect(page.getByRole('link', { name: 'Agent card' })).toHaveAttribute('href', '/.well-known/casper-agent-card.json');
   await expect(page.locator('[data-evidence-field="source"] a')).toHaveAttribute('href', 'https://home.treasury.gov/resource-center/data-chart-center/interest-rates');
-  await expect(page.getByText('Decision log')).toBeVisible();
-  await expect(page.locator('[data-page-decision-log]')).toBeVisible();
-  await expect(page.getByText('rwa-collateral-demo-001')).toBeVisible();
-  await expect(page.getByText('Decision submitted')).toBeVisible();
-  await expect(page.locator('[data-page-decision-log] .chain-proof-link')).toBeVisible();
-  await expect(page.getByLabel('Casper contract links')).toBeVisible();
-  await expect(page.getByText('Agent loop')).toBeVisible();
-  await expect(page.locator('[data-loop-status]')).toBeVisible();
-  await expect(page.locator('.loop-badge.is-running')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Run Casper cycle' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Stop Casper loop' })).toBeVisible();
+  await expect(page.locator('[data-x402-status="unavailable"]')).toBeVisible();
+  await expect(page.locator('[data-x402-status="verified"]')).toHaveCount(0);
+  await expect(page.locator('[data-evidence-field="x402"]')).toContainText('unavailable');
 });
 
 test('dashboard renders MCP calls and AI role output from the proof bundle', async ({ page }) => {
-  await page.route('**/api/dashboard/snapshot?limit=8', route => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify(linkedSnapshot),
-  }));
-
+  await routeSnapshot(page);
   await page.goto('/');
 
   await expect(page.getByText('casper_rwa_evidence')).toBeVisible();
@@ -110,40 +63,10 @@ test('dashboard renders MCP calls and AI role output from the proof bundle', asy
   await expect(page.getByLabel('AI output').getByText('policy gate')).toBeVisible();
 });
 
-test('dashboard shows pending proof links when hashes are missing', async ({ page }) => {
-  await page.route('**/api/dashboard/snapshot?limit=8', route => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({
-      ...linkedSnapshot,
-      casperProofBundle: {
-        ...linkedSnapshot.casperProofBundle,
-        status: 'blocked',
-        deployStatus: { status: 'not_submitted' },
-        readback: { verified: false, status: 'missing' },
-        lifecycle: [{ state: 'submit', status: 'not_submitted' }],
-      },
-    }),
-  }));
-
-  await page.goto('/');
-
-  await expect(page.locator('.chain-proof-missing').first()).toHaveText('pending');
-  await expect(page.getByLabel('Autonomous decision cycle').getByText('not submitted')).toBeVisible();
-  await expect(page.locator('[data-proof-link="deploy"]')).toHaveCount(0);
-});
-
-test('dashboard stays responsive across judge viewports', async ({ page }) => {
-  await page.route('**/api/dashboard/snapshot?limit=8', route => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify(linkedSnapshot),
-  }));
-  await page.route('**/api/dashboard/receipts**', route => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({ network: 'casper', receipts: [], count: 0 }),
-  }));
+test('dashboard stays responsive across Flight Deck viewports', async ({ page }) => {
+  await routeSnapshot(page);
+  await routePublicProof(page);
+  await routeReceipts(page, []);
   await page.addInitScript(() => {
     const style = document.createElement('style');
     style.textContent = '*, *::before, *::after { animation: none !important; }';
@@ -154,17 +77,18 @@ test('dashboard stays responsive across judge viewports', async ({ page }) => {
     { width: 320, height: 720 },
     { width: 375, height: 812 },
     { width: 768, height: 1024 },
+    { width: 1180, height: 900 },
     { width: 1440, height: 1000 },
   ]) {
     await page.setViewportSize(viewport);
     await page.goto('/');
 
     await expect(page.getByAltText('OmniAgent mascot')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'OmniAgent receipt console' })).toBeAttached();
-    await expect(page.getByAltText('OmniAgent autonomous mascot')).toBeAttached();
-    await expect(page.getByRole('heading', { name: 'MCP activity log' })).toBeAttached();
-    await expect(page.getByText('Judge packet')).toBeAttached();
-    await expect(page.locator('[data-proof-link="deploy"]')).toBeAttached();
+    await expect(page.getByRole('heading', { name: 'Casper proof console' })).toBeAttached();
+    await expect(page.getByLabel('Receipt flow timeline')).toBeAttached();
+    await page.getByRole('button', { name: 'Proof Packet' }).click();
+    await expect(page.getByRole('heading', { name: 'Judge packet' })).toBeAttached();
+    await expect(page.locator('[data-proof-link="deploy-hash"]')).toBeAttached();
 
     const hasHorizontalScroll = await page.evaluate(() => (
       document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
