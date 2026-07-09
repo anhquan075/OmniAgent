@@ -44,6 +44,7 @@ def test_casper_cli_output_parses_current_transaction_and_readback_shapes() -> N
     assert CasperCliOutput.extract_execution_status(
         '{"result":{"execution_info":{"execution_result":{"Version2":{"error_message":null}}}}}'
     ) == "confirmed"
+    assert CasperCliOutput.extract_balance_motes('{"result":{"balance":"2500000000"}}') == 2_500_000_000
     assert CasperCliCommand.query_key("a" * 64) == f"hash-{'a' * 64}"
     assert CasperCliCommand.query_key(f"hash-{'b' * 64}") == f"hash-{'b' * 64}"
 
@@ -95,6 +96,7 @@ def test_casper_live_submit_requires_client_for_stored_contract_call(tmp_path, m
     assert result["status"] == "blocked"
     assert result["submitted"] is False
     assert result["hardBlockers"] == ["casper_client_missing"]
+    assert result["ledgerEvent"]["eventType"] == "casper_decision_live_submit_blocked"
 
     get_settings.cache_clear()
 

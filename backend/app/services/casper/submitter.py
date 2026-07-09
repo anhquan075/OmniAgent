@@ -95,6 +95,43 @@ class CasperCliSubmitter:
         return {**result, "status": "ready", "stateRootHash": state_root_hash}
 
     @staticmethod
+    def query_account_balance(public_key: str) -> dict[str, Any] | None:
+        if not public_key or not CasperCliSubmitter.is_client_available():
+            return None
+        command = [
+            get_settings().casper_client_path,
+            "query-balance",
+            "--node-address",
+            CasperCliCommand.node_address(),
+            "--purse-identifier",
+            public_key,
+        ]
+        result = CasperCliSubmitter.run_command(command, "casper_cli_balance")
+        if result["hardBlockers"]:
+            return {
+                "status": "blocked",
+                "source": "casper_client_query_balance",
+                "hardBlockers": result["hardBlockers"],
+                "cliCommand": result.get("cliCommand"),
+            }
+        motes = CasperCliOutput.extract_balance_motes(str(result.get("cliOutput") or ""))
+        if motes is None:
+            return {
+                "status": "blocked",
+                "source": "casper_client_query_balance",
+                "hardBlockers": ["casper_account_balance_missing"],
+                "cliCommand": result.get("cliCommand"),
+            }
+        return {
+            "status": "ready",
+            "source": "casper_client_query_balance",
+            "motes": motes,
+            "cspr": motes / 1_000_000_000,
+            "hardBlockers": [],
+            "cliCommand": result.get("cliCommand"),
+        }
+
+    @staticmethod
     def query_latest_proof_digest() -> dict[str, Any]:
         if not CasperCliSubmitter.is_client_available():
             return CasperCliSubmitter.with_missing_client_blocker(
