@@ -97,6 +97,11 @@ def test_public_proof_serializer_is_allowlisted_and_redacts_private_values(monke
     assert proof["x402"]["receipt"]["receiptHash"].startswith("sha256:")
     assert proof["x402"]["receipt"]["bindingStatus"] == "bound"
     assert proof["readback"]["verified"] is True
+    assert proof["readback"]["status"] == "verified"
+    assert "proofScore" in proof
+    assert proof["proofScore"]["checks"]["readbackMatchesDigest"] is True
+    assert isinstance(proof["hardBlockers"], list)
+    assert isinstance(proof["recoveryCandidates"], list)
     assert proof["trustSummary"]["sampleSize"] == 1
     assert proof["llmTrace"]["roles"][0]["traceSource"] == "deterministic"
     assert "secret.pem" not in proof_text

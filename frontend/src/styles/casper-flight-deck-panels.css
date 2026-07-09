@@ -131,7 +131,8 @@
 .evidence-provenance li.is-complete,
 .policy-grid .is-ok { border-color: var(--color-status-ok-border); color: var(--green); }
 .receipt-flow-timeline li.is-blocked,
-.policy-grid .is-blocked { border-color: var(--color-status-danger-border); color: var(--casper-red-soft); }
+.policy-grid .is-fail { border-color: var(--color-status-danger-border); color: var(--casper-red-soft); }
+.policy-grid .is-blocked { border-color: var(--color-status-warn-border); color: var(--amber); }
 
 .policy-grid,
 .recovery-list {
@@ -209,6 +210,44 @@
 .receipt-ledger-controls input {
   flex: 1 1 180px;
   min-width: 0;
+}
+
+.receipt-ledger-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.receipt-ledger-pagination button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
+.receipt-ledger-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.receipt-ledger-pagination span {
+  display: grid;
+  min-width: 86px;
+  text-align: center;
+}
+
+.receipt-ledger-pagination small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
 }
 
 .receipt-ledger-table table {

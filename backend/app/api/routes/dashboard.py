@@ -123,18 +123,29 @@ async def dashboard_stream(request: Request, limit: int = 8, once: bool = False)
 
 
 @router.get("/dashboard/receipts", dependencies=[Depends(require_session)])
-async def dashboard_receipts(limit: int = 20) -> dict[str, object]:
+async def dashboard_receipts(limit: int = 20, offset: int = 0) -> dict[str, object]:
     selected_limit = max(1, min(limit, 50))
-    ledger = await asyncio.to_thread(CasperDecisionLedger.get_ledger_summary, selected_limit)
+    selected_offset = max(0, offset)
+    ledger = await asyncio.to_thread(
+        CasperDecisionLedger.get_ledger_summary,
+        selected_limit,
+        selected_offset,
+    )
     receipts = [
         _receipt_from_event(event)
         for event in ledger.get("events", [])
         if isinstance(event, dict)
     ]
+    total = int(ledger.get("eventCount") or 0)
     return {
         "network": "casper",
         "receipts": receipts,
         "count": len(receipts),
+        "total": total,
+        "limit": selected_limit,
+        "offset": selected_offset,
+        "hasNext": selected_offset + len(receipts) < total,
+        "hasPrevious": selected_offset > 0,
     }
 
 

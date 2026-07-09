@@ -1,4 +1,11 @@
 import { chainExplorerUrl } from './chain-proof-link';
+import {
+  displayReadbackStatus,
+  firstCheckBlocker,
+  hardBlockersFrom,
+  proofCheckStatus,
+  type ProofCheckStatus,
+} from './proof-blockers';
 import { proofLabel, proofText } from './proof-labels';
 
 export type Payload = Record<string, any>;
@@ -26,6 +33,13 @@ export type OutcomeSummary = {
   evidenceGraph: string;
   paidEvidence: string;
   template: string;
+};
+
+export type PolicyRow = {
+  key: string;
+  label: string;
+  status: ProofCheckStatus;
+  blocker?: string;
 };
 
 const completeStatuses = new Set(['complete', 'approved', 'confirmed', 'verified', 'ready', 'live_verified']);
@@ -75,11 +89,16 @@ export const lifecycleRows = (bundle?: Payload, sourceState: SourceState = 'live
 export const policyRows = (bundle?: Payload) => {
   const score = bundle?.proofScore ?? {};
   const checks = score.checks && typeof score.checks === 'object' ? score.checks : {};
-  return Object.entries(checks).slice(0, 8).map(([key, passed]) => ({
-    key,
-    label: proofLabel(key, { stripCasperPrefix: true }),
-    status: passed ? 'pass' : 'fail',
-  }));
+  const blockers = hardBlockersFrom(score, bundle?.preflight, bundle?.deployStatus, bundle?.readback);
+  return Object.entries(checks).slice(0, 8).map(([key, passed]): PolicyRow => {
+    const blocker = firstCheckBlocker(key, blockers);
+    return {
+      key,
+      label: proofLabel(key, { stripCasperPrefix: true }),
+      status: proofCheckStatus(key, passed, blockers),
+      blocker,
+    };
+  });
 };
 
 export const hasX402Receipt = (x402?: Payload) => {
@@ -91,12 +110,13 @@ export const outcomeSummary = (bundle?: Payload): OutcomeSummary => {
   const decision = decisionFromBundle(bundle);
   const evidenceGraph = decision.evidenceBundle?.evidenceGraph ?? {};
   const x402 = decision.x402 ?? {};
+  const blockers = hardBlockersFrom(bundle?.proofScore, bundle?.preflight, bundle?.deployStatus, bundle?.readback);
   return {
     action: proofLabel(decision.action, { stripCasperPrefix: true }),
     riskScore: proofText(decision.riskScore, 'pending'),
     policyGate: proofLabel(decision.policyGate, { stripCasperPrefix: true }),
     proofStatus: proofLabel(bundle?.status, { stripCasperPrefix: true }),
-    readback: bundle?.readback?.verified ? 'verified' : proofLabel(bundle?.readback?.status, { stripCasperPrefix: true }),
+    readback: proofLabel(displayReadbackStatus(bundle?.readback, blockers), { stripCasperPrefix: true }),
     evidenceGraph: proofText(evidenceGraph.graphDigest, 'pending'),
     paidEvidence: hasX402Receipt(x402) ? 'verified' : proofLabel(x402.status, { stripCasperPrefix: true }) || 'unavailable',
     template: proofLabel(decision.policyTemplate?.id, { stripCasperPrefix: true }) || 'rwa collateral v1',

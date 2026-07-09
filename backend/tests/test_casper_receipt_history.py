@@ -59,6 +59,19 @@ def test_receipts_limit_caps_result_count(tmp_path, monkeypatch) -> None:
     assert len(ledger["events"]) == 2
 
 
+def test_receipts_support_offset_pagination(tmp_path, monkeypatch) -> None:
+    _use_log(tmp_path, monkeypatch)
+    _write_events([_decision_event(f"r-{i}") for i in range(5)])
+
+    first_page = CasperDecisionLedger.get_ledger_summary(limit=2, offset=0)
+    second_page = CasperDecisionLedger.get_ledger_summary(limit=2, offset=2)
+
+    assert [event["payload"]["decision"]["decisionId"] for event in first_page["events"]] == ["r-4", "r-3"]
+    assert [event["payload"]["decision"]["decisionId"] for event in second_page["events"]] == ["r-2", "r-1"]
+    assert second_page["eventCount"] == 5
+    assert second_page["offset"] == 2
+
+
 def test_empty_ledger_returns_empty_list(tmp_path, monkeypatch) -> None:
     _use_log(tmp_path, monkeypatch)
     ledger = CasperDecisionLedger.get_ledger_summary(limit=10)

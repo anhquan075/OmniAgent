@@ -76,6 +76,42 @@ describe('agent activity model', () => {
     expect(rows.map(row => row.tool)).toContain('casper_record_readback');
   });
 
+  it('shows funded-account blockers in deploy and readback log rows', () => {
+    const blockedBundle = {
+      latestDecision: {
+        decisionId: 'blocked-001',
+        proofDigest: 'sha256:proof',
+      },
+      preflight: {
+        status: 'blocked',
+        liveSubmitEnabled: false,
+        hardBlockers: ['casper_account_balance_insufficient'],
+        accountBalance: { status: 'ready', source: 'casper_client_query_balance', motes: 0, cspr: 0 },
+      },
+      deployStatus: { status: 'not_submitted', hardBlockers: ['casper_deploy_hash_missing'] },
+      readback: { status: 'missing', verified: false, hardBlockers: ['casper_readback_missing'] },
+      proofScore: {
+        hardBlocked: true,
+        hardBlockers: [
+          'casper_account_balance_insufficient',
+          'casper_deploy_hash_missing',
+          'casper_readback_missing',
+        ],
+      },
+    };
+
+    const rows = mcpActivityRows({ status: 'blocked' }, blockedBundle);
+    const preflight = rows.find(row => row.tool === 'casper_live_preflight');
+    const decision = rows.find(row => row.tool === 'casper_record_decision');
+    const readback = rows.find(row => row.tool === 'casper_record_readback');
+
+    expect(preflight?.output).toContain('"motes":0');
+    expect(decision).toMatchObject({ status: 'blocked' });
+    expect(decision?.output).toContain('casper_account_balance_insufficient');
+    expect(readback).toMatchObject({ status: 'blocked' });
+    expect(readback?.output).toContain('casper_readback_missing');
+  });
+
   it('labels fallback role output as deterministic', () => {
     const roles = aiRoleOutputs({ latestDecision: { policyGate: 'blocked', proofDigest: 'sha256:fallback' } });
 
