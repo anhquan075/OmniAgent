@@ -4,6 +4,7 @@ import {
   hasX402Receipt,
   lifecycleRows,
   outcomeSummary,
+  policyRows,
   proofLinks,
   selectedReceiptProofState,
   trustRows,
@@ -92,5 +93,57 @@ describe('flight deck model', () => {
       paidEvidence: 'verified',
     });
     expect(trustRows({ trustSummary: { sampleSize: 3, verifiedReadbackRate: 0.667 } })[1].value).toBe('67%');
+  });
+
+  it('marks downstream Casper proof checks as blocked when the account is unfunded', () => {
+    const rows = policyRows({
+      status: 'blocked',
+      preflight: {
+        status: 'blocked',
+        hardBlockers: ['casper_account_balance_insufficient'],
+        accountBalance: { motes: 0, cspr: 0 },
+      },
+      deployStatus: { status: 'not_submitted', hardBlockers: ['casper_deploy_hash_missing'] },
+      readback: { status: 'missing', verified: false, hardBlockers: ['casper_readback_missing'] },
+      proofScore: {
+        hardBlocked: true,
+        hardBlockers: [
+          'casper_account_balance_insufficient',
+          'casper_deploy_hash_missing',
+          'casper_readback_missing',
+        ],
+        checks: {
+          casperDeployConfirmed: false,
+          readbackMatchesDigest: false,
+          decisionPayloadValid: true,
+        },
+      },
+    });
+
+    expect(rows.find(row => row.key === 'casperDeployConfirmed')).toMatchObject({
+      status: 'blocked',
+      blocker: 'casper_account_balance_insufficient',
+    });
+    expect(rows.find(row => row.key === 'readbackMatchesDigest')).toMatchObject({
+      status: 'blocked',
+      blocker: 'casper_account_balance_insufficient',
+    });
+    expect(rows.find(row => row.key === 'decisionPayloadValid')?.status).toBe('pass');
+  });
+
+  it('summarizes readback as blocked while live submit is blocked upstream', () => {
+    expect(outcomeSummary({
+      status: 'blocked',
+      preflight: { hardBlockers: ['casper_account_balance_insufficient'] },
+      readback: { status: 'missing', verified: false, hardBlockers: ['casper_readback_missing'] },
+      proofScore: {
+        hardBlockers: ['casper_account_balance_insufficient', 'casper_readback_missing'],
+      },
+      latestDecision: {
+        action: 'approve',
+        riskScore: 22,
+        policyGate: 'approved',
+      },
+    }).readback).toBe('blocked');
   });
 });

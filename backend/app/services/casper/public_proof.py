@@ -24,10 +24,13 @@ class CasperPublicProofService:
         bundle = CasperProofBundleService.get_live_proof_bundle({"limit": int(options.get("limit") or 10)})
         decision = bundle.get("latestDecision") if isinstance(bundle.get("latestDecision"), dict) else {}
         receipt = CasperPublicProofService._decision_receipt(decision)
+        proof_score = bundle.get("proofScore") if isinstance(bundle.get("proofScore"), dict) else {}
+        hard_blockers = CasperPublicProofService._public_blockers(proof_score.get("hardBlockers"))
         return {
             "network": "casper",
             "scenario": CasperPublicProofService.SCENARIO,
             "status": bundle.get("status"),
+            "hardBlockers": hard_blockers,
             "createdAt": CasperPublicProofService._string_or_none(options.get("createdAt"))
             or decision.get("timestamp")
             or datetime.now(timezone.utc).isoformat(),
@@ -52,6 +55,10 @@ class CasperPublicProofService:
             "evidenceGraph": CasperPublicProofService._evidence_graph(decision),
             "policyTemplate": CasperPublicProofService._policy_template(decision),
             "readback": CasperPublicProofService._readback(decision, bundle.get("readback")),
+            "proofScore": CasperPublicProofService._proof_score(proof_score),
+            "recoveryCandidates": CasperPublicProofService._recovery_candidates(
+                bundle.get("recoveryCandidates")
+            ),
             "x402": CasperPublicProofService._x402(decision),
             "trustSummary": bundle.get("trustSummary"),
             "llmTrace": CasperPublicProofService._llm_trace(decision),
@@ -109,10 +116,61 @@ class CasperPublicProofService:
         readback = decision.get("readback") if isinstance(decision.get("readback"), dict) else {}
         return {
             "verified": bundle.get("verified") is True or readback.get("verified") is True,
+            "status": bundle.get("status") or readback.get("status") or "missing",
+            "expectedProofDigest": bundle.get("expectedProofDigest") or decision.get("proofDigest"),
             "proofDigest": bundle.get("observedProofDigest") or readback.get("proofDigest"),
             "receiptVerified": readback.get("receiptVerified"),
             "decisionReceipt": readback.get("decisionReceipt"),
+            "hardBlockers": CasperPublicProofService._public_blockers(
+                bundle.get("hardBlockers") or readback.get("hardBlockers")
+            ),
         }
+
+    @staticmethod
+    def _proof_score(score: dict[str, Any]) -> dict[str, Any]:
+        checks = score.get("checks") if isinstance(score.get("checks"), dict) else {}
+        return {
+            "score": score.get("score"),
+            "total": score.get("total"),
+            "hardBlocked": bool(score.get("hardBlocked")),
+            "hardBlockers": CasperPublicProofService._public_blockers(score.get("hardBlockers")),
+            "checks": {str(key): bool(value) for key, value in checks.items()},
+        }
+
+    @staticmethod
+    def _recovery_candidates(candidates: object) -> list[dict[str, str]]:
+        if not isinstance(candidates, list):
+            return []
+        sanitized: list[dict[str, str]] = []
+        for item in candidates:
+            if not isinstance(item, dict) or not item.get("blocker"):
+                continue
+            action = str(item.get("action") or "")
+            raw_blocker = str(item.get("blocker") or "")
+            blocker = CasperPublicProofService._public_blocker(raw_blocker)
+            if blocker != raw_blocker or CasperPublicProofService.SECRET_VALUE_PATTERN.search(action):
+                action = "Resolve this Casper readiness blocker in deployment settings."
+            sanitized.append({
+                "blocker": blocker,
+                "action": action,
+            })
+        return sanitized
+
+    @staticmethod
+    def _public_blockers(blockers: object) -> list[str]:
+        if not isinstance(blockers, list):
+            return []
+        sanitized = [CasperPublicProofService._public_blocker(item) for item in blockers]
+        return list(dict.fromkeys(blocker for blocker in sanitized if blocker))
+
+    @staticmethod
+    def _public_blocker(blocker: object) -> str:
+        text = str(blocker or "")
+        if not text:
+            return ""
+        if CasperPublicProofService.SECRET_VALUE_PATTERN.search(text):
+            return "casper_signer_not_ready"
+        return text
 
     @staticmethod
     def _x402(decision: dict[str, Any]) -> dict[str, Any]:

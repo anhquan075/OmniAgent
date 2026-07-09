@@ -1,3 +1,4 @@
+import { displayDeployStatus, displayReadbackStatus, hardBlockersFrom } from './proof-blockers';
 import { proofLabel, proofText } from './proof-labels';
 
 export type Payload = Record<string, any>;
@@ -141,6 +142,7 @@ function activityForTool(tool: string, runtime?: Payload, bundle?: Payload, deci
   const preflight = bundle?.preflight ?? runtime?.preflight ?? {};
   const deploy = bundle?.deployStatus ?? decision.deployStatus ?? {};
   const readback = bundle?.readback ?? decision.readback ?? {};
+  const blockers = hardBlockersFrom(bundle?.proofScore, preflight, deploy, readback);
   const outputByTool: Record<string, Payload> = {
     casper_rwa_evidence: {
       scenario: proofText(evidence.scenario, 'rwa-collateral-risk-sentinel'),
@@ -157,19 +159,30 @@ function activityForTool(tool: string, runtime?: Payload, bundle?: Payload, deci
     casper_live_preflight: {
       status: proofText(preflight.status ?? runtime?.status),
       liveSubmitEnabled: Boolean(preflight.liveSubmitEnabled),
-      blockers: Array.isArray(preflight.hardBlockers) ? preflight.hardBlockers.length : 0,
+      blockers: blockers.length,
+      hardBlockers: blockers,
+      accountBalance: preflight.accountBalance && typeof preflight.accountBalance === 'object'
+        ? {
+          status: proofText(preflight.accountBalance.status),
+          source: proofText(preflight.accountBalance.source),
+          motes: preflight.accountBalance.motes ?? null,
+          cspr: preflight.accountBalance.cspr ?? null,
+        }
+        : undefined,
     },
     casper_record_decision: {
       decisionId: proofText(decision.decisionId),
-      status: proofText(deploy.status ?? bundle?.status),
+      status: displayDeployStatus(deploy, blockers),
       deployHash: proofText(deploy.deployHash ?? decision.deployHash),
       proofDigest: proofText(decision.proofDigest),
+      hardBlockers: blockers,
     },
     casper_record_readback: {
-      status: proofText(readback.status),
+      status: displayReadbackStatus(readback, blockers),
       verified: Boolean(readback.verified),
       expectedProofDigest: proofText(readback.expectedProofDigest ?? decision.proofDigest),
       observedProofDigest: proofText(readback.observedProofDigest ?? readback.proofDigest),
+      hardBlockers: blockers,
     },
   };
   const output = outputByTool[tool] ?? { status: proofText(bundle?.status ?? runtime?.status), tool };

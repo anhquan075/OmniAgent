@@ -9,12 +9,16 @@ from app.core.settings import get_settings
 
 class CasperDecisionLedger:
     @staticmethod
-    def get_ledger_summary(limit: int = 10) -> dict[str, Any]:
+    def get_ledger_summary(limit: int = 10, offset: int = 0) -> dict[str, Any]:
         events = CasperDecisionLedger._read_events()
-        selected = list(reversed(events))[: max(1, limit)]
+        selected_limit = max(1, limit)
+        selected_offset = max(0, offset)
+        selected = list(reversed(events))[selected_offset:selected_offset + selected_limit]
         return {
             "network": "casper",
             "eventCount": len(events),
+            "limit": selected_limit,
+            "offset": selected_offset,
             "events": selected,
         }
 

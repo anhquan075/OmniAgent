@@ -112,10 +112,14 @@
 
 .mcp-log-list span {
   flex: 0 0 auto;
-  color: var(--casper-red-soft);
+  color: var(--muted);
   font-size: 0.78rem;
   text-transform: capitalize;
 }
+
+.mcp-log-list li.is-ok span { color: var(--green); }
+.mcp-log-list li.is-blocked span { color: var(--amber); }
+.mcp-log-list li.is-fail span { color: var(--casper-red-soft); }
 
 .mcp-log-list pre {
   margin: 6px 0 0;
