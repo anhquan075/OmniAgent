@@ -71,6 +71,7 @@ class CasperProofBundleService:
             "casper_decision_contract_package_hash_missing": "Set the Casper contract package hash.",
             "casper_live_submit_disabled": "Enable CASPER_LIVE_SUBMIT_ENABLED only for the live proof window.",
             "casper_client_missing": "Install casper-client or set CASPER_CLIENT_PATH to the Casper CLI binary.",
+            "casper_account_balance_insufficient": "Fund the configured Casper Testnet account before live submit.",
             "casper_transaction_wasm_path_missing": "Set CASPER_TRANSACTION_WASM_PATH to the compiled decision receipt Wasm.",
             "casper_transaction_wasm_unreadable": "Make the configured Casper transaction Wasm readable.",
             "casper_deploy_hash_missing": "Run a dry-run first, then submit once with the explicit Casper testnet flag.",

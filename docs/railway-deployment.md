@@ -234,6 +234,7 @@ Use the public backend domain for `--api-url` when available. The verifier initi
 | Dashboard operator action returns `403` | `API_OPERATOR_TOKEN` is set but the session was not created with `X-Operator-Token` | Leave `API_OPERATOR_TOKEN` empty for the demo dashboard, or use an operator client that sends the header |
 | Readiness says `casper_live_submit_disabled` | Safe mode is still enabled | Set `CASPER_LIVE_SUBMIT_ENABLED=true` only for live proof |
 | Readiness says `casper_secret_key_path_missing` | No signer path configured | Mount `/data`, place signer file there, set `CASPER_SECRET_KEY_PATH` |
+| Readiness says `casper_account_balance_insufficient` or submit returns `Invalid Deploy: insufficient balance` | The configured Casper Testnet account does not have enough CSPR to cover `CASPER_PAYMENT_AMOUNT_MOTES` | Fund `CASPER_ACCOUNT_PUBLIC_KEY` on Casper Testnet, then restart or wait for the next loop cycle |
 | Receipts disappear after redeploy | No persistent backend volume | Mount a backend volume and set `CASPER_DECISION_LEDGER_PATH=/data/casper-decision-log.sqlite3` |
 
 ## Railway References

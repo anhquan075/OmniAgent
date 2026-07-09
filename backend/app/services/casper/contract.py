@@ -80,6 +80,8 @@ class CasperDecisionContractService:
         submit_result: dict[str, Any] = {}
         submitted = False
         event_type = "casper_decision_dry_run"
+        if submit and blockers:
+            event_type = "casper_decision_live_submit_blocked"
         if submit and not blockers:
             submit_result = CasperCliSubmitter.submit_decision(decision)
             blockers.extend(submit_result.get("hardBlockers") or [])

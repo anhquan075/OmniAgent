@@ -15,8 +15,13 @@ class CasperPreflightService:
         account = CasperAccountService.get_account({})
         client_available = CasperCliSubmitter.is_client_available()
         rpc_probe = CasperPreflightService.rpc_probe(client_available)
-        account_balance = CasperPreflightService.account_balance(account)
-        hard_blockers = CasperPreflightService.hard_blockers(account, client_available, rpc_probe)
+        account_balance = CasperPreflightService.account_balance(account, client_available)
+        hard_blockers = CasperPreflightService.hard_blockers(
+            account,
+            client_available,
+            rpc_probe,
+            account_balance,
+        )
         warnings = CasperPreflightService.warnings(account, account_balance)
         return {
             "network": "casper",
@@ -38,6 +43,7 @@ class CasperPreflightService:
         account: dict[str, Any],
         client_available: bool,
         rpc_probe: dict[str, Any],
+        account_balance: dict[str, Any] | None = None,
     ) -> list[str]:
         settings = get_settings()
         blockers: list[str] = []
@@ -62,6 +68,9 @@ class CasperPreflightService:
                 blockers.append("casper_client_missing")
             elif not rpc_probe["reachable"]:
                 blockers.append("casper_rpc_unreachable")
+            balance_motes = CasperPreflightService.balance_motes(account_balance)
+            if balance_motes is not None and balance_motes < settings.casper_payment_amount_motes:
+                blockers.append("casper_account_balance_insufficient")
             if settings.casper_transaction_command.strip() != "put-deploy":
                 wasm_path = CasperCliCommand.transaction_wasm_path()
                 if not settings.casper_transaction_wasm_path:
@@ -78,7 +87,7 @@ class CasperPreflightService:
         warnings: list[str] = []
         if not account.get("rpcUrl"):
             warnings.append("casper_rpc_url_missing")
-        if account_balance and account_balance.get("cspr", 0) < settings.casper_min_balance_cspr:
+        if account_balance and float(account_balance.get("cspr", 0) or 0) < settings.casper_min_balance_cspr:
             warnings.append("casper_account_balance_low")
         return warnings
 
@@ -105,9 +114,24 @@ class CasperPreflightService:
         }
 
     @staticmethod
-    def account_balance(account: dict[str, Any]) -> dict[str, Any] | None:
+    def account_balance(account: dict[str, Any], client_available: bool) -> dict[str, Any] | None:
         public_key = str(account.get("publicKey") or "")
-        return CsprCloudClient.get_account_balance(public_key)
+        cloud_balance = CsprCloudClient.get_account_balance(public_key)
+        if cloud_balance is not None:
+            return {**cloud_balance, "source": "cspr_cloud"}
+        if client_available:
+            return CasperCliSubmitter.query_account_balance(public_key)
+        return None
+
+    @staticmethod
+    def balance_motes(account_balance: dict[str, Any] | None) -> int | None:
+        if not isinstance(account_balance, dict):
+            return None
+        value = account_balance.get("motes")
+        try:
+            return int(value) if value is not None else None
+        except (TypeError, ValueError):
+            return None
 
     @staticmethod
     def is_outside_repo(path: object) -> bool:

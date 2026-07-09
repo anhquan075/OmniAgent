@@ -61,6 +61,17 @@ class CasperCliOutput:
         return None
 
     @staticmethod
+    def extract_balance_motes(output: str) -> int | None:
+        parsed = CasperCliOutput.json_data(output)
+        found = CasperCliOutput.find_key(parsed, "balance")
+        if isinstance(found, str | int):
+            try:
+                return int(found)
+            except (TypeError, ValueError):
+                return None
+        return None
+
+    @staticmethod
     def json_data(output: str) -> Any:
         try:
             return json.loads(output)

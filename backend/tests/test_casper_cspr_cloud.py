@@ -117,5 +117,5 @@ def test_preflight_uses_cspr_cloud_probe_and_balance_warning(monkeypatch) -> Non
 
     assert result["rpcProbe"]["source"] == "cspr_cloud"
     assert result["rpcProbe"]["blockHeight"] == 777
-    assert result["accountBalance"] == {"motes": 1_000_000_000, "cspr": 1.0}
+    assert result["accountBalance"] == {"motes": 1_000_000_000, "cspr": 1.0, "source": "cspr_cloud"}
     assert "casper_account_balance_low" in result["warnings"]
