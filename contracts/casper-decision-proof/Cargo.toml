@@ -14,4 +14,4 @@ test = false
 [dependencies]
 base64ct = "=1.7.2"
 casper-contract = "=5.0.0"
-casper-types = "=5.0.1"
+casper-types = "=7.0.0"
