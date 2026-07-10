@@ -33,7 +33,7 @@ It is built as a Casper-only demo for the
 
 ## Current Public Deployment
 
-Last verified: 2026-07-04.
+Last verified: 2026-07-10.
 
 | Surface | URL / Status |
 |---------|--------------|
@@ -43,7 +43,7 @@ Last verified: 2026-07-04.
 | Paywalled x402 evidence | [https://omniagent-production.up.railway.app/api/x402/rwa-evidence](https://omniagent-production.up.railway.app/api/x402/rwa-evidence) |
 | x402 status | `verified`, `bindingStatus=bound`, `hardBlockers=[]` |
 | x402 receipt hash | `sha256:9b8479d9e5370962efa0dd028dd87e9adb9af225e1002bf43eb84f453c59645f` |
-| Autonomous loop | Backend-owned loop enabled; live Casper submit and readback run every 300 seconds |
+| Autonomous loop | Runtime emergency-stopped at `2026-07-10T16:20:28Z`; existing Railway live variables must be replaced before any restart |
 
 The x402 payment rail uses Base Sepolia USDC through the testnet x402
 facilitator because the current facilitator path is EVM/Solana-based. Casper
@@ -60,7 +60,7 @@ The architecture diagram below is a self-generated raster PNG, not an SVG.
 2. The agent runtime proposes an action, critiques it, and applies a deterministic policy gate.
 3. FastAPI exposes the Casper MCP tools, dashboard API, public proof API, and verifier inputs.
 4. The Casper Testnet contract stores the latest proof digest and per-decision receipt.
-5. The dashboard and verifier replay the receipt path without exposing signer paths, operator tokens, or raw runtime logs.
+5. The public dashboard and verifier replay the receipt path without exposing signer paths, operator tokens, or raw runtime logs; mutations require a separate authenticated API operator session.
 
 - **Backend runtime:** `fastapi-casper-agent`
 - **MCP tool family:** `casper_*`
@@ -70,27 +70,33 @@ The architecture diagram below is a self-generated raster PNG, not an SVG.
 ## Safety Model (Dry Run vs Live Submit)
 
 Live Casper submission is **off by default** in local/source configuration.
-The public Railway deployment intentionally runs guarded live-submit mode with
-the backend-owned autonomous loop enabled; the frontend displays loop state and
-operator controls but does not drive the recurring execution loop.
+The frontend is a read-only public proof console and does not drive recurring
+execution. Operator mutations use the authenticated API/CLI path. Existing
+deployment variables override source defaults, so both Railway live-submit
+flags must remain off until a manual 2.5-CSPR canary is confirmed and read
+back.
 
 ## Autonomous Agent Loop
 
-The agent can run autonomously — continuously fetching live RWA evidence and
-writing Casper decision receipts every N seconds without manual intervention.
+The agent can continuously fetch RWA evidence without continuously spending
+CSPR. It writes only a materially new decision, subject to a persistent intent
+lock, an on-chain replay check, a six-hour cooldown, a daily count/budget cap,
+and a protected balance reserve.
 
 Enable the loop via environment variables:
 
 ```bash
+cd backend
 CASPER_AGENT_LOOP_ENABLED=true \
-CASPER_AGENT_LOOP_INTERVAL_SEC=60 \
-CASPER_AGENT_LOOP_DRY_RUN=false \
-rtk uv --project backend run uvicorn app.main:app --host 127.0.0.1 --port 8000
+CASPER_AGENT_LOOP_INTERVAL_SEC=3600 \
+CASPER_AGENT_LOOP_DRY_RUN=true \
+uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 - `CASPER_AGENT_LOOP_ENABLED` — starts the background asyncio loop on boot
-- `CASPER_AGENT_LOOP_INTERVAL_SEC` — seconds between cycles (default: 60)
-- `CASPER_AGENT_LOOP_DRY_RUN` — if true, writes local ledger entries only; if false, submits live Casper transactions (requires `CASPER_LIVE_SUBMIT_ENABLED=true`)
+- `CASPER_AGENT_LOOP_INTERVAL_SEC` — seconds between evidence checks (default: 3600)
+- `CASPER_AGENT_LOOP_DRY_RUN` — defaults to true and writes local ledger entries only
+- `CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED` — independent arm required before a non-dry loop may submit; defaults to false
 
 The loop fetches live US Treasury 10-Year yield from the public fiscaldata.treasury.gov API. If that API is unreachable or does not return a 10-Year observation, the loop fails closed and records the error instead of substituting static evidence. Loop status is visible in the dashboard and via `GET /api/dashboard/loop`.
 
@@ -106,9 +112,12 @@ Live mode requires:
 3. Deployed decision contract hash and package hash
 4. `casper-client` available on PATH or via `CASPER_CLIENT_PATH`
 5. `CASPER_LIVE_SUBMIT_ENABLED=true`
-6. The explicit live-submit command flag when running the script path
-7. Optional: `CASPER_CSPR_CLOUD_API_KEY` if you want CSPR.cloud-backed balance/block probes instead of Casper RPC/CLI only
-8. Optional for self-hosted deployments, required for paid-evidence claims: real `CASPER_X402_EVIDENCE_URL` and public-safe `CASPER_X402_RECEIPT`
+6. A non-empty `API_OPERATOR_TOKEN`; in this patched version anonymous sessions are never operators (deploy it before relying on this guarantee)
+7. A persistent `CASPER_DECISION_LEDGER_PATH` on a mounted volume
+8. For an autonomous live loop only: `CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED=true` and an interval of at least 21600 seconds
+9. The explicit live-submit command flag when running the one-shot script path
+10. Optional: `CASPER_CSPR_CLOUD_API_KEY` if you want CSPR.cloud-backed balance/block probes instead of Casper RPC/CLI only
+11. Optional for self-hosted deployments, required for paid-evidence claims: real `CASPER_X402_EVIDENCE_URL` and public-safe `CASPER_X402_RECEIPT`
 
 ## Full Casper Network Integration
 
@@ -128,8 +137,9 @@ Signing and submission still require `casper-client`; JSON-RPC and CSPR.cloud ar
 ### 1) Install dependencies
 
 ```bash
-pnpm install
-rtk uv sync --project backend --group dev
+uv sync --project backend --group dev
+corepack enable
+pnpm -C frontend install --frozen-lockfile
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 ```
@@ -137,18 +147,38 @@ cp frontend/.env.example frontend/.env
 ### 2) Start backend (safe mode)
 
 ```bash
+cd backend
 OMNIAGENT_SKIP_ENV_FILE=true \
+API_OPERATOR_TOKEN=judge-local-operator \
 CASPER_LIVE_SUBMIT_ENABLED=false \
-rtk uv --project backend run uvicorn app.main:app --host 127.0.0.1 --port 8000
+CASPER_AGENT_LOOP_ENABLED=false \
+CASPER_AGENT_LOOP_DRY_RUN=true \
+CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED=false \
+uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 ### 3) Start frontend
 
 ```bash
-rtk pnpm -C frontend run dev
+VITE_API_URL=http://127.0.0.1:8000 pnpm -C frontend run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173).
+
+## Judge Reproduction
+
+The complete zero-spend reproduction, expected outputs, optional single
+Testnet canary, receipt readback, and Railway rollout are documented in
+[docs/judge-reproduction.md](docs/judge-reproduction.md).
+
+After installing the prerequisites, the release gate is one command:
+
+```bash
+scripts/verify-casper-buildathon-stack.sh
+```
+
+It must finish with `[casper] ok`. The default path keeps live submission and
+the recurring loop disabled and creates no Casper transaction.
 
 ## Runtime Overview
 
@@ -197,14 +227,21 @@ Only claim stack items backed by code or verifier evidence:
 | `CASPER_DECISION_CONTRACT_HASH` | Deployed decision contract hash |
 | `CASPER_DECISION_CONTRACT_PACKAGE_HASH` | Deployed decision contract package hash |
 | `CASPER_LIVE_SUBMIT_ENABLED` | Enables guarded live-submit prerequisite validation |
+| `CASPER_PAYMENT_AMOUNT_MOTES` | Legacy deploy gas/payment cap; `2500000000` for the measured Testnet canary path |
 | `CASPER_CLIENT_PATH` | Casper CLI binary, default `casper-client` |
 | `CASPER_TRANSACTION_COMMAND` | Casper CLI decision-call command, default `put-deploy` |
 | `CASPER_TRANSACTION_WASM_PATH` | Optional compiled Wasm path for contract install/session mode |
-| `CASPER_DECISION_LEDGER_PATH` | Optional runtime backing store for the dashboard decision log |
+| `CASPER_DECISION_LEDGER_PATH` | Persistent SQLite decision log and atomic submission-intent guard; mount it on a volume in live mode |
+| `CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED` | Independently arms paid autonomous submissions; default `false` |
+| `CASPER_LIVE_MIN_SUBMIT_INTERVAL_SEC` | Cross-restart/local cooldown; default 21600 (six hours) |
+| `CASPER_LIVE_MAX_SUBMISSIONS_PER_UTC_DAY` | Daily live reservation cap; default 4 |
+| `CASPER_LIVE_DAILY_BUDGET_MOTES` | Daily offered-payment cap; default 10000000000 motes |
 | `CASPER_AGENT_LOOP_AUTO_READBACK` | Enables best-effort deploy polling and readback after loop submits |
 | `CASPER_AGENT_LOOP_POLL_MAX_RETRIES` | Max deploy-status polling attempts after submit |
 | `CASPER_CSPR_CLOUD_API_KEY` | Optional CSPR.cloud API key for balance and fallback block-height probes |
-| `CASPER_MIN_BALANCE_CSPR` | Warning threshold for low CSPR account balance |
+| `CASPER_MIN_BALANCE_CSPR` | Hard reserve retained after the offered payment; default 50 CSPR |
+| `API_SESSION_SECRET` | Signs browser API sessions; use a random secret outside source control |
+| `API_OPERATOR_TOKEN` | Required only to create an operator API session; anonymous sessions are read-only |
 | `CASPER_X402_EVIDENCE_URL` | Real x402 evidence endpoint; public deployment uses `/api/x402/rwa-evidence` |
 | `CASPER_X402_RECEIPT` | Public x402 receipt metadata with fields such as `receiptId`, `provider`, `resourceUrl`, `paidAt`, `amount`, `currency`, and optional binding fields like `sourceHash` or `requestHash`; leave empty rather than faking receipts |
 | `CASPER_LLM_TRACE_ENABLED` | Enables public-safe OpenRouter trace metadata when provider evidence is captured |
@@ -231,16 +268,19 @@ It validates backend compile/tests, contract check/release build, frontend unit/
 Generate or refresh the judge proof artifact from a running backend:
 
 ```bash
-PYTHONPATH=backend rtk uv --project backend run python backend/scripts/run-casper-decision-cycle.py \
+PYTHONPATH=backend uv run --project backend python backend/scripts/run-casper-decision-cycle.py \
   --api-url http://127.0.0.1:8000 \
+  --operator-token judge-local-operator \
   --dry-run \
-  --write-proof proofs/casper-buildathon-submission-proof.json
+  --write-proof /tmp/omniagent-judge-proof.json
 ```
 
-The artifact is intentionally status-gated. It may be `blocked` or
+The generated artifact is intentionally status-gated. It may be `blocked` or
 `ready_for_live_submit` when live Casper credentials/readback are unavailable;
 it should only be `live_verified` after the deploy and dictionary receipt
-readback match.
+readback match. The tracked file under `proofs/` is a review snapshot, not a
+guarantee of the current runtime state; the live `/api/public/proof` endpoint
+is authoritative for the deployed service.
 
 The public proof packet now includes additive proof-hardening fields:
 
@@ -279,10 +319,10 @@ cargo +nightly-2025-03-01 build --manifest-path contracts/casper-decision-proof/
 
 ## Casper Testnet & Blockchain Links
 
-The proof artifact is the source of truth for the current submission packet.
-Static links below are Casper Testnet references; treat a deploy link as current
-proof only when the same hash appears in
-`proofs/casper-buildathon-submission-proof.json`.
+The deployed `/api/public/proof` response is the source of truth for the
+current runtime packet. The tracked proof artifact is a static review snapshot.
+Treat a deploy link as current proof only when the same hash appears in a fresh
+public proof response with verified readback.
 
 | Item | Link |
 |------|------|

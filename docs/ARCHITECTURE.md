@@ -19,10 +19,14 @@ Technology stack boundary:
 ## Proof Flow
 
 1. Build a deterministic decision payload with a rationale hash and proof digest.
-2. Run Casper preflight checks for account, signer, contract hash, package hash, and live-submit flag.
-3. Append dry-run events to the Casper decision ledger, or submit a guarded live transaction through `casper-client`.
+2. Run Casper preflight checks for account, signer, contract hash, package hash, payment cap, balance reserve, and live-submit flag.
+3. Append dry-run events to the Casper decision ledger, or pass exact chain replay checks, an atomic SQLite intent lock, cooldown, daily budget, and single-flight submission before invoking `casper-client`.
 4. Capture the Casper transaction hash and refresh deploy status when requested.
 5. Score the proof bundle from latest decision, deploy status, readback status, and hard blockers.
 6. Render proof state and recovery actions in the frontend cockpit.
 
-Live submit remains blocked until explicit configuration, transaction Wasm, Casper CLI, and command flags are present.
+The default stored-contract `put-deploy --session-hash` path does not require a
+transaction Wasm file. Live submit remains blocked until explicit account,
+signer, contract, Casper CLI, balance, payment, persistence, replay-guard, and
+command-acknowledgement gates pass. The experimental `put-txn` path is blocked
+from live submission until its pricing is budgeted independently.
