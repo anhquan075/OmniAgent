@@ -48,6 +48,23 @@ def test_rwa_source_hash_ignores_live_age_counter() -> None:
     assert sha256_json(CasperRwaEvidenceService.hashable_source(source)) == source["sourceHash"]
 
 
+def test_rwa_source_hash_ignores_fetch_time_but_tracks_source_record() -> None:
+    first = source_fixture()
+    first["observedAt"] = "2026-07-10T00:00:00+00:00"
+    first["sourceRecordDate"] = "2026-07-09"
+    second = {**first, "observedAt": "2026-07-10T01:00:00+00:00"}
+
+    first_bundle = CasperRwaEvidenceService.build_evidence_bundle({"evidence": [first]})
+    second_bundle = CasperRwaEvidenceService.build_evidence_bundle({"evidence": [second]})
+    changed_bundle = CasperRwaEvidenceService.build_evidence_bundle({
+        "evidence": [{**second, "sourceRecordDate": "2026-07-10"}],
+    })
+
+    assert first_bundle["sourceHash"] == second_bundle["sourceHash"]
+    assert first_bundle["sourceHash"] != changed_bundle["sourceHash"]
+    assert first_bundle["sources"][0]["sourceRecordDate"] == "2026-07-09"
+
+
 def test_rwa_evidence_fails_closed_without_real_observation() -> None:
     bundle = CasperRwaEvidenceService.build_evidence_bundle({})
 

@@ -6,6 +6,7 @@ from app.services.casper.guardrails import CasperGuardrailService
 from app.services.casper.preflight import CasperPreflightService
 from app.services.casper.proof_bundle import CasperProofBundleService
 from app.services.casper.rwa_evidence import CasperRwaEvidenceService
+from app.services.casper.submission_guard import CasperSubmissionGuard
 from app.services.casper.x402 import CasperX402EvidenceService
 
 
@@ -60,7 +61,7 @@ class CasperAgentRuntimeService:
         })
         x402 = CasperX402EvidenceService.get_readiness(evidence_args)
         decision_args = {
-            "decisionId": args.get("decisionId") or "casper-autonomous-demo",
+            "decisionId": args.get("decisionId"),
             "action": action,
             "riskScore": args.get("riskScore", evidence["riskScore"]),
             "rationale": rationale,
@@ -77,6 +78,8 @@ class CasperAgentRuntimeService:
                 or args.get("i_understand_this_submits_casper_testnet")
             ),
         }
+        if not decision_args["decisionId"]:
+            decision_args["decisionId"] = CasperSubmissionGuard.semantic_decision_id(decision_args)
         result = CasperDecisionContractService.record_decision(decision_args)
         return {
             **result,

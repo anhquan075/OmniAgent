@@ -79,5 +79,6 @@ def test_agent_card_includes_loop_config(monkeypatch) -> None:
         "enabled": True,
         "intervalSec": 15,
         "dryRun": True,
+        "liveSubmitArmed": False,
         "autoReadback": True,
     }

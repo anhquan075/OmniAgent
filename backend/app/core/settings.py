@@ -64,7 +64,11 @@ class Settings(BaseSettings):
     casper_transaction_category: str = "small"
     casper_gas_price_tolerance: int = 10
     casper_pricing_mode: str = "fixed"
-    casper_payment_amount_motes: int = 25_000_000_000
+    # Casper Testnet currently enforces a 2.5 CSPR baseline for legacy deploys.
+    # Observed record_decision execution stays below 1.6 CSPR, so offering more
+    # only increases the non-refundable portion of unused payment headroom.
+    casper_payment_amount_motes: int = 2_500_000_000
+    casper_min_payment_amount_motes: int = 2_500_000_000
     casper_cli_timeout_sec: float = 30.0
     casper_agent_public_endpoint: str = "/.well-known/casper-agent-card.json"
     casper_decision_ledger_path: Path = BACKEND_ROOT / "data" / "casper-decision-log"
@@ -86,9 +90,10 @@ class Settings(BaseSettings):
     openrouter_site_url: str | None = None
     openrouter_app_title: str = "OmniAgent Casper Demo"
     openrouter_timeout_sec: float = 10.0
-    casper_agent_loop_enabled: bool = True
-    casper_agent_loop_interval_sec: int = 60
-    casper_agent_loop_dry_run: bool = False
+    casper_agent_loop_enabled: bool = False
+    casper_agent_loop_interval_sec: int = 3_600
+    casper_agent_loop_dry_run: bool = True
+    casper_agent_loop_live_submit_enabled: bool = False
     casper_agent_loop_cycle_timeout_sec: float = 45.0
     casper_agent_loop_auto_readback: bool = True
     casper_agent_loop_poll_max_retries: int = 10
@@ -97,6 +102,11 @@ class Settings(BaseSettings):
     casper_cspr_cloud_api_key: str | None = None
     casper_cspr_cloud_url: str = "https://api.testnet.cspr.cloud"
     casper_min_balance_cspr: float = 50.0
+    casper_live_min_submit_interval_sec: int = 21_600
+    casper_live_max_submissions_per_utc_day: int = 4
+    casper_live_daily_budget_motes: int = 10_000_000_000
+    casper_live_max_receipt_bytes: int = 512
+    casper_live_require_chain_dedupe: bool = True
 
     @property
     def origins(self) -> list[str]:

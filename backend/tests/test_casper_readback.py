@@ -15,6 +15,7 @@ def test_casper_record_readback_verifies_latest_decision_digest(tmp_path, monkey
         "#!/bin/sh\n"
         "case \"$1\" in\n"
         f"  get-state-root-hash) printf '{{\"result\":{{\"state_root_hash\":\"{state_root_hash}\"}}}}' ;;\n"
+        "  query-balance) printf '{\"result\":{\"balance\":\"100000000000\"}}' ;;\n"
         f"  put-deploy) printf '{{\"result\":{{\"deploy_hash\":\"{deploy_hash}\"}}}}' ;;\n"
         "  get-deploy) printf 'execution_result: Success' ;;\n"
         "  query-global-state) printf '{}';;\n"
@@ -29,6 +30,7 @@ def test_casper_record_readback_verifies_latest_decision_digest(tmp_path, monkey
     monkeypatch.setenv("CASPER_DECISION_CONTRACT_HASH", "hash-decision")
     monkeypatch.setenv("CASPER_DECISION_CONTRACT_PACKAGE_HASH", "hash-package")
     monkeypatch.setenv("CASPER_LIVE_SUBMIT_ENABLED", "true")
+    monkeypatch.setenv("CASPER_LIVE_REQUIRE_CHAIN_DEDUPE", "false")
     monkeypatch.setenv("CASPER_CLIENT_PATH", str(client_path))
     get_settings.cache_clear()
     result = CasperDecisionContractService.record_decision(
@@ -42,6 +44,7 @@ def test_casper_record_readback_verifies_latest_decision_digest(tmp_path, monkey
             "iUnderstandThisSubmitsCasperTestnet": True,
         }
     )
+    decision_id = result["decision"]["decisionId"]
     proof_digest = result["decision"]["proofDigest"]
     receipt_value = result["decision"]["decisionReceipt"]["receiptValue"]
     client_path.write_text(
@@ -61,7 +64,7 @@ def test_casper_record_readback_verifies_latest_decision_digest(tmp_path, monkey
     )
     client_path.chmod(0o755)
 
-    readback = CasperReadbackService.record_readback({"decisionId": "proof-003"})
+    readback = CasperReadbackService.record_readback({"decisionId": decision_id})
     bundle = CasperProofBundleService.get_live_proof_bundle({"limit": 5})
 
     assert readback["verified"] is True
@@ -72,6 +75,7 @@ def test_casper_record_readback_verifies_latest_decision_digest(tmp_path, monkey
     assert readback["readback"]["receiptVerified"] is True
     assert bundle["readback"]["verified"] is True
     assert bundle["proofScore"]["checks"]["readbackMatchesDigest"] is True
+    assert readback["submissionGuardTransition"]["status"] == "confirmed"
 
     get_settings.cache_clear()
 
@@ -132,5 +136,25 @@ def test_casper_record_readback_selects_snake_case_deploy_hash(tmp_path, monkeyp
 
     assert readback["decision"]["decisionId"] == "proof-005"
     assert "casper_client_missing" in readback["hardBlockers"]
+
+    get_settings.cache_clear()
+
+
+def test_readback_can_reconcile_unknown_outcome_with_operator_hash(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_DECISION_LEDGER_PATH", str(tmp_path / "dashboard-log"))
+    get_settings.cache_clear()
+    result = CasperDecisionContractService.record_decision({
+        "decisionId": "unknown-outcome-1",
+        "action": "hold",
+        "sourceHash": "sha256:" + "a" * 64,
+    })
+
+    decision = CasperReadbackService.target_decision({
+        "decisionId": "unknown-outcome-1",
+        "deployHash": "f" * 64,
+    })
+
+    assert decision["decisionId"] == result["decision"]["decisionId"]
+    assert decision.get("deployHash") is None
 
     get_settings.cache_clear()

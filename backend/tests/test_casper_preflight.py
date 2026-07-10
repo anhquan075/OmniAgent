@@ -57,3 +57,70 @@ def test_live_preflight_blocks_when_balance_is_below_payment(tmp_path, monkeypat
     assert result["accountBalance"]["motes"] == 0
 
     get_settings.cache_clear()
+
+
+def test_live_preflight_preserves_configured_balance_reserve(tmp_path, monkeypatch) -> None:
+    secret_path = tmp_path / "secret.pem"
+    secret_path.write_text("not-a-real-secret", encoding="utf-8")
+    monkeypatch.setenv("CASPER_ACCOUNT_PUBLIC_KEY", "01" + "a" * 64)
+    monkeypatch.setenv("CASPER_SECRET_KEY_PATH", str(secret_path))
+    monkeypatch.setenv("CASPER_DECISION_CONTRACT_HASH", "a" * 64)
+    monkeypatch.setenv("CASPER_DECISION_CONTRACT_PACKAGE_HASH", "b" * 64)
+    monkeypatch.setenv("CASPER_LIVE_SUBMIT_ENABLED", "true")
+    monkeypatch.setenv("CASPER_PAYMENT_AMOUNT_MOTES", "2500000000")
+    monkeypatch.setenv("CASPER_MIN_BALANCE_CSPR", "50")
+    monkeypatch.setenv("API_OPERATOR_TOKEN", "operator-secret")
+    monkeypatch.setenv("API_SESSION_SECRET", "a-secure-production-session-secret")
+    get_settings.cache_clear()
+    monkeypatch.setattr(CasperCliSubmitter, "is_client_available", staticmethod(lambda: True))
+    monkeypatch.setattr(
+        CasperCliSubmitter,
+        "get_state_root_hash",
+        staticmethod(lambda: {"hardBlockers": [], "stateRootHash": "c" * 64}),
+    )
+    monkeypatch.setattr(
+        CasperCliSubmitter,
+        "query_account_balance",
+        staticmethod(lambda public_key: {
+            "status": "ready",
+            "motes": 51_000_000_000,
+            "cspr": 51.0,
+            "hardBlockers": [],
+        }),
+    )
+
+    result = CasperPreflightService.get_live_preflight({})
+
+    assert "casper_account_balance_reserve_reached" in result["hardBlockers"]
+    assert result["liveSubmitEnabled"] is False
+
+    get_settings.cache_clear()
+
+
+def test_live_preflight_fails_closed_when_balance_is_unavailable(tmp_path, monkeypatch) -> None:
+    secret_path = tmp_path / "secret.pem"
+    secret_path.write_text("not-a-real-secret", encoding="utf-8")
+    monkeypatch.setenv("CASPER_ACCOUNT_PUBLIC_KEY", "01" + "a" * 64)
+    monkeypatch.setenv("CASPER_SECRET_KEY_PATH", str(secret_path))
+    monkeypatch.setenv("CASPER_DECISION_CONTRACT_HASH", "a" * 64)
+    monkeypatch.setenv("CASPER_DECISION_CONTRACT_PACKAGE_HASH", "b" * 64)
+    monkeypatch.setenv("CASPER_LIVE_SUBMIT_ENABLED", "true")
+    get_settings.cache_clear()
+    monkeypatch.setattr(CasperCliSubmitter, "is_client_available", staticmethod(lambda: True))
+    monkeypatch.setattr(
+        CasperCliSubmitter,
+        "get_state_root_hash",
+        staticmethod(lambda: {"hardBlockers": [], "stateRootHash": "c" * 64}),
+    )
+    monkeypatch.setattr(
+        CasperCliSubmitter,
+        "query_account_balance",
+        staticmethod(lambda public_key: None),
+    )
+
+    result = CasperPreflightService.get_live_preflight({})
+
+    assert "casper_account_balance_unavailable" in result["hardBlockers"]
+    assert result["liveSubmitEnabled"] is False
+
+    get_settings.cache_clear()

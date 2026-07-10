@@ -113,6 +113,31 @@ class CasperDecisionReceiptService:
         return "|".join(str(value or "") for value in fields)
 
     @staticmethod
+    def parse_receipt_value(value: str) -> dict[str, Any]:
+        fields = str(value or "").split("|")
+        if len(fields) != 10:
+            return {}
+        try:
+            risk_score = int(fields[2])
+        except ValueError:
+            return {}
+        names = (
+            "decisionId",
+            "action",
+            "riskScore",
+            "proofDigest",
+            "rationaleHash",
+            "sourceHash",
+            "timestamp",
+            "policyGate",
+            "agentAccountHash",
+            "guardrailHash",
+        )
+        parsed = dict(zip(names, fields, strict=True))
+        parsed["riskScore"] = risk_score
+        return parsed
+
+    @staticmethod
     def verify_blockers(
         receipt_result: dict[str, Any],
         local_verified: bool,

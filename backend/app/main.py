@@ -9,7 +9,7 @@ from app.core.logging import configure_logging
 from app.core.security_middleware import RequestSecurityMiddleware
 from app.core.settings import get_settings
 from app.services.casper.ledger import CasperDecisionLedger
-from app.services.casper.loop import agent_loop, loop_state
+from app.services.casper.loop import agent_loop, loop_state, start_loop, stop_loop
 from app.services.casper.trust import CasperTrustService
 from app.services.casper.x402_endpoint import (
     CasperX402EvidenceEndpointService,
@@ -24,27 +24,40 @@ logger = structlog.get_logger(__name__)
 @asynccontextmanager
 async def casper_lifespan(app: FastAPI):
     settings = get_settings()
-    task = None
+    app.state.loop_task = None
     if settings.casper_agent_loop_enabled:
-        loop_state.running = True
-        loop_state.interval_sec = settings.casper_agent_loop_interval_sec
-        loop_state.dry_run = settings.casper_agent_loop_dry_run
-        task = asyncio.create_task(agent_loop())
-        app.state.loop_task = task
-        logger.info(
-            "casper_lifespan_loop_started",
-            interval=settings.casper_agent_loop_interval_sec,
-            dry_run=settings.casper_agent_loop_dry_run,
-            live_submit=settings.casper_live_submit_enabled,
-        )
-    yield
-    if task is not None:
-        loop_state.running = False
-        task.cancel()
         try:
-            await task
-        except asyncio.CancelledError:
-            pass
+            status = start_loop()
+        except ValueError as exc:
+            logger.error("casper_lifespan_loop_blocked", blocker=str(exc))
+        else:
+            app.state.loop_task = asyncio.create_task(agent_loop())
+            logger.info(
+                "casper_lifespan_loop_started",
+                interval=status["intervalSec"],
+                dry_run=status["dryRun"],
+                live_submit=settings.casper_live_submit_enabled,
+                live_loop_submit_armed=settings.casper_agent_loop_live_submit_enabled,
+            )
+    try:
+        yield
+    finally:
+        # The API can stop and replace the startup task, so always inspect the
+        # current application-owned task instead of a stale local reference.
+        task = getattr(app.state, "loop_task", None)
+        stop_loop()
+        if task is not None and not task.done():
+            try:
+                if loop_state.cycle_in_progress:
+                    await task
+                else:
+                    task.cancel()
+                    await task
+            except asyncio.CancelledError:
+                pass
+            except Exception as exc:
+                logger.error("casper_lifespan_loop_stop_error", error=str(exc)[:200])
+        app.state.loop_task = None
         logger.info("casper_lifespan_loop_stopped")
 
 
@@ -183,6 +196,7 @@ def create_app() -> FastAPI:
                 "enabled": settings.casper_agent_loop_enabled,
                 "intervalSec": settings.casper_agent_loop_interval_sec,
                 "dryRun": settings.casper_agent_loop_dry_run,
+                "liveSubmitArmed": settings.casper_agent_loop_live_submit_enabled,
                 "autoReadback": settings.casper_agent_loop_auto_readback,
             },
         }

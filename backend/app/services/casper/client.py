@@ -126,6 +126,54 @@ class CasperJsonRpcClient:
         }
 
     @staticmethod
+    def probe_decision_receipt_sync(decision_id: str) -> dict[str, Any]:
+        """Distinguish an unused dictionary key from an unavailable RPC."""
+        contract_hash = get_settings().casper_decision_contract_hash
+        state_root_hash = CasperJsonRpcClient.get_state_root_hash_sync()
+        if not contract_hash:
+            return CasperJsonRpcClient.blocked("casper_decision_contract_hash_missing")
+        if not state_root_hash:
+            return CasperJsonRpcClient.blocked("casper_state_root_hash_missing")
+        params = {
+            "state_root_hash": state_root_hash,
+            "dictionary_identifier": {
+                "ContractNamedKey": {
+                    "key": CasperJsonRpcClient.query_key(contract_hash),
+                    "dictionary_name": "decision_receipts",
+                    "dictionary_item_key": decision_id.replace("'", "").strip(),
+                }
+            },
+        }
+        try:
+            response = CasperJsonRpcClient.sync_call("state_get_dictionary_item", params)
+        except Exception:
+            return CasperJsonRpcClient.blocked("casper_chain_receipt_probe_unavailable")
+        receipt = CasperJsonRpcClient.extract_cl_value(response.get("result"))
+        if receipt:
+            return {
+                "status": "found",
+                "source": "casper_json_rpc_dictionary_probe",
+                "stateRootHash": state_root_hash,
+                "decisionReceipt": receipt,
+                "hardBlockers": [],
+            }
+        error = response.get("error") if isinstance(response.get("error"), dict) else {}
+        error_text = f"{error.get('message', '')} {error.get('data', '')}".lower()
+        if error.get("code") == -32003 and "not found" in error_text:
+            return {
+                "status": "missing",
+                "source": "casper_json_rpc_dictionary_probe",
+                "stateRootHash": state_root_hash,
+                "decisionReceipt": None,
+                "hardBlockers": [],
+            }
+        return {
+            **CasperJsonRpcClient.blocked("casper_chain_receipt_probe_unavailable"),
+            "stateRootHash": state_root_hash,
+            "decisionReceipt": None,
+        }
+
+    @staticmethod
     def extract_cl_value(value: Any) -> str | None:
         if isinstance(value, dict):
             for key in ("parsed", "bytes"):

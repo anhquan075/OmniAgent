@@ -13,7 +13,7 @@ def csrf_headers(client: TestClient, operator_token: str | None = None) -> dict[
     return {"X-CSRF-Token": response.json()["csrfToken"]}
 
 
-def test_session_is_operator_when_no_operator_token_configured(monkeypatch) -> None:
+def test_session_is_not_operator_when_no_operator_token_configured(monkeypatch) -> None:
     monkeypatch.delenv("API_OPERATOR_TOKEN", raising=False)
     get_settings.cache_clear()
     client = TestClient(create_app())
@@ -21,7 +21,7 @@ def test_session_is_operator_when_no_operator_token_configured(monkeypatch) -> N
     response = client.get("/api/session")
 
     assert response.status_code == 200
-    assert response.json()["operator"] is True
+    assert response.json()["operator"] is False
 
 
 def test_operator_token_still_protects_direct_actions(monkeypatch) -> None:
@@ -36,7 +36,7 @@ def test_operator_token_still_protects_direct_actions(monkeypatch) -> None:
 
 
 def test_direct_cycle_endpoint_runs_without_script(monkeypatch) -> None:
-    monkeypatch.delenv("API_OPERATOR_TOKEN", raising=False)
+    monkeypatch.setenv("API_OPERATOR_TOKEN", "operator-secret")
     get_settings.cache_clear()
     client = TestClient(create_app())
     captured: dict[str, object] = {}
@@ -53,7 +53,7 @@ def test_direct_cycle_endpoint_runs_without_script(monkeypatch) -> None:
     response = client.post(
         "/api/cycle/run",
         json={"decisionId": "dashboard-test", "submit": False},
-        headers=csrf_headers(client),
+        headers=csrf_headers(client, "operator-secret"),
     )
 
     assert response.status_code == 200
@@ -62,7 +62,7 @@ def test_direct_cycle_endpoint_runs_without_script(monkeypatch) -> None:
 
 
 def test_direct_readback_endpoint_runs_without_script(monkeypatch) -> None:
-    monkeypatch.delenv("API_OPERATOR_TOKEN", raising=False)
+    monkeypatch.setenv("API_OPERATOR_TOKEN", "operator-secret")
     get_settings.cache_clear()
     client = TestClient(create_app())
     captured: dict[str, object] = {}
@@ -79,7 +79,7 @@ def test_direct_readback_endpoint_runs_without_script(monkeypatch) -> None:
     response = client.post(
         "/api/readback/record",
         json={"decisionId": "dashboard-test"},
-        headers=csrf_headers(client),
+        headers=csrf_headers(client, "operator-secret"),
     )
 
     assert response.status_code == 200
@@ -88,19 +88,58 @@ def test_direct_readback_endpoint_runs_without_script(monkeypatch) -> None:
 
 
 def test_loop_start_uses_backend_settings_defaults(monkeypatch) -> None:
-    monkeypatch.delenv("API_OPERATOR_TOKEN", raising=False)
-    monkeypatch.setenv("CASPER_AGENT_LOOP_INTERVAL_SEC", "300")
-    monkeypatch.setenv("CASPER_AGENT_LOOP_DRY_RUN", "false")
+    monkeypatch.setenv("API_OPERATOR_TOKEN", "operator-secret")
+    monkeypatch.setenv("CASPER_AGENT_LOOP_INTERVAL_SEC", "3600")
+    monkeypatch.setenv("CASPER_AGENT_LOOP_DRY_RUN", "true")
     get_settings.cache_clear()
     client = TestClient(create_app())
 
-    headers = csrf_headers(client)
+    headers = csrf_headers(client, "operator-secret")
     response = client.post("/api/loop/start", headers=headers)
 
     assert response.status_code == 200
-    assert response.json()["intervalSec"] == 300
-    assert response.json()["dryRun"] is False
+    assert response.json()["intervalSec"] == 3600
+    assert response.json()["dryRun"] is True
     client.post("/api/loop/stop", headers=headers)
+
+
+def test_live_loop_start_requires_independent_arm_and_safe_interval(monkeypatch) -> None:
+    monkeypatch.setenv("API_OPERATOR_TOKEN", "operator-secret")
+    monkeypatch.setenv("CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED", "false")
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    headers = csrf_headers(client, "operator-secret")
+
+    response = client.post("/api/loop/start?interval_sec=300&dry_run=false", headers=headers)
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "casper_agent_loop_live_submit_disabled"
+
+
+def test_live_loop_rejects_interval_below_spend_cooldown(monkeypatch) -> None:
+    monkeypatch.setenv("API_OPERATOR_TOKEN", "operator-secret")
+    monkeypatch.setenv("CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED", "true")
+    monkeypatch.setenv("CASPER_LIVE_MIN_SUBMIT_INTERVAL_SEC", "21600")
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    headers = csrf_headers(client, "operator-secret")
+
+    response = client.post("/api/loop/start?interval_sec=300&dry_run=false", headers=headers)
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "casper_agent_loop_interval_too_short"
+
+
+def test_loop_rejects_non_positive_interval_even_in_dry_run(monkeypatch) -> None:
+    monkeypatch.setenv("API_OPERATOR_TOKEN", "operator-secret")
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    headers = csrf_headers(client, "operator-secret")
+
+    response = client.post("/api/loop/start?interval_sec=-1&dry_run=true", headers=headers)
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "casper_agent_loop_interval_invalid"
 
 
 def test_dashboard_stream_emits_snapshot_events(monkeypatch) -> None:

@@ -3,13 +3,13 @@ from datetime import UTC, datetime
 from itertools import count
 import json
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from app.core.security import require_session, require_operator
 from app.core.settings import get_settings
 from app.services.casper.ledger import CasperDecisionLedger
-from app.services.casper.loop import agent_loop, get_loop_status, start_loop, stop_loop
+from app.services.casper.loop import agent_loop, get_loop_status, loop_state, start_loop, stop_loop
 from app.services.casper.proof_bundle import CasperProofBundleService
 from app.services.casper.readback import CasperReadbackService
 from app.services.casper.runtime import CasperAgentRuntimeService
@@ -173,10 +173,13 @@ async def loop_start(
     dry_run: bool | None = None,
 ) -> dict[str, object]:
     settings = get_settings()
-    status = start_loop(
-        interval_sec=interval_sec or settings.casper_agent_loop_interval_sec,
-        dry_run=settings.casper_agent_loop_dry_run if dry_run is None else dry_run,
-    )
+    try:
+        status = start_loop(
+            interval_sec=settings.casper_agent_loop_interval_sec if interval_sec is None else interval_sec,
+            dry_run=settings.casper_agent_loop_dry_run if dry_run is None else dry_run,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     task = getattr(request.app.state, "loop_task", None)
     if task is None or task.done():
         request.app.state.loop_task = asyncio.create_task(agent_loop())
@@ -188,10 +191,15 @@ async def loop_stop(request: Request) -> dict[str, object]:
     status = stop_loop()
     task = getattr(request.app.state, "loop_task", None)
     if task is not None and not task.done():
+        if loop_state.cycle_in_progress:
+            # A live submit runs in a worker thread and cannot be cancelled
+            # safely. running=false prevents another cycle; expose stopping
+            # until the in-flight cycle reaches a known outcome.
+            return status
         task.cancel()
         try:
             await task
         except asyncio.CancelledError:
             pass
-        request.app.state.loop_task = None
-    return status
+    request.app.state.loop_task = None
+    return get_loop_status()

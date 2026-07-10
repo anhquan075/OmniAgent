@@ -64,14 +64,24 @@ class CasperPreflightService:
         if not settings.casper_decision_contract_package_hash:
             blockers.append("casper_decision_contract_package_hash_missing")
         if settings.casper_live_submit_enabled:
+            if settings.casper_payment_amount_motes < settings.casper_min_payment_amount_motes:
+                blockers.append("casper_payment_amount_below_network_minimum")
+            if settings.casper_payment_amount_motes > settings.casper_live_daily_budget_motes:
+                blockers.append("casper_payment_amount_exceeds_daily_budget")
             if not client_available:
                 blockers.append("casper_client_missing")
             elif not rpc_probe["reachable"]:
                 blockers.append("casper_rpc_unreachable")
             balance_motes = CasperPreflightService.balance_motes(account_balance)
-            if balance_motes is not None and balance_motes < settings.casper_payment_amount_motes:
+            reserve_motes = max(0, int(settings.casper_min_balance_cspr * 1_000_000_000))
+            if balance_motes is None:
+                blockers.append("casper_account_balance_unavailable")
+            elif balance_motes < settings.casper_payment_amount_motes:
                 blockers.append("casper_account_balance_insufficient")
+            elif balance_motes < settings.casper_payment_amount_motes + reserve_motes:
+                blockers.append("casper_account_balance_reserve_reached")
             if settings.casper_transaction_command.strip() != "put-deploy":
+                blockers.append("casper_transaction_v1_live_submit_unsupported")
                 wasm_path = CasperCliCommand.transaction_wasm_path()
                 if not settings.casper_transaction_wasm_path:
                     blockers.append("casper_transaction_wasm_path_missing")

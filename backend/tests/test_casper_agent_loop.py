@@ -6,7 +6,7 @@ def test_loop_state_defaults_to_stopped() -> None:
     assert state.running is False
     assert state.cycle_count == 0
     assert state.error_count == 0
-    assert state.dry_run is False
+    assert state.dry_run is True
     assert state.cycle_in_progress is False
 
 
@@ -45,9 +45,9 @@ def test_start_loop_resets_consecutive_errors() -> None:
     assert get_loop_status()["nextCycleAt"] is None
 
 
-def test_loop_default_is_live_not_dry_run() -> None:
+def test_loop_default_is_safe_dry_run() -> None:
     start_loop(interval_sec=10)
-    assert get_loop_status()["dryRun"] is False
+    assert get_loop_status()["dryRun"] is True
     stop_loop()
 
 

@@ -155,6 +155,8 @@ class CasperRwaEvidenceService:
             "observedValue": observed,
             "threshold": threshold,
             "unit": str(source.get("unit") or "unit"),
+            "sourceRecordDate": str(source.get("sourceRecordDate") or "").strip(),
+            "source": str(source.get("source") or "").strip(),
             "status": "observed",
         }
         if not normalized["url"] or observed is None or threshold is None or not observed_at:
@@ -174,7 +176,10 @@ class CasperRwaEvidenceService:
         payload = {
             key: value
             for key, value in source.items()
-            if key not in {"sourceHash", "freshness"}
+            # observedAt is when this process fetched the record, not an
+            # economically material change. sourceRecordDate and value carry
+            # the source's actual version and keep repeated polls idempotent.
+            if key not in {"sourceHash", "freshness", "observedAt"}
         }
         freshness = source.get("freshness")
         if isinstance(freshness, dict):

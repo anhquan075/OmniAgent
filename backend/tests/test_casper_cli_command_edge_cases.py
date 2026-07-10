@@ -10,6 +10,15 @@ def test_put_deploy_includes_session_hash(monkeypatch) -> None:
     assert "abc123" in cmd
 
 
+def test_put_deploy_defaults_to_testnet_baseline_payment(monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_DECISION_CONTRACT_HASH", "abc123")
+    monkeypatch.setenv("CASPER_SECRET_KEY_PATH", "/tmp/secret.pem")
+    cmd = CasperCliCommand.build_submit_command({"decisionId": "d1"})
+
+    payment_index = cmd.index("--payment-amount")
+    assert cmd[payment_index + 1] == "2500000000"
+
+
 def test_put_deploy_includes_session_package_hash_when_no_hash(monkeypatch) -> None:
     monkeypatch.delenv("CASPER_DECISION_CONTRACT_HASH", raising=False)
     monkeypatch.setenv("CASPER_DECISION_CONTRACT_PACKAGE_HASH", "pkg456")
@@ -84,3 +93,11 @@ def test_query_key_prepends_hash_prefix() -> None:
     assert CasperCliCommand.query_key("abc123") == "hash-abc123"
     assert CasperCliCommand.query_key("hash-abc123") == "hash-abc123"
     assert CasperCliCommand.query_key("uref-xyz") == "uref-xyz"
+
+
+def test_latest_decision_id_query_targets_named_key(monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_DECISION_CONTRACT_HASH", "abc123")
+
+    command = CasperCliCommand.query_latest_decision_id_command("f" * 64)
+
+    assert command[-2:] == ["-q", "latest_decision_id"]

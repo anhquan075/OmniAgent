@@ -91,3 +91,25 @@ def test_autonomous_cycle_builds_rwa_guardrail_receipt(tmp_path, monkeypatch) ->
         "casper_live_preflight",
         "casper_record_decision",
     ]
+
+
+def test_autonomous_cycle_derives_restart_stable_semantic_decision_id(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_DECISION_LEDGER_PATH", str(tmp_path / "dashboard-log"))
+    source = {
+        "id": "treasury-yield-10y",
+        "label": "US 10Y Treasury yield",
+        "url": "https://example.gov/yield",
+        "observedAt": "2026-07-10T01:00:00+00:00",
+        "sourceRecordDate": "2026-07-09",
+        "observedValue": 4.2,
+        "threshold": 4.5,
+        "unit": "percent",
+    }
+
+    first = CasperAgentRuntimeService.run_autonomous_cycle({"evidence": [source]})
+    second = CasperAgentRuntimeService.run_autonomous_cycle({
+        "evidence": [{**source, "observedAt": "2026-07-10T02:00:00+00:00"}],
+    })
+
+    assert first["decision"]["decisionId"] == second["decision"]["decisionId"]
+    assert first["decision"]["decisionId"].startswith("rwa-collateral-")
