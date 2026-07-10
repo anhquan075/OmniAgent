@@ -9,6 +9,7 @@ import type { Payload, SourceState } from './flight-deck-model';
 export default function CockpitTab({
   runtime,
   bundle,
+  cycleHistory,
   streamMeta,
   streamClockMs,
   refreshedAt,
@@ -18,6 +19,7 @@ export default function CockpitTab({
 }: {
   runtime?: Payload;
   bundle?: Payload;
+  cycleHistory?: Payload;
   streamMeta?: Payload;
   streamClockMs?: number;
   refreshedAt: string;
@@ -34,6 +36,7 @@ export default function CockpitTab({
           <AgentActivityConsole
             runtime={runtime}
             bundle={sourceState === 'live' ? bundle : {}}
+            cycleHistory={cycleHistory}
             streamMeta={streamMeta}
             streamClockMs={streamClockMs}
             refreshedAt={refreshedAt}

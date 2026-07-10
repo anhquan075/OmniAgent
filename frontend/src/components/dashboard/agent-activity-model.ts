@@ -4,6 +4,7 @@ import { proofLabel, proofText } from './proof-labels';
 export type Payload = Record<string, any>;
 
 export type McpActivityRow = {
+  callId: string;
   tool: string;
   status: string;
   output: string;
@@ -23,6 +24,7 @@ export type StreamPanelStatus = {
   sequence: string;
   emittedAt: string;
   isLive: boolean;
+  isHistory: boolean;
 };
 
 const DEFAULT_TOOLS = [
@@ -58,6 +60,26 @@ export const normalizedLifecycle = (bundle?: Payload) => {
 
 export const mcpActivityRows = (runtime?: Payload, bundle?: Payload): McpActivityRow[] => {
   const decision = decisionFromBundle(bundle);
+  const toolActivity = Array.isArray(bundle?.cycle?.toolActivity)
+    ? bundle.cycle.toolActivity.filter((item: unknown) => item && typeof item === 'object')
+    : [];
+  if (toolActivity.length) {
+    return toolActivity.map((activity: Payload, index: number) => {
+      const tool = proofText(activity.tool, `mcp_tool_${index + 1}`);
+      const invoked = activity.invoked !== false;
+      const outputStatus = activity.output && typeof activity.output === 'object' ? activity.output.status : undefined;
+      const status = invoked ? proofText(activity.status ?? outputStatus, 'complete') : 'skipped';
+      const output = activity.output === undefined
+        ? { invoked, status }
+        : activity.output;
+      return {
+        callId: proofText(activity.callId, `${tool}-${index + 1}`),
+        tool,
+        status,
+        output: stringifyToolOutput(output),
+      };
+    });
+  }
   const cycleTools = [
     ...arrayOfStrings(decision.cycle?.toolsUsed),
     ...arrayOfStrings(bundle?.cycle?.toolsUsed),
@@ -116,12 +138,14 @@ export const streamPanelStatus = (streamMeta?: Payload, nowMs = Date.now()): Str
   const sequence = proofText(streamMeta?.sequence, '');
   const transport = proofText(streamMeta?.transport, '').toLowerCase();
   const emittedAt = streamTime(streamMeta?.emittedAt);
+  const isHistory = transport === 'history';
   const isLive = transport === 'sse' && Boolean(sequence) && isFreshStreamEvent(streamMeta, nowMs);
   return {
-    label: isLive ? 'live' : sequence ? 'stale' : 'snapshot',
-    sequence: sequence ? `#${sequence}` : 'pending',
+    label: isHistory ? 'recorded' : isLive ? 'live' : sequence ? 'stale' : 'snapshot',
+    sequence: sequence ? (sequence.startsWith('#') ? sequence : `#${sequence}`) : 'pending',
     emittedAt,
     isLive,
+    isHistory,
   };
 };
 
@@ -186,7 +210,16 @@ function activityForTool(tool: string, runtime?: Payload, bundle?: Payload, deci
     },
   };
   const output = outputByTool[tool] ?? { status: proofText(bundle?.status ?? runtime?.status), tool };
-  return { tool, status: proofText(output.status), output: JSON.stringify(output) };
+  return { callId: tool, tool, status: proofText(output.status), output: JSON.stringify(output) };
+}
+
+function stringifyToolOutput(value: unknown) {
+  if (typeof value === 'string') return value;
+  try {
+    return JSON.stringify(value ?? null);
+  } catch {
+    return proofText(value);
+  }
 }
 
 function arrayOfStrings(value: unknown): string[] {

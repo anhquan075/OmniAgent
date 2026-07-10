@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
+from uuid import UUID
 
 from app.services.casper.contract import CasperDecisionContractService
+from app.services.casper.ledger import CasperDecisionLedger
 from app.services.casper.runtime import CasperAgentRuntimeService
 from app.services.mcp.tools import McpToolRegistry
 
@@ -113,3 +115,22 @@ def test_autonomous_cycle_derives_restart_stable_semantic_decision_id(tmp_path, 
 
     assert first["decision"]["decisionId"] == second["decision"]["decisionId"]
     assert first["decision"]["decisionId"].startswith("rwa-collateral-")
+
+
+def test_manual_runtime_persists_normalized_cycle_context_and_safe_preflight(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("CASPER_DECISION_LEDGER_PATH", str(tmp_path / "dashboard-log"))
+    result = CasperAgentRuntimeService.run_autonomous_cycle({"decisionId": "manual-cycle"})
+    context = result["cycle"]["cycleContext"]
+
+    UUID(context["cycleId"])
+    assert context["origin"] == "manual"
+    event = CasperDecisionLedger.get_ledger_summary(limit=1)["events"][0]
+    assert event["payload"]["cycle"]["cycleContext"] == context
+    assert event["payload"]["cycle"]["toolsUsed"] == result["cycle"]["toolsUsed"]
+    historical_preflight = event["payload"]["preflight"]
+    assert "rpcUrl" not in historical_preflight
+    assert "account" not in historical_preflight
+    assert "cliCommand" not in str(historical_preflight)

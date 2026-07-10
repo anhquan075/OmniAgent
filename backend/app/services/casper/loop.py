@@ -6,6 +6,8 @@ from typing import Any
 import structlog
 
 from app.core.settings import get_settings
+from app.services.casper.cycle_context import cycle_payload, new_cycle_context
+from app.services.casper.ledger import CasperDecisionLedger
 from app.services.casper.readback import CasperReadbackService
 from app.services.casper.rwa_evidence import fetch_treasury_yield
 from app.services.casper.runtime import CasperAgentRuntimeService
@@ -105,15 +107,41 @@ async def poll_deploy_status(deploy_hash: str) -> str:
     return "unconfirmed"
 
 
-async def auto_readback(decision_id: str, deploy_hash: str) -> dict[str, Any] | None:
+async def auto_readback(
+    decision_id: str,
+    deploy_hash: str,
+    cycle_context: dict[str, str] | None = None,
+) -> dict[str, Any] | None:
     try:
+        args: dict[str, Any] = {
+            "decisionId": decision_id,
+            "deployHash": deploy_hash,
+        }
+        if cycle_context:
+            args["cycleContext"] = cycle_context
         return await asyncio.to_thread(
             CasperReadbackService.record_readback,
-            {"decisionId": decision_id, "deployHash": deploy_hash},
+            args,
         )
     except Exception as exc:
         logger.error("casper_agent_loop_readback_error", error=str(exc)[:200])
         return None
+
+
+def record_scheduled_cycle_failure(
+    cycle_context: dict[str, str],
+    error: BaseException,
+    blocker: str = "casper_agent_cycle_failed",
+) -> dict[str, Any]:
+    return CasperDecisionLedger.append_event({
+        "eventType": "casper_agent_cycle_failed",
+        "action": "observe",
+        "payload": {
+            "cycle": cycle_payload(cycle_context, ["casper_rwa_evidence"]),
+            "hardBlockers": [blocker],
+            "error": str(error)[:200],
+        },
+    })
 
 
 async def agent_loop() -> None:
@@ -121,6 +149,7 @@ async def agent_loop() -> None:
     while loop_state.running:
         loop_state.next_cycle_at = None
         loop_state.cycle_in_progress = True
+        cycle_context = new_cycle_context("scheduled_loop")
         try:
             evidence = await fetch_treasury_yield()
             if not loop_state.running:
@@ -130,6 +159,7 @@ async def agent_loop() -> None:
                 break
             cycle_args: dict[str, Any] = {
                 "evidence": evidence,
+                "cycleContext": cycle_context,
             }
             live_cycle = (
                 not loop_state.dry_run
@@ -173,7 +203,11 @@ async def agent_loop() -> None:
                     deploy_status = await poll_deploy_status(str(deploy_hash))
                     loop_state.last_deploy_status = deploy_status
                     if deploy_status == "confirmed":
-                        readback_result = await auto_readback(decision_id, str(deploy_hash))
+                        readback_result = await auto_readback(
+                            decision_id,
+                            str(deploy_hash),
+                            cycle_context,
+                        )
                         loop_state.last_readback_verified = bool(
                             readback_result and readback_result.get("verified")
                         )
@@ -190,6 +224,13 @@ async def agent_loop() -> None:
                     loop_state.last_readback_at = datetime.now(timezone.utc).isoformat()
                     logger.error("casper_agent_loop_auto_readback_error", error=str(exc)[:200])
         except asyncio.TimeoutError:
+            record_scheduled_cycle_failure(
+                cycle_context,
+                TimeoutError(
+                    f"cycle_timeout_after_{get_settings().casper_agent_loop_cycle_timeout_sec}s"
+                ),
+                "casper_agent_cycle_timeout",
+            )
             loop_state.error_count += 1
             loop_state.consecutive_errors += 1
             loop_state.last_error = f"cycle_timeout_after_{get_settings().casper_agent_loop_cycle_timeout_sec}s"
@@ -199,6 +240,7 @@ async def agent_loop() -> None:
                 logger.error("casper_agent_loop_auto_paused", errors=loop_state.consecutive_errors)
                 break
         except Exception as exc:
+            record_scheduled_cycle_failure(cycle_context, exc)
             loop_state.error_count += 1
             loop_state.consecutive_errors += 1
             loop_state.last_error = str(exc)[:200]

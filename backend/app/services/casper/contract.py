@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.core.settings import get_settings
+from app.services.casper.cycle_context import cycle_payload, normalize_cycle_context
+from app.services.casper.cycle_history import CasperCycleHistoryService
 from app.services.casper.hashing import sha256_json, sha256_text
 from app.services.casper.ledger import CasperDecisionLedger
 from app.services.casper.payload_policy import resolve_policy_gate
@@ -67,6 +69,11 @@ class CasperDecisionContractService:
     @staticmethod
     def record_decision(args: dict[str, Any]) -> dict[str, Any]:
         submit = bool(args.get("submit"))
+        cycle_context = normalize_cycle_context(args.get("cycleContext"), fallback_origin="manual")
+        tools_used = args.get("toolsUsed") if isinstance(args.get("toolsUsed"), list) else [
+            "casper_live_preflight",
+            "casper_record_decision",
+        ]
         decision = CasperDecisionContractService.build_decision_payload(args)
         requested_decision_id = decision["decisionId"]
         if submit:
@@ -196,6 +203,8 @@ class CasperDecisionContractService:
             event_type,
             submit_result,
             submission_guard,
+            preflight,
+            cycle_payload(cycle_context, tools_used),
         )
         return {
             "network": "casper",
@@ -259,6 +268,8 @@ class CasperDecisionContractService:
         event_type: str,
         submit_result: dict[str, Any] | None = None,
         submission_guard: dict[str, Any] | None = None,
+        preflight: dict[str, Any] | None = None,
+        cycle: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return CasperDecisionLedger.append_event({
             "eventType": event_type,
@@ -271,6 +282,8 @@ class CasperDecisionContractService:
                 "submitStatus": (submit_result or {}).get("status"),
                 "paymentAmountMotes": (submit_result or {}).get("paymentAmountMotes"),
                 "submissionGuard": submission_guard or {},
+                "preflight": CasperCycleHistoryService.sanitize_preflight(preflight),
+                "cycle": cycle or {},
             },
         })
 

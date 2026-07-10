@@ -9,19 +9,51 @@ import ReceiptLedgerTab from './receipt-ledger-tab';
 
 export default function CasperAgentDashboard() {
   const [snapshot, setSnapshot] = useState<DashboardSnapshot>(fallbackSnapshot);
+  const [cycleHistory, setCycleHistory] = useState<Payload>({ cycles: [], count: 0, total: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshedAt, setRefreshedAt] = useState('');
   const [streamClockMs, setStreamClockMs] = useState(() => Date.now());
   const hasLiveSnapshotRef = useRef(false);
+  const observedLedgerVersionRef = useRef<string | null | undefined>(undefined);
+  const cycleHistoryRequestRef = useRef(0);
+
+  const loadCycleHistory = useCallback(async () => {
+    const requestId = cycleHistoryRequestRef.current + 1;
+    cycleHistoryRequestRef.current = requestId;
+    try {
+      const response = await apiFetch('/api/dashboard/cycles?limit=8');
+      if (!response.ok) throw new Error(`cycles ${response.status}`);
+      const payload = await response.json();
+      if (cycleHistoryRequestRef.current === requestId) {
+        setCycleHistory(payload && typeof payload === 'object' ? payload : { cycles: [], count: 0, total: 0 });
+      }
+    } catch (err) {
+      if (cycleHistoryRequestRef.current === requestId) {
+        console.warn('Casper cycle history unavailable', err);
+      }
+    }
+  }, []);
 
   const applySnapshot = useCallback((nextSnapshot: DashboardSnapshot) => {
+    const rawLedgerVersion = nextSnapshot.casperProofBundle?.ledger?.latestEventId
+      ?? nextSnapshot.casperProofBundle?.ledger?.eventCount;
+    const nextLedgerVersion = rawLedgerVersion === undefined || rawLedgerVersion === null
+      ? null
+      : String(rawLedgerVersion);
+    if (observedLedgerVersionRef.current === undefined) {
+      observedLedgerVersionRef.current = nextLedgerVersion;
+      void loadCycleHistory();
+    } else if (observedLedgerVersionRef.current !== nextLedgerVersion) {
+      observedLedgerVersionRef.current = nextLedgerVersion;
+      void loadCycleHistory();
+    }
     setSnapshot(nextSnapshot);
     setRefreshedAt(new Date().toISOString());
     setError(null);
     setLoading(false);
     hasLiveSnapshotRef.current = true;
-  }, []);
+  }, [loadCycleHistory]);
 
   const loadSnapshot = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     if (!silent) setLoading(true);
@@ -39,6 +71,7 @@ export default function CasperAgentDashboard() {
 
   useEffect(() => {
     void loadSnapshot();
+    void loadCycleHistory();
     let closed = false;
     let source: EventSource | null = null;
     let fallbackInterval: number | null = null;
@@ -86,7 +119,7 @@ export default function CasperAgentDashboard() {
       stopFallbackPolling();
       source?.close();
     };
-  }, [applySnapshot, loadSnapshot]);
+  }, [applySnapshot, loadCycleHistory, loadSnapshot]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setStreamClockMs(Date.now()), 1_000);
@@ -114,6 +147,7 @@ export default function CasperAgentDashboard() {
         cockpit={<CockpitTab
           runtime={{ ...runtime, loopStatus }}
           bundle={liveBundle}
+          cycleHistory={cycleHistory}
           streamMeta={streamMeta}
           streamClockMs={streamClockMs}
           refreshedAt={refreshedAt}

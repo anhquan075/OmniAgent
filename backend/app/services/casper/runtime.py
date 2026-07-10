@@ -2,6 +2,7 @@ from typing import Any
 
 from app.services.casper.account import CasperAccountService
 from app.services.casper.contract import CasperDecisionContractService
+from app.services.casper.cycle_context import normalize_cycle_context
 from app.services.casper.guardrails import CasperGuardrailService
 from app.services.casper.preflight import CasperPreflightService
 from app.services.casper.proof_bundle import CasperProofBundleService
@@ -11,6 +12,13 @@ from app.services.casper.x402 import CasperX402EvidenceService
 
 
 class CasperAgentRuntimeService:
+    CYCLE_TOOLS = [
+        "casper_rwa_evidence",
+        "casper_guardrails",
+        "casper_live_preflight",
+        "casper_record_decision",
+    ]
+
     @staticmethod
     def get_runtime_snapshot(args: dict[str, Any] | None = None) -> dict[str, Any]:
         account = CasperAccountService.get_account({})
@@ -45,6 +53,7 @@ class CasperAgentRuntimeService:
 
     @staticmethod
     def run_autonomous_cycle(args: dict[str, Any]) -> dict[str, Any]:
+        cycle_context = normalize_cycle_context(args.get("cycleContext"), fallback_origin="manual")
         evidence_args = {**args}
         evidence = CasperRwaEvidenceService.build_evidence_bundle(evidence_args)
         evidence_args["evidenceBundle"] = evidence
@@ -72,6 +81,8 @@ class CasperAgentRuntimeService:
             "guardrails": guardrails,
             "policyTemplate": guardrails.get("policyTemplate"),
             "x402": x402,
+            "cycleContext": cycle_context,
+            "toolsUsed": CasperAgentRuntimeService.CYCLE_TOOLS,
             "submit": bool(args.get("submit")),
             "iUnderstandThisSubmitsCasperTestnet": bool(
                 args.get("iUnderstandThisSubmitsCasperTestnet")
@@ -85,12 +96,8 @@ class CasperAgentRuntimeService:
             **result,
             "cycle": {
                 "agent": "casper-risk-sentinel",
-                "toolsUsed": [
-                    "casper_rwa_evidence",
-                    "casper_guardrails",
-                    "casper_live_preflight",
-                    "casper_record_decision",
-                ],
+                "cycleContext": cycle_context,
+                "toolsUsed": CasperAgentRuntimeService.CYCLE_TOOLS,
                 "evidence": evidence,
                 "guardrails": guardrails,
                 "x402": x402,

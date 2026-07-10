@@ -1,4 +1,5 @@
 import asyncio
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -78,10 +79,19 @@ async def test_auto_readback_calls_record_readback_with_decision_and_deploy(monk
         fake_readback,
     )
 
-    result = await auto_readback("decision-1", "f" * 64)
+    cycle_context = {
+        "cycleId": "cycle-1",
+        "origin": "scheduled_loop",
+        "startedAt": "2026-07-10T10:00:00+00:00",
+    }
+    result = await auto_readback("decision-1", "f" * 64, cycle_context)
 
     assert result == {"verified": True}
-    assert captured == {"decisionId": "decision-1", "deployHash": "f" * 64}
+    assert captured == {
+        "decisionId": "decision-1",
+        "deployHash": "f" * 64,
+        "cycleContext": cycle_context,
+    }
 
 
 @pytest.mark.asyncio
@@ -140,7 +150,12 @@ async def test_agent_loop_clears_stale_readback_on_failed_readback(monkeypatch) 
     async def fake_poll(_: str) -> str:
         return "confirmed"
 
-    async def fake_readback(_: str, __: str) -> dict[str, object] | None:
+    async def fake_readback(
+        _: str,
+        __: str,
+        cycle_context: dict[str, str],
+    ) -> dict[str, object] | None:
+        assert cycle_context["origin"] == "scheduled_loop"
         return None
 
     async def stop_after_cycle(_: float) -> None:
@@ -193,6 +208,116 @@ async def test_agent_loop_pauses_without_retry_on_unknown_submit_outcome(monkeyp
     assert loop_state.running is False
     assert loop_state.cycle_count == 1
     assert loop_state.last_error == "casper_submission_outcome_unknown"
+
+
+@pytest.mark.asyncio
+async def test_agent_loop_records_one_sanitized_pre_runtime_failure(tmp_path, monkeypatch) -> None:
+    from app.services.casper.ledger import CasperDecisionLedger
+
+    reset_loop_state()
+    loop_state.running = True
+    loop_state.interval_sec = 0
+    loop_state.dry_run = True
+    monkeypatch.setenv("CASPER_DECISION_LEDGER_PATH", str(tmp_path / "cycle-failure.sqlite3"))
+    get_settings.cache_clear()
+
+    async def failed_evidence() -> dict[str, object]:
+        raise RuntimeError("provider fetch failed: " + "x" * 500)
+
+    async def stop_after_failure(_: float) -> None:
+        loop_state.running = False
+
+    def runtime_must_not_run(_: dict[str, object]) -> dict[str, object]:
+        raise AssertionError("runtime should not start after evidence failure")
+
+    monkeypatch.setattr("app.services.casper.loop.fetch_treasury_yield", failed_evidence)
+    monkeypatch.setattr(
+        "app.services.casper.loop.CasperAgentRuntimeService.run_autonomous_cycle",
+        runtime_must_not_run,
+    )
+    monkeypatch.setattr("app.services.casper.loop.asyncio.sleep", stop_after_failure)
+
+    await agent_loop()
+
+    events = CasperDecisionLedger.get_ledger_summary(limit=10)["events"]
+    assert len(events) == 1
+    assert events[0]["eventType"] == "casper_agent_cycle_failed"
+    assert events[0]["payload"]["hardBlockers"] == ["casper_agent_cycle_failed"]
+    assert len(events[0]["payload"]["error"]) == 200
+    context = events[0]["payload"]["cycle"]["cycleContext"]
+    assert context["origin"] == "scheduled_loop"
+    assert context["cycleId"]
+
+
+@pytest.mark.asyncio
+async def test_agent_loop_records_runtime_failure(tmp_path, monkeypatch) -> None:
+    from app.services.casper.ledger import CasperDecisionLedger
+
+    reset_loop_state()
+    loop_state.running = True
+    loop_state.interval_sec = 0
+    loop_state.dry_run = True
+    monkeypatch.setenv("CASPER_DECISION_LEDGER_PATH", str(tmp_path / "runtime-failure.sqlite3"))
+    get_settings.cache_clear()
+
+    async def evidence() -> dict[str, object]:
+        return {"source": "test"}
+
+    def failed_runtime(_: dict[str, object]) -> dict[str, object]:
+        raise RuntimeError("guardrail runtime failed")
+
+    async def stop_after_failure(_: float) -> None:
+        loop_state.running = False
+
+    monkeypatch.setattr("app.services.casper.loop.fetch_treasury_yield", evidence)
+    monkeypatch.setattr(
+        "app.services.casper.loop.CasperAgentRuntimeService.run_autonomous_cycle",
+        failed_runtime,
+    )
+    monkeypatch.setattr("app.services.casper.loop.asyncio.sleep", stop_after_failure)
+
+    await agent_loop()
+
+    events = CasperDecisionLedger.get_ledger_summary(limit=10)["events"]
+    assert len(events) == 1
+    assert events[0]["eventType"] == "casper_agent_cycle_failed"
+    assert events[0]["payload"]["hardBlockers"] == ["casper_agent_cycle_failed"]
+
+
+@pytest.mark.asyncio
+async def test_agent_loop_records_timeout_failure(tmp_path, monkeypatch) -> None:
+    from app.services.casper.ledger import CasperDecisionLedger
+
+    reset_loop_state()
+    loop_state.running = True
+    loop_state.interval_sec = 0
+    loop_state.dry_run = True
+    monkeypatch.setenv("CASPER_DECISION_LEDGER_PATH", str(tmp_path / "timeout-failure.sqlite3"))
+    monkeypatch.setenv("CASPER_AGENT_LOOP_CYCLE_TIMEOUT_SEC", "0.01")
+    get_settings.cache_clear()
+
+    async def evidence() -> dict[str, object]:
+        return {"source": "test"}
+
+    def slow_runtime(_: dict[str, object]) -> dict[str, object]:
+        time.sleep(0.05)
+        return {"status": "dry_run"}
+
+    async def stop_after_timeout(_: float) -> None:
+        loop_state.running = False
+
+    monkeypatch.setattr("app.services.casper.loop.fetch_treasury_yield", evidence)
+    monkeypatch.setattr(
+        "app.services.casper.loop.CasperAgentRuntimeService.run_autonomous_cycle",
+        slow_runtime,
+    )
+    monkeypatch.setattr("app.services.casper.loop.asyncio.sleep", stop_after_timeout)
+
+    await agent_loop()
+
+    events = CasperDecisionLedger.get_ledger_summary(limit=10)["events"]
+    assert len(events) == 1
+    assert events[0]["payload"]["hardBlockers"] == ["casper_agent_cycle_timeout"]
 
 
 @pytest.mark.asyncio

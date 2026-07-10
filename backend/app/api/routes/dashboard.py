@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 
 from app.core.security import require_session, require_operator
 from app.core.settings import get_settings
+from app.services.casper.cycle_history import CasperCycleHistoryService
 from app.services.casper.ledger import CasperDecisionLedger
 from app.services.casper.loop import agent_loop, get_loop_status, loop_state, start_loop, stop_loop
 from app.services.casper.proof_bundle import CasperProofBundleService
@@ -128,15 +129,18 @@ async def dashboard_receipts(limit: int = 20, offset: int = 0) -> dict[str, obje
     selected_offset = max(0, offset)
     ledger = await asyncio.to_thread(
         CasperDecisionLedger.get_ledger_summary,
-        selected_limit,
-        selected_offset,
+        get_settings().casper_ledger_max_events,
     )
-    receipts = [
+    all_receipts = [
         _receipt_from_event(event)
         for event in ledger.get("events", [])
         if isinstance(event, dict)
+        and isinstance(event.get("payload"), dict)
+        and isinstance(event["payload"].get("decision"), dict)
+        and bool(event["payload"]["decision"])
     ]
-    total = int(ledger.get("eventCount") or 0)
+    total = len(all_receipts)
+    receipts = all_receipts[selected_offset:selected_offset + selected_limit]
     return {
         "network": "casper",
         "receipts": receipts,
@@ -147,6 +151,15 @@ async def dashboard_receipts(limit: int = 20, offset: int = 0) -> dict[str, obje
         "hasNext": selected_offset + len(receipts) < total,
         "hasPrevious": selected_offset > 0,
     }
+
+
+@router.get("/dashboard/cycles", dependencies=[Depends(require_session)])
+async def dashboard_cycles(limit: int = 8, offset: int = 0) -> dict[str, object]:
+    return await asyncio.to_thread(
+        CasperCycleHistoryService.get_cycle_history,
+        limit,
+        offset,
+    )
 
 
 @router.get("/dashboard/loop", dependencies=[Depends(require_session)])

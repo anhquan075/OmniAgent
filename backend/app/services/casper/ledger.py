@@ -27,12 +27,12 @@ class CasperDecisionLedger:
         normalized = CasperDecisionLedger._normalize_event(event)
         with CasperDecisionLedger._connect() as db:
             CasperDecisionLedger._ensure_schema(db)
-            db.execute(
+            cursor = db.execute(
                 "INSERT INTO events (created_at, event_json) VALUES (?, ?)",
                 (normalized["createdAt"], json.dumps(normalized, sort_keys=True, default=str)),
             )
             CasperDecisionLedger._rotate_if_needed(db)
-        return normalized
+        return {**normalized, "eventId": int(cursor.lastrowid)}
 
     @staticmethod
     def replace_events(events: list[dict[str, Any]]) -> None:
@@ -63,7 +63,7 @@ class CasperDecisionLedger:
             CasperDecisionLedger._ensure_schema(db)
             rows = db.execute(
                 """
-                SELECT event_json FROM events
+                SELECT id, event_json FROM events
                 ORDER BY id DESC
                 LIMIT ?
                 """,
@@ -72,11 +72,11 @@ class CasperDecisionLedger:
         events: list[dict[str, Any]] = []
         for row in reversed(rows):
             try:
-                event = json.loads(row[0])
+                event = json.loads(row[1])
             except (TypeError, ValueError):
                 continue
             if isinstance(event, dict):
-                events.append(event)
+                events.append({**event, "eventId": int(row[0])})
         return events
 
     @staticmethod
