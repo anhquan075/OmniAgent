@@ -157,6 +157,22 @@ class CasperCliCommand:
         ]
 
     @staticmethod
+    def query_latest_decision_id_command(state_root_hash: str) -> list[str]:
+        settings = get_settings()
+        return [
+            settings.casper_client_path,
+            "query-global-state",
+            "--node-address",
+            CasperCliCommand.node_address(),
+            "--state-root-hash",
+            state_root_hash,
+            "--key",
+            CasperCliCommand.query_key(str(settings.casper_decision_contract_hash)),
+            "-q",
+            "latest_decision_id",
+        ]
+
+    @staticmethod
     def query_decision_receipt_command(state_root_hash: str, decision_id: str) -> list[str]:
         settings = get_settings()
         safe_decision_id = decision_id.replace("'", "").strip()

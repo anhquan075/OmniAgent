@@ -26,6 +26,21 @@ def evidence_bundle() -> dict[str, object]:
     )
 
 
+def test_receipt_value_parser_recovers_chain_dedupe_fields() -> None:
+    value = (
+        "decision-1|approve|22|sha256:proof|sha256:rationale|sha256:source|"
+        "2026-07-10T16:20:27+00:00|approved||sha256:guard"
+    )
+
+    parsed = CasperDecisionReceiptService.parse_receipt_value(value)
+
+    assert parsed["decisionId"] == "decision-1"
+    assert parsed["sourceHash"] == "sha256:source"
+    assert parsed["timestamp"] == "2026-07-10T16:20:27+00:00"
+    assert parsed["riskScore"] == 22
+    assert CasperDecisionReceiptService.parse_receipt_value("broken") == {}
+
+
 def test_decision_payload_contains_receipt_graph_fields() -> None:
     evidence = evidence_bundle()
     payload = CasperDecisionContractService.build_decision_payload(

@@ -8,6 +8,7 @@ from app.services.casper.payload_policy import resolve_policy_gate
 from app.services.casper.preflight import CasperPreflightService
 from app.services.casper.receipt import CasperDecisionReceiptService
 from app.services.casper.submitter import CasperCliSubmitter
+from app.services.casper.submission_guard import CasperSubmissionGuard
 
 
 class CasperDecisionContractService:
@@ -65,9 +66,19 @@ class CasperDecisionContractService:
 
     @staticmethod
     def record_decision(args: dict[str, Any]) -> dict[str, Any]:
-        decision = CasperDecisionContractService.build_decision_payload(args)
-        preflight = CasperPreflightService.get_live_preflight({})
         submit = bool(args.get("submit"))
+        decision = CasperDecisionContractService.build_decision_payload(args)
+        requested_decision_id = decision["decisionId"]
+        if submit:
+            semantic_id = CasperSubmissionGuard.semantic_decision_id(decision)
+            if requested_decision_id != semantic_id:
+                decision = CasperDecisionContractService.build_decision_payload({
+                    **args,
+                    "decisionId": semantic_id,
+                    "decision_id": semantic_id,
+                    "receiptId": semantic_id,
+                })
+        preflight = CasperPreflightService.get_live_preflight({})
         live_flag = bool(
             args.get("iUnderstandThisSubmitsCasperTestnet")
             or args.get("i_understand_this_submits_casper_testnet")
@@ -77,16 +88,73 @@ class CasperDecisionContractService:
             blockers.append("casper_live_submit_flag_missing")
         if submit and decision.get("policyGate") != "approved":
             blockers.append("casper_policy_gate_blocked")
+        if submit:
+            blockers.extend(CasperDecisionContractService.live_payload_blockers(decision))
         submit_result: dict[str, Any] = {}
+        chain_guard: dict[str, Any] = {
+            "allowed": False,
+            "status": "not_evaluated",
+            "hardBlockers": [],
+            "metadata": {},
+        }
+        submission_guard: dict[str, Any] = {
+            "allowed": False,
+            "reserved": False,
+            "status": "not_evaluated",
+            "hardBlockers": [],
+            "metadata": {},
+        }
+        intent_key = ""
         submitted = False
         event_type = "casper_decision_dry_run"
         if submit and blockers:
             event_type = "casper_decision_live_submit_blocked"
         if submit and not blockers:
-            submit_result = CasperCliSubmitter.submit_decision(decision)
+            try:
+                chain_guard = CasperSubmissionGuard.check_chain_state(decision)
+            except Exception:
+                chain_guard = {
+                    "allowed": False,
+                    "status": "blocked",
+                    "hardBlockers": ["casper_chain_submission_guard_unavailable"],
+                    "metadata": {},
+                }
+            blockers.extend(chain_guard.get("hardBlockers") or [])
+        if submit and not blockers:
+            try:
+                submission_guard = CasperSubmissionGuard.reserve(decision)
+            except Exception:
+                submission_guard = {
+                    "allowed": False,
+                    "reserved": False,
+                    "status": "blocked",
+                    "hardBlockers": ["casper_submission_guard_unavailable"],
+                    "metadata": {},
+                }
+            blockers.extend(submission_guard.get("hardBlockers") or [])
+            intent_key = str(submission_guard.get("idempotencyKey") or "")
+        if submit and blockers:
+            event_type = "casper_decision_live_submit_blocked"
+        if submit and not blockers:
+            try:
+                submit_result = CasperCliSubmitter.submit_decision(decision)
+            except Exception as exc:
+                submit_result = {
+                    "submitted": False,
+                    "status": "outcome_unknown",
+                    "outcomeUnknown": True,
+                    "hardBlockers": ["casper_cli_submit_outcome_unknown"],
+                }
+                if intent_key:
+                    CasperSubmissionGuard.mark_outcome_unknown(intent_key, str(exc)[:200])
             blockers.extend(submit_result.get("hardBlockers") or [])
             submitted = bool(submit_result.get("submitted"))
             if submitted:
+                guard_transition = CasperSubmissionGuard.mark_submitted(
+                    intent_key,
+                    str(submit_result.get("deployHash") or submit_result.get("transactionHash") or ""),
+                )
+                submission_guard = {**submission_guard, "transition": guard_transition, "status": "submitted"}
                 event_type = "casper_decision_submitted"
                 decision = {
                     **decision,
@@ -97,27 +165,48 @@ class CasperDecisionContractService:
                     "deployConfirmed": False,
                 }
                 decision["decisionReceipt"] = CasperDecisionReceiptService.receipt_from_decision(decision)
+            elif submit_result.get("outcomeUnknown"):
+                guard_transition = CasperSubmissionGuard.mark_outcome_unknown(
+                    intent_key,
+                    str((submit_result.get("hardBlockers") or ["unknown"])[0]),
+                )
+                submission_guard = {**submission_guard, "transition": guard_transition, "status": "outcome_unknown"}
+                event_type = "casper_decision_submission_outcome_unknown"
             else:
+                guard_transition = CasperSubmissionGuard.mark_failed(
+                    intent_key,
+                    str((submit_result.get("hardBlockers") or ["submit_failed"])[0]),
+                )
+                submission_guard = {**submission_guard, "transition": guard_transition, "status": "failed"}
                 event_type = "casper_decision_live_submit_failed"
         status = (
             str(submit_result.get("status") or "submitted")
             if submitted
-            else ("blocked" if submit else ("dry_run_blocked" if blockers else "dry_run"))
+            else (
+                "outcome_unknown"
+                if submit_result.get("outcomeUnknown")
+                else ("blocked" if submit else ("dry_run_blocked" if blockers else "dry_run"))
+            )
         )
+        blockers = list(dict.fromkeys(blockers))
         event = CasperDecisionContractService.append_decision_event(
             decision,
             blockers,
             submitted,
             event_type,
             submit_result,
+            submission_guard,
         )
         return {
             "network": "casper",
             "status": status,
             "submitted": submitted,
             "requiresLiveFlag": True,
+            "requestedDecisionId": requested_decision_id,
             "decision": decision,
             "preflight": preflight,
+            "chainSubmissionGuard": chain_guard,
+            "submissionGuard": submission_guard,
             "hardBlockers": blockers,
             "deployHash": submit_result.get("deployHash"),
             "transactionHash": submit_result.get("transactionHash"),
@@ -169,6 +258,7 @@ class CasperDecisionContractService:
         submitted: bool,
         event_type: str,
         submit_result: dict[str, Any] | None = None,
+        submission_guard: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return CasperDecisionLedger.append_event({
             "eventType": event_type,
@@ -179,6 +269,8 @@ class CasperDecisionContractService:
                 "hardBlockers": blockers,
                 "submitted": submitted,
                 "submitStatus": (submit_result or {}).get("status"),
+                "paymentAmountMotes": (submit_result or {}).get("paymentAmountMotes"),
+                "submissionGuard": submission_guard or {},
             },
         })
 
@@ -194,3 +286,24 @@ class CasperDecisionContractService:
     @staticmethod
     def sha256_hex(value: str) -> str:
         return sha256_text(value)
+
+    @staticmethod
+    def live_payload_blockers(decision: dict[str, Any]) -> list[str]:
+        settings = get_settings()
+        limits = {
+            "decisionId": 96,
+            "action": 48,
+            "proofDigest": 96,
+            "rationaleHash": 96,
+            "sourceHash": 96,
+            "timestamp": 48,
+            "policyGate": 32,
+            "agentAccountHash": 96,
+            "guardrailHash": 96,
+        }
+        if any(len(str(decision.get(field) or "").encode("utf-8")) > limit for field, limit in limits.items()):
+            return ["casper_decision_payload_too_large"]
+        receipt_value = CasperDecisionReceiptService.receipt_value(decision)
+        if len(receipt_value.encode("utf-8")) > settings.casper_live_max_receipt_bytes:
+            return ["casper_decision_payload_too_large"]
+        return []

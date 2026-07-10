@@ -5,6 +5,7 @@ import pytest
 
 from app.api.routes.dashboard import loop_start, loop_stop
 from app.core.settings import get_settings
+from app.main import casper_lifespan
 from app.services.casper.loop import (
     LoopState,
     agent_loop,
@@ -12,6 +13,7 @@ from app.services.casper.loop import (
     get_loop_status,
     loop_state,
     poll_deploy_status,
+    stop_loop as stop_agent_loop,
 )
 
 
@@ -162,6 +164,38 @@ async def test_agent_loop_clears_stale_readback_on_failed_readback(monkeypatch) 
 
 
 @pytest.mark.asyncio
+async def test_agent_loop_pauses_without_retry_on_unknown_submit_outcome(monkeypatch) -> None:
+    reset_loop_state()
+    loop_state.running = True
+    loop_state.interval_sec = 300
+    loop_state.dry_run = False
+    monkeypatch.setenv("CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED", "true")
+    get_settings.cache_clear()
+
+    async def fake_evidence() -> list[dict[str, object]]:
+        return [{"source": "test"}]
+
+    def fake_cycle(_: dict[str, object]) -> dict[str, object]:
+        return {
+            "status": "outcome_unknown",
+            "decision": {"decisionId": "semantic-id"},
+            "submissionGuard": {"status": "outcome_unknown"},
+        }
+
+    monkeypatch.setattr("app.services.casper.loop.fetch_treasury_yield", fake_evidence)
+    monkeypatch.setattr(
+        "app.services.casper.loop.CasperAgentRuntimeService.run_autonomous_cycle",
+        fake_cycle,
+    )
+
+    await agent_loop()
+
+    assert loop_state.running is False
+    assert loop_state.cycle_count == 1
+    assert loop_state.last_error == "casper_submission_outcome_unknown"
+
+
+@pytest.mark.asyncio
 async def test_loop_start_route_creates_and_stop_route_cancels_task(monkeypatch) -> None:
     reset_loop_state()
     request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace()))
@@ -182,3 +216,92 @@ async def test_loop_start_route_creates_and_stop_route_cancels_task(monkeypatch)
     assert stop_status["running"] is False
     assert request.app.state.loop_task is None
     assert task.cancelled() is True
+
+
+@pytest.mark.asyncio
+async def test_loop_stop_does_not_cancel_in_flight_submission() -> None:
+    reset_loop_state()
+    release = asyncio.Event()
+
+    async def in_flight_cycle() -> None:
+        await release.wait()
+
+    task = asyncio.create_task(in_flight_cycle())
+    request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(loop_task=task)))
+    loop_state.running = True
+    loop_state.cycle_in_progress = True
+
+    status = await loop_stop(request)
+
+    assert status["running"] is False
+    assert status["stopping"] is True
+    assert status["cycleInProgress"] is True
+    assert task.done() is False
+
+    loop_state.cycle_in_progress = False
+    loop_state.stopping = False
+    release.set()
+    await task
+
+
+@pytest.mark.asyncio
+async def test_stop_during_evidence_fetch_prevents_late_live_submit(monkeypatch) -> None:
+    reset_loop_state()
+    loop_state.running = True
+    loop_state.interval_sec = 21_600
+    loop_state.dry_run = False
+    evidence_started = asyncio.Event()
+    release_evidence = asyncio.Event()
+    runtime_calls: list[dict[str, object]] = []
+    monkeypatch.setenv("CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED", "true")
+    get_settings.cache_clear()
+
+    async def delayed_evidence() -> dict[str, object]:
+        evidence_started.set()
+        await release_evidence.wait()
+        return {"source": "test"}
+
+    def fake_cycle(args: dict[str, object]) -> dict[str, object]:
+        runtime_calls.append(args)
+        return {"status": "submitted"}
+
+    monkeypatch.setattr("app.services.casper.loop.fetch_treasury_yield", delayed_evidence)
+    monkeypatch.setattr(
+        "app.services.casper.loop.CasperAgentRuntimeService.run_autonomous_cycle",
+        fake_cycle,
+    )
+
+    task = asyncio.create_task(agent_loop())
+    await evidence_started.wait()
+    status = stop_agent_loop()
+    release_evidence.set()
+    await task
+
+    assert status["running"] is False
+    assert runtime_calls == []
+    assert loop_state.cycle_in_progress is False
+    assert loop_state.stopping is False
+
+
+@pytest.mark.asyncio
+async def test_lifespan_stops_api_owned_loop_task(monkeypatch) -> None:
+    reset_loop_state()
+    monkeypatch.setenv("CASPER_AGENT_LOOP_ENABLED", "false")
+    get_settings.cache_clear()
+    app = SimpleNamespace(state=SimpleNamespace())
+    release = asyncio.Event()
+
+    async def api_owned_loop() -> None:
+        try:
+            await release.wait()
+        finally:
+            loop_state.running = False
+
+    async with casper_lifespan(app):
+        loop_state.running = True
+        task = asyncio.create_task(api_owned_loop())
+        app.state.loop_task = task
+
+    assert task.cancelled() is True
+    assert app.state.loop_task is None
+    assert loop_state.running is False

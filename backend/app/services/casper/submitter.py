@@ -1,6 +1,7 @@
 from pathlib import Path
 import shutil
 import subprocess
+import threading
 from typing import Any
 
 from app.core.settings import get_settings
@@ -10,6 +11,8 @@ from app.services.casper.client import CasperJsonRpcClient
 
 
 class CasperCliSubmitter:
+    _submit_lock = threading.Lock()
+
     @staticmethod
     def is_client_available() -> bool:
         client_path = get_settings().casper_client_path.strip()
@@ -22,30 +25,43 @@ class CasperCliSubmitter:
     @staticmethod
     def submit_decision(decision: dict[str, Any]) -> dict[str, Any]:
         settings = get_settings()
-        command = CasperCliCommand.build_submit_command(decision)
-        result = CasperCliSubmitter.run_command(command, "casper_cli_submit")
-        if result["hardBlockers"]:
-            return CasperCliSubmitter.failure(result["hardBlockers"][0], result["cliCommand"], result.get("cliOutput"))
+        if not CasperCliSubmitter._submit_lock.acquire(blocking=False):
+            return CasperCliSubmitter.failure("casper_submit_in_progress", [])
+        try:
+            command = CasperCliCommand.build_submit_command(decision)
+            result = CasperCliSubmitter.run_command(command, "casper_cli_submit")
+            if result["hardBlockers"]:
+                return CasperCliSubmitter.failure(
+                    result["hardBlockers"][0],
+                    result["cliCommand"],
+                    result.get("cliOutput"),
+                    outcome_unknown=bool(result.get("outcomeUnknown")),
+                )
 
-        transaction_hash = CasperCliOutput.extract_hash(str(result.get("cliOutput") or ""))
-        if not transaction_hash:
-            return CasperCliSubmitter.failure(
-                "casper_cli_transaction_hash_missing",
-                result["cliCommand"],
-                str(result.get("cliOutput") or ""),
-            )
+            transaction_hash = CasperCliOutput.extract_hash(str(result.get("cliOutput") or ""))
+            if not transaction_hash:
+                return CasperCliSubmitter.failure(
+                    "casper_cli_transaction_hash_missing",
+                    result["cliCommand"],
+                    str(result.get("cliOutput") or ""),
+                    outcome_unknown=True,
+                )
 
-        explorer = settings.casper_explorer_url.rstrip("/")
-        return {
-            "submitted": True,
-            "status": "submitted",
-            "transactionHash": transaction_hash,
-            "deployHash": transaction_hash,
-            "explorerUrl": f"{explorer}/deploy/{transaction_hash}",
-            "transactionExplorerUrl": f"{explorer}/transaction/{transaction_hash}",
-            "hardBlockers": [],
-            "cliCommand": result["cliCommand"],
-        }
+            explorer = settings.casper_explorer_url.rstrip("/")
+            return {
+                "submitted": True,
+                "status": "submitted",
+                "transactionHash": transaction_hash,
+                "deployHash": transaction_hash,
+                "explorerUrl": f"{explorer}/deploy/{transaction_hash}",
+                "transactionExplorerUrl": f"{explorer}/transaction/{transaction_hash}",
+                "hardBlockers": [],
+                "cliCommand": result["cliCommand"],
+                "paymentAmountMotes": settings.casper_payment_amount_motes,
+                "outcomeUnknown": False,
+            }
+        finally:
+            CasperCliSubmitter._submit_lock.release()
 
     @staticmethod
     def get_transaction_status(transaction_hash: str) -> dict[str, Any]:
@@ -160,6 +176,39 @@ class CasperCliSubmitter:
         }
 
     @staticmethod
+    def query_latest_decision_id() -> dict[str, Any]:
+        if not CasperCliSubmitter.is_client_available():
+            return {
+                "status": "blocked",
+                "decisionId": None,
+                "hardBlockers": ["casper_client_missing"],
+            }
+        state = CasperCliSubmitter.get_state_root_hash()
+        if state["hardBlockers"]:
+            return {**state, "decisionId": None}
+        command = CasperCliCommand.query_latest_decision_id_command(str(state["stateRootHash"]))
+        result = CasperCliSubmitter.run_command(command, "casper_cli_latest_decision_id")
+        if result["hardBlockers"]:
+            return {**result, "stateRootHash": state["stateRootHash"], "decisionId": None}
+        parsed = CasperCliOutput.json_data(str(result.get("cliOutput") or ""))
+        raw_decision_id = CasperCliOutput.find_key(parsed, "parsed")
+        if not isinstance(raw_decision_id, str):
+            return {
+                **result,
+                "status": "blocked",
+                "stateRootHash": state["stateRootHash"],
+                "decisionId": None,
+                "hardBlockers": ["casper_latest_decision_id_missing"],
+            }
+        return {
+            **result,
+            "status": "ready",
+            "stateRootHash": state["stateRootHash"],
+            "decisionId": raw_decision_id.strip() or None,
+            "hardBlockers": [],
+        }
+
+    @staticmethod
     def query_decision_receipt(decision_id: str) -> dict[str, Any]:
         if not CasperCliSubmitter.is_client_available():
             return CasperCliSubmitter.with_missing_client_blocker(
@@ -201,15 +250,22 @@ class CasperCliSubmitter:
         except FileNotFoundError:
             return {"status": "blocked", "hardBlockers": ["casper_client_missing"], "cliCommand": redacted}
         except subprocess.TimeoutExpired:
-            return {"status": "blocked", "hardBlockers": [f"{failure_prefix}_timeout"], "cliCommand": redacted}
+            return {
+                "status": "outcome_unknown" if failure_prefix == "casper_cli_submit" else "blocked",
+                "hardBlockers": [f"{failure_prefix}_timeout"],
+                "cliCommand": redacted,
+                "outcomeUnknown": failure_prefix == "casper_cli_submit",
+            }
 
         output = "\n".join(part for part in (completed.stdout, completed.stderr) if part)
         if completed.returncode != 0:
+            outcome_unknown = failure_prefix == "casper_cli_submit"
             return {
-                "status": "blocked",
+                "status": "outcome_unknown" if outcome_unknown else "blocked",
                 "hardBlockers": [f"{failure_prefix}_failed"],
                 "cliCommand": redacted,
                 "cliOutput": output,
+                "outcomeUnknown": outcome_unknown,
             }
         return {"status": "ready", "hardBlockers": [], "cliCommand": redacted, "cliOutput": output}
 
@@ -223,5 +279,19 @@ class CasperCliSubmitter:
         return {**result, "hardBlockers": blockers}
 
     @staticmethod
-    def failure(blocker: str, command: list[str], output: str | None = None) -> dict[str, Any]:
-        return {"submitted": False, "status": "blocked", "hardBlockers": [blocker], "cliCommand": command, "cliOutput": output}
+    def failure(
+        blocker: str,
+        command: list[str],
+        output: str | None = None,
+        *,
+        outcome_unknown: bool = False,
+    ) -> dict[str, Any]:
+        return {
+            "submitted": False,
+            "status": "outcome_unknown" if outcome_unknown else "blocked",
+            "hardBlockers": [blocker],
+            "cliCommand": command,
+            "cliOutput": output,
+            "paymentAmountMotes": get_settings().casper_payment_amount_motes,
+            "outcomeUnknown": outcome_unknown,
+        }

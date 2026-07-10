@@ -13,6 +13,7 @@ from app.core.settings import get_settings
 
 COOKIE_NAME = "omni_api_session"
 SIGNATURE_ALGORITHM = hashlib.sha256
+SESSION_VERSION = 2
 
 
 @dataclass
@@ -26,9 +27,13 @@ def create_session(response: Response, operator_token: str | None = None) -> dic
     settings = get_settings()
     csrf_token = secrets.token_urlsafe(48)
     expires_at = int(time.time() * 1000) + settings.api_session_ttl_ms
-    operator = (
-        not settings.api_operator_token
-        or bool(operator_token and secrets.compare_digest(operator_token, settings.api_operator_token))
+    # An absent operator secret must never turn an anonymous browser session
+    # into an operator. CSRF prevents cross-site requests; it is not operator
+    # authentication and cannot protect paid blockchain actions on its own.
+    operator = bool(
+        settings.api_operator_token
+        and operator_token
+        and secrets.compare_digest(operator_token, settings.api_operator_token)
     )
     session = ApiSession(csrf_token=csrf_token, expires_at=expires_at, operator=operator)
     response.set_cookie(
@@ -46,6 +51,7 @@ def create_session(response: Response, operator_token: str | None = None) -> dic
 def encode_session_cookie(session: ApiSession) -> str:
     payload = json.dumps(
         {
+            "version": SESSION_VERSION,
             "csrfToken": session.csrf_token,
             "expiresAt": session.expires_at,
             "operator": session.operator,
@@ -70,6 +76,8 @@ def decode_session_cookie(cookie_value: str | None) -> ApiSession | None:
         payload = json.loads(base64.urlsafe_b64decode(padded_payload.encode("ascii")))
     except (ValueError, TypeError, json.JSONDecodeError):
         return None
+    if payload.get("version") != SESSION_VERSION:
+        return None
     csrf_token = payload.get("csrfToken")
     expires_at = payload.get("expiresAt")
     if not isinstance(csrf_token, str) or not csrf_token:
@@ -86,8 +94,10 @@ def decode_session_cookie(cookie_value: str | None) -> ApiSession | None:
 
 
 def sign_session_payload(encoded_payload: str) -> str:
+    settings = get_settings()
+    signing_secret = f"{settings.api_session_secret}\0{settings.api_operator_token or 'read-only'}"
     digest = hmac.new(
-        get_settings().api_session_secret.encode("utf-8"),
+        signing_secret.encode("utf-8"),
         encoded_payload.encode("ascii"),
         SIGNATURE_ALGORITHM,
     ).digest()
@@ -111,6 +121,6 @@ def require_operator(
     csrf_token: str | None = Header(default=None, alias="X-CSRF-Token"),
 ) -> ApiSession:
     session = require_session(request, csrf_token)
-    if not session.operator:
+    if not get_settings().api_operator_token or not session.operator:
         raise HTTPException(status_code=403, detail="Operator session is required for this action")
     return session

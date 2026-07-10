@@ -146,3 +146,36 @@ def test_submitter_uses_cli_when_client_is_available(monkeypatch) -> None:
     assert result["stateRootHash"] == "1" * 64
     assert "source" not in result
     assert result["cliCommand"][1] == "get-state-root-hash"
+
+
+def test_receipt_probe_distinguishes_missing_key_from_rpc_failure(monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_DECISION_CONTRACT_HASH", "e" * 64)
+    get_settings.cache_clear()
+    monkeypatch.setattr(
+        CasperJsonRpcClient,
+        "get_state_root_hash_sync",
+        staticmethod(lambda: "f" * 64),
+    )
+    responses = iter([
+        {
+            "error": {
+                "code": -32003,
+                "message": "Query failed",
+                "data": "value was not found in the global state",
+            }
+        },
+        {"error": {"code": -32603, "message": "node unavailable"}},
+    ])
+    monkeypatch.setattr(
+        CasperJsonRpcClient,
+        "sync_call",
+        staticmethod(lambda *_: next(responses)),
+    )
+
+    missing = CasperJsonRpcClient.probe_decision_receipt_sync("semantic-id")
+    unavailable = CasperJsonRpcClient.probe_decision_receipt_sync("semantic-id")
+
+    assert missing["status"] == "missing"
+    assert missing["hardBlockers"] == []
+    assert unavailable["status"] == "blocked"
+    assert unavailable["hardBlockers"] == ["casper_chain_receipt_probe_unavailable"]

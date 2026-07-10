@@ -5,6 +5,7 @@ from app.core.settings import get_settings
 from app.services.casper.ledger import CasperDecisionLedger
 from app.services.casper.receipt import CasperDecisionReceiptService
 from app.services.casper.submitter import CasperCliSubmitter
+from app.services.casper.submission_guard import CasperSubmissionGuard
 
 
 class CasperReadbackService:
@@ -63,6 +64,11 @@ class CasperReadbackService:
             "observedAt": datetime.now(timezone.utc).isoformat(),
         }
         verified = bool(expected and observed == expected and readback["receiptVerified"] and not hard_blockers)
+        guard_transition: dict[str, Any] = {}
+        if verified:
+            guard_transition = CasperSubmissionGuard.mark_confirmed(
+                CasperSubmissionGuard.idempotency_key(decision)
+            )
         updated = {
             **decision,
             "readback": readback,
@@ -76,6 +82,7 @@ class CasperReadbackService:
                 "decision": updated,
                 "hardBlockers": hard_blockers,
                 "readbackVerified": verified,
+                "submissionGuardTransition": guard_transition,
             },
         })
         return {
@@ -87,6 +94,7 @@ class CasperReadbackService:
             "expectedProofDigest": expected or None,
             "observedProofDigest": observed or None,
             "hardBlockers": hard_blockers,
+            "submissionGuardTransition": guard_transition,
             "ledgerEvent": event,
         }
 
@@ -100,17 +108,22 @@ class CasperReadbackService:
             or args.get("transaction_hash")
             or ""
         )
-        ledger = CasperDecisionLedger.get_ledger_summary(limit=20)
+        ledger = CasperDecisionLedger.get_ledger_summary(
+            limit=get_settings().casper_ledger_max_events
+        )
         for event in ledger["events"]:
             payload = event.get("payload") if isinstance(event, dict) else None
             decision = payload.get("decision") if isinstance(payload, dict) else None
             if isinstance(decision, dict):
                 if decision_id and str(decision.get("decisionId")) != decision_id:
                     continue
-                if deploy_hash and deploy_hash not in {
+                known_hashes = {
                     str(decision.get("deployHash") or ""),
                     str(decision.get("transactionHash") or ""),
-                }:
+                } - {""}
+                if deploy_hash and known_hashes and deploy_hash not in known_hashes:
+                    continue
+                if deploy_hash and not known_hashes and not decision_id:
                     continue
                 return dict(decision)
         return {}
