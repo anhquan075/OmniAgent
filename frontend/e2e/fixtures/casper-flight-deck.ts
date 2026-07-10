@@ -30,6 +30,12 @@ export async function routeSnapshot(page: Page, snapshot = linkedSnapshot) {
     contentType: 'application/json',
     body: JSON.stringify(snapshot),
   }));
+  await page.route('**/api/dashboard/stream?limit=8', route => route.fulfill({
+    status: 200,
+    contentType: 'text/event-stream',
+    headers: { 'Cache-Control': 'no-cache' },
+    body: `event: dashboard_snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`,
+  }));
 }
 
 export async function routeReceipts(page: Page, receipts = [olderReceipt, latestReceipt]) {
@@ -41,7 +47,7 @@ export async function routeReceipts(page: Page, receipts = [olderReceipt, latest
 }
 
 export async function routePublicProof(page: Page, x402: Record<string, unknown> = {
-  status: 'ready',
+  status: 'unavailable',
   endpoint: 'https://example.invalid/casper/x402-evidence',
   receipt: null,
 }) {
