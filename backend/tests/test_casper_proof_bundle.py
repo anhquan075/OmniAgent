@@ -155,3 +155,157 @@ def test_casper_proof_bundle_refresh_status_overrides_stored_deploy_status(
     assert bundle["deployStatus"]["hardBlockers"] == []
 
     get_settings.cache_clear()
+
+
+def test_latest_casper_event_skips_cycle_failures_without_decisions() -> None:
+    decision_event = {
+        "eventType": "casper_decision_dry_run",
+        "payload": {"decision": {"decisionId": "latest-decision"}},
+    }
+    failure_event = {
+        "eventType": "casper_agent_cycle_failed",
+        "payload": {"hardBlockers": ["casper_agent_cycle_failed"]},
+    }
+
+    assert CasperProofBundleService.latest_casper_event([
+        failure_event,
+        decision_event,
+    ]) == decision_event
+
+
+def test_proof_bundle_retains_verified_receipt_after_duplicate_blocked_loops(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("CASPER_DECISION_LEDGER_PATH", str(tmp_path / "dashboard-log"))
+    monkeypatch.setenv("CASPER_LEDGER_MAX_EVENTS", "20")
+    get_settings.cache_clear()
+    CasperDecisionLedger.clear_current_log()
+    proof_digest = "sha256:" + "a" * 64
+    deploy_hash = "d" * 64
+    verified_decision = {
+        "decisionId": "same-semantic-decision",
+        "action": "hold",
+        "riskScore": 41,
+        "rationale": "Verified collateral decision.",
+        "proofDigest": proof_digest,
+        "policyGate": "approved",
+        "deployHash": deploy_hash,
+        "deployStatus": {"status": "confirmed", "hardBlockers": []},
+        "readback": {
+            "proofDigest": proof_digest,
+            "source": "casper_json_rpc_query_global_state",
+            "stateRootHash": "state-root",
+            "receiptVerified": True,
+        },
+    }
+    CasperDecisionLedger.append_event({
+        "eventType": "casper_decision_readback_verified",
+        "payload": {"decision": verified_decision, "readbackVerified": True},
+    })
+    for index in range(10):
+        CasperDecisionLedger.append_event({
+            "eventType": "casper_decision_live_submit_blocked",
+            "payload": {
+                "decision": {
+                    "decisionId": "same-semantic-decision",
+                    "action": "hold",
+                    "riskScore": 41,
+                    "rationale": f"Duplicate loop {index}.",
+                    "proofDigest": f"sha256:blocked-{index}",
+                    "policyGate": "approved",
+                },
+                "hardBlockers": ["casper_chain_duplicate_intent"],
+                "submitted": False,
+            },
+        })
+
+    bundle = CasperProofBundleService.get_live_proof_bundle({"limit": 5})
+
+    assert bundle["latestDecision"]["decisionId"] == "same-semantic-decision"
+    assert bundle["latestDecision"]["deployHash"] == deploy_hash
+    assert bundle["deployStatus"]["status"] == "confirmed"
+    assert bundle["readback"]["verified"] is True
+
+    get_settings.cache_clear()
+
+
+def test_latest_casper_event_advances_to_newer_submitted_deploy() -> None:
+    older_verified = {
+        "eventType": "casper_decision_readback_verified",
+        "payload": {
+            "decision": {
+                "decisionId": "older-verified",
+                "deployHash": "a" * 64,
+                "readback": {"proofDigest": "sha256:older"},
+            },
+        },
+    }
+    newer_submitted = {
+        "eventType": "casper_decision_submitted",
+        "payload": {
+            "decision": {
+                "decisionId": "newer-submitted",
+                "deployHash": "b" * 64,
+            },
+        },
+    }
+
+    assert CasperProofBundleService.latest_casper_event([
+        newer_submitted,
+        older_verified,
+    ]) == newer_submitted
+
+
+def test_latest_casper_event_keeps_newer_nonduplicate_decision() -> None:
+    newer_dry_run = {
+        "eventType": "casper_decision_dry_run",
+        "payload": {
+            "decision": {
+                "decisionId": "newer-dry-run",
+                "proofDigest": "sha256:newer",
+            },
+        },
+    }
+    older_verified = {
+        "eventType": "casper_decision_readback_verified",
+        "payload": {
+            "decision": {
+                "decisionId": "older-verified",
+                "deployHash": "a" * 64,
+                "readback": {"proofDigest": "sha256:older"},
+            },
+        },
+    }
+
+    assert CasperProofBundleService.latest_casper_event([
+        newer_dry_run,
+        older_verified,
+    ]) == newer_dry_run
+
+
+def test_proof_bundle_ledger_version_advances_after_event_count_reaches_cap(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("CASPER_DECISION_LEDGER_PATH", str(tmp_path / "dashboard-log"))
+    monkeypatch.setenv("CASPER_LEDGER_MAX_EVENTS", "3")
+    get_settings.cache_clear()
+    CasperDecisionLedger.clear_current_log()
+    for index in range(4):
+        CasperDecisionLedger.append_event({
+            "eventType": "casper_decision_dry_run",
+            "payload": {
+                "decision": {
+                    "decisionId": f"cycle-{index}",
+                    "proofDigest": f"sha256:{index}",
+                },
+            },
+        })
+
+    bundle = CasperProofBundleService.get_live_proof_bundle({"limit": 2})
+
+    assert bundle["ledger"]["eventCount"] == 3
+    assert bundle["ledger"]["latestEventId"] == 4
+
+    get_settings.cache_clear()

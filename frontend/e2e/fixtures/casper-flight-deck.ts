@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-import { linkedSnapshot } from './casper-dashboard-snapshot';
+import { linkedSnapshot, recordedCycleHistory } from './casper-dashboard-snapshot';
 
 export const latestReceipt = {
   decisionId: 'casper-live-20260702-receipt-001',
@@ -24,7 +24,7 @@ export const olderReceipt = {
   eventType: 'casper_decision_blocked',
 };
 
-export async function routeSnapshot(page: Page, snapshot = linkedSnapshot) {
+export async function routeSnapshot(page: Page, snapshot = linkedSnapshot, cycleHistory = recordedCycleHistory) {
   await page.route('**/api/dashboard/snapshot?limit=8', route => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -35,6 +35,15 @@ export async function routeSnapshot(page: Page, snapshot = linkedSnapshot) {
     contentType: 'text/event-stream',
     headers: { 'Cache-Control': 'no-cache' },
     body: `event: dashboard_snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`,
+  }));
+  await routeCycleHistory(page, cycleHistory);
+}
+
+export async function routeCycleHistory(page: Page, cycleHistory = recordedCycleHistory) {
+  await page.route('**/api/dashboard/cycles?limit=8', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(cycleHistory),
   }));
 }
 

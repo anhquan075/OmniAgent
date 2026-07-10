@@ -76,6 +76,46 @@ describe('agent activity model', () => {
     expect(rows.map(row => row.tool)).toContain('casper_record_readback');
   });
 
+  it('uses recorded tool activity verbatim without inventing a readback call', () => {
+    const rows = mcpActivityRows({}, {
+      cycle: {
+        toolsUsed: ['casper_rwa_evidence', 'casper_record_readback'],
+        toolActivity: [
+          {
+            callId: 'cycle-a:evidence',
+            tool: 'casper_rwa_evidence',
+            status: 'complete',
+            invoked: true,
+            output: { marker: 'cycle-a-output' },
+          },
+          {
+            callId: 'cycle-a:decision',
+            tool: 'casper_record_decision',
+            status: 'complete',
+            invoked: false,
+            output: { reason: 'policy_blocked' },
+          },
+        ],
+      },
+    });
+
+    expect(rows).toEqual([
+      {
+        callId: 'cycle-a:evidence',
+        tool: 'casper_rwa_evidence',
+        status: 'complete',
+        output: '{"marker":"cycle-a-output"}',
+      },
+      {
+        callId: 'cycle-a:decision',
+        tool: 'casper_record_decision',
+        status: 'skipped',
+        output: '{"reason":"policy_blocked"}',
+      },
+    ]);
+    expect(rows.map(row => row.tool)).not.toContain('casper_record_readback');
+  });
+
   it('shows funded-account blockers in deploy and readback log rows', () => {
     const blockedBundle = {
       latestDecision: {
@@ -160,6 +200,17 @@ describe('agent activity model', () => {
       sequence: 'pending',
       emittedAt: 'pending',
       isLive: false,
+    });
+    expect(streamPanelStatus({
+      transport: 'history',
+      sequence: '#loop-cycle-001',
+      emittedAt: '2026-07-04T08:00:00.000Z',
+    })).toMatchObject({
+      label: 'recorded',
+      sequence: '#loop-cycle-001',
+      emittedAt: '08:00:00 UTC',
+      isLive: false,
+      isHistory: true,
     });
   });
 });

@@ -30,6 +30,7 @@ export const linkedSnapshot = {
   },
   casperProofBundle: {
     status: 'live_verified',
+    ledger: { eventCount: 2, latestEventId: 2 },
     preflight: { status: 'ready', liveSubmitEnabled: true, hardBlockers: [] },
     latestDecision: {
       decisionId: 'casper-live-20260702-receipt-001',
@@ -91,4 +92,128 @@ export const linkedSnapshot = {
     ],
     recoveryCandidates: [],
   },
+};
+
+const sharedRecordedDecision = {
+  decisionId: 'same-decision-id',
+  riskScore: 41,
+  policyGate: 'approved',
+  proofDigest: 'sha256:recorded-proof',
+  rationaleHash: 'sha256:recorded-rationale',
+  sourceHash: 'sha256:recorded-source',
+  guardrailHash: 'sha256:recorded-guardrail',
+  evidenceBundle: { status: 'ready', sourceHash: 'sha256:recorded-source', sources: [] },
+  guardrails: {
+    status: 'approved',
+    roles: [{
+      agentRole: 'policy_gate',
+      verdict: 'approved',
+      confidence: 0.91,
+      reasonCodes: ['recorded_cycle'],
+    }],
+  },
+};
+
+export const recordedCycles = [
+  {
+    cycleId: 'loop-cycle-newer-002',
+    origin: 'autonomous_loop',
+    startedAt: '2026-07-03T10:30:00.000Z',
+    completedAt: '2026-07-03T10:30:04.000Z',
+    status: 'blocked',
+    eventType: 'casper_decision_live_submit_blocked',
+    decisionId: 'same-decision-id',
+    submitted: false,
+    hardBlockers: ['casper_chain_duplicate_decision'],
+    runtime: { status: 'blocked', preflight: { status: 'blocked' } },
+    bundle: {
+      status: 'blocked',
+      latestDecision: {
+        ...sharedRecordedDecision,
+        action: 'hold',
+        rationale: 'Recorded cycle two held the position after the duplicate-chain guard fired.',
+      },
+      cycle: {
+        toolsUsed: ['casper_rwa_evidence', 'casper_record_decision'],
+        toolActivity: [
+          {
+            callId: 'loop-cycle-newer-002:evidence',
+            tool: 'casper_rwa_evidence',
+            kind: 'evidence',
+            status: 'complete',
+            invoked: true,
+            output: { marker: 'cycle-two-mcp-output', riskScore: 41 },
+          },
+          {
+            callId: 'loop-cycle-newer-002:readback',
+            tool: 'casper_record_readback',
+            kind: 'readback',
+            status: 'skipped',
+            invoked: false,
+            output: { marker: 'cycle-two-readback-skipped', reason: 'not_submitted' },
+          },
+        ],
+      },
+      proofScore: { hardBlocked: true, hardBlockers: ['casper_chain_duplicate_decision'] },
+    },
+    streamMeta: {
+      transport: 'history',
+      sequence: 'cycle-002',
+      emittedAt: '2026-07-03T10:30:04.000Z',
+    },
+  },
+  {
+    cycleId: 'loop-cycle-older-001',
+    origin: 'autonomous_loop',
+    startedAt: '2026-07-03T10:00:00.000Z',
+    completedAt: '2026-07-03T10:00:05.000Z',
+    status: 'verified',
+    eventType: 'casper_decision_readback_verified',
+    decisionId: 'same-decision-id',
+    submitted: true,
+    hardBlockers: [],
+    runtime: { status: 'ready', preflight: { status: 'ready' } },
+    bundle: {
+      status: 'live_verified',
+      latestDecision: {
+        ...sharedRecordedDecision,
+        action: 'warn',
+        rationale: 'Recorded cycle one warned after its evidence threshold crossed.',
+      },
+      cycle: {
+        toolsUsed: ['casper_rwa_evidence', 'casper_record_decision', 'casper_record_readback'],
+        toolActivity: [
+          {
+            callId: 'loop-cycle-older-001:evidence',
+            tool: 'casper_rwa_evidence',
+            kind: 'evidence',
+            status: 'complete',
+            invoked: true,
+            output: { marker: 'cycle-one-mcp-output', riskScore: 67 },
+          },
+          {
+            callId: 'loop-cycle-older-001:readback',
+            tool: 'casper_record_readback',
+            kind: 'readback',
+            status: 'verified',
+            invoked: true,
+            output: { marker: 'cycle-one-readback-output', verified: true },
+          },
+        ],
+      },
+      proofScore: { hardBlocked: false, hardBlockers: [] },
+    },
+    streamMeta: {
+      transport: 'history',
+      sequence: 'cycle-001',
+      emittedAt: '2026-07-03T10:00:05.000Z',
+    },
+  },
+];
+
+export const recordedCycleHistory = {
+  network: 'casper',
+  cycles: recordedCycles,
+  count: recordedCycles.length,
+  total: recordedCycles.length,
 };

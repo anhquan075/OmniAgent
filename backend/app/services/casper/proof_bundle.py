@@ -1,9 +1,11 @@
 from typing import Any
 
+from app.core.settings import get_settings
 from app.services.casper.contract import CasperDecisionContractService
 from app.services.casper.ledger import CasperDecisionLedger
 from app.services.casper.preflight import CasperPreflightService
 from app.services.casper.receipt import CasperDecisionReceiptService
+from app.services.casper.submission_guard import CasperSubmissionGuard
 from app.services.casper.trust import CasperTrustService
 
 
@@ -14,7 +16,10 @@ class CasperProofBundleService:
         limit = int(options.get("limit") or 10)
         refresh_status = bool(options.get("refreshStatus") or options.get("refresh_status"))
         preflight = CasperPreflightService.get_live_preflight({})
-        ledger = CasperDecisionLedger.get_ledger_summary(limit=limit)
+        ledger = CasperDecisionLedger.get_ledger_summary(
+            limit=max(limit, get_settings().casper_ledger_max_events)
+        )
+        trust_events = ledger["events"][:max(1, limit)]
         latest = CasperProofBundleService.latest_casper_event(ledger["events"])
         decision = CasperProofBundleService.decision_from_event(latest)
         deploy_status = CasperProofBundleService.deploy_status(decision, refresh_status)
@@ -38,11 +43,14 @@ class CasperProofBundleService:
             "deployStatus": deploy_status,
             "readback": readback,
             "proofScore": proof_score,
-            "trustSummary": CasperTrustService.get_trust_summary(ledger["events"]),
+            "trustSummary": CasperTrustService.get_trust_summary(trust_events),
             "recoveryCandidates": CasperProofBundleService.recovery_candidates(blockers),
             "ledger": {
                 "configured": True,
                 "eventCount": ledger["eventCount"],
+                "latestEventId": (
+                    ledger["events"][0].get("eventId") if ledger["events"] else None
+                ),
             },
         }
 
@@ -50,10 +58,41 @@ class CasperProofBundleService:
     def latest_casper_event(events: object) -> dict[str, Any] | None:
         if not isinstance(events, list):
             return None
+        latest_decision_event: dict[str, Any] | None = None
+        duplicate_decision_id = ""
+        duplicate_blockers = {
+            CasperSubmissionGuard.DUPLICATE_BLOCKER,
+            CasperSubmissionGuard.CHAIN_DUPLICATE_BLOCKER,
+        }
         for event in events:
-            if isinstance(event, dict) and str(event.get("eventType", "")).startswith("casper_"):
+            if not isinstance(event, dict) or not str(event.get("eventType", "")).startswith("casper_"):
+                continue
+            payload = event.get("payload")
+            decision = payload.get("decision") if isinstance(payload, dict) else None
+            if not isinstance(decision, dict) or not decision:
+                continue
+            if latest_decision_event is None:
+                latest_decision_event = event
+                blockers = {
+                    str(blocker)
+                    for blocker in (payload.get("hardBlockers") or [])
+                    if isinstance(blocker, str)
+                }
+                is_duplicate_attempt = bool(
+                    str(event.get("eventType") or "") == "casper_decision_live_submit_blocked"
+                    and blockers.intersection(duplicate_blockers)
+                )
+                if not is_duplicate_attempt:
+                    return event
+                duplicate_decision_id = str(decision.get("decisionId") or "")
+                continue
+            if str(decision.get("decisionId") or "") != duplicate_decision_id:
+                continue
+            has_deploy = bool(decision.get("deployHash") or decision.get("transactionHash"))
+            has_readback = isinstance(decision.get("readback"), dict) and bool(decision["readback"])
+            if has_deploy or has_readback:
                 return event
-        return None
+        return latest_decision_event
 
     @staticmethod
     def decision_from_event(event: dict[str, Any] | None) -> dict[str, Any] | None:

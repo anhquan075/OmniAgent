@@ -1,5 +1,6 @@
 .agent-main-stack,
 .agent-activity-console,
+.agent-output-column,
 .agent-stream-grid,
 .agent-loop-mascot,
 .mcp-log-panel,
@@ -28,6 +29,17 @@
   gap: 8px;
   align-items: stretch;
   min-height: 0;
+}
+
+.agent-output-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.agent-output-column .agent-stream-grid {
+  flex: 1 1 auto;
 }
 
 .agent-loop-mascot,

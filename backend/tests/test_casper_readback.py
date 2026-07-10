@@ -148,6 +148,10 @@ def test_readback_can_reconcile_unknown_outcome_with_operator_hash(tmp_path, mon
         "action": "hold",
         "sourceHash": "sha256:" + "a" * 64,
     })
+    CasperDecisionLedger.append_event({
+        "eventType": "casper_decision_submission_outcome_unknown",
+        "payload": {"decision": result["decision"]},
+    })
 
     decision = CasperReadbackService.target_decision({
         "decisionId": "unknown-outcome-1",
@@ -156,5 +160,53 @@ def test_readback_can_reconcile_unknown_outcome_with_operator_hash(tmp_path, mon
 
     assert decision["decisionId"] == result["decision"]["decisionId"]
     assert decision.get("deployHash") is None
+
+    get_settings.cache_clear()
+
+
+def test_readback_target_prefers_exact_cycle_over_repeated_decision_id(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("CASPER_DECISION_LEDGER_PATH", str(tmp_path / "dashboard-log"))
+    get_settings.cache_clear()
+    shared_id = "repeated-semantic-id"
+    cycle_a = {
+        "cycleId": "cycle-a",
+        "origin": "scheduled_loop",
+        "startedAt": "2026-07-10T10:00:00+00:00",
+    }
+    cycle_b = {
+        "cycleId": "cycle-b",
+        "origin": "scheduled_loop",
+        "startedAt": "2026-07-10T10:30:00+00:00",
+    }
+    CasperDecisionLedger.append_event({
+        "eventType": "casper_decision_submitted",
+        "payload": {
+            "decision": {
+                "decisionId": shared_id,
+                "deployHash": "a" * 64,
+                "proofDigest": "sha256:a",
+            },
+            "cycle": {"cycleContext": cycle_a, "toolsUsed": ["casper_record_decision"]},
+        },
+    })
+    CasperDecisionLedger.append_event({
+        "eventType": "casper_decision_live_submit_blocked",
+        "payload": {
+            "decision": {"decisionId": shared_id, "proofDigest": "sha256:b"},
+            "cycle": {"cycleContext": cycle_b, "toolsUsed": ["casper_record_decision"]},
+        },
+    })
+
+    selected = CasperReadbackService.target_decision({
+        "decisionId": shared_id,
+        "deployHash": "a" * 64,
+        "cycleContext": cycle_a,
+    })
+
+    assert selected["deployHash"] == "a" * 64
+    assert selected["proofDigest"] == "sha256:a"
 
     get_settings.cache_clear()

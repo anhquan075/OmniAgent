@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.core.settings import get_settings
+from app.services.casper.cycle_context import cycle_payload
 from app.services.casper.ledger import CasperDecisionLedger
 from app.services.casper.receipt import CasperDecisionReceiptService
 from app.services.casper.submitter import CasperCliSubmitter
@@ -11,7 +12,8 @@ from app.services.casper.submission_guard import CasperSubmissionGuard
 class CasperReadbackService:
     @staticmethod
     def record_readback(args: dict[str, Any]) -> dict[str, Any]:
-        decision = CasperReadbackService.target_decision(args)
+        target_event = CasperReadbackService.target_event(args)
+        decision = CasperReadbackService.decision_from_event(target_event)
         expected = str(decision.get("proofDigest") or "")
         deploy_hash = str(
             args.get("deployHash")
@@ -83,6 +85,7 @@ class CasperReadbackService:
                 "hardBlockers": hard_blockers,
                 "readbackVerified": verified,
                 "submissionGuardTransition": guard_transition,
+                "cycle": CasperReadbackService.readback_cycle(args, target_event),
             },
         })
         return {
@@ -100,7 +103,17 @@ class CasperReadbackService:
 
     @staticmethod
     def target_decision(args: dict[str, Any]) -> dict[str, Any]:
+        return CasperReadbackService.decision_from_event(CasperReadbackService.target_event(args))
+
+    @staticmethod
+    def target_event(args: dict[str, Any]) -> dict[str, Any]:
         decision_id = str(args.get("decisionId") or args.get("decision_id") or "")
+        requested_context = args.get("cycleContext")
+        requested_cycle_id = str(
+            requested_context.get("cycleId")
+            if isinstance(requested_context, dict)
+            else ""
+        )
         deploy_hash = str(
             args.get("deployHash")
             or args.get("deploy_hash")
@@ -115,6 +128,13 @@ class CasperReadbackService:
             payload = event.get("payload") if isinstance(event, dict) else None
             decision = payload.get("decision") if isinstance(payload, dict) else None
             if isinstance(decision, dict):
+                cycle = payload.get("cycle") if isinstance(payload, dict) else None
+                context = cycle.get("cycleContext") if isinstance(cycle, dict) else None
+                known_cycle_id = str(
+                    context.get("cycleId") if isinstance(context, dict) else ""
+                )
+                if requested_cycle_id and known_cycle_id != requested_cycle_id:
+                    continue
                 if decision_id and str(decision.get("decisionId")) != decision_id:
                     continue
                 known_hashes = {
@@ -123,10 +143,31 @@ class CasperReadbackService:
                 } - {""}
                 if deploy_hash and known_hashes and deploy_hash not in known_hashes:
                     continue
-                if deploy_hash and not known_hashes and not decision_id:
-                    continue
-                return dict(decision)
+                if deploy_hash and not known_hashes:
+                    if str(event.get("eventType") or "") != "casper_decision_submission_outcome_unknown":
+                        continue
+                return event
         return {}
+
+    @staticmethod
+    def decision_from_event(event: dict[str, Any]) -> dict[str, Any]:
+        payload = event.get("payload") if isinstance(event, dict) else None
+        decision = payload.get("decision") if isinstance(payload, dict) else None
+        return dict(decision) if isinstance(decision, dict) else {}
+
+    @staticmethod
+    def readback_cycle(args: dict[str, Any], target_event: dict[str, Any]) -> dict[str, Any]:
+        requested = args.get("cycleContext")
+        payload = target_event.get("payload") if isinstance(target_event, dict) else None
+        target_cycle = payload.get("cycle") if isinstance(payload, dict) else None
+        target_context = target_cycle.get("cycleContext") if isinstance(target_cycle, dict) else None
+        context = requested if isinstance(requested, dict) and requested.get("cycleId") else target_context
+        if not isinstance(context, dict) or not context.get("cycleId"):
+            return {}
+        tools = target_cycle.get("toolsUsed") if isinstance(target_cycle, dict) else []
+        tools_used = [str(tool) for tool in tools if isinstance(tool, str)]
+        tools_used.append("casper_record_readback")
+        return cycle_payload(context, tools_used)
 
     @staticmethod
     def input_blockers(decision: dict[str, Any], expected: str, deploy_hash: str) -> list[str]:

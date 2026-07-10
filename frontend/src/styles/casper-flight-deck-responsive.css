@@ -99,6 +99,15 @@
 }
 
 @media (max-width: 720px) {
+  .cycle-history-field {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cycle-history-field select {
+    max-width: 100%;
+  }
+
   .receipt-flow-timeline ol,
   .evidence-provenance ol {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -12,10 +12,12 @@ export default function AiOutputPanel({
   bundle,
   streamMeta,
   streamClockMs,
+  cycleId,
 }: {
   bundle?: Payload;
   streamMeta?: Payload;
   streamClockMs?: number;
+  cycleId?: string;
 }) {
   const summary = aiDecisionSummary(bundle);
   const roles = aiRoleOutputs(bundle);
@@ -23,11 +25,11 @@ export default function AiOutputPanel({
   const stream = streamPanelStatus(streamMeta, streamClockMs);
 
   return (
-    <section className="ai-output-panel" aria-label="AI output">
+    <section className="ai-output-panel" aria-label={cycleId ? `AI output for cycle ${cycleId}` : 'AI output'}>
       <div className="panel-head">
         <BrainCircuitIcon className="h-4 w-4" />
         <h3>AI output</h3>
-        <span className={`stream-live-meta ${stream.isLive ? 'is-live' : ''}`}>
+        <span className={`stream-live-meta ${stream.isLive ? 'is-live' : ''} ${stream.isHistory ? 'is-history' : ''}`}>
           <b>{stream.label}</b>
           <small>{stream.sequence} · {stream.emittedAt}</small>
         </span>

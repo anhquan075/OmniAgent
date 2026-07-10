@@ -63,6 +63,36 @@ test('dashboard renders MCP calls and AI role output from the proof bundle', asy
   await expect(page.getByLabel('AI output').getByText('policy gate')).toBeVisible();
 });
 
+test('cycle history switches MCP and AI output together and keeps recorded selection pinned', async ({ page }) => {
+  await routeSnapshot(page);
+  await page.goto('/');
+
+  const selector = page.getByLabel('Select autonomous loop cycle');
+  await expect(selector).toHaveValue('');
+  await expect(selector.locator('option').first()).toHaveText('Latest live cycle');
+  await expect(page.getByLabel('AI output')).toContainText('Treasury collateral yield crossed the policy band');
+
+  await selector.selectOption('loop-cycle-older-001');
+  await expect(page.locator('.agent-stream-grid[data-cycle-id="loop-cycle-older-001"]')).toBeVisible();
+  await expect(page.getByLabel('MCP activity for cycle loop-cycle-older-001')).toContainText('cycle-one-mcp-output');
+  await expect(page.getByLabel('AI output for cycle loop-cycle-older-001')).toContainText('Recorded cycle one warned');
+  await expect(page.getByText('recorded', { exact: true })).toHaveCount(2);
+
+  await page.getByRole('button', { name: 'Refresh Casper snapshot' }).click();
+  await expect(selector).toHaveValue('loop-cycle-older-001');
+  await expect(page.getByLabel('MCP activity for cycle loop-cycle-older-001')).toContainText('cycle-one-mcp-output');
+  await expect(page.getByLabel('AI output for cycle loop-cycle-older-001')).toContainText('Recorded cycle one warned');
+
+  await selector.selectOption('loop-cycle-newer-002');
+  await expect(page.getByLabel('MCP activity for cycle loop-cycle-newer-002')).toContainText('cycle-two-mcp-output');
+  await expect(page.getByLabel('MCP activity for cycle loop-cycle-newer-002')).toContainText('cycle-two-readback-skipped');
+  await expect(page.getByLabel('AI output for cycle loop-cycle-newer-002')).toContainText('Recorded cycle two held');
+
+  await selector.selectOption('');
+  await expect(selector).toHaveValue('');
+  await expect(page.getByLabel('AI output')).toContainText('Treasury collateral yield crossed the policy band');
+});
+
 test('dashboard stays responsive across Flight Deck viewports', async ({ page }) => {
   await routeSnapshot(page);
   await routePublicProof(page);
