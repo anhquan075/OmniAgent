@@ -2,10 +2,17 @@ import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 
+import {
+  fetchUpstreamWithRetry,
+  proxyRetryConfigFromEnv,
+  upstreamErrorReason,
+} from "./server-proxy.mjs";
+
 const port = Number(process.env.PORT || 4173);
 const distDir = resolve("dist");
 const backendUrl = normalizeBackendUrl(process.env.BACKEND_INTERNAL_URL || process.env.BACKEND_URL || "");
 const maxRequestBodyBytes = Number(process.env.FRONTEND_MAX_BODY_BYTES || 1_048_576);
+const proxyRetryConfig = proxyRetryConfigFromEnv();
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -118,10 +125,22 @@ async function proxyApi(req, res, url) {
     throw error;
   }
 
-  const upstream = await fetch(targetUrl, {
+  const upstream = await fetchUpstreamWithRetry(targetUrl, {
     method: req.method,
     headers,
     body: requestBody,
+  }, {
+    ...proxyRetryConfig,
+    onRetry: ({ attempt, maxAttempts, reason }) => {
+      console.log(JSON.stringify({
+        event: "frontend_proxy_retry",
+        method: req.method,
+        path: url.pathname,
+        attempt,
+        maxAttempts,
+        reason,
+      }));
+    },
   });
 
   res.statusCode = upstream.status;
@@ -187,8 +206,18 @@ const server = createServer(async (req, res) => {
     setSecurityHeaders(res);
     res.statusCode = 502;
     res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("Retry-After", "2");
     res.end(JSON.stringify({ error: "frontend_proxy_error" }));
-    console.error(error);
+    let path = "invalid_request_url";
+    try {
+      path = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`).pathname;
+    } catch {}
+    console.error(JSON.stringify({
+      event: "frontend_proxy_error",
+      method: req.method,
+      path,
+      reason: upstreamErrorReason(error),
+    }));
   }
 });
 
