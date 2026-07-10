@@ -22,6 +22,29 @@ def test_secret_path_outside_repo_uses_backend_root_when_repo_root_is_filesystem
     assert CasperPreflightService.is_outside_repo(app_root / "secret_key.pem") is False
 
 
+def test_rpc_probe_runs_read_only_check_while_live_submit_is_disabled(monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_LIVE_SUBMIT_ENABLED", "false")
+    get_settings.cache_clear()
+    monkeypatch.setattr(CasperCliSubmitter, "is_client_available", staticmethod(lambda: True))
+    monkeypatch.setattr(
+        CasperCliSubmitter,
+        "get_state_root_hash",
+        staticmethod(lambda: {
+            "source": "casper_client",
+            "stateRootHash": "c" * 64,
+            "hardBlockers": [],
+        }),
+    )
+
+    result = CasperPreflightService.rpc_probe(client_available=True)
+
+    assert result["reachable"] is True
+    assert result["stateRootHash"] == "c" * 64
+    assert result["hardBlockers"] == []
+
+    get_settings.cache_clear()
+
+
 def test_live_preflight_blocks_when_balance_is_below_payment(tmp_path, monkeypatch) -> None:
     secret_path = tmp_path / "secret.pem"
     secret_path.write_text("not-a-real-secret", encoding="utf-8")

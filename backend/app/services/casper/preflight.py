@@ -112,7 +112,7 @@ class CasperPreflightService:
                 "blockHeight": block_height,
                 "hardBlockers": [] if block_height is not None else ["casper_cspr_cloud_unreachable"],
             }
-        if not settings.casper_live_submit_enabled or not client_available:
+        if not client_available:
             return {"reachable": False, "skipped": True, "hardBlockers": []}
         result = CasperCliSubmitter.get_state_root_hash()
         return {
