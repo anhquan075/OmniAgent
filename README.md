@@ -51,8 +51,6 @@ facilitator because the current facilitator path is EVM/Solana-based. Casper
 remains the proof network: decision receipts, proof digests, contract readback,
 and the public verifier are anchored to Casper Testnet.
 
-The architecture diagram below is a self-generated raster PNG, not an SVG.
-
 ![Self-generated OmniAgent Casper architecture PNG](frontend/public/imgs/omniagent-casper-architecture.png)
 
 ## High-Level Design
