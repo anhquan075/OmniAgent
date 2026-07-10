@@ -26,15 +26,24 @@ CASPER_SECRET_KEY_PATH=<secret-path-outside-git>
 CASPER_DECISION_CONTRACT_HASH=<deployed-contract-hash>
 CASPER_DECISION_CONTRACT_PACKAGE_HASH=<deployed-package-hash>
 CASPER_LIVE_SUBMIT_ENABLED=false
+CASPER_PAYMENT_AMOUNT_MOTES=2500000000
 CASPER_CLIENT_PATH=/usr/local/bin/casper-client
-CASPER_DECISION_LEDGER_PATH=railway-casper-dashboard-log
+CASPER_AGENT_LOOP_ENABLED=false
+CASPER_AGENT_LOOP_DRY_RUN=true
+CASPER_AGENT_LOOP_INTERVAL_SEC=3600
+CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED=false
+CASPER_LIVE_MIN_SUBMIT_INTERVAL_SEC=21600
+CASPER_LIVE_MAX_SUBMISSIONS_PER_UTC_DAY=4
+CASPER_LIVE_DAILY_BUDGET_MOTES=10000000000
+CASPER_MIN_BALANCE_CSPR=50
+CASPER_DECISION_LEDGER_PATH=/data/casper-decision-log.sqlite3
 API_SESSION_SECRET=<sealed-secret>
 API_OPERATOR_TOKEN=<sealed-secret>
 API_TRUSTED_HOSTS=localhost,127.0.0.1,testserver,healthcheck.railway.app,*.up.railway.app,*.railway.internal
 ALLOWED_FRONTEND_ORIGINS=https://<frontend-public-domain>.up.railway.app
 ```
 
-The backend image installs `casper-client` 5.0.1 at `/usr/local/bin/casper-client`. The dashboard decision log is rendered through the API and does not require a checked-in proof artifact.
+The backend image installs `casper-client` 5.0.1 at `/usr/local/bin/casper-client`. Mount a backend volume at `/data`; the same SQLite file stores the dashboard log and the atomic submission budget/idempotency guard.
 
 ## Frontend Variables
 
@@ -59,6 +68,5 @@ Then call these MCP tools through the deployed frontend origin:
 - `casper_get_account`
 - `casper_live_preflight`
 - `casper_live_proof_bundle`
-- `casper_record_decision`
 
-Keep `CASPER_LIVE_SUBMIT_ENABLED=false` until the Casper account, signer, contract, deploy receipt, readback proof, and deploy writer are verified.
+Before any restart, require `CASPER_LIVE_SUBMIT_ENABLED=false`, `CASPER_AGENT_LOOP_ENABLED=false`, `CASPER_AGENT_LOOP_DRY_RUN=true`, and `CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED=false`. Keep them there until a single manual 2.5-CSPR canary is confirmed and read back. Existing Railway variables override code defaults; change or remove the old `25000000000`, five-minute interval, and live-loop values before redeploying.
