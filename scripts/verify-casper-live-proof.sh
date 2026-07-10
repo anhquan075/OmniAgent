@@ -47,7 +47,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 node_extract() {
-  rtk node -e '
+  node -e '
 const fs = require("fs");
 const mode = process.argv[1], file = process.argv[2], path = process.argv[3] || "";
 const text = fs.readFileSync(file, "utf8");

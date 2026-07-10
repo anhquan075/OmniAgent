@@ -32,7 +32,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'OMNIAGENT_SKIP_ENV_FILE=true CASPER_LIVE_SUBMIT_ENABLED=false CASPER_AGENT_LOOP_ENABLED=false CASPER_DECISION_LEDGER_PATH=playwright-casper-dashboard-log rtk uv --project . run uvicorn app.main:app --host 127.0.0.1 --port 8020',
+      command: 'OMNIAGENT_SKIP_ENV_FILE=true CASPER_LIVE_SUBMIT_ENABLED=false CASPER_AGENT_LOOP_ENABLED=false CASPER_DECISION_LEDGER_PATH=playwright-casper-dashboard-log uv run --project . uvicorn app.main:app --host 127.0.0.1 --port 8020',
       url: 'http://127.0.0.1:8020/api/health',
       timeout: 120000,
       reuseExistingServer: false,

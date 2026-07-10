@@ -72,7 +72,7 @@ if [[ -n "$EXPECTED_ACCOUNT$EXPECTED_CONTRACT_HASH$EXPECTED_PACKAGE_HASH" ]]; th
     echo "PUBLIC_PROOF_UNAVAILABLE: public proof unavailable at ${API_BASE}/api/public/proof"
     exit 4
   }
-  rtk node -e '
+  node -e '
 const fs = require("fs");
 const [file, account, contractHash, packageHash] = process.argv.slice(1);
 const proof = JSON.parse(fs.readFileSync(file, "utf8"));
@@ -91,7 +91,7 @@ for (const [code, expected, observed, matches] of checks) {
 ' "${PUBLIC_PROOF_JSON}" "${EXPECTED_ACCOUNT}" "${EXPECTED_CONTRACT_HASH}" "${EXPECTED_PACKAGE_HASH}" || exit 4
 fi
 
-LOCAL_RECEIPT=$(rtk node -e '
+LOCAL_RECEIPT=$(node -e '
 const fs = require("fs");
 const [file, decisionId] = process.argv.slice(1);
 const data = JSON.parse(fs.readFileSync(file, "utf8"));

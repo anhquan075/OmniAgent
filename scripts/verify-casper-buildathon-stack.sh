@@ -23,10 +23,10 @@ trap cleanup EXIT
 cd "${ROOT_DIR}"
 
 echo "[casper] backend compile"
-rtk uv --project backend run python -m compileall backend/app backend/scripts
+uv run --project backend python -m compileall backend/app backend/scripts
 
 echo "[casper] backend tests"
-rtk uv --project backend run python -m pytest -q backend/tests
+uv run --project backend python -m pytest -q backend/tests
 
 echo "[casper] contract check"
 cargo +nightly-2025-03-01 check \
@@ -40,13 +40,13 @@ cargo +nightly-2025-03-01 build \
   --target wasm32v1-none
 
 echo "[casper] frontend tests"
-rtk pnpm -C frontend test -- --run
+pnpm -C frontend test -- --run
 
 echo "[casper] frontend build"
-rtk pnpm -C frontend run build
+pnpm -C frontend run build
 
 echo "[casper] frontend e2e"
-rtk pnpm -C frontend run test:e2e -- e2e/tests/casper-proof-dashboard.spec.ts
+pnpm -C frontend run test:e2e -- e2e/tests/casper-proof-dashboard.spec.ts
 
 echo "[casper] safe backend"
 (
@@ -56,7 +56,7 @@ echo "[casper] safe backend"
     CASPER_LIVE_SUBMIT_ENABLED=false \
     CASPER_DECISION_LEDGER_PATH="verifier-casper-dashboard-log-${BACKEND_PORT}" \
     API_OPERATOR_TOKEN="${OPERATOR_TOKEN}" \
-    rtk uv --project . run uvicorn app.main:app --host 127.0.0.1 --port "${BACKEND_PORT}" \
+    uv run --project . uvicorn app.main:app --host 127.0.0.1 --port "${BACKEND_PORT}" \
       >"${BACKEND_LOG}" 2>&1
 ) &
 BACKEND_PID="$!"
@@ -71,7 +71,7 @@ curl -fsS "${BACKEND_URL}/health" >/dev/null
 
 echo "[casper] readiness gate (expected blocked without live account)"
 set +e
-PYTHONPATH=backend rtk uv --project backend run python backend/scripts/check-casper-testnet-readiness.py --api-url "${BACKEND_URL}"
+PYTHONPATH=backend uv run --project backend python backend/scripts/check-casper-testnet-readiness.py --api-url "${BACKEND_URL}"
 READINESS_CODE="$?"
 set -e
 if [[ "${READINESS_CODE}" -eq 0 ]]; then
@@ -81,7 +81,7 @@ else
 fi
 
 echo "[casper] dry-run decision"
-PYTHONPATH=backend rtk uv --project backend run python backend/scripts/run-casper-decision-cycle.py \
+PYTHONPATH=backend uv run --project backend python backend/scripts/run-casper-decision-cycle.py \
   --api-url "${BACKEND_URL}" \
   --operator-token "${OPERATOR_TOKEN}" \
   --dry-run
@@ -91,7 +91,7 @@ curl -fsS -c "${SESSION_JAR}" "${BACKEND_URL}/api/session" >/dev/null
 curl -fsS -b "${SESSION_JAR}" "${BACKEND_URL}/api/dashboard/snapshot?limit=8" -o "${SNAPSHOT_JSON}"
 curl -fsS -b "${SESSION_JAR}" "${BACKEND_URL}/api/dashboard/receipts?limit=10" -o "${RECEIPTS_JSON}"
 curl -fsS "${BACKEND_URL}/api/public/proof" -o "${PUBLIC_PROOF_JSON}"
-rtk node -e '
+node -e '
 const fs = require("fs");
 const [snapshotPath, receiptsPath, publicProofPath] = process.argv.slice(1);
 const snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
@@ -117,7 +117,7 @@ git ls-files --error-unmatch proofs/casper-buildathon-submission-proof.json >/de
   exit 1
 }
 test -f proofs/casper-buildathon-submission-proof.json
-rtk node -e '
+node -e '
 const fs = require("fs");
 const proof = JSON.parse(fs.readFileSync("proofs/casper-buildathon-submission-proof.json", "utf8"));
 const text = JSON.stringify(proof);
