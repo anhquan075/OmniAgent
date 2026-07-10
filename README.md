@@ -43,7 +43,8 @@ Last verified: 2026-07-10.
 | Paywalled x402 evidence | [https://omniagent-production.up.railway.app/api/x402/rwa-evidence](https://omniagent-production.up.railway.app/api/x402/rwa-evidence) |
 | x402 status | `verified`, `bindingStatus=bound`, `hardBlockers=[]` |
 | x402 receipt hash | `sha256:9b8479d9e5370962efa0dd028dd87e9adb9af225e1002bf43eb84f453c59645f` |
-| Autonomous loop | Runtime emergency-stopped at `2026-07-10T16:20:28Z`; existing Railway live variables must be replaced before any restart |
+| Live submit | Disabled for the rollout; no paid canary was authorized or broadcast |
+| Autonomous loop | Safe Railway configuration deployed from `86bb73f`: `running=false`, `dryRun=true`, live-loop arm off |
 
 The x402 payment rail uses Base Sepolia USDC through the testnet x402
 facilitator because the current facilitator path is EVM/Solana-based. Casper
