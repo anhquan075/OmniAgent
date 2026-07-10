@@ -137,6 +137,20 @@ Expected:
 - A deterministic local decision/proof receipt is present.
 - No Casper transaction is created and no CSPR is spent.
 
+Inspect the recorded loop output with a normal dashboard session:
+
+```bash
+COOKIE_JAR=/tmp/omniagent-judge.cookies
+curl -fsS -c "$COOKIE_JAR" http://127.0.0.1:8000/api/session >/dev/null
+curl -fsS -b "$COOKIE_JAR" \
+  'http://127.0.0.1:8000/api/dashboard/cycles?limit=8' \
+  | jq '{count,total,cycles:[.cycles[] | {cycleId,status,decisionId,tools:.bundle.cycle.toolActivity}]}'
+```
+
+Open the Cockpit and use **Select autonomous loop cycle** to switch between
+recorded attempts. The MCP activity and AI output panels are pinned to the same
+cycle until **Latest live cycle** is selected again.
+
 ## 6. Replay public on-chain proof
 
 The deployed proof surfaces require no private key:
@@ -261,7 +275,7 @@ not arm the autonomous loop merely to demonstrate the one-shot canary.
 
 ## 8. Railway production safety
 
-Production must boot with:
+A new or unverified production deployment should first boot with:
 
 ```text
 CASPER_LIVE_SUBMIT_ENABLED=false
@@ -275,6 +289,11 @@ CASPER_LIVE_DAILY_BUDGET_MOTES=10000000000
 CASPER_MIN_BALANCE_CSPR=50
 CASPER_DECISION_LEDGER_PATH=/data/casper-decision-log.sqlite3
 ```
+
+The current public deployment was subsequently armed at a guarded 1800-second
+interval only after a 2.5-CSPR canary confirmed with matching contract receipt
+readback. Keep the safe values above for judge reproduction and initial rollout;
+arming recurring live submission is a separate owner-only production decision.
 
 Use one backend replica with a volume mounted at `/data`. The SQLite guard is
 the atomic cross-process budget/idempotency boundary for the currently deployed
