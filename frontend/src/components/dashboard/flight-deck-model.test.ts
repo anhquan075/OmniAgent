@@ -6,6 +6,9 @@ import {
   outcomeSummary,
   policyRows,
   proofLinks,
+  receiptDeployLabel,
+  receiptProofCategory,
+  receiptRowKey,
   selectedReceiptProofState,
   trustRows,
   utcTime,
@@ -16,7 +19,7 @@ const bundle = {
     { state: 'evidence', status: 'complete' },
     { state: 'policy_gate', status: 'blocked' },
   ],
-  latestDecision: { decisionId: 'latest-001' },
+  latestDecision: { decisionId: 'latest-001', proofDigest: 'sha256:latest-proof' },
   deployStatus: { deployHash: 'deploy-hash', explorerUrl: 'https://testnet.cspr.live/deploy/deploy-hash' },
   readback: { verified: true, status: 'verified' },
 };
@@ -45,16 +48,73 @@ describe('flight deck model', () => {
   });
 
   it('attaches latest deploy and readback only to the matching receipt', () => {
-    expect(selectedReceiptProofState({ decisionId: 'latest-001' }, bundle)).toMatchObject({
+    expect(selectedReceiptProofState({
+      decisionId: 'latest-001',
+      deployHash: 'deploy-hash',
+      proofDigest: 'sha256:latest-proof',
+      eventType: 'casper_decision_readback_verified',
+    }, bundle)).toMatchObject({
       matchesLatest: true,
       deployStatus: bundle.deployStatus,
       readback: bundle.readback,
+    });
+    expect(selectedReceiptProofState({
+      decisionId: 'latest-001',
+      proofDigest: 'sha256:latest-proof',
+      eventType: 'casper_decision_live_submit_blocked',
+    }, bundle)).toMatchObject({
+      matchesLatest: false,
+      deployStatus: {},
+      readback: {},
+    });
+    expect(selectedReceiptProofState({
+      decisionId: 'latest-001',
+      deployHash: 'deploy-hash',
+      proofDigest: 'sha256:mismatched-proof',
+      eventType: 'casper_decision_readback_verified',
+    }, bundle)).toMatchObject({
+      matchesLatest: false,
+      deployStatus: {},
+      readback: {},
     });
     expect(selectedReceiptProofState({ decisionId: 'older-001' }, bundle)).toMatchObject({
       matchesLatest: false,
       deployStatus: {},
       readback: {},
     });
+  });
+
+  it('maps missing deploy hashes to the recorded submission outcome', () => {
+    expect(receiptDeployLabel({ eventType: 'casper_decision_live_submit_blocked' })).toBe('not submitted');
+    expect(receiptDeployLabel({ eventType: 'casper_decision_dry_run' })).toBe('dry run');
+    expect(receiptDeployLabel({ eventType: 'casper_decision_live_submit_failed' })).toBe('submit failed');
+    expect(receiptDeployLabel({ eventType: 'casper_decision_submission_outcome_unknown' })).toBe('outcome unknown');
+    expect(receiptDeployLabel({ eventType: 'casper_decision_submitted' })).toBe('pending');
+    expect(receiptDeployLabel({ eventType: 'casper_decision_live_submit_blocked', deployHash: 'deploy-hash' })).toBe('');
+  });
+
+  it('classifies filters from proof events instead of treating every non-blocked row as verified', () => {
+    expect(receiptProofCategory({ eventType: 'casper_decision_readback_verified' })).toBe('verified');
+    expect(receiptProofCategory({ eventType: 'casper_decision_live_submit_blocked' })).toBe('blocked');
+    expect(receiptProofCategory({ eventType: 'casper_decision_live_submit_failed' })).toBe('blocked');
+    expect(receiptProofCategory({ eventType: 'casper_decision_submitted' })).toBe('other');
+  });
+
+  it('keeps repeated decision IDs as distinct receipt rows', () => {
+    const verifiedKey = receiptRowKey({
+      decisionId: 'latest-001',
+      createdAt: '2026-07-11T01:00:00Z',
+      eventType: 'casper_decision_readback_verified',
+      proofDigest: 'sha256:latest-proof',
+    });
+    const blockedKey = receiptRowKey({
+      decisionId: 'latest-001',
+      createdAt: '2026-07-11T01:30:00Z',
+      eventType: 'casper_decision_live_submit_blocked',
+      proofDigest: 'sha256:newer-blocked-attempt',
+    });
+
+    expect(blockedKey).not.toBe(verifiedKey);
   });
 
   it('formats UTC timestamps and Casper explorer links', () => {

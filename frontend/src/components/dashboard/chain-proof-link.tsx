@@ -6,6 +6,7 @@ type LinkProps = {
   explorerBaseUrl?: string | null;
   kind?: 'deploy' | 'contract' | 'contract-package' | 'account';
   label?: string;
+  missingLabel?: string;
 };
 
 const shortHash = (hash: string) => `${hash.slice(0, 10)}...${hash.slice(-8)}`;
@@ -20,7 +21,7 @@ export function chainExplorerUrl({ hash, explorerUrl, explorerBaseUrl, kind = 'd
 export function ChainProofLink(props: LinkProps) {
   const hash = props.hash ?? '';
   const href = chainExplorerUrl(props);
-  if (!hash || !href) return <span className="chain-proof-missing">pending</span>;
+  if (!hash || !href) return <span className="chain-proof-missing">{props.missingLabel ?? 'pending'}</span>;
   const label = props.label ?? `${props.kind ?? 'deploy'} proof`;
   return (
     <a className="chain-proof-link" href={href} target="_blank" rel="noreferrer" aria-label={`Open ${label} on Casper explorer`}>

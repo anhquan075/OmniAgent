@@ -11,7 +11,7 @@ export const latestReceipt = {
   proofDigest: 'sha256:95c27f7aeffaf7f994b8edc824547a8f9142d5c8159368f020912627eac6158f',
   rationaleHash: 'sha256:87f7c5b2f5f0d2ff2f930706cfb45a03ad49a2a3bbad9936c9b5c27ca70d8a44',
   policyGate: 'approved',
-  eventType: 'casper_decision_submitted',
+  eventType: 'casper_decision_readback_verified',
 };
 
 export const olderReceipt = {

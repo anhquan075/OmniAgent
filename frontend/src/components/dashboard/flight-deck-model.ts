@@ -148,9 +148,46 @@ export const proofLinks = (runtime?: Payload, bundle?: Payload) => {
 
 export const receiptRowTime = (receipt: ReceiptRow) => utcTime(receipt.timestamp ?? receipt.createdAt);
 
+export const receiptRowKey = (receipt: ReceiptRow, fallback = '') => {
+  const parts = [
+    receipt.createdAt ?? receipt.timestamp,
+    receipt.eventType,
+    receipt.proofDigest,
+    receipt.deployHash,
+    receipt.decisionId,
+  ].map(value => proofText(value, ''));
+  return parts.some(Boolean) ? parts.join('|') : fallback;
+};
+
+export const receiptDeployLabel = (receipt: ReceiptRow) => {
+  if (receipt.deployHash) return '';
+  const eventType = proofText(receipt.eventType, '').toLowerCase();
+  if (eventType.includes('dry_run')) return 'dry run';
+  if (eventType.includes('outcome_unknown')) return 'outcome unknown';
+  if (eventType.includes('live_submit_failed')) return 'submit failed';
+  if (eventType.includes('blocked')) return 'not submitted';
+  if (eventType.includes('submitted')) return 'pending';
+  return 'not submitted';
+};
+
+export type ReceiptProofCategory = 'verified' | 'blocked' | 'other';
+
+export const receiptProofCategory = (receipt: ReceiptRow): ReceiptProofCategory => {
+  const eventType = proofText(receipt.eventType, '').toLowerCase();
+  if (eventType.includes('readback_verified')) return 'verified';
+  if (eventType.includes('blocked') || eventType.includes('failed') || eventType.includes('outcome_unknown')) return 'blocked';
+  return 'other';
+};
+
 export const selectedReceiptProofState = (receipt?: ReceiptRow, bundle?: Payload) => {
   const latestDecision = decisionFromBundle(bundle);
-  const matchesLatest = Boolean(receipt?.decisionId && receipt.decisionId === latestDecision.decisionId);
+  const eventType = proofText(receipt?.eventType, '').toLowerCase();
+  const latestDeployHash = proofText(bundle?.deployStatus?.deployHash, '');
+  const isProofBearingEvent = eventType === 'casper_decision_submitted' || eventType === 'casper_decision_readback_verified';
+  const sameDecision = Boolean(receipt?.decisionId && receipt.decisionId === latestDecision.decisionId);
+  const sameDeploy = Boolean(receipt?.deployHash && latestDeployHash && receipt.deployHash === latestDeployHash);
+  const sameDigest = Boolean(receipt?.proofDigest && receipt.proofDigest === latestDecision.proofDigest);
+  const matchesLatest = isProofBearingEvent && sameDecision && sameDeploy && sameDigest;
   return {
     matchesLatest,
     deployStatus: matchesLatest ? bundle?.deployStatus ?? {} : {},

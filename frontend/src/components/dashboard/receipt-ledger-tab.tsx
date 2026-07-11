@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 
 import { apiFetch } from '../../lib/api';
-import { decisionFromBundle, type Payload, type ReceiptRow } from './flight-deck-model';
+import {
+  receiptProofCategory,
+  receiptRowKey,
+  selectedReceiptProofState,
+  type Payload,
+  type ReceiptRow,
+} from './flight-deck-model';
 import ReceiptInspector from './receipt-inspector';
 import ReceiptLedgerTable from './receipt-ledger-table';
 
@@ -11,7 +17,7 @@ const PAGE_SIZE = 10;
 
 export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?: Payload; refreshKey?: string }) {
   const [receipts, setReceipts] = useState<ReceiptRow[]>([]);
-  const [selectedId, setSelectedId] = useState('');
+  const [selectedKey, setSelectedKey] = useState('');
   const [filter, setFilter] = useState<LedgerFilter>('all');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -41,7 +47,6 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
       });
     return () => { cancelled = true; };
   }, [page, refreshKey]);
-  const latestDecision = decisionFromBundle(bundle);
   const totalPages = Math.max(1, Math.ceil(totalReceipts / PAGE_SIZE));
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
@@ -53,16 +58,16 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
-      const blocked = haystack.includes('blocked');
-      const matchesFilter = filter === 'all' || (filter === 'blocked' ? blocked : !blocked);
+      const category = receiptProofCategory(receipt);
+      const matchesFilter = filter === 'all' || filter === category;
       return matchesFilter && (!search || haystack.includes(search));
     });
   }, [filter, query, receipts]);
   const selected = useMemo(() => (
-    filteredReceipts.find(receipt => receipt.decisionId === selectedId)
-    ?? filteredReceipts.find(receipt => receipt.decisionId === latestDecision.decisionId)
+    filteredReceipts.find(receipt => receiptRowKey(receipt) === selectedKey)
+    ?? filteredReceipts.find(receipt => selectedReceiptProofState(receipt, bundle).matchesLatest)
     ?? filteredReceipts[0]
-  ), [filteredReceipts, latestDecision.decisionId, selectedId]);
+  ), [bundle, filteredReceipts, selectedKey]);
   const pageStart = totalReceipts ? (page - 1) * PAGE_SIZE + 1 : 0;
   const pageEnd = Math.min(page * PAGE_SIZE, totalReceipts);
   return (
@@ -80,7 +85,7 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
               className={filter === item ? 'is-active' : ''}
               onClick={() => {
                 setFilter(item);
-                setSelectedId('');
+                setSelectedKey('');
               }}
             >
               {item}
@@ -90,7 +95,7 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
             value={query}
             onChange={event => {
               setQuery(event.target.value);
-              setSelectedId('');
+              setSelectedKey('');
             }}
             placeholder="Search current page"
             aria-label="Search current receipt page"
@@ -118,7 +123,11 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
             <ChevronRightIcon className="h-4 w-4" />
           </button>
         </div>
-        <ReceiptLedgerTable receipts={filteredReceipts} selectedId={selected?.decisionId} onSelect={(receipt) => setSelectedId(receipt.decisionId ?? '')} />
+        <ReceiptLedgerTable
+          receipts={filteredReceipts}
+          selectedKey={selected ? receiptRowKey(selected) : ''}
+          onSelect={(receipt) => setSelectedKey(receiptRowKey(receipt))}
+        />
       </section>
       <ReceiptInspector receipt={selected} bundle={bundle} />
     </div>
