@@ -1,16 +1,16 @@
 import { EyeIcon } from 'lucide-react';
 
 import ChainProofLink from './chain-proof-link';
-import { receiptRowTime, shortValue, type ReceiptRow } from './flight-deck-model';
+import { receiptDeployLabel, receiptRowKey, receiptRowTime, shortValue, type ReceiptRow } from './flight-deck-model';
 import { proofLabel, proofText } from './proof-labels';
 
 export default function ReceiptLedgerTable({
   receipts,
-  selectedId,
+  selectedKey,
   onSelect,
 }: {
   receipts: ReceiptRow[];
-  selectedId?: string;
+  selectedKey?: string;
   onSelect: (receipt: ReceiptRow) => void;
 }) {
   return (
@@ -28,21 +28,24 @@ export default function ReceiptLedgerTable({
             </tr>
           </thead>
           <tbody>
-            {receipts.map((receipt, index) => (
-              <tr key={receipt.decisionId ?? index} className={`receipt-ledger-row ${selectedId === receipt.decisionId ? 'is-selected' : ''}`}>
-                <td>{receiptRowTime(receipt)}</td>
-                <td><b>{shortValue(receipt.decisionId)}</b></td>
-                <td>{proofLabel(receipt.eventType, { stripCasperPrefix: true })}</td>
-                <td>{proofLabel(receipt.policyGate, { stripCasperPrefix: true })}</td>
-                <td><ChainProofLink hash={receipt.deployHash} kind="deploy" label="deploy" /></td>
-                <td>
-                  <button type="button" onClick={() => onSelect(receipt)} aria-label={`Inspect receipt ${proofText(receipt.decisionId, 'unknown')}`}>
-                    <EyeIcon className="h-4 w-4" />
-                    Inspect
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {receipts.map((receipt, index) => {
+              const rowKey = receiptRowKey(receipt, `receipt-${index}`);
+              return (
+                <tr key={rowKey} className={`receipt-ledger-row ${selectedKey === rowKey ? 'is-selected' : ''}`}>
+                  <td>{receiptRowTime(receipt)}</td>
+                  <td><b>{shortValue(receipt.decisionId)}</b></td>
+                  <td>{proofLabel(receipt.eventType, { stripCasperPrefix: true })}</td>
+                  <td>{proofLabel(receipt.policyGate, { stripCasperPrefix: true })}</td>
+                  <td><ChainProofLink hash={receipt.deployHash} kind="deploy" label="deploy" missingLabel={receiptDeployLabel(receipt)} /></td>
+                  <td>
+                    <button type="button" onClick={() => onSelect(receipt)} aria-label={`Inspect receipt ${proofText(receipt.decisionId, 'unknown')}`}>
+                      <EyeIcon className="h-4 w-4" />
+                      Inspect
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       ) : (

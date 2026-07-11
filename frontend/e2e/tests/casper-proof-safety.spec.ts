@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { linkedSnapshot } from '../fixtures/casper-dashboard-snapshot';
-import { latestReceipt, olderReceipt, routePublicProof, routeReceipts, routeSnapshot } from '../fixtures/casper-flight-deck';
+import { latestReceipt, routePublicProof, routeReceipts, routeSnapshot } from '../fixtures/casper-flight-deck';
 
 test('live submit stays guarded when preflight is blocked even if backend setting is enabled', async ({ page }) => {
   await routeSnapshot(page, {
@@ -103,21 +103,37 @@ test('silent refresh failure quarantines stale proof actions', async ({ page }) 
 });
 
 test('receipt ledger scopes latest proof to the selected decision id', async ({ page }) => {
+  const repeatedBlockedReceipt = {
+    ...latestReceipt,
+    timestamp: '2026-07-11T03:37:22+00:00',
+    createdAt: '2026-07-11T03:37:22+00:00',
+    deployHash: undefined,
+    eventType: 'casper_decision_live_submit_blocked',
+  };
   await routeSnapshot(page);
-  await routeReceipts(page);
+  await routeReceipts(page, [repeatedBlockedReceipt, latestReceipt]);
   await page.goto('/');
   await page.getByRole('button', { name: 'Receipt Ledger' }).click();
 
   const inspector = page.locator('[data-receipt-inspector]');
-  await expect(page.getByRole('button', { name: `Inspect receipt ${latestReceipt.decisionId}` })).toBeVisible();
+  const ledgerRows = page.locator('[data-receipt-ledger] tbody tr');
+  const blockedRow = ledgerRows.filter({ hasText: 'decision live submit blocked' });
+  const verifiedRow = ledgerRows.filter({ hasText: 'decision readback verified' });
+  await expect(blockedRow.getByRole('cell').nth(4)).toHaveText('not submitted');
+  await expect(blockedRow.getByRole('cell').nth(4)).not.toContainText('pending');
+  await expect(verifiedRow.getByRole('link', { name: /Open deploy on Casper explorer/ })).toBeVisible();
+  await expect(page.locator('[data-receipt-ledger] tbody tr.is-selected')).toHaveCount(1);
   await expect(inspector).toContainText('Latest proof');
   await expect(inspector).toContainText('Readback verified');
   await expect(inspector).toContainText('yes');
 
-  await page.getByRole('button', { name: 'blocked' }).click();
-  await expect(page.getByRole('button', { name: `Inspect receipt ${olderReceipt.decisionId}` })).toBeVisible();
-  await expect(page.getByRole('button', { name: `Inspect receipt ${latestReceipt.decisionId}` })).toHaveCount(0);
+  await blockedRow.getByRole('button', { name: `Inspect receipt ${latestReceipt.decisionId}` }).click();
+  await expect(page.locator('[data-receipt-ledger] tbody tr.is-selected')).toHaveCount(1);
   await expect(inspector).toContainText('Row only');
   await expect(inspector).toContainText('not row-scoped');
   await expect(inspector).toContainText('latest proof not attached to this row');
+
+  await page.getByRole('button', { name: 'verified' }).click();
+  await expect(verifiedRow).toBeVisible();
+  await expect(blockedRow).toHaveCount(0);
 });
