@@ -54,7 +54,14 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
   const filteredReceipts = useMemo(() => {
     const search = query.trim().toLowerCase();
     return receipts.filter((receipt) => {
-      const haystack = [receipt.decisionId, receipt.proofDigest, receipt.deployHash, receipt.policyGate, receipt.eventType]
+      const haystack = [
+        receipt.decisionId,
+        receipt.proofDigest,
+        receipt.deployHash,
+        receipt.policyGate,
+        receipt.eventType,
+        ...(receipt.hardBlockers ?? []),
+      ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();

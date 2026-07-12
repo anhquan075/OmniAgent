@@ -48,8 +48,38 @@ def test_receipt_has_all_required_fields(tmp_path, monkeypatch) -> None:
     from app.api.routes.dashboard import _receipt_from_event
     ledger = CasperDecisionLedger.get_ledger_summary(limit=10)
     receipt = _receipt_from_event(ledger["events"][0])
-    for field in ["decisionId", "action", "riskScore", "timestamp", "deployHash", "proofDigest", "policyGate"]:
+    for field in ["decisionId", "action", "riskScore", "timestamp", "deployHash", "proofDigest", "policyGate", "hardBlockers"]:
         assert field in receipt
+
+
+def test_receipt_includes_submission_blockers(tmp_path, monkeypatch) -> None:
+    _use_log(tmp_path, monkeypatch)
+    event = _decision_event("r-duplicate")
+    event["payload"]["hardBlockers"] = ["casper_chain_duplicate_intent"]
+    _write_events([event])
+
+    from app.api.routes.dashboard import _receipt_from_event
+
+    ledger = CasperDecisionLedger.get_ledger_summary(limit=10)
+    receipt = _receipt_from_event(ledger["events"][0])
+
+    assert receipt["hardBlockers"] == ["casper_chain_duplicate_intent"]
+
+
+def test_receipt_caps_and_sanitizes_submission_blockers(tmp_path, monkeypatch) -> None:
+    _use_log(tmp_path, monkeypatch)
+    event = _decision_event("r-many-blockers")
+    event["payload"]["hardBlockers"] = ["x" * 120, 7, *[f"blocker-{index}" for index in range(40)]]
+    _write_events([event])
+
+    from app.api.routes.dashboard import _receipt_from_event
+
+    ledger = CasperDecisionLedger.get_ledger_summary(limit=10)
+    blockers = _receipt_from_event(ledger["events"][0])["hardBlockers"]
+
+    assert len(blockers) == 32
+    assert blockers[0] == "x" * 100
+    assert all(isinstance(blocker, str) for blocker in blockers)
 
 
 def test_receipts_limit_caps_result_count(tmp_path, monkeypatch) -> None:

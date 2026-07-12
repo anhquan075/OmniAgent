@@ -109,6 +109,7 @@ test('receipt ledger scopes latest proof to the selected decision id', async ({ 
     createdAt: '2026-07-11T03:37:22+00:00',
     deployHash: undefined,
     eventType: 'casper_decision_live_submit_blocked',
+    hardBlockers: ['casper_chain_duplicate_intent'],
   };
   await routeSnapshot(page);
   await routeReceipts(page, [repeatedBlockedReceipt, latestReceipt]);
@@ -119,7 +120,7 @@ test('receipt ledger scopes latest proof to the selected decision id', async ({ 
   const ledgerRows = page.locator('[data-receipt-ledger] tbody tr');
   const blockedRow = ledgerRows.filter({ hasText: 'decision live submit blocked' });
   const verifiedRow = ledgerRows.filter({ hasText: 'decision readback verified' });
-  await expect(blockedRow.getByRole('cell').nth(4)).toHaveText('not submitted');
+  await expect(blockedRow.getByRole('cell').nth(4)).toHaveText('already recorded');
   await expect(blockedRow.getByRole('cell').nth(4)).not.toContainText('pending');
   await expect(verifiedRow.getByRole('link', { name: /Open deploy on Casper explorer/ })).toBeVisible();
   await expect(page.locator('[data-receipt-ledger] tbody tr.is-selected')).toHaveCount(1);
