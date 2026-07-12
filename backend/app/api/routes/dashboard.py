@@ -33,6 +33,7 @@ def _receipt_from_event(event: dict[str, object]) -> dict[str, object | None]:
     payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
     decision = payload.get("decision") if isinstance(payload.get("decision"), dict) else {}
     receipt = decision.get("decisionReceipt") if isinstance(decision.get("decisionReceipt"), dict) else {}
+    hard_blockers = payload.get("hardBlockers") if isinstance(payload.get("hardBlockers"), list) else []
     return {
         "decisionId": decision.get("decisionId"),
         "action": decision.get("action"),
@@ -48,6 +49,7 @@ def _receipt_from_event(event: dict[str, object]) -> dict[str, object | None]:
         "policyGate": decision.get("policyGate"),
         "eventType": event.get("eventType"),
         "createdAt": event.get("createdAt"),
+        "hardBlockers": [blocker[:100] for blocker in hard_blockers if isinstance(blocker, str)][:32],
     }
 
 

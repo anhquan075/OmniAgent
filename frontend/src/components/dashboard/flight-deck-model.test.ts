@@ -85,6 +85,20 @@ describe('flight deck model', () => {
   });
 
   it('maps missing deploy hashes to the recorded submission outcome', () => {
+    expect(receiptDeployLabel({
+      eventType: 'casper_decision_live_submit_blocked',
+      hardBlockers: ['casper_chain_duplicate_intent'],
+    })).toBe('already recorded');
+    for (const blocker of [
+      'casper_submission_duplicate_intent',
+      'casper_chain_semantic_id_collision',
+      'casper_chain_submission_cooldown_active',
+    ]) {
+      expect(receiptDeployLabel({
+        eventType: 'casper_decision_live_submit_blocked',
+        hardBlockers: [blocker],
+      })).toBe('not submitted');
+    }
     expect(receiptDeployLabel({ eventType: 'casper_decision_live_submit_blocked' })).toBe('not submitted');
     expect(receiptDeployLabel({ eventType: 'casper_decision_dry_run' })).toBe('dry run');
     expect(receiptDeployLabel({ eventType: 'casper_decision_live_submit_failed' })).toBe('submit failed');

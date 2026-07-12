@@ -22,6 +22,7 @@ export type ReceiptRow = {
   rationaleHash?: string;
   policyGate?: string;
   eventType?: string;
+  hardBlockers?: string[];
 };
 
 export type OutcomeSummary = {
@@ -161,6 +162,8 @@ export const receiptRowKey = (receipt: ReceiptRow, fallback = '') => {
 
 export const receiptDeployLabel = (receipt: ReceiptRow) => {
   if (receipt.deployHash) return '';
+  const hardBlockers = Array.isArray(receipt.hardBlockers) ? receipt.hardBlockers : [];
+  if (hardBlockers.some(blocker => blocker.toLowerCase() === 'casper_chain_duplicate_intent')) return 'already recorded';
   const eventType = proofText(receipt.eventType, '').toLowerCase();
   if (eventType.includes('dry_run')) return 'dry run';
   if (eventType.includes('outcome_unknown')) return 'outcome unknown';
