@@ -19,14 +19,14 @@
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.2.1",
     "lucide-react": "^0.575.0",
-    "react": "19.0.0",
+    "react": "19.2.7",
     "react-dom": "19.0.0",
     "tailwindcss": "^4.2.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@types/node": "^25.5.0",
-    "@types/react": "^19.2.14",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.3.4",
     "typescript": "^5.9.3",
