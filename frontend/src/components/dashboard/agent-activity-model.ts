@@ -1,0 +1,260 @@
+import { displayDeployStatus, displayReadbackStatus, hardBlockersFrom } from './proof-blockers';
+import { proofLabel, proofText } from './proof-labels';
+
+export type Payload = Record<string, any>;
+
+export type McpActivityRow = {
+  callId: string;
+  tool: string;
+  status: string;
+  output: string;
+};
+
+export type AiRoleOutput = {
+  role: string;
+  verdict: string;
+  confidence: string;
+  summary: string;
+  traceSource: string;
+  traceHash: string;
+};
+
+export type StreamPanelStatus = {
+  label: string;
+  sequence: string;
+  emittedAt: string;
+  isLive: boolean;
+  isHistory: boolean;
+};
+
+const DEFAULT_TOOLS = [
+  'casper_rwa_evidence',
+  'casper_guardrails',
+  'casper_live_preflight',
+  'casper_record_decision',
+  'casper_record_readback',
+];
+
+const completeStatuses = new Set(['complete', 'approved', 'confirmed', 'verified', 'ready']);
+
+export const decisionFromBundle = (bundle?: Payload): Payload => (
+  bundle?.latestDecision && typeof bundle.latestDecision === 'object' ? bundle.latestDecision : {}
+);
+
+export const normalizedLifecycle = (bundle?: Payload) => {
+  const lifecycle = Array.isArray(bundle?.lifecycle) ? bundle.lifecycle : [];
+  const rows = lifecycle.length ? lifecycle : [
+    { state: 'sense', status: 'waiting' },
+    { state: 'propose', status: 'waiting' },
+    { state: 'critique', status: 'waiting' },
+    { state: 'policy_gate', status: 'blocked' },
+    { state: 'submit', status: 'not_submitted' },
+    { state: 'readback', status: 'missing' },
+  ];
+  return rows.slice(0, 6).map((item: Payload) => ({
+    state: proofText(item.state, 'step'),
+    status: proofText(item.status, 'waiting'),
+    complete: completeStatuses.has(proofText(item.status, '').toLowerCase()),
+  }));
+};
+
+export const mcpActivityRows = (runtime?: Payload, bundle?: Payload): McpActivityRow[] => {
+  const decision = decisionFromBundle(bundle);
+  const toolActivity = Array.isArray(bundle?.cycle?.toolActivity)
+    ? bundle.cycle.toolActivity.filter((item: unknown) => item && typeof item === 'object')
+    : [];
+  if (toolActivity.length) {
+    return toolActivity.map((activity: Payload, index: number) => {
+      const tool = proofText(activity.tool, `mcp_tool_${index + 1}`);
+      const invoked = activity.invoked !== false;
+      const outputStatus = activity.output && typeof activity.output === 'object' ? activity.output.status : undefined;
+      const status = invoked ? proofText(activity.status ?? outputStatus, 'complete') : 'skipped';
+      const output = activity.output === undefined
+        ? { invoked, status }
+        : activity.output;
+      return {
+        callId: proofText(activity.callId, `${tool}-${index + 1}`),
+        tool,
+        status,
+        output: stringifyToolOutput(output),
+      };
+    });
+  }
+  const cycleTools = [
+    ...arrayOfStrings(decision.cycle?.toolsUsed),
+    ...arrayOfStrings(bundle?.cycle?.toolsUsed),
+    ...arrayOfStrings(runtime?.cycle?.toolsUsed),
+  ];
+  const tools = cycleTools.length ? Array.from(new Set(cycleTools)) : DEFAULT_TOOLS;
+  return withRequiredTool(tools, 'casper_record_readback', 6)
+    .map(tool => activityForTool(tool, runtime, bundle, decision));
+};
+
+export const aiDecisionSummary = (bundle?: Payload) => {
+  const decision = decisionFromBundle(bundle);
+  return {
+    action: proofLabel(decision.action, { stripCasperPrefix: true }),
+    riskScore: proofText(decision.riskScore, 'pending'),
+    policyGate: proofLabel(decision.policyGate, { stripCasperPrefix: true }),
+    rationale: shortText(decision.rationale, 168),
+    proofDigest: proofText(decision.proofDigest),
+    rationaleHash: proofText(decision.rationaleHash),
+    sourceHash: proofText(decision.evidenceBundle?.sourceHash ?? decision.sourceHash),
+    guardrailHash: proofText(decision.guardrailHash ?? decision.guardrails?.guardrailHash),
+  };
+};
+
+export const aiRoleOutputs = (bundle?: Payload): AiRoleOutput[] => {
+  const decision = decisionFromBundle(bundle);
+  const roles = Array.isArray(decision.guardrails?.roles) ? decision.guardrails.roles : [];
+  if (!roles.length) {
+    return [{
+      role: proofLabel('policy_gate', { stripCasperPrefix: true }),
+      verdict: proofLabel(decision.policyGate, { stripCasperPrefix: true }),
+      confidence: proofText(decision.materialityGate?.confidence),
+      summary: proofText(decision.rationale, 'waiting for autonomous cycle output'),
+      traceSource: 'deterministic',
+      traceHash: proofText(decision.guardrailHash ?? decision.proofDigest, ''),
+    }];
+  }
+  return roles.slice(0, 3).map((role: Payload) => ({
+    role: proofLabel(role.agentRole, { stripCasperPrefix: true }),
+    verdict: proofLabel(role.verdict, { stripCasperPrefix: true }),
+    confidence: formatConfidence(role.confidence),
+    summary: arrayOfStrings(role.reasonCodes).slice(0, 3).map(item => proofLabel(item)).join(' · ') || 'ready',
+    traceSource: proofLabel(role.traceSource || 'deterministic'),
+    traceHash: proofText(role.outputHash ?? role.modelClaimHash ?? role.promptHash),
+  }));
+};
+
+export const evidenceSourceUrl = (bundle?: Payload) => {
+  const decision = decisionFromBundle(bundle);
+  const sources = Array.isArray(decision.evidenceBundle?.sources) ? decision.evidenceBundle.sources : [];
+  const source = sources.find((item: Payload) => typeof item?.url === 'string' && item.url);
+  return safeHttpsUrl(source?.url);
+};
+
+export const streamPanelStatus = (streamMeta?: Payload, nowMs = Date.now()): StreamPanelStatus => {
+  const sequence = proofText(streamMeta?.sequence, '');
+  const transport = proofText(streamMeta?.transport, '').toLowerCase();
+  const emittedAt = streamTime(streamMeta?.emittedAt);
+  const isHistory = transport === 'history';
+  const isLive = transport === 'sse' && Boolean(sequence) && isFreshStreamEvent(streamMeta, nowMs);
+  return {
+    label: isHistory ? 'recorded' : isLive ? 'live' : sequence ? 'stale' : 'snapshot',
+    sequence: sequence ? (sequence.startsWith('#') ? sequence : `#${sequence}`) : 'pending',
+    emittedAt,
+    isLive,
+    isHistory,
+  };
+};
+
+export const safeHttpsUrl = (value: unknown) => {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return '';
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' ? url.toString() : '';
+  } catch {
+    return '';
+  }
+};
+
+function activityForTool(tool: string, runtime?: Payload, bundle?: Payload, decision: Payload = {}): McpActivityRow {
+  const evidence = decision.evidenceBundle && typeof decision.evidenceBundle === 'object' ? decision.evidenceBundle : {};
+  const guardrails = decision.guardrails && typeof decision.guardrails === 'object' ? decision.guardrails : {};
+  const preflight = bundle?.preflight ?? runtime?.preflight ?? {};
+  const deploy = bundle?.deployStatus ?? decision.deployStatus ?? {};
+  const readback = bundle?.readback ?? decision.readback ?? {};
+  const blockers = hardBlockersFrom(bundle?.proofScore, preflight, deploy, readback);
+  const outputByTool: Record<string, Payload> = {
+    casper_rwa_evidence: {
+      scenario: proofText(evidence.scenario, 'rwa-collateral-risk-sentinel'),
+      status: proofText(evidence.status, decision.sourceHash ? 'ready' : 'waiting'),
+      riskScore: proofText(evidence.riskScore ?? decision.riskScore),
+      sourceHash: proofText(evidence.sourceHash ?? decision.sourceHash),
+      sources: Array.isArray(evidence.sources) ? evidence.sources.length : 0,
+    },
+    casper_guardrails: {
+      status: proofText(guardrails.status ?? decision.policyGate),
+      guardrailHash: proofText(guardrails.guardrailHash ?? decision.guardrailHash),
+      roles: Array.isArray(guardrails.roles) ? guardrails.roles.length : 0,
+    },
+    casper_live_preflight: {
+      status: proofText(preflight.status ?? runtime?.status),
+      liveSubmitEnabled: Boolean(preflight.liveSubmitEnabled),
+      blockers: blockers.length,
+      hardBlockers: blockers,
+      accountBalance: preflight.accountBalance && typeof preflight.accountBalance === 'object'
+        ? {
+          status: proofText(preflight.accountBalance.status),
+          source: proofText(preflight.accountBalance.source),
+          motes: preflight.accountBalance.motes ?? null,
+          cspr: preflight.accountBalance.cspr ?? null,
+        }
+        : undefined,
+    },
+    casper_record_decision: {
+      decisionId: proofText(decision.decisionId),
+      status: displayDeployStatus(deploy, blockers),
+      deployHash: proofText(deploy.deployHash ?? decision.deployHash),
+      proofDigest: proofText(decision.proofDigest),
+      hardBlockers: blockers,
+    },
+    casper_record_readback: {
+      status: displayReadbackStatus(readback, blockers),
+      verified: Boolean(readback.verified),
+      expectedProofDigest: proofText(readback.expectedProofDigest ?? decision.proofDigest),
+      observedProofDigest: proofText(readback.observedProofDigest ?? readback.proofDigest),
+      hardBlockers: blockers,
+    },
+  };
+  const output = outputByTool[tool] ?? { status: proofText(bundle?.status ?? runtime?.status), tool };
+  return { callId: tool, tool, status: proofText(output.status), output: JSON.stringify(output) };
+}
+
+function stringifyToolOutput(value: unknown) {
+  if (typeof value === 'string') return value;
+  try {
+    return JSON.stringify(value ?? null);
+  } catch {
+    return proofText(value);
+  }
+}
+
+function arrayOfStrings(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter(item => typeof item === 'string') : [];
+}
+
+function withRequiredTool(tools: string[], required: string, limit: number) {
+  const unique = Array.from(new Set(tools));
+  if (unique.includes(required)) return unique.slice(0, limit);
+  return [...unique.slice(0, Math.max(0, limit - 1)), required];
+}
+
+function shortText(value: unknown, limit: number) {
+  const text = proofText(value);
+  return text.length > limit ? `${text.slice(0, limit - 1)}...` : text;
+}
+
+function formatConfidence(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? `${Math.round(value * 100)}%` : proofText(value);
+}
+
+function streamTime(value: unknown) {
+  const raw = proofText(value, '');
+  if (!raw) return 'pending';
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw.slice(0, 19);
+  return `${date.toISOString().slice(11, 19)} UTC`;
+}
+
+function isFreshStreamEvent(streamMeta?: Payload, nowMs = Date.now()) {
+  const emittedAtMs = Date.parse(proofText(streamMeta?.emittedAt, ''));
+  if (!Number.isFinite(emittedAtMs)) return false;
+  const rawInterval = Number(streamMeta?.intervalSec);
+  const intervalSec = Number.isFinite(rawInterval) && rawInterval > 0 ? rawInterval : 1;
+  const staleAfterMs = Math.max(5_000, intervalSec * 4_000);
+  const ageMs = nowMs - emittedAtMs;
+  return ageMs >= -30_000 && ageMs <= staleAfterMs;
+}

@@ -1,0 +1,165 @@
+@media (max-width: 1440px) {
+  .receipt-ledger-tab {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1180px) {
+  .flight-deck,
+  .cockpit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cockpit-grid {
+    grid-template-rows: none;
+  }
+
+  .agent-activity-console,
+  .policy-gate-summary,
+  .loop-status-panel,
+  .recovery-queue {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .flight-deck {
+    align-content: start;
+  }
+
+  .flight-rail {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto;
+    align-items: center;
+    padding: 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .flight-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .flight-rail-status { display: none; }
+
+  .flight-status-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-height: 0;
+  }
+
+  .flight-title {
+    grid-column: span 2;
+  }
+
+  .loop-status-panel {
+    height: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .flight-status-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .flight-title {
+    grid-column: 1 / -1;
+  }
+
+  .receipt-flow-timeline ol,
+  .evidence-provenance ol {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .proof-outcome-panel,
+  .proof-outcome-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .agent-activity-console,
+  .agent-stream-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-activity-console {
+    height: auto;
+  }
+
+  .agent-loop-mascot,
+  .mcp-log-panel,
+  .ai-output-panel,
+  .loop-status-panel {
+    overflow: visible;
+  }
+
+  .mcp-log-list,
+  .ai-output-scroll,
+  .loop-status-content {
+    overflow: visible;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .cycle-history-field {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cycle-history-field select {
+    max-width: 100%;
+  }
+
+  .receipt-flow-timeline ol,
+  .evidence-provenance ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .policy-grid,
+  .recovery-list,
+  .loop-stats,
+  .trust-mini-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .flight-title,
+  .flight-status-item,
+  .live-submit-guard {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 10px 12px;
+  }
+
+  .flight-brand img {
+    width: 48px;
+    height: 48px;
+  }
+
+  .receipt-ledger-controls input {
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .flight-rail {
+    grid-template-columns: 1fr;
+  }
+
+  .proof-outcome-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .proof-outcome-grid {
+    grid-template-columns: repeat(2, minmax(128px, 1fr));
+  }
+
+  .live-submit-guard {
+    grid-column: auto;
+  }
+
+  .flight-tab-panel {
+    padding: 8px;
+  }
+
+  .receipt-ledger-table table {
+    min-width: 640px;
+  }
+}

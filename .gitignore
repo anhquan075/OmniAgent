@@ -1,0 +1,126 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
+.env.wdk
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend_fastapi/.env
+backend_fastapi/.env.*
+!backend_fastapi/.env.example
+
+# Hardhat / Solidity artifacts
+artifacts/
+cache/
+typechain/
+typechain-types/
+coverage/
+coverage.json
+gasReporterOutput.json
+ignition/deployments/
+
+# Next.js / frontend build output
+frontend/.next/
+frontend/out/
+frontend/dist/
+frontend/.turbo/
+backend/.venv/
+backend_fastapi/.venv/
+.claude/skills/.venv/
+.agents/skills/.venv/
+**/skills/**/__pycache__/
+**/skills/**/*.pyc
+backend/.pytest_cache/
+backend_fastapi/.pytest_cache/
+backend/.ruff_cache/
+backend_fastapi/.ruff_cache/
+backend/**/__pycache__/
+backend_fastapi/**/__pycache__/
+backend/**/*.pyc
+backend_fastapi/**/*.pyc
+backend/data/*.jsonl
+backend/data/*.sqlite3
+backend/data/*.sqlite3-*
+backend/data/casper-decision-log*
+backend/playwright-casper-dashboard-log*
+backend_fastapi/data/*.jsonl
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+
+# Local agent tooling
+.agents/
+.claude/skills/*
+!.claude/skills/solidity-sage/
+!.claude/skills/solidity-sage/**
+
+# Claude local settings (personal permissions, not for repo)
+.claude/settings.local.json
+
+# Misc
+*.pid
+*.seed
+*.pid.lock
+.eslintcache
+.npm/
+.pnpm-store/
+target/
+backend/verifier-casper-dashboard-log-*
+
+# Planning and generated docs
+/plans/
+/plans/**/tmp/
+.chats/
+/docs/
+!/docs/
+!/docs/README.md
+!/docs/ARCHITECTURE.md
+!/docs/problem-and-approach.md
+!/docs/casper-agentic-demo-script.md
+!/docs/casper-buildathon-submission-checklist.md
+!/docs/casper-launch-roadmap.md
+!/docs/railway-deployment.md
+/docs/journals/
+/docs/reports/
+# Build outputs
+dist/
+*.log
+*.pid
+
+# Environment
+.env.local
+.env.*.local
+
+# Temp files
+check_*.js
+check_*.ts
+test-*.js
+*-output*.xml
+
+# CLI artifacts
+.chats/
+serena/
+.sisyphus/
+.serena/
+
+# Deprecated
+scripts/wdk/
+.claude/auto-context.md

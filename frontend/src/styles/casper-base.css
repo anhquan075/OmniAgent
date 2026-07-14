@@ -1,0 +1,265 @@
+/* ═══════════════════════════════════════════════════
+   OmniAgent — Base Styles & Bento Shell
+   Casper Network warm dark palette
+   ═══════════════════════════════════════════════════ */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100dvh;
+  background: var(--color-casper-bg);
+  color: var(--color-casper-text);
+}
+
+button,
+a {
+  font: inherit;
+}
+
+/* ── Shell: deep warm dark with subtle red ambient glow ── */
+.casper-shell {
+  background:
+    radial-gradient(ellipse 70% 50% at 30% 15%, var(--color-casper-red-dim) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 75% 85%, rgba(255, 248, 239, 0.04) 0%, transparent 55%),
+    linear-gradient(180deg, var(--color-casper-bg) 0%, var(--color-casper-bg-raised) 100%);
+  min-height: 100dvh;
+}
+
+.casper-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 248, 239, 0.025) 0 1px, transparent 1px 80px),
+    repeating-linear-gradient(0deg, rgba(230, 63, 55, 0.025) 0 1px, transparent 1px 80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.casper-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+/* ── Topbar ── */
+.agent-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 64px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--color-glass-border);
+}
+
+.agent-identity,
+.agent-actions,
+.casper-proof-head,
+.casper-proof-receipt,
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Agent mark: red ring with inner glow ── */
+.agent-mark {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(230, 63, 55, 0.45);
+  background: linear-gradient(145deg, rgba(230, 63, 55, 0.3), var(--color-casper-cream-dim));
+  box-shadow: 0 0 22px var(--color-casper-red-glow), inset 0 0 14px rgba(230, 63, 55, 0.1);
+  transition: box-shadow 0.4s var(--ease-smooth);
+}
+
+.agent-mark:hover {
+  box-shadow: 0 0 35px var(--color-casper-red-glow), inset 0 0 18px rgba(230, 63, 55, 0.15);
+}
+
+/* ── Typography ── */
+.agent-identity p,
+.agent-command span,
+.casper-proof-head span,
+.signal-stat small,
+.panel-head h3,
+.check-list small,
+.recovery-list small,
+.casper-proof-metrics small,
+.casper-proof-lifecycle small,
+.command-status small {
+  margin: 0;
+  color: var(--color-casper-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.agent-identity h1,
+.agent-command h2,
+.casper-proof-head h3,
+.panel-head h3 {
+  margin: 0;
+  color: var(--color-casper-text);
+  font-weight: 760;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+}
+
+.agent-identity h1 {
+  font-size: 1.3rem;
+}
+
+.agent-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* ── Buttons & pills: glass style ── */
+.agent-actions button,
+.judge-actions button,
+.status-pill,
+.chain-proof-link,
+.chain-proof-missing,
+.casper-proof-rpc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-glass-border);
+  padding: 0 14px;
+  color: var(--color-casper-text);
+  text-decoration: none;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  font-weight: 550;
+  background: var(--color-glass);
+  backdrop-filter: blur(var(--blur-glass));
+  transition: all 0.25s var(--ease-smooth);
+}
+
+.agent-actions button,
+.judge-actions button {
+  cursor: pointer;
+}
+
+.agent-actions button:hover,
+.judge-actions button:hover,
+.chain-proof-link:hover,
+.casper-proof-rpc:hover {
+  border-color: var(--color-glass-border-strong);
+  background: var(--color-casper-red-dim);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(38, 13, 10, 0.4);
+}
+
+.agent-actions button:active,
+.judge-actions button:active,
+.chain-proof-link:active,
+.casper-proof-rpc:active {
+  transform: translateY(0);
+}
+
+/* ── Status pills ── */
+.status-pill.is-ok,
+.check-list .is-ok {
+  color: var(--color-status-ok);
+  background: var(--color-status-ok-bg);
+  border-color: var(--color-status-ok-border);
+}
+
+.status-pill.is-blocked,
+.check-list .is-blocked {
+  color: var(--color-status-danger);
+  background: var(--color-status-danger-bg);
+  border-color: var(--color-status-danger-border);
+}
+
+/* ── Spinning ── */
+.is-spinning {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Glow animations ── */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px var(--color-casper-red-glow); }
+  50% { box-shadow: 0 0 22px var(--color-casper-red-glow); }
+}
+
+@keyframes border-glow {
+  0%, 100% { border-color: rgba(230, 63, 55, 0.25); }
+  50% { border-color: rgba(230, 63, 55, 0.45); }
+}
+
+/* ── Entrance animations ── */
+@keyframes slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-in {
+  animation: slide-up-fade 0.5s var(--ease-smooth) both;
+}
+
+.animate-in-delay-1 { animation-delay: 0.05s; }
+.animate-in-delay-2 { animation-delay: 0.1s; }
+.animate-in-delay-3 { animation-delay: 0.15s; }
+.animate-in-delay-4 { animation-delay: 0.2s; }
+.animate-in-delay-5 { animation-delay: 0.25s; }
+
+/* ── Live badge pulse ── */
+.live-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-badge::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-casper-red);
+  box-shadow: 0 0 8px var(--color-casper-red-glow);
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
