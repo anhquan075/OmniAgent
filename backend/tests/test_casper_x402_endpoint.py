@@ -61,6 +61,8 @@ def _decision_event() -> dict[str, object]:
 
 def test_x402_setup_endpoint_reports_missing_pay_to(monkeypatch) -> None:
     monkeypatch.delenv("CASPER_X402_PAY_TO_ADDRESS", raising=False)
+    monkeypatch.delenv("CASPER_X402_FACILITATOR_API_KEY", raising=False)
+    monkeypatch.delenv("CASPER_CSPR_CLOUD_API_KEY", raising=False)
     get_settings.cache_clear()
     client = TestClient(create_app())
 
@@ -72,7 +74,7 @@ def test_x402_setup_endpoint_reports_missing_pay_to(monkeypatch) -> None:
     assert setup["status"] == "setup_required"
     assert "casper_x402_pay_to_address_missing" in setup["hardBlockers"]
     assert evidence_response.status_code == 503
-    assert evidence_response.json()["detail"]["status"] == "setup_required"
+    assert evidence_response.json()["status"] == "setup_required"
 
 
 def test_x402_cors_allows_payment_headers(monkeypatch) -> None:
@@ -96,22 +98,64 @@ def test_x402_cors_allows_payment_headers(monkeypatch) -> None:
     assert "payment-signature" in allowed_headers
 
 
-def test_x402_setup_ready_when_pay_to_configured(monkeypatch) -> None:
-    monkeypatch.setenv("CASPER_X402_PAY_TO_ADDRESS", "0x1111111111111111111111111111111111111111")
+def test_x402_setup_ready_when_fully_configured(monkeypatch) -> None:
+    monkeypatch.setenv(
+        "CASPER_X402_PAY_TO_ADDRESS",
+        "00aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    )
     monkeypatch.setenv("CASPER_X402_EVIDENCE_URL", "https://example.com/api/x402/rwa-evidence")
+    monkeypatch.setenv("CASPER_X402_FACILITATOR_API_KEY", "test-key")
+    monkeypatch.setenv("CASPER_X402_NETWORK", "casper:casper-test")
     get_settings.cache_clear()
 
     setup = CasperX402EvidenceEndpointService.setup_status(get_settings())
 
     assert setup["status"] == "ready"
     assert setup["endpoint"] == "https://example.com/api/x402/rwa-evidence"
-    assert setup["paymentNetwork"] == "eip155:84532"
+    assert setup["paymentNetwork"] == "casper:casper-test"
+    assert setup["currency"] == "WCSPR"
     assert setup["hardBlockers"] == []
+    assert setup["settleReady"] is True
+
+
+def test_x402_unpaid_request_returns_casper_402(monkeypatch) -> None:
+    monkeypatch.setenv(
+        "CASPER_X402_PAY_TO_ADDRESS",
+        "00aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    )
+    monkeypatch.setenv("CASPER_X402_FACILITATOR_API_KEY", "test-key")
+    monkeypatch.setenv("CASPER_X402_NETWORK", "casper:casper-test")
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+
+    response = client.get("/api/x402/rwa-evidence")
+
+    assert response.status_code == 402
+    body = response.json()
+    assert body["x402Version"] == 2
+    assert body["accepts"][0]["scheme"] == "exact"
+    assert body["accepts"][0]["network"] == "casper:casper-test"
+    assert "amount" in body["accepts"][0]
+    assert body["accepts"][0]["asset"].startswith("hash-")
+    assert "PAYMENT-REQUIRED" in response.headers
+
+
+def test_x402_rejects_eip155_network(monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_X402_PAY_TO_ADDRESS", "00aa")
+    monkeypatch.setenv("CASPER_X402_NETWORK", "eip155:84532")
+    monkeypatch.setenv("CASPER_X402_FACILITATOR_API_KEY", "test-key")
+    get_settings.cache_clear()
+
+    setup = CasperX402EvidenceEndpointService.setup_status(get_settings())
+    assert "casper_x402_network_unsupported" in setup["hardBlockers"]
 
 
 def test_x402_paid_evidence_payload_binds_to_public_proof(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("CASPER_DECISION_LEDGER_PATH", str(tmp_path / "x402.sqlite3"))
-    monkeypatch.setenv("CASPER_X402_PAY_TO_ADDRESS", "0x1111111111111111111111111111111111111111")
+    monkeypatch.setenv(
+        "CASPER_X402_PAY_TO_ADDRESS",
+        "00aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    )
     monkeypatch.setenv("CASPER_X402_EVIDENCE_URL", "https://example.com/api/x402/rwa-evidence")
     get_settings.cache_clear()
     CasperDecisionLedger.clear_current_log()
@@ -125,3 +169,4 @@ def test_x402_paid_evidence_payload_binds_to_public_proof(monkeypatch, tmp_path)
     assert payload["binding"]["sourceHash"] == "sha256:" + "b" * 64
     assert payload["publicProof"]["decisionId"] == "x402-evidence-001"
     assert payload["receiptBindingHint"]["sourceHash"] == "sha256:" + "b" * 64
+    assert payload["payment"]["network"] == "casper:casper-test"

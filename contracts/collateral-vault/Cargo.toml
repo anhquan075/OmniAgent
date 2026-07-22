@@ -1,0 +1,17 @@
+[package]
+name = "collateral-vault"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+
+[[bin]]
+name = "collateral-vault"
+path = "src/main.rs"
+bench = false
+doctest = false
+test = false
+
+[dependencies]
+base64ct = "=1.7.2"
+casper-contract = "=5.0.0"
+casper-types = "=5.0.1"
