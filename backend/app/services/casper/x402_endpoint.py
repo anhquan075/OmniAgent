@@ -1,16 +1,20 @@
+"""OmniAgent x402 evidence paywall — Casper-native settlement."""
+
+from __future__ import annotations
+
 from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import FastAPI
 import structlog
-from x402.http import FacilitatorConfig, HTTPFacilitatorClient, PaymentOption
-from x402.http.middleware.fastapi import PaymentMiddlewareASGI
-from x402.http.types import RouteConfig
-from x402.mechanisms.evm.exact import ExactEvmServerScheme
-from x402.schemas import Network
-from x402.server import x402ResourceServer
 
 from app.core.settings import Settings
+from app.services.casper.casper_x402_facilitator import (
+    DEFAULT_CEP18_ASSET,
+    DEFAULT_FACILITATOR_URL,
+    NETWORK_TESTNET,
+    CasperX402Config,
+)
 from app.services.casper.proof_bundle import CasperProofBundleService
 from app.services.casper.public_proof import CasperPublicProofService
 
@@ -23,16 +27,54 @@ X402_EVIDENCE_ROUTE_PATTERN = f"GET {X402_EVIDENCE_ROUTE_PATH}"
 
 class CasperX402EvidenceEndpointService:
     @staticmethod
+    def config_from_settings(settings: Settings) -> CasperX402Config:
+        """Build Casper x402 config from app settings."""
+        extra: dict[str, Any] = {
+            "name": str(settings.casper_x402_asset_name or "WCSPR"),
+            "version": str(settings.casper_x402_asset_version or "1"),
+            "decimals": str(settings.casper_x402_asset_decimals or "9"),
+        }
+        fee_payer = str(settings.casper_x402_fee_payer or "").strip()
+        if fee_payer:
+            extra["feePayer"] = fee_payer
+        api_key = (
+            str(settings.casper_x402_facilitator_api_key or "").strip()
+            or str(settings.casper_cspr_cloud_api_key or "").strip()
+        )
+        amount = str(settings.casper_x402_amount or "").strip()
+        # Back-compat: old "$0.001" style → 0.001 WCSPR atomic (9 decimals).
+        if not amount or amount.startswith("$"):
+            amount = "1000000"
+        return CasperX402Config(
+            facilitator_url=str(
+                settings.casper_x402_facilitator_url or DEFAULT_FACILITATOR_URL
+            ).rstrip("/"),
+            network=str(settings.casper_x402_network or NETWORK_TESTNET),
+            pay_to=str(settings.casper_x402_pay_to_address or "").strip(),
+            asset=str(settings.casper_x402_asset or DEFAULT_CEP18_ASSET).strip(),
+            amount=amount,
+            description="OmniAgent Casper RWA collateral evidence proof",
+            api_key=api_key,
+            currency=str(settings.casper_x402_currency or "WCSPR"),
+            extra=extra,
+        )
+
+    @staticmethod
     def setup_blockers(settings: Settings) -> list[str]:
+        cfg = CasperX402EvidenceEndpointService.config_from_settings(settings)
         blockers: list[str] = []
-        if not str(settings.casper_x402_pay_to_address or "").strip():
+        if not cfg.pay_to:
             blockers.append("casper_x402_pay_to_address_missing")
+        if not cfg.asset:
+            blockers.append("casper_x402_asset_missing")
         if not str(settings.casper_x402_facilitator_url or "").strip():
             blockers.append("casper_x402_facilitator_url_missing")
-        if not str(settings.casper_x402_price or "").strip():
-            blockers.append("casper_x402_price_missing")
-        if not str(settings.casper_x402_network or "").startswith("eip155:"):
+        if not cfg.amount:
+            blockers.append("casper_x402_amount_missing")
+        if not cfg.network.startswith("casper:"):
             blockers.append("casper_x402_network_unsupported")
+        if not cfg.api_key:
+            blockers.append("casper_x402_facilitator_api_key_missing")
         return blockers
 
     @staticmethod
@@ -41,23 +83,41 @@ class CasperX402EvidenceEndpointService:
 
     @staticmethod
     def setup_status(settings: Settings, request_url: str | None = None) -> dict[str, Any]:
+        cfg = CasperX402EvidenceEndpointService.config_from_settings(settings)
         blockers = CasperX402EvidenceEndpointService.setup_blockers(settings)
+        # Price tag can be emitted without API key; settlement cannot.
+        tag_ready = cfg.configured
+        settle_ready = cfg.settle_ready
+        if tag_ready and not settle_ready:
+            status = "setup_required"
+        elif tag_ready and settle_ready:
+            status = "ready"
+        else:
+            status = "setup_required"
         return {
             "network": "casper",
             "provider": "x402",
-            "status": "ready" if not blockers else "setup_required",
+            "status": status,
             "endpoint": CasperX402EvidenceEndpointService.public_url(settings, request_url),
             "route": X402_EVIDENCE_ROUTE_PATH,
-            "facilitatorUrl": settings.casper_x402_facilitator_url,
-            "paymentNetwork": settings.casper_x402_network,
-            "price": settings.casper_x402_price,
-            "currency": settings.casper_x402_currency,
-            "payToConfigured": bool(str(settings.casper_x402_pay_to_address or "").strip()),
+            "facilitatorUrl": cfg.facilitator_url,
+            "paymentNetwork": cfg.network,
+            "price": cfg.amount,
+            "amount": cfg.amount,
+            "currency": cfg.currency,
+            "asset": cfg.asset,
+            "payToConfigured": bool(cfg.pay_to),
+            "settleReady": settle_ready,
             "hardBlockers": blockers,
         }
 
     @staticmethod
-    def paid_evidence_payload(settings: Settings, request_url: str | None = None) -> dict[str, Any]:
+    def paid_evidence_payload(
+        settings: Settings,
+        request_url: str | None = None,
+        *,
+        settlement: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         public_proof = CasperPublicProofService.get_public_proof({})
         proof_bundle = CasperProofBundleService.get_live_proof_bundle({"limit": 10})
         decision = (
@@ -68,6 +128,7 @@ class CasperX402EvidenceEndpointService:
         evidence_bundle = (
             decision.get("evidenceBundle") if isinstance(decision.get("evidenceBundle"), dict) else {}
         )
+        cfg = CasperX402EvidenceEndpointService.config_from_settings(settings)
         resource_url = CasperX402EvidenceEndpointService.public_url(settings, request_url)
         payload = {
             "network": "casper",
@@ -76,12 +137,15 @@ class CasperX402EvidenceEndpointService:
             "resourceUrl": resource_url,
             "generatedAt": datetime.now(timezone.utc).isoformat(),
             "payment": {
-                "facilitatorUrl": settings.casper_x402_facilitator_url,
-                "network": settings.casper_x402_network,
-                "price": settings.casper_x402_price,
-                "currency": settings.casper_x402_currency,
-                "payTo": settings.casper_x402_pay_to_address,
+                "facilitatorUrl": cfg.facilitator_url,
+                "network": cfg.network,
+                "price": cfg.amount,
+                "amount": cfg.amount,
+                "currency": cfg.currency,
+                "asset": cfg.asset,
+                "payTo": cfg.pay_to,
             },
+            "settlement": settlement,
             "binding": {
                 "resourceUrl": resource_url,
                 "sourceHash": public_proof.get("sourceHash"),
@@ -91,11 +155,12 @@ class CasperX402EvidenceEndpointService:
             "receiptBindingHint": {
                 "provider": "x402",
                 "resourceUrl": resource_url,
-                "amount": settings.casper_x402_price,
-                "currency": settings.casper_x402_currency,
-                "network": settings.casper_x402_network,
-                "seller": settings.casper_x402_pay_to_address,
+                "amount": cfg.amount,
+                "currency": cfg.currency,
+                "network": cfg.network,
+                "seller": cfg.pay_to,
                 "sourceHash": public_proof.get("sourceHash"),
+                "settlementTxHash": (settlement or {}).get("transaction"),
             },
             "evidenceBundle": evidence_bundle,
             "publicProof": public_proof,
@@ -105,37 +170,18 @@ class CasperX402EvidenceEndpointService:
 
     @staticmethod
     def register_payment_middleware(app: FastAPI, settings: Settings) -> bool:
+        """No-op: Casper x402 is enforced in the route, not EVM middleware.
+
+        Kept for call-site compatibility with ``create_app``.
+        """
         blockers = CasperX402EvidenceEndpointService.setup_blockers(settings)
         if blockers:
-            logger.info("x402_evidence_paywall_disabled", blockers=blockers)
+            logger.info("x402_casper_paywall_setup_incomplete", blockers=blockers)
             return False
-
-        network: Network = settings.casper_x402_network
-        facilitator = HTTPFacilitatorClient(
-            FacilitatorConfig(url=settings.casper_x402_facilitator_url)
-        )
-        server = x402ResourceServer(facilitator)
-        server.register(network, ExactEvmServerScheme())
-        routes = {
-            X402_EVIDENCE_ROUTE_PATTERN: RouteConfig(
-                accepts=PaymentOption(
-                    scheme="exact",
-                    pay_to=str(settings.casper_x402_pay_to_address),
-                    price=settings.casper_x402_price,
-                    network=network,
-                ),
-                resource=settings.casper_x402_evidence_url or X402_EVIDENCE_ROUTE_PATH,
-                mime_type="application/json",
-                description="OmniAgent Casper RWA collateral evidence proof",
-                service_name="OmniAgent Casper evidence",
-                tags=["casper", "rwa", "proof", "omniagent"],
-            )
-        }
-        app.add_middleware(PaymentMiddlewareASGI, routes=routes, server=server)
         logger.info(
-            "x402_evidence_paywall_enabled",
+            "x402_casper_paywall_ready",
             route=X402_EVIDENCE_ROUTE_PATTERN,
-            network=network,
-            price=settings.casper_x402_price,
+            network=settings.casper_x402_network,
+            facilitator=settings.casper_x402_facilitator_url,
         )
         return True

@@ -47,10 +47,13 @@ Last verified: 2026-07-11.
 | Autonomous loop | `running=true`, `dryRun=false`, interval/cooldown `1800s`, live-loop arm on |
 | Latest live decision | [`51b01901…a9cc`](https://testnet.cspr.live/deploy/51b01901a2991b43cd586bb684cad9307e2b6ca4e58aa522a5144199c6aca9cc), confirmed with verified receipt readback |
 
-The x402 payment rail uses Base Sepolia USDC through the testnet x402
-facilitator because the current facilitator path is EVM/Solana-based. Casper
-remains the proof network: decision receipts, proof digests, contract readback,
-and the public verifier are anchored to Casper Testnet.
+The x402 evidence paywall settles **natively on Casper Testnet** via the
+CSPR.cloud facilitator (`x402-facilitator.cspr.cloud`) using CEP-18
+`transfer_with_authorization` (default asset: make-software reference WCSPR
+package). Decision receipts, proof digests, contract readback, and the public
+verifier remain anchored to Casper. Set `CASPER_X402_PAY_TO_ADDRESS` (00-prefixed
+account hash), `CASPER_X402_FACILITATOR_API_KEY` (or `CASPER_CSPR_CLOUD_API_KEY`),
+and optionally `CASPER_X402_ASSET` / `CASPER_X402_FEE_PAYER`.
 
 ![Self-generated OmniAgent Casper architecture PNG](frontend/public/imgs/omniagent-casper-architecture.png)
 
