@@ -324,10 +324,14 @@ class CasperPublicProofService:
                 CasperPublicProofService._string_or_none(payload.get("entryPoint"))
                 or CasperPublicProofService._string_or_none(event.get("action"))
             )
+            if entry not in {"freeze", "unfreeze", "set_ltv"}:
+                continue
             tx_hash = (
                 CasperPublicProofService._string_or_none(payload.get("transactionHash"))
                 or CasperPublicProofService._string_or_none(payload.get("deployHash"))
             )
+            if not tx_hash:
+                continue
             explorer_url = CasperPublicProofService._string_or_none(payload.get("explorerUrl"))
             if not explorer_url and tx_hash and explorer:
                 explorer_url = f"{explorer}/deploy/{tx_hash}"
