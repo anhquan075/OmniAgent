@@ -14,7 +14,9 @@ Technology stack boundary:
 - The backend is Python/FastAPI and orchestrates Casper JSON-RPC plus `casper-client`.
 - The frontend is TypeScript/React.
 - The MCP surface is project-owned `casper_*` tooling, not a broad multi-chain adapter.
-- Odra, CSPR.click, CSPR.cloud, CSPR.trade, and live x402 facilitator flows are not claimed unless added with real integrations.
+- Native Casper x402 settlement uses the CSPR.cloud facilitator (`x402-facilitator.cspr.cloud`) with CEP-18 `transfer_with_authorization`.
+- Collateral vault enforcement (`contracts/collateral-vault`) freezes / unfreezes / sets LTV only when given an approved decision-proof receipt; loop arming is gated by `CASPER_VAULT_ENFORCE_ENABLED`.
+- Odra and CSPR.click remain optional stretch; do not claim them unless wired with live integrations.
 
 ## Proof Flow
 

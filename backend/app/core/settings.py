@@ -74,11 +74,27 @@ class Settings(BaseSettings):
     casper_decision_ledger_path: Path = BACKEND_ROOT / "data" / "casper-decision-log"
     casper_x402_evidence_url: str | None = None
     casper_x402_receipt: str | None = None
-    casper_x402_facilitator_url: str = "https://x402.org/facilitator"
-    casper_x402_network: str = "eip155:84532"
-    casper_x402_price: str = "$0.001"
-    casper_x402_currency: str = "USDC"
+    casper_x402_facilitator_url: str = "https://x402-facilitator.cspr.cloud"
+    casper_x402_network: str = "casper:casper-test"
+    # Atomic units of CEP-18 asset (WCSPR 9 decimals → 1000000 == 0.001 WCSPR).
+    casper_x402_amount: str = "1000000"
+    casper_x402_price: str = "1000000"
+    casper_x402_currency: str = "WCSPR"
     casper_x402_pay_to_address: str | None = None
+    # CEP-18 package hash implementing transfer_with_authorization.
+    casper_x402_asset: str = (
+        "hash-cb65a928f8e1b7ce172bddd075c10dd0de8bcfd9cf808c799fd409766a1735c3"
+    )
+    casper_x402_asset_name: str = "WCSPR"
+    casper_x402_asset_version: str = "1"
+    casper_x402_asset_decimals: str = "9"
+    casper_x402_fee_payer: str | None = None
+    casper_x402_facilitator_api_key: str | None = None
+    # Vault enforcement (Phase 2+)
+    casper_vault_contract_hash: str | None = None
+    casper_vault_package_hash: str | None = None
+    casper_vault_enforce_enabled: bool = False
+    casper_vault_asset_id: str = "rwa-demo-collateral-001"
     casper_llm_trace_enabled: bool = False
     casper_llm_trace_provider: str = "openrouter"
     casper_llm_trace_model: str = "deepseek/deepseek-v4-flash"

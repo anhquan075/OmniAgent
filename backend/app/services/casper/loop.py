@@ -12,6 +12,7 @@ from app.services.casper.readback import CasperReadbackService
 from app.services.casper.rwa_evidence import fetch_treasury_yield
 from app.services.casper.runtime import CasperAgentRuntimeService
 from app.services.casper.submitter import CasperCliSubmitter
+from app.services.casper.vault import CasperVaultService
 
 
 logger = structlog.get_logger(__name__)
@@ -36,6 +37,9 @@ class LoopState:
     last_deploy_status: str | None = None
     last_readback_verified: bool | None = None
     last_readback_at: str | None = None
+    last_vault_tx: str | None = None
+    last_vault_action: str | None = None
+    last_vault_status: str | None = None
 
 
 loop_state = LoopState()
@@ -64,6 +68,10 @@ def get_loop_status() -> dict[str, Any]:
         "lastDeployStatus": loop_state.last_deploy_status,
         "lastReadbackVerified": loop_state.last_readback_verified,
         "lastReadbackAt": loop_state.last_readback_at,
+        "vaultEnforceEnabled": settings.casper_vault_enforce_enabled,
+        "lastVaultTx": loop_state.last_vault_tx,
+        "lastVaultAction": loop_state.last_vault_action,
+        "lastVaultStatus": loop_state.last_vault_status,
     }
 
 
@@ -216,6 +224,44 @@ async def agent_loop() -> None:
                             "casper_agent_loop_readback",
                             verified=loop_state.last_readback_verified,
                         )
+                        if loop_state.last_readback_verified:
+                            try:
+                                vault_result = await asyncio.to_thread(
+                                    CasperVaultService.enforce_from_decision,
+                                    decision,
+                                )
+                                if vault_result is not None:
+                                    loop_state.last_vault_status = str(
+                                        vault_result.get("status") or ""
+                                    )
+                                    loop_state.last_vault_action = str(
+                                        vault_result.get("entryPoint")
+                                        or vault_result.get("action")
+                                        or ""
+                                    )
+                                    loop_state.last_vault_tx = (
+                                        str(vault_result.get("transactionHash") or "")
+                                        or None
+                                    )
+                                    logger.info(
+                                        "casper_agent_loop_vault",
+                                        status=loop_state.last_vault_status,
+                                        action=loop_state.last_vault_action,
+                                        tx=loop_state.last_vault_tx,
+                                    )
+                                    CasperDecisionLedger.append_event(
+                                        {
+                                            "eventType": "casper_vault_enforcement",
+                                            "action": loop_state.last_vault_action or "vault",
+                                            "payload": vault_result,
+                                        }
+                                    )
+                            except Exception as vault_exc:
+                                loop_state.last_vault_status = "error"
+                                logger.error(
+                                    "casper_agent_loop_vault_error",
+                                    error=str(vault_exc)[:200],
+                                )
                     else:
                         loop_state.last_readback_verified = False
                 except Exception as exc:
