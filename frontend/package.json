@@ -21,7 +21,7 @@
     "lucide-react": "^0.575.0",
     "react": "19.2.7",
     "react-dom": "19.2.7",
-    "tailwindcss": "^4.2.1"
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
