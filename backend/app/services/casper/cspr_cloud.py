@@ -8,8 +8,10 @@ from app.core.settings import get_settings
 class CsprCloudClient:
     @staticmethod
     def _headers() -> dict[str, str]:
-        key = get_settings().casper_cspr_cloud_api_key
-        return {"X-API-Key": key} if key else {}
+        key = str(get_settings().casper_cspr_cloud_api_key or "").strip()
+        # CSPR.cloud REST expects the access token in the Authorization header
+        # (not X-API-Key). See docs.cspr.cloud authorization guide.
+        return {"Authorization": key, "Accept": "application/json"} if key else {}
 
     @staticmethod
     def get_block_height() -> int | None:
@@ -21,7 +23,8 @@ class CsprCloudClient:
                 timeout=settings.casper_rpc_timeout_sec,
                 headers=CsprCloudClient._headers(),
             ) as client:
-                resp = client.get(f"{settings.casper_cspr_cloud_url}/api/v1/blocks", params={"limit": 1})
+                # Current CSPR.cloud REST paths are /blocks (not /api/v1/blocks).
+                resp = client.get(f"{settings.casper_cspr_cloud_url.rstrip('/')}/blocks", params={"limit": 1})
                 resp.raise_for_status()
                 return CsprCloudClient.extract_block_height(resp.json())
         except Exception:
@@ -37,7 +40,9 @@ class CsprCloudClient:
                 timeout=settings.casper_rpc_timeout_sec,
                 headers=CsprCloudClient._headers(),
             ) as client:
-                resp = client.get(f"{settings.casper_cspr_cloud_url}/api/v1/accounts/{public_key}/balance")
+                resp = client.get(
+                    f"{settings.casper_cspr_cloud_url.rstrip('/')}/accounts/{public_key}/balance"
+                )
                 resp.raise_for_status()
                 motes = CsprCloudClient.extract_motes(resp.json())
                 if motes is None:
@@ -63,8 +68,18 @@ class CsprCloudClient:
         if not isinstance(data, dict):
             return None
         payload = data.get("data", data)
+        # Live testnet responses use {"data": <motes:int>}.
+        if isinstance(payload, (int, float)):
+            return int(payload)
+        if isinstance(payload, str) and payload.strip().isdigit():
+            return int(payload.strip())
         if isinstance(payload, dict):
             value = payload.get("balance", payload.get("motes", payload.get("total_balance")))
         else:
             value = payload
-        return int(value) if value is not None else None
+        if value is None or value == "":
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
