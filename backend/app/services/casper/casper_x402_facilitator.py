@@ -19,10 +19,19 @@ import httpx
 X402_VERSION = 2
 DEFAULT_FACILITATOR_URL = "https://x402-facilitator.cspr.cloud"
 NETWORK_TESTNET = "casper:casper-test"
-# make-software reference CEP-18 with transfer_with_authorization (Casper testnet).
-DEFAULT_CEP18_ASSET = (
-    "hash-cb65a928f8e1b7ce172bddd075c10dd0de8bcfd9cf808c799fd409766a1735c3"
-)
+# Wrapped CSPR (make-software / PicaSwap testnet) — has deposit + transfer_with_authorization.
+# Facilitator + make-software client require bare 64-hex (no ``hash-`` prefix).
+DEFAULT_CEP18_ASSET = "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e"
+
+
+def normalize_cep18_asset(asset: str) -> str:
+    """Normalize CEP-18 package hash for Casper x402 (bare 64-hex)."""
+    value = str(asset or "").strip()
+    if value.startswith("hash-"):
+        value = value[5:]
+    if value.startswith("0x"):
+        value = value[2:]
+    return value.lower()
 
 
 @dataclass(frozen=True)
@@ -44,7 +53,9 @@ class CasperX402Config:
     @property
     def configured(self) -> bool:
         """True when enough is set to emit a real Casper price tag."""
-        return bool(self.pay_to and self.asset and self.amount and self.network.startswith("casper:"))
+        return bool(
+            self.pay_to and self.asset and self.amount and self.network.startswith("casper:")
+        )
 
     @property
     def settle_ready(self) -> bool:
@@ -72,7 +83,9 @@ class SettlementResult:
         }
         return base64.b64encode(json.dumps(payload).encode()).decode()
 
-    def receipt_dict(self, *, resource_url: str, amount: str, currency: str, seller: str) -> dict[str, Any]:
+    def receipt_dict(
+        self, *, resource_url: str, amount: str, currency: str, seller: str
+    ) -> dict[str, Any]:
         """Public receipt shape for OmniAgent proof binding."""
         return {
             "receiptId": self.transaction or "unsettled",
@@ -102,14 +115,12 @@ def build_payment_requirements(cfg: CasperX402Config, resource: str) -> dict[str
         "mimeType": cfg.mime_type,
         "payTo": cfg.pay_to,
         "maxTimeoutSeconds": cfg.max_timeout_seconds,
-        "asset": cfg.asset,
+        "asset": normalize_cep18_asset(cfg.asset),
         "extra": cfg.extra,
     }
 
 
-def payment_required_body(
-    cfg: CasperX402Config, resource: str, *, error: str
-) -> dict[str, Any]:
+def payment_required_body(cfg: CasperX402Config, resource: str, *, error: str) -> dict[str, Any]:
     """JSON body for HTTP 402 responses."""
     return {
         "x402Version": X402_VERSION,
@@ -132,7 +143,11 @@ def payment_required_headers(cfg: CasperX402Config, resource: str) -> dict[str, 
 
 def read_payment_header(headers: Any) -> str | None:
     """Pull signed payment payload from request headers."""
-    return headers.get("X-PAYMENT") or headers.get("Payment-Signature") or headers.get("PAYMENT-SIGNATURE")
+    return (
+        headers.get("X-PAYMENT")
+        or headers.get("Payment-Signature")
+        or headers.get("PAYMENT-SIGNATURE")
+    )
 
 
 def decode_payment_payload(raw: str) -> dict[str, Any]:
@@ -278,16 +293,12 @@ async def gate_payment(
 
     is_valid, _payer, reason = await facilitator.verify(payload, requirements)
     if not is_valid:
-        body = payment_required_body(
-            cfg, resource, error=f"payment verification failed: {reason}"
-        )
+        body = payment_required_body(cfg, resource, error=f"payment verification failed: {reason}")
         return None, body, payment_required_headers(cfg, resource)
 
     result = await facilitator.settle(payload, requirements)
     if not result.success:
-        body = payment_required_body(
-            cfg, resource, error=f"settlement failed: {result.error}"
-        )
+        body = payment_required_body(cfg, resource, error=f"settlement failed: {result.error}")
         return None, body, payment_required_headers(cfg, resource)
 
     return result, None, None

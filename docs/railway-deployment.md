@@ -155,7 +155,8 @@ The autonomous loop uses the public fiscaldata.treasury.gov Treasury API for evi
 | `CASPER_X402_AMOUNT` / `CASPER_X402_PRICE` | CEP-18 transfer amount for the paywall (default `1000000`). |
 | `CASPER_X402_CURRENCY` | Public receipt currency label, default `WCSPR`. |
 | `CASPER_X402_PAY_TO_ADDRESS` | `00`-prefixed account-hash that receives CEP-18 payments. Required before `/api/x402/rwa-evidence` becomes payment-protected. |
-| `CASPER_X402_ASSET` | CEP-18 package hash (default make-software WCSPR reference). |
+| `CASPER_X402_ASSET` | Bare 64-hex CEP-18 package hash (no `hash-` prefix). Default: wrapable Wrapped CSPR `3d80df21…`. |
+| `CASPER_X402_ASSET_NAME` | EIP-712 token name; must match on-chain `name()` (default `Wrapped CSPR`). |
 | `CASPER_X402_FACILITATOR_API_KEY` | CSPR.cloud facilitator API key (or reuse `CASPER_CSPR_CLOUD_API_KEY`). |
 | `CASPER_VAULT_CONTRACT_HASH` | Deployed collateral-vault contract hash. |
 | `CASPER_VAULT_PACKAGE_HASH` | Deployed collateral-vault package hash (fallback session target). |
