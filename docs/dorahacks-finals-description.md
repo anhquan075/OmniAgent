@@ -80,4 +80,7 @@ Live submit is capped and fail-closed:
 
 ## Honest status
 
-Code for native Casper x402 + collateral vault + loop enforcement is on branch `finals/native-casper-x402-vault`. Paste live cspr.live rows 6–10 after deploy/settle canaries; until then keep those cells as pending rather than claiming them.
+Native Casper x402 + collateral vault + loop enforcement are on `main` and live
+on Railway (vault canary + enforce armed). Paste the live CEP-18 settle into
+proof table row 6 and refresh `CASPER_X402_RECEIPT` before claiming paid-evidence
+`verified` on the BUIDL page; rows 7–10 already have Testnet explorer links.
