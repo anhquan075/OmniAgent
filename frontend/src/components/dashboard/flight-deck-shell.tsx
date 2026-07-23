@@ -30,7 +30,7 @@ export default function FlightDeckShell({
   const [activeTab, setActiveTab] = useState<FlightDeckTab>('cockpit');
   const content = { cockpit, proof, ledger }[activeTab];
   return (
-    <div className="flight-deck">
+    <div className="flight-deck h-full min-h-0 max-[1180px]:h-auto">
       <FlightDeckRail
         activeTab={activeTab}
         onTabChange={setActiveTab}

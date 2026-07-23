@@ -140,7 +140,7 @@ export default function CasperAgentDashboard() {
   const streamMeta = sourceState === 'live' ? snapshot.streamMeta : undefined;
 
   return (
-    <div className="casper-dashboard">
+    <div className="casper-dashboard h-full min-h-0 max-[1180px]:h-auto">
       <FlightDeckShell
         runtime={runtime}
         bundle={liveBundle}

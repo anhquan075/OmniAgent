@@ -26,7 +26,6 @@ a {
     radial-gradient(ellipse 70% 50% at 30% 15%, var(--color-casper-red-dim) 0%, transparent 55%),
     radial-gradient(ellipse 50% 40% at 75% 85%, rgba(255, 248, 239, 0.04) 0%, transparent 55%),
     linear-gradient(180deg, var(--color-casper-bg) 0%, var(--color-casper-bg-raised) 100%);
-  min-height: 100dvh;
 }
 
 .casper-shell::before {
@@ -43,8 +42,16 @@ a {
 .casper-dashboard {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
   width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+@media (max-width: 1180px) {
+  .casper-dashboard {
+    height: auto;
+  }
 }
 
 /* ── Topbar ── */

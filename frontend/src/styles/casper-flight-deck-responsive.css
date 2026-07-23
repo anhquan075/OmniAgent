@@ -58,8 +58,20 @@
   }
 
   .flight-deck {
+    height: auto;
     align-content: start;
     min-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow: visible;
+  }
+
+  .flight-main {
+    display: block;
+    overflow: visible;
+  }
+
+  .flight-tab-panel {
+    flex: none;
+    overflow: visible;
   }
 
   .flight-rail {
