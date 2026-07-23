@@ -1,6 +1,6 @@
 @media (max-width: 1440px) {
   .receipt-ledger-tab {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.85fr);
   }
 
   .flight-status-strip {
@@ -10,6 +10,10 @@
   .flight-status-item:nth-child(4),
   .flight-status-item:nth-child(5) {
     display: none;
+  }
+
+  .judge-packet .judge-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -37,11 +41,26 @@
     justify-content: flex-start;
     min-height: 38px;
   }
+
+  .flight-tab-panel:has(.proof-packet-tab),
+  .flight-tab-panel:has(.receipt-ledger-tab) {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .flight-tab-panel:has(.proof-packet-tab) > .proof-packet-tab,
+  .flight-tab-panel:has(.receipt-ledger-tab) > .receipt-ledger-tab {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
 }
 
 @media (max-width: 1180px) {
   .flight-deck,
-  .cockpit-grid {
+  .cockpit-grid,
+  .proof-packet-mid,
+  .receipt-ledger-tab {
     grid-template-columns: 1fr;
   }
 
@@ -72,6 +91,24 @@
   .flight-tab-panel {
     flex: none;
     overflow: visible;
+  }
+
+  .proof-packet-tab,
+  .receipt-ledger-tab {
+    height: auto;
+    grid-template-rows: none;
+  }
+
+  .proof-packet-mid > *,
+  .receipt-ledger-panel,
+  .receipt-inspector,
+  .receipt-ledger-body {
+    overflow: visible;
+    height: auto;
+  }
+
+  .raw-evidence-preview pre {
+    max-height: 240px;
   }
 
   .flight-rail {
@@ -118,9 +155,12 @@
     height: auto;
   }
 
-  .cockpit-grid,
-  .receipt-ledger-tab {
+  .cockpit-grid {
     --cockpit-card-row-height: auto;
+  }
+
+  .judge-packet .judge-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

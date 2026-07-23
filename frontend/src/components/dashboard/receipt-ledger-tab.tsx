@@ -80,61 +80,65 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
   return (
     <div className="receipt-ledger-tab">
       <section className="flight-panel receipt-ledger-panel">
-        <div className="flight-panel-head">
-          <h2>Receipt Ledger</h2>
-          <span>{loading ? 'Loading receipts' : `Rows ${pageStart}-${pageEnd} of ${totalReceipts}`}</span>
-        </div>
-        <div className="receipt-ledger-controls">
-          {(['all', 'verified', 'blocked'] as LedgerFilter[]).map(item => (
-            <button
-              key={item}
-              type="button"
-              className={filter === item ? 'is-active' : ''}
-              onClick={() => {
-                setFilter(item);
+        <div className="receipt-ledger-toolbar">
+          <div className="flight-panel-head">
+            <h2>Receipt Ledger</h2>
+            <span>{loading ? 'Loading receipts' : `Rows ${pageStart}-${pageEnd} of ${totalReceipts}`}</span>
+          </div>
+          <div className="receipt-ledger-controls">
+            {(['all', 'verified', 'blocked'] as LedgerFilter[]).map(item => (
+              <button
+                key={item}
+                type="button"
+                className={filter === item ? 'is-active' : ''}
+                onClick={() => {
+                  setFilter(item);
+                  setSelectedKey('');
+                }}
+              >
+                {item}
+              </button>
+            ))}
+            <input
+              value={query}
+              onChange={event => {
+                setQuery(event.target.value);
                 setSelectedKey('');
               }}
+              placeholder="Search current page"
+              aria-label="Search current receipt page"
+            />
+          </div>
+          <div className="receipt-ledger-pagination" aria-label="Receipt ledger pagination">
+            <button
+              type="button"
+              onClick={() => setPage(value => Math.max(1, value - 1))}
+              disabled={page <= 1 || loading}
+              aria-label="Previous receipt page"
             >
-              {item}
+              <ChevronLeftIcon className="h-4 w-4" />
             </button>
-          ))}
-          <input
-            value={query}
-            onChange={event => {
-              setQuery(event.target.value);
-              setSelectedKey('');
-            }}
-            placeholder="Search current page"
-            aria-label="Search current receipt page"
+            <span>
+              <small>Page</small>
+              <b>{page} / {totalPages}</b>
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage(value => Math.min(totalPages, value + 1))}
+              disabled={page >= totalPages || loading}
+              aria-label="Next receipt page"
+            >
+              <ChevronRightIcon className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        <div className="receipt-ledger-body">
+          <ReceiptLedgerTable
+            receipts={filteredReceipts}
+            selectedKey={selected ? receiptRowKey(selected) : ''}
+            onSelect={(receipt) => setSelectedKey(receiptRowKey(receipt))}
           />
         </div>
-        <div className="receipt-ledger-pagination" aria-label="Receipt ledger pagination">
-          <button
-            type="button"
-            onClick={() => setPage(value => Math.max(1, value - 1))}
-            disabled={page <= 1 || loading}
-            aria-label="Previous receipt page"
-          >
-            <ChevronLeftIcon className="h-4 w-4" />
-          </button>
-          <span>
-            <small>Page</small>
-            <b>{page} / {totalPages}</b>
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage(value => Math.min(totalPages, value + 1))}
-            disabled={page >= totalPages || loading}
-            aria-label="Next receipt page"
-          >
-            <ChevronRightIcon className="h-4 w-4" />
-          </button>
-        </div>
-        <ReceiptLedgerTable
-          receipts={filteredReceipts}
-          selectedKey={selected ? receiptRowKey(selected) : ''}
-          onSelect={(receipt) => setSelectedKey(receiptRowKey(receipt))}
-        />
       </section>
       <ReceiptInspector receipt={selected} bundle={bundle} />
     </div>

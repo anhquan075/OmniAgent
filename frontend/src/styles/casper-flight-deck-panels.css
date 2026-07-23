@@ -37,6 +37,10 @@
   list-style: none;
 }
 
+.evidence-provenance ol {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .proof-outcome-panel {
   display: grid;
   grid-template-columns: minmax(220px, 0.38fr) minmax(0, 1fr);
@@ -156,9 +160,156 @@
   overflow: hidden;
 }
 
+.judge-packet .judge-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.judge-packet .judge-grid span {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 8px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.judge-packet .judge-grid small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.judge-packet .judge-grid b {
+  display: block;
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 0.84rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.judge-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.judge-actions button,
+.judge-actions .chain-proof-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.judge-actions button:hover:not(:disabled),
+.judge-actions .chain-proof-link:hover {
+  border-color: rgba(230, 63, 55, 0.45);
+  background: rgba(230, 63, 55, 0.12);
+  color: var(--casper-red-soft);
+}
+
+.judge-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.judge-actions button:active:not(:disabled),
+.judge-actions .chain-proof-link:active {
+  transform: translateY(1px);
+}
+
+.evidence-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.evidence-summary .evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 6px;
+}
+
+.evidence-summary .evidence-field {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 8px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.evidence-summary .evidence-field small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.evidence-summary .evidence-field b,
+.evidence-summary .evidence-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 0.84rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.evidence-summary .evidence-field b.is-ok { color: var(--green); }
+.evidence-summary .evidence-field b.is-blocked { color: var(--casper-red-soft); }
+
+.evidence-summary .evidence-hash-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.evidence-summary .hash-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.74rem;
+  word-break: break-all;
+}
+
+.evidence-summary .copy-hash-btn {
+  min-height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
+.evidence-summary .copy-hash-btn:hover {
+  border-color: rgba(230, 63, 55, 0.45);
+  color: var(--casper-red-soft);
+}
+
 .raw-evidence-preview pre {
-  max-height: 280px;
+  max-height: 180px;
   overflow: auto;
+  margin: 0;
   color: var(--muted);
   font-size: 0.78rem;
 }
@@ -169,13 +320,44 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
+  margin-top: 8px;
 }
+
+.x402-proof.is-ok { border-color: var(--color-status-ok-border); }
+.x402-proof.is-guarded { border-color: rgba(230, 63, 55, 0.34); }
 
 .x402-proof b,
 .x402-proof span { min-width: 0; overflow-wrap: anywhere; }
 
-.receipt-ledger-table {
+.receipt-ledger-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.receipt-ledger-toolbar {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 8px;
+}
+
+.receipt-ledger-toolbar .flight-panel-head {
+  margin-bottom: 0;
+}
+
+.receipt-ledger-body {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
+}
+
+.receipt-ledger-table {
+  overflow: visible;
 }
 
 .receipt-ledger-empty { display: grid; gap: 4px; }
@@ -184,7 +366,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 0;
 }
 
 .receipt-ledger-controls button,
@@ -200,11 +382,17 @@
 .receipt-ledger-controls button {
   cursor: pointer;
   text-transform: capitalize;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.receipt-ledger-controls button:hover {
+  border-color: rgba(230, 63, 55, 0.35);
 }
 
 .receipt-ledger-controls button.is-active {
   border-color: rgba(230, 63, 55, 0.5);
   color: var(--casper-red-soft);
+  background: rgba(230, 63, 55, 0.12);
 }
 
 .receipt-ledger-controls input {
@@ -217,7 +405,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  margin: 0 0 10px;
+  margin: 0;
 }
 
 .receipt-ledger-pagination button {
@@ -264,10 +452,14 @@
 }
 
 .receipt-ledger-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   color: var(--muted);
   font-size: 0.74rem;
   font-weight: 650;
   text-transform: uppercase;
+  background: rgba(9, 18, 20, 0.96);
 }
 
 .receipt-ledger-row {
@@ -373,6 +565,19 @@
   cursor: pointer;
 }
 
+.receipt-inspector {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+}
+
+.receipt-inspector.is-empty,
+.receipt-inspector:has(> p) {
+  justify-content: flex-start;
+}
+
 .receipt-inspector dl {
   display: grid;
   gap: 10px;
@@ -381,6 +586,10 @@
 
 .receipt-inspector div {
   min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 8px;
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .receipt-inspector dt {
@@ -392,4 +601,5 @@
 .receipt-inspector dd {
   margin: 2px 0 0;
   overflow-wrap: anywhere;
+  color: var(--text);
 }

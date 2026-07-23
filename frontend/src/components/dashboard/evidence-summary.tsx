@@ -1,4 +1,4 @@
-import { ExternalLinkIcon, ShieldCheckIcon } from 'lucide-react';
+import { ExternalLinkIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import { proofLabel, proofText } from './proof-labels';
@@ -28,10 +28,10 @@ export function EvidenceSummary({ evidence, x402 }: { evidence?: Payload; x402?:
   };
 
   return (
-    <div className="evidence-summary" aria-label="RWA evidence summary">
-      <div className="panel-head">
-        <ShieldCheckIcon className="h-4 w-4" />
-        <h3>Evidence summary</h3>
+    <section className="flight-panel evidence-summary" aria-label="RWA evidence summary">
+      <div className="flight-panel-head">
+        <h2>Evidence summary</h2>
+        <span>{x402Verified ? 'x402 verified' : proofLabel(x402Status)}</span>
       </div>
       <div className="evidence-grid">
         <span className="evidence-field" data-evidence-field="scenario">
@@ -82,7 +82,7 @@ export function EvidenceSummary({ evidence, x402 }: { evidence?: Payload; x402?:
         )}
         <span className="copy-status" aria-live="polite">{copyStatus}</span>
       </div>
-    </div>
+    </section>
   );
 }
 

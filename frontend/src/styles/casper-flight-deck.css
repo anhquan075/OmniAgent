@@ -232,19 +232,51 @@
   padding: 8px;
 }
 
-.cockpit-tab,
-.proof-packet-tab {
+.cockpit-tab {
   display: grid;
   gap: 10px;
 }
 
-.cockpit-grid,
-.receipt-ledger-tab {
+.proof-packet-tab {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  min-height: 0;
+  height: 100%;
+}
+
+.proof-packet-hero {
+  min-width: 0;
+}
+
+.proof-packet-mid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.proof-packet-mid > * {
+  min-height: 0;
+  overflow: auto;
+}
+
+.cockpit-grid {
   --cockpit-card-row-height: clamp(410px, 38dvh, 460px);
   display: grid;
   grid-template-columns: minmax(0, 1.54fr) minmax(300px, 0.46fr);
   gap: 8px;
   align-items: stretch;
+}
+
+.receipt-ledger-tab {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.9fr);
+  gap: 8px;
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
 }
 
 .cockpit-grid {

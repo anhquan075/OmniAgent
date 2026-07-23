@@ -52,9 +52,13 @@ export default function ProofPacketTab({ runtime, bundle, sourceState }: {
   };
   return (
     <div className="proof-packet-tab">
-      <JudgePacket runtime={runtime} bundle={bundle} sourceState={sourceState} onVerify={handleVerify} verifyStatus={verifyStatus} />
-      <EvidenceProvenance bundle={sourceState === 'live' ? bundle : {}} x402={sourceState === 'live' ? publicX402 : {}} />
-      <EvidenceSummary evidence={sourceState === 'live' ? decision.evidenceBundle : {}} x402={sourceState === 'live' ? publicX402 : {}} />
+      <div className="proof-packet-hero">
+        <JudgePacket runtime={runtime} bundle={bundle} sourceState={sourceState} onVerify={handleVerify} verifyStatus={verifyStatus} />
+      </div>
+      <div className="proof-packet-mid">
+        <EvidenceProvenance bundle={sourceState === 'live' ? bundle : {}} x402={sourceState === 'live' ? publicX402 : {}} />
+        <EvidenceSummary evidence={sourceState === 'live' ? decision.evidenceBundle : {}} x402={sourceState === 'live' ? publicX402 : {}} />
+      </div>
       <section className="flight-panel raw-evidence-preview">
         <div className="flight-panel-head">
           <h2>Raw evidence preview</h2>
