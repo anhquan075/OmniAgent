@@ -6,16 +6,22 @@ import type { Payload, SourceState } from './flight-deck-model';
 
 export default function RecoveryQueue({ bundle, sourceState = 'live' }: { bundle?: Payload; sourceState?: SourceState }) {
   const recovery: Payload[] = Array.isArray(bundle?.recoveryCandidates) ? bundle.recoveryCandidates.slice(0, 4) : [];
-  const unavailable = sourceState !== 'live';
+  const loading = sourceState === 'loading';
+  const unavailable = sourceState === 'fallback';
   const rows = trustRows(bundle);
   return (
     <section className="flight-panel recovery-queue">
       <div className="flight-panel-head">
         <h2>Recovery queue</h2>
-        <span>{unavailable ? 'unavailable' : `${recovery.length} blockers`}</span>
+        <span>{loading ? 'loading' : unavailable ? 'unavailable' : `${recovery.length} blockers`}</span>
       </div>
       <div className="recovery-list">
-        {unavailable ? (
+        {loading ? (
+          <span>
+            <b>Loading recovery state…</b>
+            <small>Holding proof gates closed until the live snapshot arrives.</small>
+          </span>
+        ) : unavailable ? (
           <span>
             <b>Recovery state unavailable</b>
             <small>Snapshot unavailable; proof gates are not assumed clear.</small>

@@ -11,6 +11,18 @@ import { proofLabel, proofText } from './proof-labels';
 export type Payload = Record<string, any>;
 export type SourceState = 'loading' | 'live' | 'fallback';
 
+export const sourceStateLabel = (sourceState: SourceState): string => {
+  if (sourceState === 'live') return 'System operational';
+  if (sourceState === 'loading') return 'Loading snapshot';
+  return 'Snapshot unavailable';
+};
+
+export const sourceMetricLabel = (sourceState: SourceState, liveValue: string): string => {
+  if (sourceState === 'live') return liveValue;
+  if (sourceState === 'loading') return 'loading';
+  return 'unavailable';
+};
+
 export type ReceiptRow = {
   decisionId?: string;
   action?: string;
@@ -68,6 +80,10 @@ export const shortValue = (value: unknown, fallback = 'pending') => {
 };
 
 export const lifecycleRows = (bundle?: Payload, sourceState: SourceState = 'live') => {
+  if (sourceState === 'loading') {
+    return ['evidence', 'proposer', 'critic', 'policy_gate', 'casper_submit', 'readback']
+      .map((state) => ({ state, status: 'loading', complete: false }));
+  }
   if (sourceState !== 'live') {
     return ['evidence', 'proposer', 'critic', 'policy_gate', 'casper_submit', 'readback']
       .map((state) => ({ state, status: 'unavailable', complete: false }));

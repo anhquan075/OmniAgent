@@ -1,7 +1,7 @@
 import { LockIcon, RefreshCwIcon, ServerIcon, ShieldCheckIcon, TimerIcon, WifiIcon } from 'lucide-react';
 
 import { proofLabel, proofText } from './proof-labels';
-import type { Payload, SourceState } from './flight-deck-model';
+import { sourceMetricLabel, type Payload, type SourceState } from './flight-deck-model';
 
 export default function FlightDeckStatusStrip({
   runtime,
@@ -29,8 +29,8 @@ export default function FlightDeckStatusStrip({
         <small>Receipt Flight Deck</small>
         <h1>Casper proof console</h1>
       </div>
-      <StatusItem icon={ShieldCheckIcon} label="Proof score" value={sourceState === 'live' ? `${score.score ?? 0}/${score.total ?? 0}` : 'unavailable'} tone={score.hardBlocked ? 'warn' : 'ok'} />
-      <StatusItem icon={ServerIcon} label="Backend health" value={sourceState === 'live' ? proofLabel(health?.status, { stripCasperPrefix: true }) : 'unavailable'} tone={health?.status === 'ok' && sourceState === 'live' ? 'ok' : 'warn'} />
+      <StatusItem icon={ShieldCheckIcon} label="Proof score" value={sourceMetricLabel(sourceState, `${score.score ?? 0}/${score.total ?? 0}`)} tone={sourceState === 'loading' ? 'neutral' : score.hardBlocked ? 'warn' : 'ok'} />
+      <StatusItem icon={ServerIcon} label="Backend health" value={sourceMetricLabel(sourceState, proofLabel(health?.status, { stripCasperPrefix: true }))} tone={health?.status === 'ok' && sourceState === 'live' ? 'ok' : sourceState === 'loading' ? 'neutral' : 'warn'} />
       <StatusItem icon={TimerIcon} label="Loop status" value={loop.running ? 'Running' : 'Stopped'} tone={loop.running ? 'ok' : 'warn'} sub={loop.intervalSec ? `Every ${loop.intervalSec}s` : undefined} />
       <StatusItem icon={WifiIcon} label="Network" value={proofText(runtime?.network ?? health?.network, 'casper')} sub={proofText(runtime?.account?.explorerUrl, '')} />
       <div className={`live-submit-guard ${liveSubmit ? 'is-live' : 'is-guarded'}`} data-live-submit-status={liveSubmit ? 'enabled' : 'guarded'}>
