@@ -336,7 +336,7 @@ Public replay surfaces:
 - Backend proof endpoint: [https://omniagent-production.up.railway.app/api/public/proof](https://omniagent-production.up.railway.app/api/public/proof)
 - Paywalled x402 evidence endpoint: [https://omniagent-production.up.railway.app/api/x402/rwa-evidence](https://omniagent-production.up.railway.app/api/x402/rwa-evidence)
 - Proof artifact: [proofs/casper-buildathon-submission-proof.json](proofs/casper-buildathon-submission-proof.json)
-- Demo video: [YouTube](https://www.youtube.com/watch?v=-blqn4a2sf4)
+- Demo video: [https://youtu.be/wcVoqJXqPhc](https://youtu.be/wcVoqJXqPhc)
 - Submission checklist: [docs/casper-buildathon-submission-checklist.md](docs/casper-buildathon-submission-checklist.md)
 - Launch roadmap: [docs/casper-launch-roadmap.md](docs/casper-launch-roadmap.md)
 

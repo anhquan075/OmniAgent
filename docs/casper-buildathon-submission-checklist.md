@@ -11,7 +11,7 @@ must stay weaker than the proof packet.
 | Frontend demo | Set after deployment |
 | Backend proof endpoint | `GET /api/public/proof` |
 | Proof artifact | `proofs/casper-buildathon-submission-proof.json` |
-| Demo video | https://www.youtube.com/watch?v=-blqn4a2sf4 |
+| Demo video | https://youtu.be/wcVoqJXqPhc |
 | Casper contract | See README contract links |
 
 ## Proof Commands

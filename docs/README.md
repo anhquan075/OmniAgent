@@ -11,3 +11,5 @@ This docs folder is Casper-only. It covers the buildathon runtime, proof model, 
 - [Demo Script](casper-agentic-demo-script.md)
 - [Buildathon Submission Checklist](casper-buildathon-submission-checklist.md)
 - [Launch Roadmap](casper-launch-roadmap.md)
+- Demo video: https://youtu.be/wcVoqJXqPhc
+- DoraHacks finals paste: [dorahacks-finals-description.md](dorahacks-finals-description.md)

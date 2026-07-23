@@ -1,5 +1,7 @@
 # Casper Demo Script
 
+Recorded walkthrough (≤90s): https://youtu.be/wcVoqJXqPhc
+
 1. Start from [judge-reproduction.md](judge-reproduction.md). With the funded Testnet account, signer path, deployed contract hashes, persistent SQLite volume, and operator token configured, start the backend with the recurring loop disabled and dry-run defense retained:
    `cd backend && CASPER_PAYMENT_AMOUNT_MOTES=2500000000 CASPER_LIVE_SUBMIT_ENABLED=true CASPER_AGENT_LOOP_ENABLED=false CASPER_AGENT_LOOP_DRY_RUN=true CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED=false CASPER_AGENT_LOOP_AUTO_READBACK=true uv run uvicorn app.main:app`
 2. Before any operator action, verify an anonymous `GET /api/session` reports `operator=false`; abort if it does not. Then open `/.well-known/casper-agent-card.json` and show the public Casper network agent card.

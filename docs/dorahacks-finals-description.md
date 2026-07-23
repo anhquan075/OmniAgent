@@ -29,7 +29,7 @@ Should this RWA collateral stay financeable? OmniAgent answers with a fail-close
 
 Demo: https://omniyield.app  
 Repo: https://github.com/anhquan075/OmniAgent  
-Video: https://www.youtube.com/watch?v=-blqn4a2sf4
+Video: https://youtu.be/wcVoqJXqPhc
 
 ## The problem
 

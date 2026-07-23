@@ -3,7 +3,7 @@
 ## 30 Days
 
 - Keep the public proof packet schema stable and versioned.
-- Record a short demo that replays the exact proof artifact and public endpoint.
+- Demo video published: https://youtu.be/wcVoqJXqPhc (replays the judge path + public proof).
 - Add one more RWA evidence source behind the same source-hash pipeline.
 - Turn the evidence graph digest into the primary public proof anchor for source freshness and provenance.
 - Document a signer rotation and live-submit runbook.
