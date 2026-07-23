@@ -150,11 +150,17 @@ The autonomous loop uses the public fiscaldata.treasury.gov Treasury API for evi
 | `CASPER_LIVE_REQUIRE_CHAIN_DEDUPE` | Fail-closed exact semantic dictionary lookup plus latest-receipt cooldown check, default `true` |
 | `CASPER_X402_EVIDENCE_URL` | Real x402 evidence endpoint, if available |
 | `CASPER_X402_RECEIPT` | Real x402 receipt metadata; leave empty rather than faking a receipt. To mark paid evidence verified, receipt metadata must be public-safe and bound to the evidence request through `resourceUrl`, `sourceHash`, or `requestHash`. |
-| `CASPER_X402_FACILITATOR_URL` | x402 facilitator base URL. For hackathon/testnet use `https://x402.org/facilitator`; the browser URL itself may 404, while `/verify` and `/settle` are API routes. |
-| `CASPER_X402_NETWORK` | x402 payment network, default `eip155:84532` for Base Sepolia. |
-| `CASPER_X402_PRICE` | x402 evidence price, default `$0.001`. |
-| `CASPER_X402_CURRENCY` | Public receipt currency label, default `USDC`. |
-| `CASPER_X402_PAY_TO_ADDRESS` | EVM address that receives Base Sepolia x402 test payments. Required before `/api/x402/rwa-evidence` becomes payment-protected. |
+| `CASPER_X402_FACILITATOR_URL` | Casper x402 facilitator base URL, default `https://x402-facilitator.cspr.cloud`. |
+| `CASPER_X402_NETWORK` | x402 payment network, default `casper:casper-test`. |
+| `CASPER_X402_AMOUNT` / `CASPER_X402_PRICE` | CEP-18 transfer amount for the paywall (default `1000000`). |
+| `CASPER_X402_CURRENCY` | Public receipt currency label, default `WCSPR`. |
+| `CASPER_X402_PAY_TO_ADDRESS` | `00`-prefixed account-hash that receives CEP-18 payments. Required before `/api/x402/rwa-evidence` becomes payment-protected. |
+| `CASPER_X402_ASSET` | CEP-18 package hash (default make-software WCSPR reference). |
+| `CASPER_X402_FACILITATOR_API_KEY` | CSPR.cloud facilitator API key (or reuse `CASPER_CSPR_CLOUD_API_KEY`). |
+| `CASPER_VAULT_CONTRACT_HASH` | Deployed collateral-vault contract hash. |
+| `CASPER_VAULT_PACKAGE_HASH` | Deployed collateral-vault package hash (fallback session target). |
+| `CASPER_VAULT_ENFORCE_ENABLED` | Arm loop vault mutations after verified decision readback; default `false`. |
+| `CASPER_VAULT_ASSET_ID` | Demo collateral asset id, default `rwa-demo-collateral-001`. |
 | `CASPER_LLM_TRACE_ENABLED` | Enable OpenRouter-backed LLM trace metadata |
 | `CASPER_LLM_TRACE_PROVIDER` | Trace provider label, default `openrouter` |
 | `CASPER_LLM_TRACE_MODEL` | Trace model label, default `deepseek/deepseek-v4-flash` |

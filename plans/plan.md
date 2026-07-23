@@ -38,10 +38,10 @@ Phases 3–4 turn those two upgrades into daily on-chain activity and a judge-re
 
 | Phase | Name | Status | Effort |
 |-------|------|--------|--------|
-| 1 | [Native Casper x402 Settlement](./phase-01-native-casper-x402-settlement.md) | Pending | 1–1.5 days |
-| 2 | [Collateral Vault Enforcement Contract](./phase-02-collateral-vault-enforcement-contract.md) | Pending | 0.75–1 day |
-| 3 | [Agent Loop Live Enforcement](./phase-03-agent-loop-live-enforcement.md) | Pending | 0.5 day |
-| 4 | [Submission Polish and Proof Surface](./phase-04-submission-polish-and-proof-surface.md) | Pending | 0.5 day |
+| 1 | [Native Casper x402 Settlement](./phase-01-native-casper-x402-settlement.md) | Code done — live settle pending API key | 1–1.5 days |
+| 2 | [Collateral Vault Enforcement Contract](./phase-02-collateral-vault-enforcement-contract.md) | Code done — testnet deploy pending | 0.75–1 day |
+| 3 | [Agent Loop Live Enforcement](./phase-03-agent-loop-live-enforcement.md) | Code done — arm after vault canary | 0.5 day |
+| 4 | [Submission Polish and Proof Surface](./phase-04-submission-polish-and-proof-surface.md) | In progress (docs + public proof vault) | 0.5 day |
 
 ## Key Decisions (to confirm in validate)
 
@@ -123,11 +123,13 @@ None (greenfield hardening on existing OmniAgent codebase).
 - [x] Phase 1 native Casper x402 client + route gate + tests
 - [x] Phase 2 collateral-vault contract + WASM + backend service
 - [x] Phase 3 loop vault enforcement after readback
+- [x] Public proof `vault` surface + install/demo scripts + DoraHacks draft
 - [ ] Deploy vault to testnet + arm env on Railway
 - [ ] Live settle with facilitator API key + paste cspr.live links
-- [ ] Paste DoraHacks description from `docs/dorahacks-finals-description.md`
+- [ ] Paste DoraHacks description from `docs/dorahacks-finals-description.md` (fill rows 6–10 after canaries)
 
 ### Whole-Plan Consistency Sweep
 - No remaining `eip155` defaults in settings/.env.example
 - Action mapping documented consistently in vault README + vault.py + phase docs
 - Unresolved: live facilitator settle requires user's CSPR.cloud API key (not in repo)
+- Unresolved: vault deploy requires `casper-client` + funded secret key on the operator machine
