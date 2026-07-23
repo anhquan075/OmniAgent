@@ -26,7 +26,7 @@ WASM_PATH="${WASM_PATH:-$ROOT/contracts/collateral-vault/wasm/collateral-vault.w
 PROOF_CONTRACT_HASH="${PROOF_CONTRACT_HASH:-5a82529f9ba05e716933384ddc9862710ba9a0fd3a7347ab1e8c6e60b1a4c861}"
 CASPER_NODE_ADDRESS="${CASPER_NODE_ADDRESS:-http://node.testnet.casper.network:7777}"
 CASPER_NETWORK="${CASPER_NETWORK:-casper-test}"
-CASPER_PAYMENT_AMOUNT_MOTES="${CASPER_PAYMENT_AMOUNT_MOTES:-2500000000}"
+CASPER_PAYMENT_AMOUNT_MOTES="${CASPER_PAYMENT_AMOUNT_MOTES:-100000000000}"
 CASPER_CLIENT_PATH="${CASPER_CLIENT_PATH:-casper-client}"
 
 if [[ -z "${CASPER_SECRET_KEY_PATH:-}" ]]; then
@@ -52,6 +52,7 @@ echo "  proof:  $PROOF_CONTRACT_HASH"
 echo "  agent:  $AGENT_ACCOUNT_HASH"
 echo "  node:   $CASPER_NODE_ADDRESS"
 echo "  chain:  $CASPER_NETWORK"
+echo "  pay:    $CASPER_PAYMENT_AMOUNT_MOTES (Wasm install needs ~100 CSPR on casper-test)"
 
 set -x
 "$CASPER_CLIENT_PATH" put-deploy \
