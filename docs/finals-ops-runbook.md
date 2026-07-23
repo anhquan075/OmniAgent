@@ -63,11 +63,24 @@ node scripts/settle_x402_casper_live.mjs
 - `hash-cb65a928…` → facilitator `invalid_exact_casper_invalid_asset` (fixed in code).
 - Direct settle with unfunded buyer `01e6bcbf…` → deploy
   `9fe35eed…` **failed** (`User error: 64658`, zero balance). Do not paste.
+- Funded buyer with 20 CSPR → wrap
+  [`714f8539…`](https://testnet.cspr.live/transaction/714f85394e405977939a1d58391eaede2a604275a0c3bd9e2783b2ac585d3bcd)
+  → **successful** CEP-18 settle to OmniAgent `payTo`
+  [`93074ccb…`](https://testnet.cspr.live/deploy/93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5)
+  (Wrapped CSPR `3d80df21…`, amount `1000000`).
+
+**Still set on Railway** (paywall currently still emits CasCet `cb65a928…`):
+
+```bash
+CASPER_X402_ASSET=3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e
+CASPER_X402_ASSET_NAME=Wrapped CSPR
+CASPER_X402_RECEIPT='{"receiptId":"93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5","provider":"x402","resourceUrl":"https://omniagent-production.up.railway.app/api/x402/rwa-evidence","amount":"1000000","currency":"WCSPR","network":"casper:casper-test","settlementTxHash":"93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5","seller":"005fbafb3d180056637745218c3a21bef20ad4aca0737b676125791db7a2ead0c6","buyer":"009201bf2e2468c8ae48c516dd0dadb4174a523bd1869b6d422795712a7b9d65cc","bindingStatus":"bound"}'
+```
 
 ## DoraHacks paste
 
 Paste [`dorahacks-finals-description.md`](dorahacks-finals-description.md) into
-https://dorahacks.io/buidl/40823. Rows 7–10 live; row 6 pending until settle.
+https://dorahacks.io/buidl/40823. Rows **6–10** have live explorer links.
 Fill socials before judging.
 
 ## Env reference
