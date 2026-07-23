@@ -41,4 +41,15 @@ CASPER_VAULT_ENFORCE_ENABLED=true
 CASPER_VAULT_ASSET_ID=rwa-demo-collateral-001
 ```
 
+Install on Testnet: [`scripts/install-collateral-vault.sh`](../../scripts/install-collateral-vault.sh).
+Canary cycle: `cd backend && uv run python scripts/vault_demo_cycle.py`.
+
 The autonomous loop maps `block→freeze`, `approve→unfreeze`, `haircut→set_ltv` after a verified decision readback.
+
+## Deploy checklist (ops)
+
+1. Ensure `casper-client` is on PATH and `CASPER_SECRET_KEY_PATH` points at a funded Testnet key.
+2. Set `AGENT_ACCOUNT_HASH` to the agent account-hash, then run `scripts/install-collateral-vault.sh`.
+3. Copy contract/package hashes from the install deploy on cspr.live into Railway.
+4. Keep `CASPER_VAULT_ENFORCE_ENABLED=false` until `vault_demo_cycle.py` deposit+freeze+unfreeze succeeds.
+5. Arm enforce; confirm `/api/public/proof` → `vault.lastAction` / `vault.explorerUrl`.

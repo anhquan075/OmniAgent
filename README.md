@@ -67,8 +67,23 @@ and optionally `CASPER_X402_ASSET` / `CASPER_X402_FEE_PAYER`.
 
 - **Backend runtime:** `fastapi-casper-agent`
 - **MCP tool family:** `casper_*`
-- **On-chain component:** [contracts/casper-decision-proof](contracts/casper-decision-proof)
+- **On-chain component:** [contracts/casper-decision-proof](contracts/casper-decision-proof) (receipts) + [contracts/collateral-vault](contracts/collateral-vault) (enforcement)
 - **Frontend:** a Casper proof cockpit for decision traces, policy gates, deploy status, readback checks, judge packet, and recovery actions
+
+### Collateral vault (enforcement)
+
+After a verified decision readback, the autonomous loop can map policy actions to
+vault entry points (`block→freeze`, `approve→unfreeze`, `haircut→set_ltv`). Arm with:
+
+```bash
+CASPER_VAULT_CONTRACT_HASH=<hash>
+CASPER_VAULT_ENFORCE_ENABLED=true
+CASPER_VAULT_ASSET_ID=rwa-demo-collateral-001
+```
+
+Install helper: [`scripts/install-collateral-vault.sh`](scripts/install-collateral-vault.sh).
+Canary: `cd backend && uv run python scripts/vault_demo_cycle.py`.
+Public proof exposes the latest vault action under `vault` (and `contractLinks.vaultContractHash` when configured).
 
 ## Safety Model (Dry Run vs Live Submit)
 
@@ -337,4 +352,10 @@ public proof response with verified readback.
 | Contract install deploy | [0444471ab96e840e25d69f525341ee95f014137ebda3e3c0a838eb46b31267f1](https://testnet.cspr.live/deploy/0444471ab96e840e25d69f525341ee95f014137ebda3e3c0a838eb46b31267f1) |
 | Reference demo decision deploy | [ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736](https://testnet.cspr.live/deploy/ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736) |
 | Contract source | [contracts/casper-decision-proof](contracts/casper-decision-proof) |
+| Collateral vault source | [contracts/collateral-vault](contracts/collateral-vault) |
+| Vault install script | [scripts/install-collateral-vault.sh](scripts/install-collateral-vault.sh) |
 | Receipt verifier | [scripts/verify-casper-receipt.sh](scripts/verify-casper-receipt.sh) |
+
+Vault install / freeze / unfreeze / x402 settle explorer rows belong in the
+DoraHacks proof table once live canaries land — see
+[`docs/dorahacks-finals-description.md`](docs/dorahacks-finals-description.md).

@@ -96,6 +96,9 @@ def test_public_proof_serializer_is_allowlisted_and_redacts_private_values(monke
     assert proof["policyTemplate"]["id"] == "rwa-collateral-v1"
     assert proof["x402"]["receipt"]["receiptHash"].startswith("sha256:")
     assert proof["x402"]["receipt"]["bindingStatus"] == "bound"
+    assert proof["vault"]["enforceEnabled"] is False
+    assert proof["vault"]["configured"] is False
+    assert proof["vault"]["actionMap"]["block"] == "freeze"
     assert proof["readback"]["verified"] is True
     assert proof["readback"]["status"] == "verified"
     assert "proofScore" in proof
@@ -124,6 +127,45 @@ def test_public_proof_endpoint_requires_no_private_session(monkeypatch, tmp_path
     assert body["decisionId"] == "public-endpoint-001"
     assert "ledgerPath" not in response.text
     assert "operator" not in response.text.lower()
+
+
+def test_public_proof_includes_vault_enforcement_from_ledger(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("CASPER_DECISION_LEDGER_PATH", str(tmp_path / "proof.sqlite3"))
+    monkeypatch.setenv("CASPER_VAULT_CONTRACT_HASH", "vault-contract-hash")
+    monkeypatch.setenv("CASPER_VAULT_PACKAGE_HASH", "vault-package-hash")
+    monkeypatch.setenv("CASPER_VAULT_ENFORCE_ENABLED", "true")
+    monkeypatch.setenv("CASPER_VAULT_ASSET_ID", "rwa-demo-collateral-001")
+    monkeypatch.setenv("CASPER_EXPLORER_URL", "https://testnet.cspr.live")
+    get_settings.cache_clear()
+    CasperDecisionLedger.clear_current_log()
+    CasperDecisionLedger.append_event(_decision_event("vault-proof-001"))
+    CasperDecisionLedger.append_event(
+        {
+            "eventType": "casper_vault_enforcement",
+            "action": "freeze",
+            "payload": {
+                "submitted": True,
+                "status": "submitted",
+                "entryPoint": "freeze",
+                "assetId": "rwa-demo-collateral-001",
+                "decisionId": "vault-proof-001",
+                "transactionHash": "e" * 64,
+                "explorerUrl": "https://testnet.cspr.live/deploy/" + "e" * 64,
+            },
+        }
+    )
+
+    proof = CasperPublicProofService.get_public_proof({})
+
+    assert proof["vault"]["enforceEnabled"] is True
+    assert proof["vault"]["configured"] is True
+    assert proof["vault"]["contractHash"] == "vault-contract-hash"
+    assert proof["vault"]["lastAction"] == "freeze"
+    assert proof["vault"]["lastStatus"] == "submitted"
+    assert proof["vault"]["decisionId"] == "vault-proof-001"
+    assert proof["vault"]["transactionHash"] == "e" * 64
+    assert proof["vault"]["explorerUrl"].endswith("/deploy/" + "e" * 64)
+    assert proof["contractLinks"]["vaultContractHash"].endswith("/contract/vault-contract-hash")
 
 
 def test_public_proof_writer_rejects_private_material(tmp_path) -> None:

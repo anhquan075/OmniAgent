@@ -5,6 +5,8 @@ import re
 from typing import Any
 
 from app.core.settings import get_settings
+from app.services.casper.ledger import CasperDecisionLedger
+from app.services.casper.loop import get_loop_status
 from app.services.casper.proof_bundle import CasperProofBundleService
 
 
@@ -60,6 +62,7 @@ class CasperPublicProofService:
                 bundle.get("recoveryCandidates")
             ),
             "x402": CasperPublicProofService._x402(decision),
+            "vault": CasperPublicProofService._vault(settings),
             "trustSummary": bundle.get("trustSummary"),
             "llmTrace": CasperPublicProofService._llm_trace(decision),
             "liveProof": CasperPublicProofService._live_proof(settings, decision, receipt),
@@ -203,8 +206,78 @@ class CasperPublicProofService:
             "signatureHash",
             "bindingStatus",
             "receiptHash",
+            "settlementTxHash",
         )
         return {key: receipt.get(key) for key in allowed if receipt.get(key) is not None}
+
+    @staticmethod
+    def _vault(settings: Any) -> dict[str, Any]:
+        explorer = str(settings.casper_explorer_url or "").rstrip("/")
+        loop = get_loop_status()
+        ledger_vault = CasperPublicProofService._latest_vault_ledger_event()
+        payload = ledger_vault.get("payload") if isinstance(ledger_vault.get("payload"), dict) else {}
+        action = (
+            CasperPublicProofService._string_or_none(loop.get("lastVaultAction"))
+            or CasperPublicProofService._string_or_none(payload.get("entryPoint"))
+            or CasperPublicProofService._string_or_none(ledger_vault.get("action"))
+        )
+        status = (
+            CasperPublicProofService._string_or_none(loop.get("lastVaultStatus"))
+            or CasperPublicProofService._string_or_none(payload.get("status"))
+            or ("submitted" if payload.get("submitted") else None)
+        )
+        tx_hash = (
+            CasperPublicProofService._string_or_none(loop.get("lastVaultTx"))
+            or CasperPublicProofService._string_or_none(payload.get("transactionHash"))
+            or CasperPublicProofService._string_or_none(payload.get("deployHash"))
+        )
+        decision_id = CasperPublicProofService._string_or_none(payload.get("decisionId"))
+        asset_id = (
+            CasperPublicProofService._string_or_none(payload.get("assetId"))
+            or settings.casper_vault_asset_id
+        )
+        explorer_url = None
+        if tx_hash and explorer:
+            explorer_url = f"{explorer}/deploy/{tx_hash}"
+        elif CasperPublicProofService._string_or_none(payload.get("explorerUrl")):
+            explorer_url = str(payload.get("explorerUrl"))
+        contract_hash = settings.casper_vault_contract_hash
+        package_hash = settings.casper_vault_package_hash
+        links: dict[str, str] = {}
+        if explorer and contract_hash:
+            links["contractHash"] = f"{explorer}/contract/{contract_hash}"
+        if explorer and package_hash:
+            links["contractPackageHash"] = f"{explorer}/contract-package/{package_hash}"
+        configured = bool(contract_hash or package_hash)
+        return {
+            "enforceEnabled": bool(settings.casper_vault_enforce_enabled),
+            "configured": configured,
+            "contractHash": contract_hash,
+            "packageHash": package_hash,
+            "assetId": asset_id,
+            "lastAction": action,
+            "lastStatus": status,
+            "decisionId": decision_id,
+            "transactionHash": tx_hash,
+            "explorerUrl": explorer_url,
+            "contractLinks": links,
+            "actionMap": {
+                "block": "freeze",
+                "approve": "unfreeze",
+                "haircut": "set_ltv",
+            },
+        }
+
+    @staticmethod
+    def _latest_vault_ledger_event() -> dict[str, Any]:
+        summary = CasperDecisionLedger.get_ledger_summary(limit=50, offset=0)
+        events = summary.get("events") if isinstance(summary.get("events"), list) else []
+        for event in events:
+            if not isinstance(event, dict):
+                continue
+            if event.get("eventType") == "casper_vault_enforcement":
+                return event
+        return {}
 
     @staticmethod
     def _evidence_graph(decision: dict[str, Any]) -> dict[str, Any] | None:
@@ -279,7 +352,15 @@ class CasperPublicProofService:
         if explorer and settings.casper_decision_contract_hash:
             links["contractHash"] = f"{explorer}/contract/{settings.casper_decision_contract_hash}"
         if explorer and settings.casper_decision_contract_package_hash:
-            links["contractPackageHash"] = f"{explorer}/contract-package/{settings.casper_decision_contract_package_hash}"
+            links["contractPackageHash"] = (
+                f"{explorer}/contract-package/{settings.casper_decision_contract_package_hash}"
+            )
+        if explorer and settings.casper_vault_contract_hash:
+            links["vaultContractHash"] = f"{explorer}/contract/{settings.casper_vault_contract_hash}"
+        if explorer and settings.casper_vault_package_hash:
+            links["vaultContractPackageHash"] = (
+                f"{explorer}/contract-package/{settings.casper_vault_package_hash}"
+            )
         return links
 
     @staticmethod
