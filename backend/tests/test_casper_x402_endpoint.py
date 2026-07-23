@@ -136,7 +136,8 @@ def test_x402_unpaid_request_returns_casper_402(monkeypatch) -> None:
     assert body["accepts"][0]["scheme"] == "exact"
     assert body["accepts"][0]["network"] == "casper:casper-test"
     assert "amount" in body["accepts"][0]
-    assert body["accepts"][0]["asset"].startswith("hash-")
+    assert not body["accepts"][0]["asset"].startswith("hash-")
+    assert len(body["accepts"][0]["asset"]) == 64
     assert "PAYMENT-REQUIRED" in response.headers
 
 

@@ -14,6 +14,7 @@ from app.services.casper.casper_x402_facilitator import (
     build_payment_requirements,
     decode_payment_payload,
     gate_payment,
+    normalize_cep18_asset,
     payment_required_body,
 )
 
@@ -23,14 +24,21 @@ def _cfg(**overrides: Any) -> CasperX402Config:
         "facilitator_url": "https://x402-facilitator.cspr.cloud",
         "network": "casper:casper-test",
         "pay_to": "00" + "ab" * 32,
-        "asset": "hash-cb65a928f8e1b7ce172bddd075c10dd0de8bcfd9cf808c799fd409766a1735c3",
+        "asset": "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e",
         "amount": "1000000",
         "description": "test",
         "api_key": "test-key",
-        "extra": {"name": "WCSPR", "version": "1", "decimals": "9"},
+        "extra": {"name": "Wrapped CSPR", "version": "1", "decimals": "9"},
     }
     base.update(overrides)
     return CasperX402Config(**base)
+
+
+def test_normalize_cep18_asset_strips_hash_prefix() -> None:
+    bare = "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e"
+    assert normalize_cep18_asset(f"hash-{bare}") == bare
+    assert normalize_cep18_asset(f"0x{bare}") == bare
+    assert normalize_cep18_asset(bare.upper()) == bare
 
 
 def test_build_payment_requirements_uses_amount_not_max() -> None:
@@ -41,6 +49,17 @@ def test_build_payment_requirements_uses_amount_not_max() -> None:
     assert "maxAmountRequired" not in req
     assert req["extra"]["version"] == "1"
     assert req["payTo"].startswith("00")
+    assert not req["asset"].startswith("hash-")
+    assert len(req["asset"]) == 64
+
+
+def test_build_payment_requirements_strips_hash_prefix_from_cfg() -> None:
+    bare = "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e"
+    req = build_payment_requirements(
+        _cfg(asset=f"hash-{bare}"),
+        "https://example.com/r",
+    )
+    assert req["asset"] == bare
 
 
 def test_payment_required_body_shape() -> None:
