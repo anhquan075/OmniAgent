@@ -17,7 +17,7 @@ export function proxyRetryConfigFromEnv(env = process.env) {
   return {
     maxAttempts: positiveInteger(env.FRONTEND_UPSTREAM_MAX_ATTEMPTS, 3),
     retryDelayMs: nonNegativeInteger(env.FRONTEND_UPSTREAM_RETRY_DELAY_MS, 250),
-    timeoutMs: positiveInteger(env.FRONTEND_UPSTREAM_TIMEOUT_MS, 5_000),
+    timeoutMs: positiveInteger(env.FRONTEND_UPSTREAM_TIMEOUT_MS, 20_000),
   };
 }
 
@@ -44,7 +44,7 @@ export async function fetchUpstreamWithRetry(targetUrl, init = {}, options = {})
   const maxAttempts = positiveInteger(options.maxAttempts, 3);
   const retryDelayMs = nonNegativeInteger(options.retryDelayMs, 250);
   const sleep = options.sleep || defaultSleep;
-  const timeoutMs = positiveInteger(options.timeoutMs, 5_000);
+  const timeoutMs = positiveInteger(options.timeoutMs, 20_000);
   const method = String(init.method || "GET").toUpperCase();
   const attempts = retryableMethods.has(method) ? maxAttempts : 1;
 
