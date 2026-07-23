@@ -27,15 +27,18 @@ export default function CockpitTab({
   isLoading?: boolean;
   error?: string | null;
 }) {
+  const liveBundle = sourceState === 'live' ? bundle : {};
   return (
     <div className="cockpit-tab">
-      <ProofOutcomePanel bundle={sourceState === 'live' ? bundle : {}} sourceState={sourceState} />
-      <ReceiptFlowTimeline bundle={bundle} sourceState={sourceState} />
-      <div className="cockpit-grid">
+      <div className="cockpit-header">
+        <ProofOutcomePanel bundle={liveBundle} sourceState={sourceState} />
+        <ReceiptFlowTimeline bundle={bundle} sourceState={sourceState} />
+      </div>
+      <div className="cockpit-workbench">
         <div className="cockpit-primary">
           <AgentActivityConsole
             runtime={runtime}
-            bundle={sourceState === 'live' ? bundle : {}}
+            bundle={liveBundle}
             cycleHistory={cycleHistory}
             streamMeta={streamMeta}
             streamClockMs={streamClockMs}
@@ -43,11 +46,11 @@ export default function CockpitTab({
             isLoading={isLoading}
             error={error}
           />
-          <PolicyGateSummary bundle={sourceState === 'live' ? bundle : {}} />
         </div>
         <aside className="cockpit-side">
           <LoopStatusPanel loopStatus={runtime?.loopStatus} />
-          <RecoveryQueue bundle={sourceState === 'live' ? bundle : {}} sourceState={sourceState} />
+          <PolicyGateSummary bundle={liveBundle} />
+          <RecoveryQueue bundle={liveBundle} sourceState={sourceState} />
         </aside>
       </div>
     </div>

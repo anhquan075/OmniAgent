@@ -1,4 +1,4 @@
-import { ActivityIcon, CheckCircle2Icon, ClockIcon, PlayIcon, SquareIcon } from 'lucide-react';
+import { CheckCircle2Icon, ClockIcon, PlayIcon, SquareIcon } from 'lucide-react';
 import { proofLabel, proofText } from './proof-labels';
 
 type Payload = Record<string, any>;
@@ -21,10 +21,10 @@ export function LoopStatusPanel({
   const dryRun = loopStatus?.dryRun !== false;
 
   return (
-    <section className="ops-section bento-card loop-status-panel" aria-label="Agent loop status">
-      <div className="panel-head">
-        <ActivityIcon className="h-4 w-4" />
-        <h3>Agent loop</h3>
+    <section className="flight-panel loop-status-panel" aria-label="Agent loop status">
+      <div className="flight-panel-head">
+        <h2>Agent loop</h2>
+        <span>{running ? 'running' : 'stopped'}</span>
       </div>
       <div className="loop-status-content" data-loop-status>
         <span className={`loop-badge ${running ? 'is-running' : 'is-stopped'}`}>

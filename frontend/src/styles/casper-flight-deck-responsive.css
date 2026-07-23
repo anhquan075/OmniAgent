@@ -43,14 +43,16 @@
   }
 
   .flight-tab-panel:has(.proof-packet-tab),
-  .flight-tab-panel:has(.receipt-ledger-tab) {
+  .flight-tab-panel:has(.receipt-ledger-tab),
+  .flight-tab-panel:has(.cockpit-tab) {
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
 
   .flight-tab-panel:has(.proof-packet-tab) > .proof-packet-tab,
-  .flight-tab-panel:has(.receipt-ledger-tab) > .receipt-ledger-tab {
+  .flight-tab-panel:has(.receipt-ledger-tab) > .receipt-ledger-tab,
+  .flight-tab-panel:has(.cockpit-tab) > .cockpit-tab {
     flex: 1 1 auto;
     min-height: 0;
   }
@@ -58,14 +60,10 @@
 
 @media (max-width: 1180px) {
   .flight-deck,
-  .cockpit-grid,
+  .cockpit-workbench,
   .proof-packet-mid,
   .receipt-ledger-tab {
     grid-template-columns: 1fr;
-  }
-
-  .cockpit-grid {
-    grid-template-rows: none;
   }
 
   .agent-activity-console,
@@ -94,9 +92,29 @@
   }
 
   .proof-packet-tab,
-  .receipt-ledger-tab {
+  .receipt-ledger-tab,
+  .cockpit-tab {
     height: auto;
     grid-template-rows: none;
+  }
+
+  .cockpit-header,
+  .cockpit-workbench,
+  .cockpit-primary,
+  .cockpit-side {
+    overflow: visible;
+    height: auto;
+    max-height: none;
+  }
+
+  .cockpit-side .loop-status-panel,
+  .cockpit-side .policy-gate-summary,
+  .cockpit-side .recovery-queue,
+  .cockpit-primary .agent-activity-console {
+    flex: none;
+    max-height: none;
+    overflow: visible;
+    height: auto;
   }
 
   .proof-packet-mid > *,
@@ -109,6 +127,18 @@
 
   .raw-evidence-preview pre {
     max-height: 240px;
+  }
+
+  .proof-outcome-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .proof-outcome-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .proof-outcome-secondary {
+    grid-template-columns: 1fr;
   }
 
   .flight-rail {
@@ -155,10 +185,6 @@
     height: auto;
   }
 
-  .cockpit-grid {
-    --cockpit-card-row-height: auto;
-  }
-
   .judge-packet .judge-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -178,7 +204,6 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .proof-outcome-panel,
   .proof-outcome-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -249,10 +274,6 @@
 
 @media (max-width: 520px) {
   .flight-rail {
-    grid-template-columns: 1fr;
-  }
-
-  .proof-outcome-panel {
     grid-template-columns: 1fr;
   }
 

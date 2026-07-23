@@ -43,7 +43,7 @@
 
 .proof-outcome-panel {
   display: grid;
-  grid-template-columns: minmax(220px, 0.38fr) minmax(0, 1fr);
+  grid-template-columns: minmax(180px, 0.28fr) minmax(0, 1fr);
   gap: 10px;
   align-items: stretch;
 }
@@ -58,6 +58,7 @@
 
 .proof-outcome-title,
 .proof-outcome-grid span,
+.proof-outcome-secondary span,
 .trust-mini-grid span {
   min-width: 0;
   border: 1px solid var(--line);
@@ -81,6 +82,7 @@
 
 .proof-outcome-title small,
 .proof-outcome-grid small,
+.proof-outcome-secondary small,
 .trust-mini-grid small {
   display: block;
   color: var(--muted);
@@ -89,13 +91,26 @@
   text-transform: uppercase;
 }
 
+.proof-outcome-metrics {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
 .proof-outcome-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.proof-outcome-secondary {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.35fr) minmax(0, 1fr);
   gap: 6px;
 }
 
 .proof-outcome-grid b,
+.proof-outcome-secondary b,
 .trust-mini-grid b {
   display: block;
   margin-top: 3px;
@@ -109,6 +124,32 @@
 
 .proof-outcome-hash b {
   overflow-wrap: anywhere;
+  text-transform: none;
+}
+
+.receipt-flow-timeline {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.receipt-flow-timeline .flight-panel-head {
+  margin-bottom: 6px;
+}
+
+.receipt-flow-timeline ol {
+  gap: 4px;
+}
+
+.receipt-flow-timeline li {
+  padding: 6px 7px;
+}
+
+.receipt-flow-timeline li b {
+  font-size: 0.82rem;
+}
+
+.receipt-flow-timeline li span {
+  font-size: 0.72rem;
 }
 
 .trust-mini-grid {

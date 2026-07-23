@@ -31,25 +31,39 @@ export default function ProofOutcomePanel({
           <h2>{headline}</h2>
         </div>
       </div>
-      <div className="proof-outcome-grid">
-        {loading ? (
-          <>
-            <span className="skeleton-block" aria-hidden="true" /><span className="skeleton-block" aria-hidden="true" />
-            <span className="skeleton-block" aria-hidden="true" /><span className="skeleton-block" aria-hidden="true" />
-            <span className="skeleton-block" aria-hidden="true" /><span className="skeleton-block" aria-hidden="true" />
-            <span className="skeleton-block proof-outcome-hash" aria-hidden="true" />
-          </>
-        ) : (
-          <>
-            <span><small>Risk</small><b>{outcome.riskScore}</b></span>
-            <span><small>Policy</small><b>{outcome.policyGate}</b></span>
-            <span><small>Proof</small><b>{outcome.proofStatus}</b></span>
-            <span><small>Readback</small><b>{outcome.readback}</b></span>
-            <span><small>Template</small><b>{outcome.template}</b></span>
-            <span><small>Paid evidence</small><b>{outcome.paidEvidence}</b></span>
-            <span className="proof-outcome-hash"><small>Evidence graph</small><b>{shortValue(outcome.evidenceGraph)}</b></span>
-          </>
-        )}
+      <div className="proof-outcome-metrics">
+        <div className="proof-outcome-grid">
+          {loading ? (
+            <>
+              <span className="skeleton-block" aria-hidden="true" />
+              <span className="skeleton-block" aria-hidden="true" />
+              <span className="skeleton-block" aria-hidden="true" />
+              <span className="skeleton-block" aria-hidden="true" />
+              <span className="skeleton-block" aria-hidden="true" />
+            </>
+          ) : (
+            <>
+              <span><small>Risk</small><b>{outcome.riskScore}</b></span>
+              <span><small>Policy</small><b>{outcome.policyGate}</b></span>
+              <span><small>Proof</small><b>{outcome.proofStatus}</b></span>
+              <span><small>Readback</small><b>{outcome.readback}</b></span>
+              <span><small>Paid evidence</small><b>{outcome.paidEvidence}</b></span>
+            </>
+          )}
+        </div>
+        <div className="proof-outcome-secondary">
+          {loading ? (
+            <>
+              <span className="skeleton-block" aria-hidden="true" />
+              <span className="skeleton-block proof-outcome-hash" aria-hidden="true" />
+            </>
+          ) : (
+            <>
+              <span><small>Template</small><b>{outcome.template}</b></span>
+              <span className="proof-outcome-hash"><small>Evidence graph</small><b>{shortValue(outcome.evidenceGraph)}</b></span>
+            </>
+          )}
+        </div>
       </div>
     </section>
   );

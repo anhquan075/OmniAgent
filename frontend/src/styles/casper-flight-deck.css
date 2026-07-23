@@ -118,7 +118,8 @@
 }
 
 /* Win over `.proof-outcome-grid span { background: ... }` so loading shimmer stays visible. */
-.proof-outcome-panel.is-loading .proof-outcome-grid .skeleton-block {
+.proof-outcome-panel.is-loading .proof-outcome-grid .skeleton-block,
+.proof-outcome-panel.is-loading .proof-outcome-secondary .skeleton-block {
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0.04) 0%,
@@ -234,7 +235,56 @@
 
 .cockpit-tab {
   display: grid;
-  gap: 10px;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+  height: 100%;
+}
+
+.cockpit-header {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cockpit-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.45fr);
+  gap: 8px;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.cockpit-primary,
+.cockpit-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cockpit-primary .agent-activity-console {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+}
+
+.cockpit-side > * {
+  min-height: 0;
+}
+
+.cockpit-side .loop-status-panel {
+  flex: 0 1 auto;
+  max-height: 42%;
+  overflow: auto;
+}
+
+.cockpit-side .policy-gate-summary,
+.cockpit-side .recovery-queue {
+  flex: 1 1 0;
+  overflow: auto;
 }
 
 .proof-packet-tab {
@@ -262,14 +312,6 @@
   overflow: auto;
 }
 
-.cockpit-grid {
-  --cockpit-card-row-height: clamp(410px, 38dvh, 460px);
-  display: grid;
-  grid-template-columns: minmax(0, 1.54fr) minmax(300px, 0.46fr);
-  gap: 8px;
-  align-items: stretch;
-}
-
 .receipt-ledger-tab {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.9fr);
@@ -277,34 +319,4 @@
   align-items: stretch;
   min-height: 0;
   height: 100%;
-}
-
-.cockpit-grid {
-  grid-template-rows: var(--cockpit-card-row-height) minmax(128px, auto);
-}
-
-.cockpit-primary,
-.cockpit-side {
-  display: contents;
-  min-width: 0;
-}
-
-.agent-activity-console {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.policy-gate-summary {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-.loop-status-panel {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.recovery-queue {
-  grid-column: 2;
-  grid-row: 2;
 }
