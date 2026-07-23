@@ -33,6 +33,14 @@ describe('flight deck model', () => {
     expect(rows.some(row => row.complete)).toBe(false);
   });
 
+  it('shows loading lifecycle placeholders before the first live snapshot', () => {
+    const rows = lifecycleRows(bundle, 'loading');
+
+    expect(rows).toHaveLength(6);
+    expect(rows.every(row => row.status === 'loading')).toBe(true);
+    expect(rows.some(row => row.complete)).toBe(false);
+  });
+
   it('marks only concrete completion states as complete for live lifecycle rows', () => {
     expect(lifecycleRows(bundle, 'live')).toEqual([
       { state: 'evidence', status: 'complete', complete: true },

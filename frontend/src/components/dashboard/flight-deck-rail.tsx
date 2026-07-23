@@ -1,6 +1,6 @@
 import { BookOpenCheckIcon, ClipboardListIcon, GaugeIcon } from 'lucide-react';
 
-import type { SourceState } from './flight-deck-model';
+import { sourceStateLabel, type SourceState } from './flight-deck-model';
 
 export type FlightDeckTab = 'cockpit' | 'proof' | 'ledger';
 
@@ -45,8 +45,8 @@ export default function FlightDeckRail({
         ))}
       </nav>
       <div className="flight-rail-status">
-        <span className={sourceState === 'live' ? 'is-ok' : 'is-blocked'} />
-        <b>{sourceState === 'live' ? 'System operational' : 'Snapshot unavailable'}</b>
+        <span className={sourceState === 'live' ? 'is-ok' : sourceState === 'loading' ? 'is-loading' : 'is-blocked'} />
+        <b>{sourceStateLabel(sourceState)}</b>
         <small>Last sync: {refreshedAt ? new Date(refreshedAt).toISOString().slice(11, 19) : 'pending'} UTC</small>
       </div>
     </aside>
