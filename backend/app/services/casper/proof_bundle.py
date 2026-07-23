@@ -203,11 +203,20 @@ class CasperProofBundleService:
             "decisionPayloadValid": bool((decision or {}).get("proofDigest")),
             "casperDeployConfirmed": deploy_status.get("status") == "confirmed",
             "readbackMatchesDigest": bool(readback.get("verified")),
-            "agentRationalePresent": bool((decision or {}).get("rationale")),
+            "agentRationalePresent": bool(
+                (decision or {}).get("rationale") or (decision or {}).get("rationaleHash")
+            ),
             "policyGateApproved": (decision or {}).get("policyGate") == "approved"
             or bool(((decision or {}).get("materialityGate") or {}).get("passed")),
-            "decisionReceiptPresent": bool((decision or {}).get("decisionReceipt")),
-            "evidenceSourceHashPresent": bool(((decision or {}).get("evidenceBundle") or {}).get("sourceHash")),
+            "decisionReceiptPresent": bool(
+                (decision or {}).get("decisionReceipt")
+                or ((decision or {}).get("readback") or {}).get("decisionReceipt")
+                or ((decision or {}).get("readback") or {}).get("receiptVerified") is True
+            ),
+            "evidenceSourceHashPresent": bool(
+                ((decision or {}).get("evidenceBundle") or {}).get("sourceHash")
+                or (decision or {}).get("sourceHash")
+            ),
             "evidenceGraphDigestPresent": bool(
                 (((decision or {}).get("evidenceBundle") or {}).get("evidenceGraph") or {}).get("graphDigest")
             ),

@@ -11,6 +11,63 @@ def test_casper_proof_bundle_includes_lifecycle_score_and_recovery(tmp_path, mon
     get_settings.cache_clear()
 
 
+def test_agent_rationale_present_accepts_rationale_hash() -> None:
+    score = CasperProofBundleService.proof_score(
+        preflight={"rpcReachable": True},
+        decision={
+            "proofDigest": "sha256:proof",
+            "rationaleHash": "sha256:d561b44b5a6aed1b8274031bf206834394bf5a859df2b2a8f2e359cc7bb22a99",
+            "policyGate": "approved",
+            "guardrailHash": "sha256:guardrail",
+            "decisionReceipt": {"receiptValue": "receipt"},
+            "evidenceBundle": {
+                "sourceHash": "sha256:source",
+                "evidenceGraph": {"graphDigest": "sha256:graph"},
+            },
+            "x402": {"status": "verified"},
+        },
+        deploy_status={"status": "confirmed"},
+        readback={"verified": True},
+        blockers=[],
+    )
+
+    assert score["checks"]["agentRationalePresent"] is True
+
+    missing = CasperProofBundleService.proof_score(
+        preflight={"rpcReachable": True},
+        decision={"proofDigest": "sha256:proof"},
+        deploy_status={"status": "confirmed"},
+        readback={"verified": True},
+        blockers=[],
+    )
+    assert missing["checks"]["agentRationalePresent"] is False
+
+
+def test_proof_score_accepts_readback_receipt_and_top_level_source_hash() -> None:
+    score = CasperProofBundleService.proof_score(
+        preflight={"rpcReachable": True},
+        decision={
+            "proofDigest": "sha256:proof",
+            "rationaleHash": "sha256:rationale",
+            "sourceHash": "sha256:source",
+            "policyGate": "approved",
+            "guardrailHash": "sha256:guardrail",
+            "readback": {
+                "decisionReceipt": "id|approve|22|sha256:proof|sha256:rationale|sha256:source|ts|approved||sha256:g",
+                "receiptVerified": True,
+            },
+        },
+        deploy_status={"status": "confirmed"},
+        readback={"verified": True},
+        blockers=[],
+    )
+
+    assert score["checks"]["decisionReceiptPresent"] is True
+    assert score["checks"]["evidenceSourceHashPresent"] is True
+    assert score["checks"]["evidenceGraphDigestPresent"] is False
+    assert score["checks"]["x402PaidEvidenceVerified"] is False
+
+
 def test_casper_proof_bundle_surfaces_receipt_and_agentic_lifecycle(
     tmp_path,
     monkeypatch,
