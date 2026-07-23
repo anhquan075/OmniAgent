@@ -61,8 +61,9 @@ class CasperProofBundleService:
     def latest_casper_event(events: object) -> dict[str, Any] | None:
         if not isinstance(events, list):
             return None
-        latest_decision_event: dict[str, Any] | None = None
-        duplicate_decision_id = ""
+        # Ledger is newest-first (ORDER BY id DESC). Skip chain/local duplicate
+        # blocked attempts so a looping approve re-try cannot hide a newer
+        # distinct submitted decision (e.g. finals warn/haircut canaries).
         duplicate_blockers = {
             CasperSubmissionGuard.DUPLICATE_BLOCKER,
             CasperSubmissionGuard.CHAIN_DUPLICATE_BLOCKER,
@@ -74,28 +75,19 @@ class CasperProofBundleService:
             decision = payload.get("decision") if isinstance(payload, dict) else None
             if not isinstance(decision, dict) or not decision:
                 continue
-            if latest_decision_event is None:
-                latest_decision_event = event
-                blockers = {
-                    str(blocker)
-                    for blocker in (payload.get("hardBlockers") or [])
-                    if isinstance(blocker, str)
-                }
-                is_duplicate_attempt = bool(
-                    str(event.get("eventType") or "") == "casper_decision_live_submit_blocked"
-                    and blockers.intersection(duplicate_blockers)
-                )
-                if not is_duplicate_attempt:
-                    return event
-                duplicate_decision_id = str(decision.get("decisionId") or "")
+            blockers = {
+                str(blocker)
+                for blocker in ((payload.get("hardBlockers") or []) if isinstance(payload, dict) else [])
+                if isinstance(blocker, str)
+            }
+            is_duplicate_attempt = bool(
+                str(event.get("eventType") or "") == "casper_decision_live_submit_blocked"
+                and blockers.intersection(duplicate_blockers)
+            )
+            if is_duplicate_attempt:
                 continue
-            if str(decision.get("decisionId") or "") != duplicate_decision_id:
-                continue
-            has_deploy = bool(decision.get("deployHash") or decision.get("transactionHash"))
-            has_readback = isinstance(decision.get("readback"), dict) and bool(decision["readback"])
-            if has_deploy or has_readback:
-                return event
-        return latest_decision_event
+            return event
+        return None
 
     @staticmethod
     def decision_from_event(event: dict[str, Any] | None) -> dict[str, Any] | None:

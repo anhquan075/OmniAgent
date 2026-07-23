@@ -26,34 +26,44 @@ readback, and a public verifier that does not require private keys or internal
 operator access.
 
 OmniAgent reads public RWA evidence, runs a proposer/critic/policy-gate agent
-loop, writes a decision receipt to a native Casper Rust contract, and exposes
-the receipt through a dashboard, public proof endpoint, and verifier script.
-It is built as a Casper-only demo for the
-[Casper Agentic Buildathon](https://dorahacks.io/hackathon/casper-agentic-buildathon/detail).
+loop, writes a decision receipt to a native Casper Rust contract, optionally
+enforces collateral state via a vault (`freeze` / `unfreeze` / `set_ltv`), and
+exposes everything through a dashboard, public proof endpoint, and verifier
+script. It is built as a Casper-only demo for the
+[Casper Agentic Buildathon Finals](https://dorahacks.io/hackathon/casper-agentic-buildathon-finals/detail).
+
+## Judge path (≈5 minutes)
+
+1. Open [https://omniyield.app](https://omniyield.app) — flight deck + latest proof
+2. Open [https://omniyield.app/api/public/proof](https://omniyield.app/api/public/proof) — public-safe JSON (no keys)
+3. Open the latest decision deploy from the proof payload / table below
+4. Hit [https://omniyield.app/api/x402/rwa-evidence](https://omniyield.app/api/x402/rwa-evidence) unpaid → HTTP **402** on `casper:casper-test`
+5. Open vault freeze / unfreeze / `set_ltv` deploys — enforcement is real state change
+
+Full DoraHacks paste: [`docs/dorahacks-finals-description.md`](docs/dorahacks-finals-description.md)
 
 ## Current Public Deployment
 
-Last verified: 2026-07-11.
+Last verified: 2026-07-23.
 
 | Surface | URL / Status |
 |---------|--------------|
 | Frontend proof console | [https://omniyield.app](https://omniyield.app) |
 | Backend public proof | [https://omniagent-production.up.railway.app/api/public/proof](https://omniagent-production.up.railway.app/api/public/proof) |
 | Agent card | [https://omniagent-production.up.railway.app/.well-known/casper-agent-card.json](https://omniagent-production.up.railway.app/.well-known/casper-agent-card.json) |
-| Paywalled x402 evidence | [https://omniagent-production.up.railway.app/api/x402/rwa-evidence](https://omniagent-production.up.railway.app/api/x402/rwa-evidence) |
-| x402 status | `verified`, `bindingStatus=bound`, `hardBlockers=[]` |
-| x402 receipt hash | `sha256:9b8479d9e5370962efa0dd028dd87e9adb9af225e1002bf43eb84f453c59645f` |
+| Paywalled x402 evidence | [https://omniyield.app/api/x402/rwa-evidence](https://omniyield.app/api/x402/rwa-evidence) |
+| x402 status | `verified`, `bindingStatus=bound`, WCSPR `3d80df21…`, facilitator `x402-facilitator.cspr.cloud` |
+| x402 settle (row 6) | [`93074ccb…`](https://testnet.cspr.live/deploy/93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5) |
 | Live submit | Enabled with a `2.5 CSPR` payment cap, `4` submissions/day, `10 CSPR`/day budget, and `50 CSPR` reserve |
-| Autonomous loop | `running=true`, `dryRun=false`, interval/cooldown `1800s`, live-loop arm on |
-| Latest live decision | [`51b01901…a9cc`](https://testnet.cspr.live/deploy/51b01901a2991b43cd586bb684cad9307e2b6ca4e58aa522a5144199c6aca9cc), confirmed with verified receipt readback |
+| Autonomous loop | Armed at `1800s` interval with fail-closed guardrails |
+| Latest live decision | [`87734909…`](https://testnet.cspr.live/deploy/87734909bab1a83890228b59a66c64fd7636ce99eb4beeb4ac5d9c07b990bb22) (`haircut`, 2026-07-23) |
+| Vault freeze / unfreeze / set_ltv | [`36d1f699…`](https://testnet.cspr.live/deploy/36d1f699ebf201e1c2617a16ee9152a56c567351ba733e2e87b944db7c325176) / [`39dc155a…`](https://testnet.cspr.live/deploy/39dc155aac0a9be1a23aa424d60d5783d5ff75fb2cb9ab51d4a630a7ea245646) / [`43a8c497…`](https://testnet.cspr.live/deploy/43a8c497166b0d219a9867464b6de2ea66c5a6512f725f51df9bd89341612604) |
 
 The x402 evidence paywall settles **natively on Casper Testnet** via the
 CSPR.cloud facilitator (`x402-facilitator.cspr.cloud`) using CEP-18
-`transfer_with_authorization` (default asset: make-software reference WCSPR
-package). Decision receipts, proof digests, contract readback, and the public
-verifier remain anchored to Casper. Set `CASPER_X402_PAY_TO_ADDRESS` (00-prefixed
-account hash), `CASPER_X402_FACILITATOR_API_KEY` (or `CASPER_CSPR_CLOUD_API_KEY`),
-and optionally `CASPER_X402_ASSET` / `CASPER_X402_FEE_PAYER`.
+`transfer_with_authorization` (Wrapped CSPR package `3d80df21…`). Decision
+receipts, proof digests, contract readback, and the public verifier remain
+anchored to Casper.
 
 ![Self-generated OmniAgent Casper architecture PNG](frontend/public/imgs/omniagent-casper-architecture.png)
 

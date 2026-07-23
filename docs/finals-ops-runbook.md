@@ -12,8 +12,9 @@ WAF-blocked.
 | Paywall challenge | unpaid evidence → HTTP **402** with Casper `accepts[]` |
 | Facilitator arm | `settleReady=true` (CSPR.cloud API key set) |
 | Stale Base/USDC receipt | deleted |
-| Latest decision canary | `warn` deploy `9e696671…` (2026-07-23) — public proof `live_verified` |
-| Vault install / freeze / unfreeze | live on casper-test; fresh freeze `6d593895…` + unfreeze `3ec2aad5…` (2026-07-23) |
+| Latest decision canary | `haircut` deploy `87734909…` (2026-07-23) — public proof `live_verified` |
+| Prior warn canary | `warn` deploy `9e696671…` (2026-07-23) |
+| Vault install / freeze / unfreeze / set_ltv | live; freeze `36d1f699…`, unfreeze `39dc155a…`, set_ltv `43a8c497…` |
 | Vault Railway env | hashes set; `CASPER_VAULT_ENFORCE_ENABLED=true` |
 | x402 asset | bare WCSPR `3d80df21…`; receipt bound (`bindingStatus=bound`) |
 

@@ -379,6 +379,49 @@ def test_latest_casper_event_keeps_newer_nonduplicate_decision() -> None:
     ]) == newer_dry_run
 
 
+def test_latest_casper_event_skips_old_duplicate_blocks_for_newer_deploy() -> None:
+    """Loop duplicate-blocks of an older semantic id must not hide a newer canary."""
+    older_verified = {
+        "eventType": "casper_decision_readback_verified",
+        "payload": {
+            "decision": {
+                "decisionId": "older-approve",
+                "action": "approve",
+                "deployHash": "a" * 64,
+                "readback": {"proofDigest": "sha256:older"},
+            },
+        },
+    }
+    newer_haircut = {
+        "eventType": "casper_decision_submitted",
+        "payload": {
+            "decision": {
+                "decisionId": "newer-haircut",
+                "action": "haircut",
+                "deployHash": "b" * 64,
+            },
+        },
+    }
+    duplicate_block = {
+        "eventType": "casper_decision_live_submit_blocked",
+        "payload": {
+            "decision": {
+                "decisionId": "older-approve",
+                "action": "approve",
+                "proofDigest": "sha256:blocked",
+            },
+            "hardBlockers": ["casper_chain_duplicate_intent"],
+            "submitted": False,
+        },
+    }
+
+    assert CasperProofBundleService.latest_casper_event([
+        duplicate_block,
+        newer_haircut,
+        older_verified,
+    ]) == newer_haircut
+
+
 def test_proof_bundle_ledger_version_advances_after_event_count_reaches_cap(
     tmp_path,
     monkeypatch,

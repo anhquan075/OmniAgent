@@ -17,6 +17,8 @@ export default function CasperAgentDashboard() {
   const hasLiveSnapshotRef = useRef(false);
   const observedLedgerVersionRef = useRef<string | null | undefined>(undefined);
   const cycleHistoryRequestRef = useRef(0);
+  const snapshotInFlightRef = useRef(false);
+  const pendingVisibleRefreshRef = useRef(false);
 
   const loadCycleHistory = useCallback(async () => {
     const requestId = cycleHistoryRequestRef.current + 1;
@@ -56,6 +58,14 @@ export default function CasperAgentDashboard() {
   }, [loadCycleHistory]);
 
   const loadSnapshot = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (snapshotInFlightRef.current) {
+      if (!silent) {
+        // A silent poll is already running; queue a visible refresh after it.
+        pendingVisibleRefreshRef.current = true;
+      }
+      return;
+    }
+    snapshotInFlightRef.current = true;
     if (!silent) setLoading(true);
     try {
       const response = await apiFetch('/api/dashboard/snapshot?limit=8');
@@ -70,13 +80,16 @@ export default function CasperAgentDashboard() {
       }
       setError(err instanceof Error ? err.message : 'snapshot unavailable');
     } finally {
+      snapshotInFlightRef.current = false;
       if (!silent) setLoading(false);
+      if (pendingVisibleRefreshRef.current) {
+        pendingVisibleRefreshRef.current = false;
+        void loadSnapshot({ silent: false });
+      }
     }
   }, [applySnapshot]);
 
   useEffect(() => {
-    void loadSnapshot();
-    void loadCycleHistory();
     let closed = false;
     let source: EventSource | null = null;
     let fallbackInterval: number | null = null;
@@ -117,7 +130,15 @@ export default function CasperAgentDashboard() {
       }
     };
 
-    void openStream();
+    // First REST snapshot must win before SSE. The FE proxy used to buffer SSE
+    // with arrayBuffer(), which hung the stream and starved snapshot loads.
+    void (async () => {
+      await loadSnapshot();
+      void loadCycleHistory();
+      if (!closed) {
+        void openStream();
+      }
+    })();
 
     return () => {
       closed = true;

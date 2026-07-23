@@ -25,6 +25,13 @@ export function upstreamErrorReason(error) {
   return error?.cause?.code || error?.code || error?.name || "upstream_fetch_failed";
 }
 
+/** SSE must be streamed; buffering with arrayBuffer() never finishes. */
+export function shouldStreamUpstream(pathname = "", contentType = "") {
+  const path = String(pathname || "");
+  const type = String(contentType || "").toLowerCase();
+  return path === "/api/dashboard/stream" || type.includes("text/event-stream");
+}
+
 async function fetchWithTimeout(fetchImpl, targetUrl, init, timeoutMs) {
   const timeoutController = new AbortController();
   const timeout = setTimeout(() => timeoutController.abort(), timeoutMs);

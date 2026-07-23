@@ -1,12 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { fetchUpstreamWithRetry } from "./server-proxy.mjs";
+import { fetchUpstreamWithRetry, shouldStreamUpstream } from "./server-proxy.mjs";
 
 function timeoutError() {
   const error = new TypeError("fetch failed");
   error.cause = { code: "ETIMEDOUT" };
   return error;
 }
+
+describe("shouldStreamUpstream", () => {
+  it("streams the dashboard SSE path", () => {
+    expect(shouldStreamUpstream("/api/dashboard/stream")).toBe(true);
+    expect(shouldStreamUpstream("/api/dashboard/snapshot")).toBe(false);
+  });
+
+  it("streams event-stream content types", () => {
+    expect(shouldStreamUpstream("/api/other", "text/event-stream; charset=utf-8")).toBe(true);
+    expect(shouldStreamUpstream("/api/other", "application/json")).toBe(false);
+  });
+});
 
 describe("fetchUpstreamWithRetry", () => {
   it("retries an idempotent request after a transient connection failure", async () => {

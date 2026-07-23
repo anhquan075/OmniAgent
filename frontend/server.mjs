@@ -5,6 +5,7 @@ import { extname, join, normalize, resolve } from "node:path";
 import {
   fetchUpstreamWithRetry,
   proxyRetryConfigFromEnv,
+  shouldStreamUpstream,
   upstreamErrorReason,
 } from "./server-proxy.mjs";
 
@@ -101,6 +102,62 @@ function getRequestBody(req) {
   });
 }
 
+async function proxySse(req, res, targetUrl, headers) {
+  const abort = new AbortController();
+  const onClientClose = () => abort.abort();
+  req.on("close", onClientClose);
+
+  try {
+    // No short timeout: SSE is long-lived. Client disconnect aborts upstream.
+    const upstream = await fetch(targetUrl, {
+      method: "GET",
+      headers,
+      signal: abort.signal,
+    });
+
+    res.statusCode = upstream.status;
+    copyProxyHeaders(upstream.headers, res);
+    if (!res.getHeader("content-type")) {
+      res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    }
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    setSecurityHeaders(res);
+
+    if (!upstream.body) {
+      res.end();
+      return;
+    }
+
+    const reader = upstream.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!res.write(Buffer.from(value))) {
+        await new Promise((resolve) => res.once("drain", resolve));
+      }
+    }
+    res.end();
+  } catch (error) {
+    if (!res.headersSent) {
+      setSecurityHeaders(res);
+      res.statusCode = 502;
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.end(JSON.stringify({ error: "frontend_proxy_error" }));
+    } else {
+      res.end();
+    }
+    console.error(JSON.stringify({
+      event: "frontend_proxy_sse_error",
+      path: "/api/dashboard/stream",
+      reason: upstreamErrorReason(error),
+    }));
+  } finally {
+    req.off("close", onClientClose);
+  }
+}
+
 async function proxyApi(req, res, url) {
   const targetUrl = `${backendUrl}${url.pathname}${url.search}`;
   const headers = new Headers();
@@ -125,6 +182,11 @@ async function proxyApi(req, res, url) {
     throw error;
   }
 
+  if (shouldStreamUpstream(url.pathname)) {
+    await proxySse(req, res, targetUrl, headers);
+    return;
+  }
+
   const upstream = await fetchUpstreamWithRetry(targetUrl, {
     method: req.method,
     headers,
@@ -147,6 +209,23 @@ async function proxyApi(req, res, url) {
   copyProxyHeaders(upstream.headers, res);
   res.setHeader("Cache-Control", "no-store");
   setSecurityHeaders(res);
+  if (shouldStreamUpstream(url.pathname, upstream.headers.get("content-type") || "")) {
+    // Defensive: if a non-stream path somehow returns SSE, do not buffer it.
+    if (!upstream.body) {
+      res.end();
+      return;
+    }
+    const reader = upstream.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!res.write(Buffer.from(value))) {
+        await new Promise((resolve) => res.once("drain", resolve));
+      }
+    }
+    res.end();
+    return;
+  }
   const body = Buffer.from(await upstream.arrayBuffer());
   res.end(body);
 }
