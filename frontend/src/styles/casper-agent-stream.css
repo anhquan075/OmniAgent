@@ -42,6 +42,7 @@
 .cycle-history-field select {
   width: 100%;
   min-width: 0;
+  max-width: 100%;
   min-height: 44px;
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
@@ -50,6 +51,9 @@
   background: var(--color-glass-strong);
   font: inherit;
   font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .cycle-history-field select:focus-visible {
@@ -76,6 +80,51 @@
 .mcp-log-panel .panel-head h3,
 .ai-output-panel .panel-head h3 {
   margin-right: auto;
+}
+
+.mcp-log-details {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.mcp-log-details summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 6px 8px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mcp-log-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.mcp-log-details[open] summary {
+  border-bottom: 1px solid var(--line);
+  color: var(--casper-red-soft);
+}
+
+.mcp-log-details pre {
+  margin: 0;
+  max-height: 180px;
+  overflow: auto;
+  padding: 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+@media (min-width: 901px) {
+  .mcp-log-details[open] {
+    /* keep payload usable in desktop console without dominating the card */
+    max-height: none;
+  }
 }
 
 .stream-live-meta {

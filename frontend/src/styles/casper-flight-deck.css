@@ -90,6 +90,50 @@
 
 .flight-rail-status .is-ok { background: var(--green); }
 .flight-rail-status .is-blocked { background: var(--danger); }
+.flight-rail-status .is-loading {
+  background: var(--casper-red-soft);
+  animation: flight-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes flight-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+.skeleton-block {
+  display: block;
+  min-height: 42px;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.1) 45%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+/* Win over `.proof-outcome-grid span { background: ... }` so loading shimmer stays visible. */
+.proof-outcome-panel.is-loading .proof-outcome-grid .skeleton-block {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.1) 45%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.proof-outcome-panel.is-loading .proof-outcome-grid {
+  opacity: 0.95;
+}
 
 .flight-main {
   min-width: 0;
