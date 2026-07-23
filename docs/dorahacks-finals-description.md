@@ -69,10 +69,10 @@ Live submit is capped and fail-closed:
 | 4 | Reference demo decision | https://testnet.cspr.live/deploy/ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736 |
 | 5 | Latest live decision | https://testnet.cspr.live/deploy/51b01901a2991b43cd586bb684cad9307e2b6ca4e58aa522a5144199c6aca9cc |
 | 6 | x402 CEP-18 settle | _paste after live settle_ |
-| 7 | Vault install | _paste after vault deploy_ |
-| 8 | Vault freeze | _paste after canary_ |
-| 9 | Vault unfreeze | _paste after canary_ |
-| 10 | Agent account | _paste agent account explorer URL_ |
+| 7 | Vault install | https://testnet.cspr.live/deploy/21437ac6d7da2965e632d2f931678f6484707474b5b10204be55184076e45946 |
+| 8 | Vault freeze | https://testnet.cspr.live/deploy/8d7912626337e21cbb483554bca310f0e00c198c82a990b6bbe7cd6cad6a7591 |
+| 9 | Vault unfreeze | https://testnet.cspr.live/deploy/7b24ab0e262f62960edbb6c24aaa1dfef8fdc9aba4eb4237671b2ce5b734c078 |
+| 10 | Vault contract | https://testnet.cspr.live/contract/66969eead67ac3cb07e131dc86bf4e6b7e63d2c2a33fb1779f705d79878bb55f |
 
 ## Socials
 

@@ -353,9 +353,14 @@ public proof response with verified readback.
 | Reference demo decision deploy | [ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736](https://testnet.cspr.live/deploy/ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736) |
 | Contract source | [contracts/casper-decision-proof](contracts/casper-decision-proof) |
 | Collateral vault source | [contracts/collateral-vault](contracts/collateral-vault) |
+| Vault contract | [66969eead67ac3cb07e131dc86bf4e6b7e63d2c2a33fb1779f705d79878bb55f](https://testnet.cspr.live/contract/66969eead67ac3cb07e131dc86bf4e6b7e63d2c2a33fb1779f705d79878bb55f) |
+| Vault package | [5868d6d6bc65f0e6e1aba462eaf6bf2850075313ae576e49f640864f4e1abed3](https://testnet.cspr.live/contract-package/5868d6d6bc65f0e6e1aba462eaf6bf2850075313ae576e49f640864f4e1abed3) |
+| Vault install deploy | [21437ac6d7da2965e632d2f931678f6484707474b5b10204be55184076e45946](https://testnet.cspr.live/deploy/21437ac6d7da2965e632d2f931678f6484707474b5b10204be55184076e45946) |
+| Vault freeze canary | [8d7912626337e21cbb483554bca310f0e00c198c82a990b6bbe7cd6cad6a7591](https://testnet.cspr.live/deploy/8d7912626337e21cbb483554bca310f0e00c198c82a990b6bbe7cd6cad6a7591) |
+| Vault unfreeze canary | [7b24ab0e262f62960edbb6c24aaa1dfef8fdc9aba4eb4237671b2ce5b734c078](https://testnet.cspr.live/deploy/7b24ab0e262f62960edbb6c24aaa1dfef8fdc9aba4eb4237671b2ce5b734c078) |
 | Vault install script | [scripts/install-collateral-vault.sh](scripts/install-collateral-vault.sh) |
 | Receipt verifier | [scripts/verify-casper-receipt.sh](scripts/verify-casper-receipt.sh) |
 
-Vault install / freeze / unfreeze / x402 settle explorer rows belong in the
-DoraHacks proof table once live canaries land — see
+Vault install / freeze / unfreeze explorer rows are live; refresh the
+DoraHacks proof table from
 [`docs/dorahacks-finals-description.md`](docs/dorahacks-finals-description.md).
