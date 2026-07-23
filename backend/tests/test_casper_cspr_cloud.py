@@ -38,7 +38,7 @@ def test_get_block_height_returns_height_from_api(monkeypatch) -> None:
     get_settings.cache_clear()
 
     assert CsprCloudClient.get_block_height() == 12345
-    assert calls == [{"url": "https://cspr.example/api/v1/blocks", "params": {"limit": 1}}]
+    assert calls == [{"url": "https://cspr.example/blocks", "params": {"limit": 1}}]
 
 
 def test_get_block_height_returns_none_on_error(monkeypatch) -> None:
@@ -74,8 +74,8 @@ def test_get_account_balance_returns_motes_and_cspr(monkeypatch) -> None:
             return None
 
         def get(self, url: str) -> FakeResponse:
-            assert url == "https://api.testnet.cspr.cloud/api/v1/accounts/abc/balance"
-            return FakeResponse({"data": {"balance": "2500000000"}})
+            assert url == "https://api.testnet.cspr.cloud/accounts/abc/balance"
+            return FakeResponse({"data": 2_500_000_000})
 
     monkeypatch.setenv("CASPER_CSPR_CLOUD_API_KEY", "test-key")
     monkeypatch.setattr("app.services.casper.cspr_cloud.httpx.Client", FakeClient)
@@ -85,6 +85,10 @@ def test_get_account_balance_returns_motes_and_cspr(monkeypatch) -> None:
         "motes": 2_500_000_000,
         "cspr": 2.5,
     }
+
+
+def test_extract_motes_accepts_nested_balance_object() -> None:
+    assert CsprCloudClient.extract_motes({"data": {"balance": "2500000000"}}) == 2_500_000_000
 
 
 def test_cspr_cloud_is_skipped_without_api_key(monkeypatch) -> None:
