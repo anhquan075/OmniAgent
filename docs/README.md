@@ -6,6 +6,7 @@ This docs folder is Casper-only. It covers the buildathon runtime, proof model, 
 
 - [Architecture](ARCHITECTURE.md)
 - [Railway Deployment](railway-deployment.md)
+- [Finals ops runbook](finals-ops-runbook.md)
 - [Problem and Approach](problem-and-approach.md)
 - [Demo Script](casper-agentic-demo-script.md)
 - [Buildathon Submission Checklist](casper-buildathon-submission-checklist.md)
