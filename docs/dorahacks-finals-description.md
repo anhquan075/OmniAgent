@@ -23,7 +23,7 @@ Most finalists attest. OmniAgent enforces — fail-closed AI risk loop → Caspe
 
 | Attest-only agents | OmniAgent |
 |---|---|
-| Prove a claim / cashflow / oracle feed happened | Decide RWA collateral risk, then **change vault state** |
+| Prove a claim or score happened | Decide RWA collateral risk, then **change vault state** |
 | Stop at a signed message or score | Stop at explorer-linkable **decision + vault** deploys |
 | Hard for judges to feel the product | One public page: [https://omniyield.app/try](https://omniyield.app/try) |
 
@@ -87,7 +87,7 @@ Setup: https://omniyield.app/api/x402/setup
 
 ## Differentiator
 
-Most finalists attest (cashflow, oracle, quorum). OmniAgent **enforces collateral** after a fail-closed AI debate. Every risk call becomes a Casper receipt that can drive vault `freeze` / `unfreeze` / `set_ltv` — replayable at `/try` and `/api/public/proof` with no private keys.
+Most finalists attest. OmniAgent **enforces collateral** after a fail-closed AI debate. Every risk call becomes a Casper receipt that can drive vault `freeze` / `unfreeze` / `set_ltv` — replayable at `/try` and `/api/public/proof` with no private keys.
 
 ## Roadmap
 
