@@ -14,6 +14,7 @@ from app.services.casper.casper_x402_facilitator import (
     DEFAULT_FACILITATOR_URL,
     NETWORK_TESTNET,
     CasperX402Config,
+    normalize_cep18_asset,
 )
 from app.services.casper.proof_bundle import CasperProofBundleService
 from app.services.casper.public_proof import CasperPublicProofService
@@ -30,7 +31,7 @@ class CasperX402EvidenceEndpointService:
     def config_from_settings(settings: Settings) -> CasperX402Config:
         """Build Casper x402 config from app settings."""
         extra: dict[str, Any] = {
-            "name": str(settings.casper_x402_asset_name or "WCSPR"),
+            "name": str(settings.casper_x402_asset_name or "Wrapped CSPR"),
             "version": str(settings.casper_x402_asset_version or "1"),
             "decimals": str(settings.casper_x402_asset_decimals or "9"),
         }
@@ -51,7 +52,7 @@ class CasperX402EvidenceEndpointService:
             ).rstrip("/"),
             network=str(settings.casper_x402_network or NETWORK_TESTNET),
             pay_to=str(settings.casper_x402_pay_to_address or "").strip(),
-            asset=str(settings.casper_x402_asset or DEFAULT_CEP18_ASSET).strip(),
+            asset=normalize_cep18_asset(str(settings.casper_x402_asset or DEFAULT_CEP18_ASSET)),
             amount=amount,
             description="OmniAgent Casper RWA collateral evidence proof",
             api_key=api_key,
@@ -126,7 +127,9 @@ class CasperX402EvidenceEndpointService:
             else {}
         )
         evidence_bundle = (
-            decision.get("evidenceBundle") if isinstance(decision.get("evidenceBundle"), dict) else {}
+            decision.get("evidenceBundle")
+            if isinstance(decision.get("evidenceBundle"), dict)
+            else {}
         )
         cfg = CasperX402EvidenceEndpointService.config_from_settings(settings)
         resource_url = CasperX402EvidenceEndpointService.public_url(settings, request_url)

@@ -31,12 +31,10 @@ class Settings(BaseSettings):
     api_rate_limit_window_sec: int = 60
     api_max_body_bytes: int = 1_048_576
     api_trusted_hosts: str = (
-        "localhost,127.0.0.1,testserver,healthcheck.railway.app,"
-        "*.up.railway.app,*.railway.internal"
+        "localhost,127.0.0.1,testserver,healthcheck.railway.app,*.up.railway.app,*.railway.internal"
     )
     allowed_frontend_origins: str = (
-        "http://localhost:5173,http://127.0.0.1:5173,"
-        "http://localhost:3000,http://127.0.0.1:3000"
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
     )
     agent_runtime_adapter: str = "fastapi-casper-agent"
     mcp_allowed_tools: str = (
@@ -81,11 +79,10 @@ class Settings(BaseSettings):
     casper_x402_price: str = "1000000"
     casper_x402_currency: str = "WCSPR"
     casper_x402_pay_to_address: str | None = None
-    # CEP-18 package hash implementing transfer_with_authorization.
-    casper_x402_asset: str = (
-        "hash-cb65a928f8e1b7ce172bddd075c10dd0de8bcfd9cf808c799fd409766a1735c3"
-    )
-    casper_x402_asset_name: str = "WCSPR"
+    # Bare 64-hex CEP-18 package hash (hash- prefix is stripped at runtime).
+    # Default: wrapable Wrapped CSPR on casper-test (deposit + transfer_with_authorization).
+    casper_x402_asset: str = "3d80df21ba4ee4d66a2a1f60c32570dd5685e4b279f6538162a5fd1314847c1e"
+    casper_x402_asset_name: str = "Wrapped CSPR"
     casper_x402_asset_version: str = "1"
     casper_x402_asset_decimals: str = "9"
     casper_x402_fee_payer: str | None = None
