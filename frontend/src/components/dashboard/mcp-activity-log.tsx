@@ -32,7 +32,12 @@ export default function McpActivityLog({
               <code>{row.tool}</code>
               <span>{proofLabel(row.status, { stripCasperPrefix: true })}</span>
             </div>
-            <pre>{row.output}</pre>
+            {row.output ? (
+              <details className="mcp-log-details">
+                <summary>Payload</summary>
+                <pre>{row.output}</pre>
+              </details>
+            ) : null}
           </li>
         ))}
       </ol>
