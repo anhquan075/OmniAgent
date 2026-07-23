@@ -98,6 +98,29 @@
   animation: flight-pulse 1.2s ease-in-out infinite;
 }
 
+.flight-rail-try {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.9rem;
+  margin-top: 2px;
+  border: 1px solid rgba(230, 63, 55, 0.35);
+  border-radius: 8px;
+  padding: 0 0.65rem;
+  color: var(--casper-red-soft);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  text-transform: uppercase;
+  background: rgba(230, 63, 55, 0.08);
+}
+
+.flight-rail-try:hover {
+  border-color: rgba(230, 63, 55, 0.55);
+  background: rgba(230, 63, 55, 0.14);
+}
+
 @keyframes flight-pulse {
   0%, 100% { opacity: 0.35; }
   50% { opacity: 1; }

@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     casper_node_address: str | None = None
     casper_rpc_timeout_sec: float = 10.0
     casper_explorer_url: str = "https://testnet.cspr.live"
+    casper_demo_url: str = "https://omniyield.app"
+    casper_demo_video_url: str = "https://youtu.be/wcVoqJXqPhc"
     casper_account_public_key: str | None = None
     casper_secret_key_path: str | None = None
     casper_contract_install_deploy_hash: str | None = None

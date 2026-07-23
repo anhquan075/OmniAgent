@@ -333,6 +333,7 @@ Public replay surfaces:
 
 - Step-by-step judge reproduction: [docs/judge-reproduction.md](docs/judge-reproduction.md)
 - Frontend proof console: [https://omniyield.app](https://omniyield.app)
+- Try enforcement (public, no login): [https://omniyield.app/try](https://omniyield.app/try)
 - Backend proof endpoint: [https://omniagent-production.up.railway.app/api/public/proof](https://omniagent-production.up.railway.app/api/public/proof)
 - Paywalled x402 evidence endpoint: [https://omniagent-production.up.railway.app/api/x402/rwa-evidence](https://omniagent-production.up.railway.app/api/x402/rwa-evidence)
 - Proof artifact: [proofs/casper-buildathon-submission-proof.json](proofs/casper-buildathon-submission-proof.json)

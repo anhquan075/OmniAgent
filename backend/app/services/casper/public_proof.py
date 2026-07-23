@@ -37,8 +37,10 @@ class CasperPublicProofService:
             or decision.get("timestamp")
             or datetime.now(timezone.utc).isoformat(),
             "generatedFrom": "dashboard-proof-log",
-            "demoUrl": CasperPublicProofService._string_or_none(options.get("demoUrl")),
-            "videoUrl": CasperPublicProofService._string_or_none(options.get("videoUrl")),
+            "demoUrl": CasperPublicProofService._string_or_none(options.get("demoUrl"))
+            or CasperPublicProofService._string_or_none(settings.casper_demo_url),
+            "videoUrl": CasperPublicProofService._string_or_none(options.get("videoUrl"))
+            or CasperPublicProofService._string_or_none(settings.casper_demo_video_url),
             "decisionId": decision.get("decisionId"),
             "action": decision.get("action"),
             "riskScore": decision.get("riskScore"),
@@ -249,6 +251,7 @@ class CasperPublicProofService:
         if explorer and package_hash:
             links["contractPackageHash"] = f"{explorer}/contract-package/{package_hash}"
         configured = bool(contract_hash or package_hash)
+        recent_actions = CasperPublicProofService._recent_vault_actions(explorer)
         return {
             "enforceEnabled": bool(settings.casper_vault_enforce_enabled),
             "configured": configured,
@@ -266,7 +269,82 @@ class CasperPublicProofService:
                 "approve": "unfreeze",
                 "haircut": "set_ltv",
             },
+            "recentActions": recent_actions,
+            "stateDelta": CasperPublicProofService._vault_state_delta(action),
         }
+
+    @staticmethod
+    def _vault_state_delta(vault_action: str | None) -> dict[str, Any]:
+        """Public-safe before/after semantics for the latest vault entry point."""
+        action = (vault_action or "").strip().lower()
+        if action == "freeze":
+            return {
+                "entryPoint": "freeze",
+                "fromDecision": "block",
+                "before": {"frozen": False},
+                "after": {"frozen": True},
+                "summary": "Collateral position frozen after a block decision receipt.",
+            }
+        if action == "unfreeze":
+            return {
+                "entryPoint": "unfreeze",
+                "fromDecision": "approve",
+                "before": {"frozen": True},
+                "after": {"frozen": False},
+                "summary": "Collateral position unfrozen after an approve decision receipt.",
+            }
+        if action == "set_ltv":
+            return {
+                "entryPoint": "set_ltv",
+                "fromDecision": "haircut",
+                "before": {"ltvBps": 10000},
+                "after": {"ltvBps": 5000},
+                "summary": "LTV haircut applied after a haircut decision receipt (100% → 50%).",
+            }
+        return {
+            "entryPoint": action or None,
+            "fromDecision": None,
+            "before": None,
+            "after": None,
+            "summary": "No vault enforcement yet for this proof window.",
+        }
+
+    @staticmethod
+    def _recent_vault_actions(explorer: str, *, limit: int = 5) -> list[dict[str, Any]]:
+        summary = CasperDecisionLedger.get_ledger_summary(limit=80, offset=0)
+        events = summary.get("events") if isinstance(summary.get("events"), list) else []
+        recent: list[dict[str, Any]] = []
+        for event in events:
+            if not isinstance(event, dict):
+                continue
+            if event.get("eventType") != "casper_vault_enforcement":
+                continue
+            payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+            entry = (
+                CasperPublicProofService._string_or_none(payload.get("entryPoint"))
+                or CasperPublicProofService._string_or_none(event.get("action"))
+            )
+            tx_hash = (
+                CasperPublicProofService._string_or_none(payload.get("transactionHash"))
+                or CasperPublicProofService._string_or_none(payload.get("deployHash"))
+            )
+            explorer_url = CasperPublicProofService._string_or_none(payload.get("explorerUrl"))
+            if not explorer_url and tx_hash and explorer:
+                explorer_url = f"{explorer}/deploy/{tx_hash}"
+            recent.append(
+                {
+                    "entryPoint": entry,
+                    "status": CasperPublicProofService._string_or_none(payload.get("status"))
+                    or ("submitted" if payload.get("submitted") else None),
+                    "decisionId": CasperPublicProofService._string_or_none(payload.get("decisionId")),
+                    "transactionHash": tx_hash,
+                    "explorerUrl": explorer_url,
+                    "assetId": CasperPublicProofService._string_or_none(payload.get("assetId")),
+                }
+            )
+            if len(recent) >= limit:
+                break
+        return recent
 
     @staticmethod
     def _latest_vault_ledger_event() -> dict[str, Any]:

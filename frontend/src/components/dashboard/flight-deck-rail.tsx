@@ -48,6 +48,9 @@ export default function FlightDeckRail({
         <span className={sourceState === 'live' ? 'is-ok' : sourceState === 'loading' ? 'is-loading' : 'is-blocked'} />
         <b>{sourceStateLabel(sourceState)}</b>
         <small>Last sync: {refreshedAt ? new Date(refreshedAt).toISOString().slice(11, 19) : 'pending'} UTC</small>
+        <a className="flight-rail-try" href="/try">
+          Try enforcement
+        </a>
       </div>
     </aside>
   );

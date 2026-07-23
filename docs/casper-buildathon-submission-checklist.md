@@ -8,7 +8,8 @@ must stay weaker than the proof packet.
 | Item | Status |
 |---|---|
 | Repository | Current checkout |
-| Frontend demo | Set after deployment |
+| Frontend demo | https://omniyield.app |
+| Try enforcement | https://omniyield.app/try |
 | Backend proof endpoint | `GET /api/public/proof` |
 | Proof artifact | `proofs/casper-buildathon-submission-proof.json` |
 | Demo video | https://youtu.be/wcVoqJXqPhc |

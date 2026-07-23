@@ -166,6 +166,11 @@ def test_public_proof_includes_vault_enforcement_from_ledger(monkeypatch, tmp_pa
     assert proof["vault"]["transactionHash"] == "e" * 64
     assert proof["vault"]["explorerUrl"].endswith("/deploy/" + "e" * 64)
     assert proof["contractLinks"]["vaultContractHash"].endswith("/contract/vault-contract-hash")
+    assert proof["vault"]["recentActions"][0]["entryPoint"] == "freeze"
+    assert proof["vault"]["stateDelta"]["entryPoint"] == "freeze"
+    assert proof["vault"]["stateDelta"]["after"]["frozen"] is True
+    assert proof["demoUrl"] == "https://omniyield.app"
+    assert proof["videoUrl"] == "https://youtu.be/wcVoqJXqPhc"
 
 
 def test_public_proof_writer_rejects_private_material(tmp_path) -> None:

@@ -112,6 +112,7 @@ unfreeze
 Paste [`dorahacks-finals-description.md`](dorahacks-finals-description.md) into
 https://dorahacks.io/buidl/40823. Rows **6–10** have live explorer links.
 Demo video: https://youtu.be/wcVoqJXqPhc — set it on the BUIDL if not already.
+Try page: https://omniyield.app/try (after FE deploy).
 Fill socials before judging.
 
 ## Env reference

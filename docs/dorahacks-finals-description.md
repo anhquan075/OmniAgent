@@ -7,7 +7,7 @@ Use the **Tagline** field for the short line. Paste everything under **Descripti
 ## Tagline
 
 ```text
-Should this RWA collateral stay financeable? OmniAgent answers with a fail-closed AI loop, a Casper decision receipt, and on-chain vault enforcement.
+Most finalists attest. OmniAgent enforces — fail-closed AI risk loop → Casper receipt → vault freeze / set_ltv.
 ```
 
 ---
@@ -17,17 +17,26 @@ Should this RWA collateral stay financeable? OmniAgent answers with a fail-close
 ```markdown
 # OmniAgent
 
-**One-liner:** An AI agent that decides RWA collateral risk, writes a Casper-verifiable receipt, and can freeze / unfreeze / set LTV on-chain — judges can replay everything without private keys.
+**One-liner:** Most agent demos attest. OmniAgent **enforces**: evidence → fail-closed AI debate → Casper decision receipt → collateral vault `freeze` / `unfreeze` / `set_ltv`. Judges replay it without private keys.
+
+## Attest vs enforce
+
+| Attest-only agents | OmniAgent |
+|---|---|
+| Prove a claim / cashflow / oracle feed happened | Decide RWA collateral risk, then **change vault state** |
+| Stop at a signed message or score | Stop at explorer-linkable **decision + vault** deploys |
+| Hard for judges to feel the product | One public page: [https://omniyield.app/try](https://omniyield.app/try) |
 
 ## Judge path (≈5 minutes)
 
-1. Open https://omniyield.app
+1. Open https://omniyield.app/try — live decision action, vault entry, before/after, TX links
 2. Open https://omniyield.app/api/public/proof (public-safe JSON, no keys)
 3. Open the latest decision deploy on cspr.live (proof table row 5)
 4. Hit https://omniyield.app/api/x402/rwa-evidence unpaid → HTTP **402** on `casper:casper-test`
 5. Open vault freeze / unfreeze / set_ltv deploys (rows 8–9, 12) — enforcement is real state change
 
 Demo: https://omniyield.app  
+Try enforcement: https://omniyield.app/try  
 Repo: https://github.com/anhquan075/OmniAgent  
 Video: https://youtu.be/wcVoqJXqPhc
 
@@ -78,7 +87,7 @@ Setup: https://omniyield.app/api/x402/setup
 
 ## Differentiator
 
-Agent Casper rebalances a vault. OmniAgent turns every risk call into a **Casper receipt** and can **enforce collateral state** from that receipt — fail-closed, replayable, no private keys required for judges.
+Most finalists attest (cashflow, oracle, quorum). OmniAgent **enforces collateral** after a fail-closed AI debate. Every risk call becomes a Casper receipt that can drive vault `freeze` / `unfreeze` / `set_ltv` — replayable at `/try` and `/api/public/proof` with no private keys.
 
 ## Roadmap
 
