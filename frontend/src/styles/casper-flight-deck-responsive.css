@@ -2,6 +2,41 @@
   .receipt-ledger-tab {
     grid-template-columns: 1fr;
   }
+
+  .flight-status-strip {
+    grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr)) auto auto;
+  }
+
+  .flight-status-item:nth-child(4),
+  .flight-status-item:nth-child(5) {
+    display: none;
+  }
+}
+
+@media (min-width: 1181px) {
+  .flight-rail {
+    position: static;
+    grid-template-columns: none;
+    grid-template-rows: auto 1fr auto;
+    align-items: stretch;
+    padding: 14px 10px;
+    border-right: 1px solid var(--color-glass-border);
+    border-bottom: 0;
+    backdrop-filter: none;
+  }
+
+  .flight-rail-status {
+    display: grid;
+  }
+
+  .flight-tabs {
+    grid-template-columns: none;
+  }
+
+  .flight-tabs button {
+    justify-content: flex-start;
+    min-height: 38px;
+  }
 }
 
 @media (max-width: 1180px) {
@@ -24,19 +59,31 @@
 
   .flight-deck {
     align-content: start;
+    min-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
 
   .flight-rail {
+    position: sticky;
+    top: 0;
+    z-index: 30;
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: auto;
     align-items: center;
     padding: 12px;
+    padding-top: max(12px, env(safe-area-inset-top));
     border-right: 0;
     border-bottom: 1px solid var(--line);
+    background: rgba(5, 12, 14, 0.96);
+    backdrop-filter: blur(10px);
   }
 
   .flight-tabs {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .flight-tabs button {
+    min-height: 44px;
+    justify-content: center;
   }
 
   .flight-rail-status { display: none; }
@@ -50,8 +97,18 @@
     grid-column: span 2;
   }
 
+  .flight-refresh {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
   .loop-status-panel {
     height: auto;
+  }
+
+  .cockpit-grid,
+  .receipt-ledger-tab {
+    --cockpit-card-row-height: auto;
   }
 }
 
@@ -157,9 +214,20 @@
 
   .flight-tab-panel {
     padding: 8px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
   }
 
-  .receipt-ledger-table table {
-    min-width: 640px;
+  .receipt-ledger-table table,
+  .receipt-ledger-table::after {
+    display: none;
+  }
+
+  .receipt-ledger-cards {
+    display: grid;
+  }
+
+  .receipt-ledger-controls button,
+  .receipt-ledger-pagination button {
+    min-height: 44px;
   }
 }

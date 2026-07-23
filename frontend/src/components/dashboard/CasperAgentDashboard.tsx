@@ -62,7 +62,11 @@ export default function CasperAgentDashboard() {
       if (!response.ok) throw new Error(`snapshot ${response.status}`);
       applySnapshot(await response.json());
     } catch (err) {
-      if (!silent) setSnapshot(fallbackSnapshot);
+      // Quarantine proof UI via `error`, but keep the last good snapshot when we
+      // already had live data so a refresh spinner does not flash empty fallback.
+      if (!silent && !hasLiveSnapshotRef.current) {
+        setSnapshot(fallbackSnapshot);
+      }
       setError(err instanceof Error ? err.message : 'snapshot unavailable');
     } finally {
       if (!silent) setLoading(false);
