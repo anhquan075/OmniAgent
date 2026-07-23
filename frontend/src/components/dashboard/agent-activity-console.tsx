@@ -110,8 +110,14 @@ function cycleOptionLabel(cycle: Payload) {
   const parsed = Date.parse(completedAt);
   const time = Number.isFinite(parsed) ? `${new Date(parsed).toISOString().slice(11, 19)} UTC` : 'time pending';
   const status = String(cycle.status || 'complete').replaceAll('_', ' ');
-  const decisionId = String(cycle.decisionId || cycle.bundle?.latestDecision?.decisionId || 'decision pending');
+  const decisionId = shortDecisionId(cycle.decisionId || cycle.bundle?.latestDecision?.decisionId || 'decision pending');
   return `${time} · ${status} · ${decisionId} · ${shortCycleId(cycle.cycleId)}`;
+}
+
+function shortDecisionId(value: unknown) {
+  const text = typeof value === 'string' ? value : String(value ?? '');
+  if (!text || text === 'decision pending') return 'decision pending';
+  return text.length > 28 ? `${text.slice(0, 12)}…${text.slice(-8)}` : text;
 }
 
 function shortCycleId(value: unknown) {

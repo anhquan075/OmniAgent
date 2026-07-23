@@ -293,6 +293,86 @@
   cursor: pointer;
 }
 
+.receipt-ledger-cards {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 10px;
+}
+
+.receipt-ledger-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.receipt-ledger-card.is-selected {
+  border-color: rgba(230, 63, 55, 0.55);
+  background: rgba(230, 63, 55, 0.12);
+}
+
+.receipt-ledger-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.receipt-ledger-card-head b,
+.receipt-ledger-card-head small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.receipt-ledger-card-head small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.receipt-ledger-card dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.receipt-ledger-card dl div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.receipt-ledger-card dt {
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.receipt-ledger-card dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.receipt-ledger-card button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
 .receipt-inspector dl {
   display: grid;
   gap: 10px;
