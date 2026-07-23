@@ -17,6 +17,7 @@ class CasperX402EvidenceService:
         "seller",
         "buyer",
         "signatureHash",
+        "settlementTxHash",
     )
     SECRET_KEY_PATTERN = re.compile(r"(authorization|api[_-]?key|secret|token)", re.IGNORECASE)
 
@@ -136,4 +137,9 @@ class CasperX402EvidenceService:
         normalized = value.strip()
         if normalized.lower().startswith(("bearer ", "basic ")):
             return True
+        # Public Casper deploy hashes and account ids are not secrets.
+        if re.fullmatch(r"(0x)?[0-9a-fA-F]{64}", normalized):
+            return False
+        if re.fullmatch(r"0[0-2][0-9a-fA-F]{64}", normalized):
+            return False
         return bool(re.fullmatch(r"[A-Za-z0-9_\-]{48,}", normalized))

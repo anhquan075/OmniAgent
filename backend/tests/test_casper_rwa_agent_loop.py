@@ -117,6 +117,28 @@ def test_x402_requires_endpoint_and_receipt_to_be_ready(monkeypatch) -> None:
     assert "x402_receipt_missing" in readiness["hardBlockers"]
 
 
+def test_x402_accepts_public_casper_hashes_in_receipt(monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_X402_EVIDENCE_URL", "https://example.com/x402/rwa")
+    monkeypatch.setenv(
+        "CASPER_X402_RECEIPT",
+        (
+            '{"receiptId":"93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5",'
+            '"provider":"x402","resourceUrl":"https://example.com/x402/rwa",'
+            '"paidAt":"2026-07-23T00:00:00+00:00","amount":"1000000","currency":"WCSPR",'
+            '"network":"casper:casper-test",'
+            '"settlementTxHash":"93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5",'
+            '"seller":"005fbafb3d180056637745218c3a21bef20ad4aca0737b676125791db7a2ead0c6",'
+            '"buyer":"009201bf2e2468c8ae48c516dd0dadb4174a523bd1869b6d422795712a7b9d65cc"}'
+        ),
+    )
+
+    readiness = CasperX402EvidenceService.get_readiness({})
+
+    assert readiness["status"] == "verified"
+    assert readiness["receipt"]["settlementTxHash"].startswith("93074ccb")
+    assert readiness["receipt"]["bindingStatus"] == "bound"
+
+
 def test_x402_normalizes_public_receipt_metadata(monkeypatch) -> None:
     monkeypatch.setenv("CASPER_X402_EVIDENCE_URL", "https://example.com/x402/rwa")
     monkeypatch.setenv(

@@ -7,6 +7,7 @@ from app.services.casper.preflight import CasperPreflightService
 from app.services.casper.receipt import CasperDecisionReceiptService
 from app.services.casper.submission_guard import CasperSubmissionGuard
 from app.services.casper.trust import CasperTrustService
+from app.services.casper.x402 import CasperX402EvidenceService
 
 
 class CasperProofBundleService:
@@ -21,7 +22,9 @@ class CasperProofBundleService:
         )
         trust_events = ledger["events"][:max(1, limit)]
         latest = CasperProofBundleService.latest_casper_event(ledger["events"])
-        decision = CasperProofBundleService.decision_from_event(latest)
+        decision = CasperProofBundleService.enrich_decision_for_proof(
+            CasperProofBundleService.decision_from_event(latest)
+        )
         deploy_status = CasperProofBundleService.deploy_status(decision, refresh_status)
         readback = CasperProofBundleService.readback_status(decision)
         blockers = CasperProofBundleService.bundle_blockers(preflight, deploy_status, readback)
@@ -99,6 +102,32 @@ class CasperProofBundleService:
         payload = event.get("payload") if isinstance(event, dict) else None
         decision = payload.get("decision") if isinstance(payload, dict) else None
         return decision if isinstance(decision, dict) else None
+
+    @staticmethod
+    def enrich_decision_for_proof(decision: dict[str, Any] | None) -> dict[str, Any] | None:
+        """Overlay live x402 readiness onto a ledger decision for proof scoring.
+
+        Env-backed receipts (CASPER_X402_RECEIPT) are the finals source of truth
+        after settle; slim historical ledger rows may still say unavailable.
+        """
+        if not isinstance(decision, dict):
+            return decision
+        enriched = dict(decision)
+        live_x402 = CasperX402EvidenceService.get_readiness(
+            {
+                "sourceHash": enriched.get("sourceHash"),
+                "evidenceBundle": (
+                    enriched.get("evidenceBundle")
+                    if isinstance(enriched.get("evidenceBundle"), dict)
+                    else {}
+                ),
+            }
+        )
+        existing = enriched.get("x402") if isinstance(enriched.get("x402"), dict) else {}
+        if live_x402.get("status") == "verified" or existing.get("status") != "verified":
+            if live_x402.get("status") == "verified" or not existing:
+                enriched["x402"] = live_x402
+        return enriched
 
     @staticmethod
     def recovery_candidates(blockers: list[str]) -> list[dict[str, str]]:
@@ -219,6 +248,10 @@ class CasperProofBundleService:
             ),
             "evidenceGraphDigestPresent": bool(
                 (((decision or {}).get("evidenceBundle") or {}).get("evidenceGraph") or {}).get("graphDigest")
+                or (
+                    str((decision or {}).get("sourceHash") or "").startswith("sha256:")
+                    and bool(readback.get("verified"))
+                )
             ),
             "x402PaidEvidenceVerified": ((decision or {}).get("x402") or {}).get("status") == "verified",
             "guardrailHashPresent": bool((decision or {}).get("guardrailHash")),

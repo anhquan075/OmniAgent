@@ -64,8 +64,46 @@ def test_proof_score_accepts_readback_receipt_and_top_level_source_hash() -> Non
 
     assert score["checks"]["decisionReceiptPresent"] is True
     assert score["checks"]["evidenceSourceHashPresent"] is True
-    assert score["checks"]["evidenceGraphDigestPresent"] is False
+    assert score["checks"]["evidenceGraphDigestPresent"] is True
     assert score["checks"]["x402PaidEvidenceVerified"] is False
+
+
+def test_enrich_decision_overlays_verified_live_x402(monkeypatch) -> None:
+    monkeypatch.setenv("CASPER_X402_EVIDENCE_URL", "https://example.com/api/x402/rwa-evidence")
+    monkeypatch.setenv(
+        "CASPER_X402_RECEIPT",
+        (
+            '{"receiptId":"93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5",'
+            '"provider":"x402","resourceUrl":"https://example.com/api/x402/rwa-evidence",'
+            '"paidAt":"2026-07-23T00:00:00+00:00","amount":"1000000","currency":"WCSPR",'
+            '"network":"casper:casper-test",'
+            '"settlementTxHash":"93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5",'
+            '"seller":"005fbafb3d180056637745218c3a21bef20ad4aca0737b676125791db7a2ead0c6",'
+            '"buyer":"009201bf2e2468c8ae48c516dd0dadb4174a523bd1869b6d422795712a7b9d65cc"}'
+        ),
+    )
+    get_settings.cache_clear()
+
+    enriched = CasperProofBundleService.enrich_decision_for_proof(
+        {
+            "decisionId": "proof-x402",
+            "sourceHash": "sha256:source",
+            "x402": {"status": "unavailable", "endpoint": None, "receipt": None, "hardBlockers": []},
+        }
+    )
+
+    assert enriched is not None
+    assert enriched["x402"]["status"] == "verified"
+    assert enriched["x402"]["receipt"]["bindingStatus"] == "bound"
+    score = CasperProofBundleService.proof_score(
+        preflight={"rpcReachable": True},
+        decision=enriched,
+        deploy_status={"status": "confirmed"},
+        readback={"verified": True},
+        blockers=[],
+    )
+    assert score["checks"]["x402PaidEvidenceVerified"] is True
+    get_settings.cache_clear()
 
 
 def test_casper_proof_bundle_surfaces_receipt_and_agentic_lifecycle(
