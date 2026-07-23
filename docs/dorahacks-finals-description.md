@@ -132,7 +132,7 @@ Agent card: https://omniagent-production.up.railway.app/.well-known/casper-agent
 | 3 | Contract package | https://testnet.cspr.live/contract-package/46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea |
 | 4 | Reference demo decision | https://testnet.cspr.live/deploy/ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736 |
 | 5 | Latest live decision | https://testnet.cspr.live/deploy/51b01901a2991b43cd586bb684cad9307e2b6ca4e58aa522a5144199c6aca9cc |
-| 6 | x402 CEP-18 settle | _pending — paste successful `transfer_with_authorization` deploy after funded buyer settle_ |
+| 6 | x402 CEP-18 settle | https://testnet.cspr.live/deploy/93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5 |
 | 7 | Vault install | https://testnet.cspr.live/deploy/21437ac6d7da2965e632d2f931678f6484707474b5b10204be55184076e45946 |
 | 8 | Vault freeze | https://testnet.cspr.live/deploy/8d7912626337e21cbb483554bca310f0e00c198c82a990b6bbe7cd6cad6a7591 |
 | 9 | Vault unfreeze | https://testnet.cspr.live/deploy/7b24ab0e262f62960edbb6c24aaa1dfef8fdc9aba4eb4237671b2ce5b734c078 |
@@ -150,6 +150,6 @@ OmniAgent maps directly to finals priorities:
 
 ## Honest status
 
-- Decision receipts, vault install/freeze/unfreeze, and the Casper x402 **402 paywall** are live on `main` / Railway.
-- Paste row **6** only after a **successful** CEP-18 settle deploy (do not use failed attempts).
-- Keep `CASPER_X402_ASSET` as bare 64-hex Wrapped CSPR (`3d80df21…`) and `CASPER_X402_ASSET_NAME=Wrapped CSPR`.
+- Decision receipts, vault install/freeze/unfreeze, Casper x402 **402 paywall**, and a live CEP-18 settle are on Testnet.
+- Proof table row **6**: https://testnet.cspr.live/deploy/93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5
+- Set Railway `CASPER_X402_ASSET` to bare Wrapped CSPR (`3d80df21…`) + `CASPER_X402_ASSET_NAME=Wrapped CSPR` so the paywall matches the settled asset; refresh `CASPER_X402_RECEIPT` with the settle tx.
