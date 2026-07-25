@@ -80,6 +80,62 @@ export type CheatRunResult = {
   retryAfterSec?: number;
 };
 
+export type PaidActStep = {
+  id: string;
+  title: string;
+  order: number;
+  explanation: string;
+  actionLabel: string;
+  expectedOutcome: string;
+  status: string;
+  settlementTxHash?: string | null;
+  explorerUrl?: string | null;
+  endpoint?: string;
+};
+
+export type PaidAct = {
+  status: string;
+  count: number;
+  readyCount: number;
+  tryPath: string;
+  endpoint: string;
+  evidenceEndpoint?: string;
+  x402Status?: string | null;
+  bindingStatus?: string | null;
+  settlementTxHash?: string | null;
+  explorerUrl?: string | null;
+  steps: PaidActStep[];
+};
+
+export type PaidActRunResult = {
+  ok: boolean;
+  status: string;
+  mode?: string;
+  stepId?: string;
+  title?: string;
+  explanation?: string;
+  expectedOutcome?: string;
+  httpStatus?: number;
+  paymentNetwork?: string | null;
+  amount?: string | null;
+  currency?: string | null;
+  unlocked?: boolean;
+  x402Status?: string | null;
+  bindingStatus?: string | null;
+  settlementTxHash?: string | null;
+  explorerUrl?: string | null;
+  decisionId?: string | null;
+  decisionAction?: string | null;
+  vaultEntry?: string | null;
+  vaultEnforceEnabled?: boolean;
+  decisionDeployHash?: string | null;
+  decisionExplorerUrl?: string | null;
+  vaultExplorerUrl?: string | null;
+  hardBlockers?: string[];
+  hint?: string;
+  contrast?: { unpaid?: string; paid?: string };
+};
+
 export type PublicProof = {
   status: string | null;
   action: string | null;
@@ -93,10 +149,15 @@ export type PublicProof = {
   x402?: {
     status?: string | null;
     bindingStatus?: string | null;
-    receipt?: { bindingStatus?: string | null } | null;
+    receipt?: {
+      bindingStatus?: string | null;
+      settlementTxHash?: string | null;
+      explorerUrl?: string | null;
+    } | null;
   } | null;
   vault?: PublicProofVault | null;
   cheatReverts?: CheatReverts | null;
+  paidAct?: PaidAct | null;
 };
 
 export async function fetchPublicProof(signal?: AbortSignal): Promise<PublicProof> {
@@ -127,4 +188,20 @@ export async function runCheatScenario(
     throw new Error(`Cheat run failed (${response.status})`);
   }
   return (await response.json()) as CheatRunResult;
+}
+
+export async function runPaidActStep(
+  stepId: string,
+  options?: { signal?: AbortSignal },
+): Promise<PaidActRunResult> {
+  const response = await fetch(`/api/public/paid-act/${encodeURIComponent(stepId)}`, {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+    signal: options?.signal,
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    throw new Error(`Paid-act run failed (${response.status})`);
+  }
+  return (await response.json()) as PaidActRunResult;
 }

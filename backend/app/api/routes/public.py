@@ -3,6 +3,7 @@ import asyncio
 from fastapi import APIRouter, HTTPException, Query
 
 from app.services.casper.cheat_lab import CasperCheatLabService
+from app.services.casper.paid_act import CasperPaidActService
 from app.services.casper.public_proof import CasperPublicProofService
 
 
@@ -31,4 +32,17 @@ async def public_cheat_run(
     )
     if result.get("status") == "unknown_scenario":
         raise HTTPException(status_code=404, detail="Unknown cheat scenario")
+    return result
+
+
+@router.get("/public/paid-act")
+async def public_paid_act_catalog() -> dict[str, object]:
+    return await asyncio.to_thread(CasperPaidActService.public_paid_act)
+
+
+@router.post("/public/paid-act/{step_id}")
+async def public_paid_act_run(step_id: str) -> dict[str, object]:
+    result = await asyncio.to_thread(CasperPaidActService.run_step, step_id)
+    if result.get("status") == "unknown_step":
+        raise HTTPException(status_code=404, detail="Unknown paid-act step")
     return result

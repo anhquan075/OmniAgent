@@ -8,13 +8,17 @@ import {
   PercentIcon,
   BanIcon,
   ShieldXIcon,
+  CoinsIcon,
 } from 'lucide-react';
 import ChainProofLink from '@/components/dashboard/chain-proof-link';
 import {
   fetchPublicProof,
   runCheatScenario,
+  runPaidActStep,
   type CheatRunResult,
   type CheatScenario,
+  type PaidActRunResult,
+  type PaidActStep,
   type PublicProof,
   type VaultRecentAction,
 } from '@/lib/public-proof';
@@ -97,6 +101,38 @@ const FALLBACK_CHEATS: CheatScenario[] = [
   },
 ];
 
+const FALLBACK_PAID_ACT: PaidActStep[] = [
+  {
+    id: 'probe_unpaid',
+    title: 'Buy — unpaid evidence',
+    order: 1,
+    explanation: 'Premium RWA evidence is paywalled with native Casper x402.',
+    actionLabel: 'Probe unpaid',
+    expectedOutcome: 'HTTP 402 on casper:casper-test',
+    status: 'ready',
+  },
+  {
+    id: 'verify_settle',
+    title: 'Verify — settle canary',
+    order: 2,
+    explanation: 'Finals CEP-18 settle is bound into the decision receipt.',
+    actionLabel: 'Verify settle',
+    expectedOutcome: 'x402 verified + bound settle TX',
+    status: 'pending',
+    settlementTxHash: null,
+    explorerUrl: null,
+  },
+  {
+    id: 'enforce_from_paid',
+    title: 'Act — enforce from paid evidence',
+    order: 3,
+    explanation: 'Without payment, enforce stays locked. Paid unlocks the vault path.',
+    actionLabel: 'Enforce from paid',
+    expectedOutcome: 'Unpaid blocked · paid unlocks',
+    status: 'pending',
+  },
+];
+
 const LIVE_METRIC_LABELS = ['Decision', 'Vault entry', 'x402', 'Enforce'] as const;
 
 function shortHash(hash: string): string {
@@ -154,6 +190,9 @@ export default function TryEnforcementPage() {
   const [cheatBusyId, setCheatBusyId] = useState<string | null>(null);
   const [cheatResults, setCheatResults] = useState<Record<string, CheatRunResult>>({});
   const [cheatError, setCheatError] = useState<string | null>(null);
+  const [paidBusyId, setPaidBusyId] = useState<string | null>(null);
+  const [paidResults, setPaidResults] = useState<Record<string, PaidActRunResult>>({});
+  const [paidError, setPaidError] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = 'OmniAgent — Try the enforcement';
@@ -193,6 +232,8 @@ export default function TryEnforcementPage() {
   const cheatScenarios =
     proof?.cheatReverts?.scenarios?.length ? proof.cheatReverts.scenarios : FALLBACK_CHEATS;
   const cheatReady = proof?.cheatReverts?.readyCount ?? 0;
+  const paidSteps = proof?.paidAct?.steps?.length ? proof.paidAct.steps : FALLBACK_PAID_ACT;
+  const paidReady = proof?.paidAct?.readyCount ?? 0;
 
   async function onCheatClick(scenarioId: string) {
     setCheatError(null);
@@ -210,6 +251,22 @@ export default function TryEnforcementPage() {
     }
   }
 
+  async function onPaidActClick(stepId: string) {
+    setPaidError(null);
+    setPaidBusyId(stepId);
+    try {
+      const result = await runPaidActStep(stepId);
+      setPaidResults((prev) => ({ ...prev, [stepId]: result }));
+      if (!result.ok && result.hardBlockers?.length) {
+        setPaidError(result.hint || result.hardBlockers.join(', '));
+      }
+    } catch (err) {
+      setPaidError(err instanceof Error ? err.message : 'Paid-act run failed');
+    } finally {
+      setPaidBusyId(null);
+    }
+  }
+
   return (
     <div className="casper-shell relative min-h-[100dvh] w-full overflow-x-hidden">
       <div className="relative z-10 mx-auto flex w-full max-w-[1100px] flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10">
@@ -224,8 +281,9 @@ export default function TryEnforcementPage() {
             <p className="max-w-2xl text-sm leading-relaxed text-[var(--color-casper-muted)] sm:text-base">
               Most finalists attest. OmniAgent enforces. A fail-closed AI debate writes a Casper
               decision receipt, then the vault applies{' '}
-              <span className="text-[var(--color-casper-cream)]">freeze / unfreeze / set_ltv</span>{' '}
-              — and cheat attempts revert on-chain. Replayable without private keys.
+              <span className="text-[var(--color-casper-cream)]">freeze / unfreeze / set_ltv</span>
+              . Pay for evidence over native x402, then act — cheat attempts revert on-chain.
+              Replayable without private keys.
             </p>
           </div>
           <nav className="flex flex-wrap gap-2">
@@ -390,6 +448,94 @@ export default function TryEnforcementPage() {
           </div>
         </section>
 
+        <section className="space-y-4" id="paid-act">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-[var(--color-casper-cream)]">
+              x402 buy → verify → act
+            </h2>
+            <p className="text-sm text-[var(--color-casper-muted)]">
+              Unpaid evidence returns HTTP 402. A bound CEP-18 settle unlocks enforce. {paidReady}/3
+              steps ready for judges (no wallet required).
+            </p>
+          </div>
+          {paidError ? (
+            <p className="text-sm text-[var(--color-status-danger)]" role="alert">
+              {paidError}
+            </p>
+          ) : null}
+          <div className="grid gap-4 md:grid-cols-3">
+            {paidSteps.map((step) => {
+              const result = paidResults[step.id];
+              const busy = paidBusyId === step.id;
+              const txHash = result?.settlementTxHash || step.settlementTxHash;
+              const explorerUrl = result?.explorerUrl || step.explorerUrl;
+              const shown = Boolean(result);
+              const contrast = result?.contrast;
+              return (
+                <article key={step.id} className="flight-panel try-paid-card">
+                  <div className="flex items-center gap-2 text-[var(--color-casper-red-soft)]">
+                    <CoinsIcon className="h-4 w-4" aria-hidden="true" />
+                    <span className="text-xs font-semibold tracking-wide uppercase">
+                      Step {step.order}
+                    </span>
+                  </div>
+                  <h3 className="text-base font-semibold text-[var(--color-casper-cream)]">
+                    {step.title}
+                  </h3>
+                  <p className="text-sm text-[var(--color-casper-muted)]">{step.explanation}</p>
+                  <button
+                    type="button"
+                    className="try-paid-btn"
+                    disabled={busy}
+                    onClick={() => void onPaidActClick(step.id)}
+                  >
+                    {busy ? 'Running…' : step.actionLabel}
+                  </button>
+                  {shown ? (
+                    <div className="try-paid-result" aria-live="polite">
+                      <strong translate="no">
+                        {result?.httpStatus
+                          ? `HTTP ${result.httpStatus}`
+                          : result?.status}
+                        {result?.unlocked ? ' · unlocked' : ''}
+                      </strong>
+                      <span>{result?.expectedOutcome || step.expectedOutcome}</span>
+                      {contrast ? (
+                        <div className="try-paid-contrast">
+                          <span>
+                            <em>Unpaid</em> {contrast.unpaid}
+                          </span>
+                          <span>
+                            <em>Paid</em> {contrast.paid}
+                          </span>
+                        </div>
+                      ) : null}
+                      {result?.decisionAction || result?.vaultEntry ? (
+                        <span translate="no">
+                          {result.decisionAction || '—'}
+                          {result.vaultEntry ? ` → ${result.vaultEntry}` : ''}
+                        </span>
+                      ) : null}
+                      {txHash && explorerUrl ? (
+                        <a
+                          className="chain-proof-link"
+                          href={explorerUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />
+                          <span translate="no">{shortHash(txHash)}</span>
+                          <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
         <section className="space-y-4">
           <div className="space-y-1">
             <h2 className="text-lg font-semibold text-[var(--color-casper-cream)]">
@@ -461,6 +607,10 @@ export default function TryEnforcementPage() {
               Open this page — confirm decision action and vault entry above.
             </li>
             <li>
+              Run <strong>x402 buy → verify → act</strong>: Probe unpaid (402) → Verify settle →
+              Enforce from paid.
+            </li>
+            <li>
               Click <strong>Try to cheat</strong> on each Cheat Lab card — open the explorer link and
               confirm the User error.
             </li>
@@ -469,14 +619,7 @@ export default function TryEnforcementPage() {
               <a href="/api/public/proof" target="_blank" rel="noreferrer">
                 /api/public/proof
               </a>{' '}
-              and match <code>cheatReverts</code> + deploy hashes.
-            </li>
-            <li>
-              Hit{' '}
-              <a href="/api/x402/rwa-evidence" target="_blank" rel="noreferrer">
-                /api/x402/rwa-evidence
-              </a>{' '}
-              unpaid → HTTP <strong>402</strong> on <code>casper:casper-test</code>.
+              and match <code>paidAct</code> + <code>cheatReverts</code> + deploy hashes.
             </li>
             <li>
               Optional:{' '}

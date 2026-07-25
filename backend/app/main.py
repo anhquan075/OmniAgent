@@ -133,6 +133,13 @@ def create_app() -> FastAPI:
                     "tryPath": "/try",
                 },
                 {
+                    "id": "casper-paid-act",
+                    "name": "x402 buy → verify → act",
+                    "endpoint": "/api/public/paid-act",
+                    "authentication": "public",
+                    "tryPath": "/try",
+                },
+                {
                     "id": "x402-paid-evidence",
                     "name": "x402 paid evidence URL",
                     "endpoint": X402_EVIDENCE_ROUTE_PATH,
@@ -152,6 +159,7 @@ def create_app() -> FastAPI:
             "endpoints": {
                 "publicProof": "/api/public/proof",
                 "cheatLab": "/api/public/cheat",
+                "paidAct": "/api/public/paid-act",
                 "x402Evidence": X402_EVIDENCE_ROUTE_PATH,
                 "x402Setup": "/api/x402/setup",
                 "mcp": "/api/mcp",

@@ -67,6 +67,7 @@ class CasperPublicProofService:
             "x402": CasperPublicProofService._x402(decision),
             "vault": CasperPublicProofService._vault(settings),
             "cheatReverts": CasperCheatLabService.public_cheat_reverts(),
+            "paidAct": CasperPublicProofService._paid_act(),
             "trustSummary": bundle.get("trustSummary"),
             "llmTrace": CasperPublicProofService._llm_trace(decision),
             "liveProof": CasperPublicProofService._live_proof(settings, decision, receipt),
@@ -180,13 +181,21 @@ class CasperPublicProofService:
         return text
 
     @staticmethod
+    def _paid_act() -> dict[str, Any]:
+        from app.services.casper.paid_act import CasperPaidActService
+
+        return CasperPaidActService.public_paid_act()
+
+    @staticmethod
     def _x402(decision: dict[str, Any]) -> dict[str, Any]:
         x402 = decision.get("x402") if isinstance(decision.get("x402"), dict) else {}
         receipt = x402.get("receipt") if isinstance(x402.get("receipt"), dict) else None
+        public_receipt = CasperPublicProofService._x402_receipt(receipt)
         return {
             "status": x402.get("status") or "unavailable",
             "endpoint": x402.get("endpoint"),
-            "receipt": CasperPublicProofService._x402_receipt(receipt),
+            "receipt": public_receipt,
+            "bindingStatus": (public_receipt or {}).get("bindingStatus"),
             "hardBlockers": [str(item) for item in x402.get("hardBlockers") or []],
         }
 
@@ -211,8 +220,15 @@ class CasperPublicProofService:
             "bindingStatus",
             "receiptHash",
             "settlementTxHash",
+            "explorerUrl",
         )
-        return {key: receipt.get(key) for key in allowed if receipt.get(key) is not None}
+        public = {key: receipt.get(key) for key in allowed if receipt.get(key) is not None}
+        settle = str(public.get("settlementTxHash") or "").strip()
+        if settle and not public.get("explorerUrl"):
+            explorer = str(get_settings().casper_explorer_url or "").rstrip("/")
+            if explorer:
+                public["explorerUrl"] = f"{explorer}/deploy/{settle}"
+        return public
 
     @staticmethod
     def _vault(settings: Any) -> dict[str, Any]:
