@@ -1,59 +1,123 @@
 {
-  "accountPublicKey": null,
-  "action": "approve",
-  "contractHash": null,
-  "contractLinks": {},
-  "contractPackageHash": null,
-  "createdAt": "2026-07-03T17:21:35.148760+00:00",
-  "decisionId": "rwa-collateral-submission-20260704-001",
+  "accountPublicKey": "0203a586a9fb99cc0d3addbcfa543ea1539c16e016b60e4a218d440f25f6727fe8fb",
+  "action": "haircut",
+  "cheatReverts": {
+    "count": 3,
+    "endpoint": "/api/public/cheat",
+    "liveEnabled": false,
+    "readyCount": 3,
+    "scenarios": [
+      {
+        "attack": "Call freeze with receipt='not-a-receipt'",
+        "entryPoint": "freeze",
+        "errorLabel": "User error: 100",
+        "errorMessage": "User error: 100",
+        "expectedOutcome": "Deploy executes and reverts; collateral stays unfrozen",
+        "expectedUserError": 100,
+        "explanation": "Vault rejects a non-receipt string before any state change. Parse fails \u2192 ApiError::User(100).",
+        "explorerUrl": "https://testnet.cspr.live/deploy/2b7113b0d8a4d916b6c6b0263a500a5823970e920fdef318484a789ccb912d46",
+        "id": "malformed_receipt",
+        "liveEnabled": false,
+        "recordedAt": "2026-07-25T16:25:30+00:00",
+        "status": "ready",
+        "title": "Malformed receipt",
+        "transactionHash": "2b7113b0d8a4d916b6c6b0263a500a5823970e920fdef318484a789ccb912d46"
+      },
+      {
+        "attack": "Call freeze with a blocked decision receipt",
+        "entryPoint": "freeze",
+        "errorLabel": "User error: 102",
+        "errorMessage": "User error: 102",
+        "expectedOutcome": "Deploy reverts with User(102); no freeze",
+        "expectedUserError": 102,
+        "explanation": "A well-formed receipt with policy_gate=blocked cannot freeze. AI may debate; the chain is the final no.",
+        "explorerUrl": "https://testnet.cspr.live/deploy/feb4d8b714dc66d9d19bd1a70cfd71e58f62884b8c3a76771875db92d018dff2",
+        "id": "unapproved_gate",
+        "liveEnabled": false,
+        "recordedAt": "2026-07-25T16:25:30+00:00",
+        "status": "ready",
+        "title": "Unapproved policy gate",
+        "transactionHash": "feb4d8b714dc66d9d19bd1a70cfd71e58f62884b8c3a76771875db92d018dff2"
+      },
+      {
+        "attack": "Call freeze with an approve-action receipt",
+        "entryPoint": "freeze",
+        "errorLabel": "User error: 103",
+        "errorMessage": "User error: 103",
+        "expectedOutcome": "Deploy reverts with User(103); no freeze",
+        "expectedUserError": 103,
+        "explanation": "An approve receipt cannot drive freeze. Action must match the vault entry point (block\u2192freeze / approve\u2192unfreeze / haircut\u2192set_ltv).",
+        "explorerUrl": "https://testnet.cspr.live/deploy/307306b6dd7201466245464d5f3f9d8c7a4563eaac6057fd3a846dcd7322a6c4",
+        "id": "wrong_action",
+        "liveEnabled": false,
+        "recordedAt": "2026-07-25T16:25:30+00:00",
+        "status": "ready",
+        "title": "Wrong action for entry point",
+        "transactionHash": "307306b6dd7201466245464d5f3f9d8c7a4563eaac6057fd3a846dcd7322a6c4"
+      }
+    ],
+    "status": "ready",
+    "tryPath": "/try"
+  },
+  "contractHash": "5a82529f9ba05e716933384ddc9862710ba9a0fd3a7347ab1e8c6e60b1a4c861",
+  "contractLinks": {
+    "contractHash": "https://testnet.cspr.live/contract/5a82529f9ba05e716933384ddc9862710ba9a0fd3a7347ab1e8c6e60b1a4c861",
+    "contractPackageHash": "https://testnet.cspr.live/contract-package/46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea",
+    "vaultContractHash": "https://testnet.cspr.live/contract/66969eead67ac3cb07e131dc86bf4e6b7e63d2c2a33fb1779f705d79878bb55f",
+    "vaultContractPackageHash": "https://testnet.cspr.live/contract-package/5868d6d6bc65f0e6e1aba462eaf6bf2850075313ae576e49f640864f4e1abed3"
+  },
+  "contractPackageHash": "46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea",
+  "createdAt": "2026-07-23T06:19:31.254202+00:00",
+  "decisionId": "rwa-collateral-e0e59b3bd36f143f7111",
   "decisionReceipt": {
-    "receiptHash": "sha256:ffb21c53662bb478ad36cf79b38ba35c22cbe3099f85218cb4efea78c39f83dc",
-    "receiptValue": "rwa-collateral-submission-20260704-001|approve|22|sha256:96ded7c44d0b84602a2be98351b17931325b8fe350f119ca5d49ecd8b8d9d12d|sha256:d561b44b5a6aed1b8274031bf206834394bf5a859df2b2a8f2e359cc7bb22a99|sha256:f332807f9fbaa6c722f2a426ddcde57e69e1b720902889dd60389bb5a6796145|2026-07-03T17:21:35.148760+00:00|approved||sha256:ebefc17e8ec020352cc8a3a034cfb1be683912dcd7cb3ab63db14925bd9e9b88"
+    "receiptHash": "sha256:b018430fa59797b99880c9115ece5287d25d5338379c1a31f6597df988aca366",
+    "receiptValue": "rwa-collateral-e0e59b3bd36f143f7111|haircut|22|sha256:fe46c5dafddaff9ad4923d552dbd1ac83280ac068cb006bb829fff0fba7865bb|sha256:ce0f46d1c46425b7eaf9a55dd378fa286f585d4d66cf1245939c8a86b9cd3b06|sha256:8a449c911976370364849ab37885088425261261c5368e0fccc15438758c3c49|2026-07-23T06:19:31.254202+00:00|approved||sha256:fb120ae37230eefe8c239b9561b44a427968451b398797c835ef2312866447de"
   },
-  "demoUrl": null,
-  "deployHash": null,
+  "demoUrl": "https://omniyield.app",
+  "deployHash": "87734909bab1a83890228b59a66c64fd7636ce99eb4beeb4ac5d9c07b990bb22",
   "evidenceGraph": {
-    "graphDigest": null,
-    "missingSourceCount": null,
-    "observedSourceCount": null,
+    "graphDigest": "sha256:ef0819656783c814ec53480efeb3b8a810aa6bb1bbced22460ba54b939f8a042",
+    "missingSourceCount": 0,
+    "observedSourceCount": 1,
     "scenario": "rwa-collateral-nav-risk-receipt",
-    "sourceCount": null,
-    "staleSourceCount": null
+    "sourceCount": 1,
+    "staleSourceCount": 0
   },
-  "explorerUrl": null,
+  "explorerUrl": "https://testnet.cspr.live/deploy/87734909bab1a83890228b59a66c64fd7636ce99eb4beeb4ac5d9c07b990bb22",
   "generatedFrom": "dashboard-proof-log",
-  "guardrailHash": "sha256:ebefc17e8ec020352cc8a3a034cfb1be683912dcd7cb3ab63db14925bd9e9b88",
+  "guardrailHash": "sha256:fb120ae37230eefe8c239b9561b44a427968451b398797c835ef2312866447de",
+  "hardBlockers": [],
   "liveProof": {
-    "contractHash": null,
-    "contractInstallDeployHash": null,
-    "contractPackageHash": null,
-    "decisionDeployHash": null,
-    "decisionId": "rwa-collateral-submission-20260704-001",
-    "decisionReceipt": "rwa-collateral-submission-20260704-001|approve|22|sha256:96ded7c44d0b84602a2be98351b17931325b8fe350f119ca5d49ecd8b8d9d12d|sha256:d561b44b5a6aed1b8274031bf206834394bf5a859df2b2a8f2e359cc7bb22a99|sha256:f332807f9fbaa6c722f2a426ddcde57e69e1b720902889dd60389bb5a6796145|2026-07-03T17:21:35.148760+00:00|approved||sha256:ebefc17e8ec020352cc8a3a034cfb1be683912dcd7cb3ab63db14925bd9e9b88",
-    "proofDigest": "sha256:96ded7c44d0b84602a2be98351b17931325b8fe350f119ca5d49ecd8b8d9d12d"
+    "contractHash": "5a82529f9ba05e716933384ddc9862710ba9a0fd3a7347ab1e8c6e60b1a4c861",
+    "contractInstallDeployHash": "0444471ab96e840e25d69f525341ee95f014137ebda3e3c0a838eb46b31267f1",
+    "contractPackageHash": "46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea",
+    "decisionDeployHash": "87734909bab1a83890228b59a66c64fd7636ce99eb4beeb4ac5d9c07b990bb22",
+    "decisionId": "rwa-collateral-e0e59b3bd36f143f7111",
+    "decisionReceipt": "rwa-collateral-e0e59b3bd36f143f7111|haircut|22|sha256:fe46c5dafddaff9ad4923d552dbd1ac83280ac068cb006bb829fff0fba7865bb|sha256:ce0f46d1c46425b7eaf9a55dd378fa286f585d4d66cf1245939c8a86b9cd3b06|sha256:8a449c911976370364849ab37885088425261261c5368e0fccc15438758c3c49|2026-07-23T06:19:31.254202+00:00|approved||sha256:fb120ae37230eefe8c239b9561b44a427968451b398797c835ef2312866447de",
+    "proofDigest": "sha256:fe46c5dafddaff9ad4923d552dbd1ac83280ac068cb006bb829fff0fba7865bb"
   },
   "llmTrace": {
     "roles": [
       {
         "agentRole": "proposer",
-        "outputHash": "sha256:2a8286723227a0bf0d7032a5bbb61075f0d3dd009620c84288b12ad4001feff7",
-        "promptHash": "sha256:88444bfc3d23c9cbcd53c22efa1a81d12f84a933a50355974da420de94823d6e",
-        "rationaleHash": "sha256:d561b44b5a6aed1b8274031bf206834394bf5a859df2b2a8f2e359cc7bb22a99",
+        "outputHash": "sha256:12b837c62d75a640c93d4dd480d1520192472b33097a7d95ff6b007c29565fba",
+        "promptHash": "sha256:01cdf76c1c03fa29acb2cc9a2ab6257f1405105f5d452c734fff6d92a9a29ffb",
+        "rationaleHash": "sha256:ce0f46d1c46425b7eaf9a55dd378fa286f585d4d66cf1245939c8a86b9cd3b06",
         "traceSource": "deterministic",
         "verdict": "proposed"
       },
       {
         "agentRole": "critic",
-        "outputHash": "sha256:337c22b34fcd1adeafe0f5a2a95fc2ce9715053f8d7865b70de202e84e9f711a",
-        "promptHash": "sha256:8c6a45fe6c35043abc0e7ebe754afc673aaf68a31ffb89845e122e167687123b",
+        "outputHash": "sha256:473628f0fdf5f51ccad9d7aa3c24f239ec82e089ca4eea0bf5c22cb6ceb77477",
+        "promptHash": "sha256:cdd1f8a71f2f1942e7a7a17bbab16f6a57307e271d09b6c1e0db24363913958f",
         "rationaleHash": "sha256:92d3824df0fb740fbc97cbdfc26eab4a8e83e52579ea25dc35fbbc74ac99fe18",
         "traceSource": "deterministic",
         "verdict": "passed"
       },
       {
         "agentRole": "policy_gate",
-        "outputHash": "sha256:79042f0ccd55bb574b6b0574f80f6bd873dd5ca6d4a37a4e0d81e431fd00b989",
-        "promptHash": "sha256:ee92e44c46a8bcd3450191a016c44e4d1cf5a94a08a6886a16fe5ef3fdf29ba9",
+        "outputHash": "sha256:dc716157397b3d778af7dde1269c08deeac3d02f017ab20cbe86fd158c9409ab",
+        "promptHash": "sha256:876b1fae4cec6164829c6c2937128e04d7d782adbc9e610b081460202e6f7e23",
         "rationaleHash": "sha256:135b7289c5993dfe672e6753709723b6fa2c4a74e5243b9079eae809eca3b8d6",
         "traceSource": "deterministic",
         "verdict": "approved"
@@ -61,38 +125,142 @@
     ]
   },
   "network": "casper",
+  "paidAct": {
+    "bindingStatus": "bound",
+    "count": 3,
+    "endpoint": "/api/public/paid-act",
+    "evidenceEndpoint": "/api/x402/rwa-evidence",
+    "explorerUrl": "https://testnet.cspr.live/deploy/93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5",
+    "readyCount": 3,
+    "settlementTxHash": "93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5",
+    "status": "ready",
+    "steps": [
+      {
+        "actionLabel": "Probe unpaid",
+        "endpoint": "/api/x402/rwa-evidence",
+        "expectedOutcome": "HTTP 402 on casper:casper-test with WCSPR price tag",
+        "explanation": "Premium RWA evidence is paywalled with native Casper x402 (not Base/USDC). Unpaid requests get HTTP 402.",
+        "explorerUrl": null,
+        "id": "probe_unpaid",
+        "order": 1,
+        "settlementTxHash": null,
+        "status": "ready",
+        "title": "Buy \u2014 unpaid evidence"
+      },
+      {
+        "actionLabel": "Verify settle",
+        "endpoint": "/api/x402/rwa-evidence",
+        "expectedOutcome": "x402 status=verified, bindingStatus=bound, settle TX on explorer",
+        "explanation": "Finals CEP-18 settle is bound into the decision receipt. Judges verify the explorer deploy without holding a wallet.",
+        "explorerUrl": "https://testnet.cspr.live/deploy/93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5",
+        "id": "verify_settle",
+        "order": 2,
+        "settlementTxHash": "93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5",
+        "status": "ready",
+        "title": "Verify \u2014 settle canary"
+      },
+      {
+        "actionLabel": "Enforce from paid",
+        "endpoint": "/api/x402/rwa-evidence",
+        "expectedOutcome": "Unpaid blocked \u00b7 paid unlocks vault enforce story",
+        "explanation": "Without a bound payment, enforce stays blocked. With verified x402, the vault enforce path unlocks.",
+        "explorerUrl": "https://testnet.cspr.live/deploy/93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5",
+        "id": "enforce_from_paid",
+        "order": 3,
+        "settlementTxHash": "93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5",
+        "status": "ready",
+        "title": "Act \u2014 enforce from paid evidence"
+      }
+    ],
+    "tryPath": "/try",
+    "x402Status": "verified"
+  },
+  "policyGate": "approved",
   "policyTemplate": {
     "id": "rwa-collateral-v1",
     "label": "RWA collateral financing gate",
-    "templateHash": null
+    "templateHash": "sha256:a20a7ccea4d3b147046501534a711a0263934e3d91a5a557d9a8db4422bab221"
   },
-  "policyGate": "approved",
-  "proofDigest": "sha256:96ded7c44d0b84602a2be98351b17931325b8fe350f119ca5d49ecd8b8d9d12d",
+  "proofDigest": "sha256:fe46c5dafddaff9ad4923d552dbd1ac83280ac068cb006bb829fff0fba7865bb",
+  "proofScore": {
+    "checks": {
+      "agentRationalePresent": true,
+      "casperAccountConfigured": true,
+      "casperContractConfigured": true,
+      "casperDeployConfirmed": true,
+      "casperRpcReachable": true,
+      "decisionPayloadValid": true,
+      "decisionReceiptPresent": true,
+      "evidenceGraphDigestPresent": true,
+      "evidenceSourceHashPresent": true,
+      "guardrailHashPresent": true,
+      "policyGateApproved": true,
+      "readbackMatchesDigest": true,
+      "x402PaidEvidenceVerified": true
+    },
+    "hardBlocked": false,
+    "hardBlockers": [],
+    "score": 13,
+    "total": 13
+  },
   "readback": {
-    "decisionReceipt": null,
-    "proofDigest": null,
-    "receiptVerified": null,
-    "verified": false
+    "decisionReceipt": "rwa-collateral-e0e59b3bd36f143f7111|haircut|22|sha256:fe46c5dafddaff9ad4923d552dbd1ac83280ac068cb006bb829fff0fba7865bb|sha256:ce0f46d1c46425b7eaf9a55dd378fa286f585d4d66cf1245939c8a86b9cd3b06|sha256:8a449c911976370364849ab37885088425261261c5368e0fccc15438758c3c49|2026-07-23T06:19:31.254202+00:00|approved||sha256:fb120ae37230eefe8c239b9561b44a427968451b398797c835ef2312866447de",
+    "expectedProofDigest": "sha256:fe46c5dafddaff9ad4923d552dbd1ac83280ac068cb006bb829fff0fba7865bb",
+    "hardBlockers": [],
+    "proofDigest": "sha256:fe46c5dafddaff9ad4923d552dbd1ac83280ac068cb006bb829fff0fba7865bb",
+    "receiptVerified": true,
+    "status": "verified",
+    "verified": true
   },
+  "recoveryCandidates": [],
   "riskScore": 22,
   "scenario": "rwa-collateral-nav-risk-receipt",
-  "sourceHash": "sha256:f332807f9fbaa6c722f2a426ddcde57e69e1b720902889dd60389bb5a6796145",
-  "status": "blocked",
-  "timestamp": "2026-07-03T17:21:35.148760+00:00",
+  "sourceHash": "sha256:8a449c911976370364849ab37885088425261261c5368e0fccc15438758c3c49",
+  "status": "live_verified",
+  "timestamp": "2026-07-23T06:19:31.254202+00:00",
   "trustSummary": {
     "components": {
-      "paidEvidenceVerifiedDecisions": 0,
+      "paidEvidenceVerifiedDecisions": 10,
       "policyBlockedDecisions": 0,
       "staleEvidenceDecisions": 0,
       "verifiedReadbacks": 0
     },
     "minSampleSize": 3,
-    "paidEvidenceVerifiedRate": null,
-    "policyBlockedRate": null,
-    "sampleSize": 0,
-    "staleEvidenceRate": null,
-    "status": "insufficient_data",
-    "verifiedReadbackRate": null
+    "paidEvidenceVerifiedRate": 1.0,
+    "policyBlockedRate": 0.0,
+    "sampleSize": 10,
+    "staleEvidenceRate": 0.0,
+    "status": "measured",
+    "verifiedReadbackRate": 0.0
+  },
+  "vault": {
+    "actionMap": {
+      "approve": "unfreeze",
+      "block": "freeze",
+      "haircut": "set_ltv"
+    },
+    "assetId": "rwa-demo-collateral-001",
+    "configured": true,
+    "contractHash": "66969eead67ac3cb07e131dc86bf4e6b7e63d2c2a33fb1779f705d79878bb55f",
+    "contractLinks": {
+      "contractHash": "https://testnet.cspr.live/contract/66969eead67ac3cb07e131dc86bf4e6b7e63d2c2a33fb1779f705d79878bb55f",
+      "contractPackageHash": "https://testnet.cspr.live/contract-package/5868d6d6bc65f0e6e1aba462eaf6bf2850075313ae576e49f640864f4e1abed3"
+    },
+    "decisionId": null,
+    "enforceEnabled": true,
+    "explorerUrl": null,
+    "lastAction": null,
+    "lastStatus": null,
+    "packageHash": "5868d6d6bc65f0e6e1aba462eaf6bf2850075313ae576e49f640864f4e1abed3",
+    "recentActions": [],
+    "stateDelta": {
+      "after": null,
+      "before": null,
+      "entryPoint": null,
+      "fromDecision": null,
+      "summary": "No vault enforcement yet for this proof window."
+    },
+    "transactionHash": null
   },
   "verifier": {
     "liveProofCommand": "scripts/verify-casper-live-proof.sh --proof-file proofs/casper-buildathon-submission-proof.json",
@@ -103,11 +271,24 @@
   },
   "videoUrl": "https://youtu.be/wcVoqJXqPhc",
   "x402": {
-    "endpoint": null,
-    "hardBlockers": [
-      "x402_evidence_endpoint_missing"
-    ],
-    "receipt": null,
-    "status": "unavailable"
+    "bindingStatus": "bound",
+    "endpoint": "https://omniagent-production.up.railway.app/api/x402/rwa-evidence",
+    "hardBlockers": [],
+    "receipt": {
+      "amount": "1000000",
+      "bindingStatus": "bound",
+      "buyer": "009201bf2e2468c8ae48c516dd0dadb4174a523bd1869b6d422795712a7b9d65cc",
+      "currency": "WCSPR",
+      "explorerUrl": "https://testnet.cspr.live/deploy/93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5",
+      "network": "casper:casper-test",
+      "paidAt": "2026-07-23T00:00:00+00:00",
+      "provider": "x402",
+      "receiptHash": "sha256:504a9b5f2f29c0a9e104ec867b23dfae8012c17e1aa1fe10308dce7efa651276",
+      "receiptId": "93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5",
+      "resourceUrl": "https://omniagent-production.up.railway.app/api/x402/rwa-evidence",
+      "seller": "005fbafb3d180056637745218c3a21bef20ad4aca0737b676125791db7a2ead0c6",
+      "settlementTxHash": "93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5"
+    },
+    "status": "verified"
   }
 }

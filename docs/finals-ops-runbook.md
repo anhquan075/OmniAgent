@@ -1,6 +1,6 @@
 # Finals ops runbook
 
-Status as of **2026-07-23**. Native Casper x402 + collateral vault are on
+Status as of **2026-07-25**. Native Casper x402 + collateral vault are on
 `main` / Railway. Prefer `https://omniyield.app` when the raw Railway host is
 WAF-blocked.
 
@@ -12,11 +12,14 @@ WAF-blocked.
 | Paywall challenge | unpaid evidence → HTTP **402** with Casper `accepts[]` |
 | Facilitator arm | `settleReady=true` (CSPR.cloud API key set) |
 | Stale Base/USDC receipt | deleted |
-| Latest decision canary | `haircut` deploy `87734909…` (2026-07-23) — public proof `live_verified` |
-| Prior warn canary | `warn` deploy `9e696671…` (2026-07-23) |
+| Latest decision canary | `haircut` deploy `87734909…` — public proof `live_verified` |
+| Prior warn canary | `warn` deploy `9e696671…` |
 | Vault install / freeze / unfreeze / set_ltv | live; freeze `36d1f699…`, unfreeze `39dc155a…`, set_ltv `43a8c497…` |
 | Vault Railway env | hashes set; `CASPER_VAULT_ENFORCE_ENABLED=true` |
 | x402 asset | bare WCSPR `3d80df21…`; receipt bound (`bindingStatus=bound`) |
+| Cheat Lab | User(100/102/103) canaries on `/try` + `cheatReverts` |
+| Paid-act | buy→verify→act on `/try` + `paidAct` (`readyCount=3`) |
+| Committed proof artifact | `proofs/casper-buildathon-submission-proof.json` must stay `live_verified` |
 
 ```bash
 curl -sS https://omniyield.app/api/x402/setup | jq '{facilitatorUrl,paymentNetwork,settleReady,asset,hardBlockers}'

@@ -91,3 +91,13 @@ jobs:
 
       - name: Check tracked source for obvious secrets
         run: scripts/check-secrets.sh
+
+  proof-artifact:
+    name: Public Proof Artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Require live_verified committed proof
+        run: scripts/verify-casper-proof-artifact.sh

@@ -122,8 +122,14 @@ const fs = require("fs");
 const proof = JSON.parse(fs.readFileSync("proofs/casper-buildathon-submission-proof.json", "utf8"));
 const text = JSON.stringify(proof);
 if (proof.scenario !== "rwa-collateral-nav-risk-receipt") throw new Error("tracked proof scenario mismatch");
-if (proof.status === "live_verified" && proof.readback?.verified !== true) throw new Error("tracked proof overclaims live verification");
+if (proof.status !== "live_verified") throw new Error(`tracked proof status=${proof.status}, expected live_verified`);
+if (proof.readback?.verified !== true) throw new Error("tracked proof missing verified readback");
+if (!proof.deployHash || !proof.explorerUrl) throw new Error("tracked proof missing decision deploy explorer link");
+if ((proof.cheatReverts?.readyCount ?? 0) < 3) throw new Error("tracked proof missing Cheat Lab canaries");
+if ((proof.paidAct?.readyCount ?? 0) < 3) throw new Error("tracked proof missing paid-act steps");
+if (proof.x402?.status !== "verified") throw new Error("tracked proof x402 is not verified");
 if (/CASPER_SECRET_KEY_PATH|API_OPERATOR_TOKEN|secret\.pem|\.env/.test(text)) throw new Error("tracked proof leaked private material");
+console.log(`tracked proof: ${proof.status} action=${proof.action} deploy=${String(proof.deployHash).slice(0, 12)}…`);
 '
 
 echo "[casper] tracked secret hygiene"

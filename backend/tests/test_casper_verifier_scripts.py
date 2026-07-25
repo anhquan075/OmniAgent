@@ -12,6 +12,28 @@ def test_stack_verifier_uses_dashboard_proof_log() -> None:
     assert "/api/dashboard/receipts" in text
     assert "/api/public/proof" in text
     assert "ledgerPath" in text
+    assert 'proof.status !== "live_verified"' in text
+    assert "cheatReverts" in text
+    assert "paidAct" in text
+
+
+def test_tracked_proof_artifact_is_live_verified() -> None:
+    proof_path = Path(__file__).resolve().parents[2] / "proofs" / "casper-buildathon-submission-proof.json"
+    proof = __import__("json").loads(proof_path.read_text(encoding="utf-8"))
+    assert proof["status"] == "live_verified"
+    assert proof["readback"]["verified"] is True
+    assert proof["deployHash"]
+    assert proof["cheatReverts"]["readyCount"] >= 3
+    assert proof["paidAct"]["readyCount"] >= 3
+    assert proof["x402"]["status"] == "verified"
+
+
+def test_proof_artifact_verifier_script_exists() -> None:
+    verifier = Path(__file__).resolve().parents[2] / "scripts" / "verify-casper-proof-artifact.sh"
+    text = verifier.read_text(encoding="utf-8")
+    assert "live_verified" in text
+    assert "cheatReverts" in text
+    assert "paidAct" in text
 
 
 def test_live_proof_verifier_requires_receipt_dictionary() -> None:
