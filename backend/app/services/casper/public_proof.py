@@ -503,11 +503,17 @@ class CasperPublicProofService:
         explorer = str(settings.casper_explorer_url or "").rstrip("/")
         last_blocked = None
         if blocked_tx or blocked_id:
+            dissent = CasperPublicProofService._string_or_none(
+                getattr(settings, "casper_decision_blocked_dissent_digest", None)
+            )
             last_blocked = {
                 "decisionId": blocked_id,
                 "transactionHash": blocked_tx,
                 "explorerUrl": f"{explorer}/deploy/{blocked_tx}" if explorer and blocked_tx else None,
                 "policyGate": "blocked",
+                "proposerVerdict": "proposed",
+                "criticVerdict": "blocked",
+                "dissentDigest": dissent,
                 "enforceRevertTransactionHash": blocked_enforce,
                 "enforceRevertExplorerUrl": (
                     f"{explorer}/deploy/{blocked_enforce}"
