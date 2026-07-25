@@ -35,20 +35,22 @@ const STORY: StoryStep[] = [
   {
     decision: 'block',
     vault: 'freeze',
-    before: 'frozen: false',
-    after: 'frozen: true',
+    before: 'Unfrozen',
+    after: 'Frozen',
     icon: 'freeze',
     canaryHash: '36d1f699ebf201e1c2617a16ee9152a56c567351ba733e2e87b944db7c325176',
   },
   {
     decision: 'approve',
     vault: 'unfreeze',
-    before: 'frozen: true',
-    after: 'frozen: false',
+    before: 'Frozen',
+    after: 'Unfrozen',
     icon: 'unfreeze',
     canaryHash: '39dc155aac0a9be1a23aa424d60d5783d5ff75fb2cb9ab51d4a630a7ea245646',
   },
 ];
+
+const LIVE_METRIC_LABELS = ['Decision', 'Vault entry', 'x402', 'Enforce'] as const;
 
 function shortHash(hash: string): string {
   if (hash.length < 20) return hash;
@@ -80,9 +82,22 @@ function findVaultTx(
 }
 
 function StepIcon({ kind }: { kind: StoryStep['icon'] }) {
-  if (kind === 'freeze') return <SnowflakeIcon className="h-4 w-4" aria-hidden />;
-  if (kind === 'ltv') return <PercentIcon className="h-4 w-4" aria-hidden />;
-  return <LockIcon className="h-4 w-4" aria-hidden />;
+  if (kind === 'freeze') return <SnowflakeIcon className="h-4 w-4" aria-hidden="true" />;
+  if (kind === 'ltv') return <PercentIcon className="h-4 w-4" aria-hidden="true" />;
+  return <LockIcon className="h-4 w-4" aria-hidden="true" />;
+}
+
+function LiveProofSkeleton() {
+  return (
+    <div className="try-live-grid" aria-busy="true" aria-label="Loading live proof">
+      {LIVE_METRIC_LABELS.map((label) => (
+        <div key={label}>
+          <span>{label}</span>
+          <strong className="try-skeleton-value" aria-hidden="true" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function TryEnforcementPage() {
@@ -91,6 +106,7 @@ export default function TryEnforcementPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    document.title = 'OmniAgent — Try the enforcement';
     const controller = new AbortController();
     void (async () => {
       try {
@@ -108,15 +124,23 @@ export default function TryEnforcementPage() {
         if (!controller.signal.aborted) setLoading(false);
       }
     })();
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      document.title = 'OmniAgent Casper Proof Console';
+    };
   }, []);
 
   const vault = proof?.vault;
-  const x402Status = proof?.x402?.status ?? 'unknown';
+  const x402Status = proof?.x402?.status ?? null;
   const binding =
     proof?.x402?.receipt?.bindingStatus ?? proof?.x402?.bindingStatus ?? null;
   const liveAction = (proof?.action || '').toLowerCase();
   const liveVault = (vault?.lastAction || '').toLowerCase();
+  const statusChip = loading
+    ? 'Loading…'
+    : error
+      ? 'unavailable'
+      : proof?.status || 'unavailable';
 
   return (
     <div className="casper-shell relative min-h-[100dvh] w-full overflow-x-hidden">
@@ -126,7 +150,7 @@ export default function TryEnforcementPage() {
             <p className="text-xs font-semibold tracking-[0.18em] text-[var(--color-casper-red-soft)] uppercase">
               OmniAgent
             </p>
-            <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-[var(--color-casper-cream)] sm:text-4xl">
+            <h1 className="max-w-xl text-balance text-3xl font-semibold tracking-tight text-[var(--color-casper-cream)] sm:text-4xl">
               Try the enforcement
             </h1>
             <p className="max-w-2xl text-sm leading-relaxed text-[var(--color-casper-muted)] sm:text-base">
@@ -142,67 +166,85 @@ export default function TryEnforcementPage() {
             </a>
             <a className="try-cta" href="/api/public/proof" target="_blank" rel="noreferrer">
               Raw proof JSON
-              <ExternalLinkIcon className="h-3.5 w-3.5" />
+              <ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
             </a>
           </nav>
         </header>
 
-        <section className="flight-panel try-live-panel" aria-live="polite">
+        <section
+          className={`flight-panel try-live-panel${loading ? ' is-loading' : ''}`}
+          aria-live="polite"
+          aria-busy={loading || undefined}
+        >
           <div className="flight-panel-head">
             <h2>Live proof now</h2>
-            <span>{loading ? 'loading' : proof?.status || 'unavailable'}</span>
+            <span>{statusChip}</span>
           </div>
-          {error ? (
-            <p className="text-sm text-[var(--color-status-danger)]">{error}</p>
-          ) : (
-            <div className="try-live-grid">
-              <div>
-                <span>Decision</span>
-                <strong className="capitalize">{proof?.action || '—'}</strong>
+          {error && !loading ? (
+            <p className="text-sm text-[var(--color-status-danger)]">
+              {error}. Refresh this page, or open{' '}
+              <a href="/api/public/proof" target="_blank" rel="noreferrer">
+                /api/public/proof
+              </a>{' '}
+              directly.
+            </p>
+          ) : null}
+          {loading ? <LiveProofSkeleton /> : null}
+          {!loading && !error && proof ? (
+            <>
+              <div className="try-live-grid">
+                <div>
+                  <span>Decision</span>
+                  <strong className="capitalize" translate="no">
+                    {proof.action || 'none'}
+                  </strong>
+                </div>
+                <div>
+                  <span>Vault entry</span>
+                  <strong className="capitalize" translate="no">
+                    {vault?.lastAction || 'none'}
+                  </strong>
+                </div>
+                <div>
+                  <span>x402</span>
+                  <strong translate="no">
+                    {x402Status || 'unavailable'}
+                    {binding ? ` / ${binding}` : ''}
+                  </strong>
+                </div>
+                <div>
+                  <span>Enforce</span>
+                  <strong>{vault?.enforceEnabled ? 'armed' : 'off'}</strong>
+                </div>
               </div>
-              <div>
-                <span>Vault entry</span>
-                <strong className="capitalize">{vault?.lastAction || '—'}</strong>
+              <div className="try-link-row">
+                {proof.deployHash ? (
+                  <ChainProofLink
+                    hash={proof.deployHash}
+                    explorerUrl={proof.explorerUrl}
+                    label="decision deploy"
+                  />
+                ) : null}
+                {vault?.transactionHash ? (
+                  <ChainProofLink
+                    hash={vault.transactionHash}
+                    explorerUrl={vault.explorerUrl}
+                    label="vault deploy"
+                  />
+                ) : null}
+                {vault?.contractHash ? (
+                  <ChainProofLink
+                    hash={vault.contractHash}
+                    explorerUrl={vault.contractLinks?.contractHash}
+                    kind="contract"
+                    label="vault contract"
+                  />
+                ) : null}
               </div>
-              <div>
-                <span>x402</span>
-                <strong>
-                  {x402Status}
-                  {binding ? ` / ${binding}` : ''}
-                </strong>
-              </div>
-              <div>
-                <span>Enforce</span>
-                <strong>{vault?.enforceEnabled ? 'armed' : 'off'}</strong>
-              </div>
-            </div>
-          )}
-          <div className="try-link-row">
-            {proof?.deployHash ? (
-              <ChainProofLink
-                hash={proof.deployHash}
-                explorerUrl={proof.explorerUrl}
-                label="decision deploy"
-              />
-            ) : null}
-            {vault?.transactionHash ? (
-              <ChainProofLink
-                hash={vault.transactionHash}
-                explorerUrl={vault.explorerUrl}
-                label="vault deploy"
-              />
-            ) : null}
-            {vault?.contractHash ? (
-              <ChainProofLink
-                hash={vault.contractHash}
-                explorerUrl={vault.contractLinks?.contractHash}
-                kind="contract"
-                label="vault contract"
-              />
-            ) : null}
-          </div>
-          {vault?.stateDelta?.summary ? (
-            <p className="text-sm text-[var(--color-casper-muted)]">{vault.stateDelta.summary}</p>
+              {vault?.stateDelta?.summary ? (
+                <p className="text-sm text-[var(--color-casper-muted)]">{vault.stateDelta.summary}</p>
+              ) : null}
+            </>
           ) : null}
         </section>
 
@@ -220,7 +262,8 @@ export default function TryEnforcementPage() {
             {STORY.map((step) => {
               const tx = findVaultTx(vault?.recentActions, step.vault, step.canaryHash);
               const active =
-                liveAction === step.decision || liveVault === step.vault.toLowerCase();
+                !loading &&
+                (liveAction === step.decision || liveVault === step.vault.toLowerCase());
               return (
                 <article
                   key={step.vault}
@@ -237,7 +280,10 @@ export default function TryEnforcementPage() {
                       <span>Before</span>
                       <code>{step.before}</code>
                     </div>
-                    <ArrowRightIcon className="h-4 w-4 shrink-0 text-[var(--color-casper-faint)]" />
+                    <ArrowRightIcon
+                      className="h-4 w-4 shrink-0 text-[var(--color-casper-faint)]"
+                      aria-hidden="true"
+                    />
                     <div>
                       <span>After</span>
                       <code>{step.after}</code>
@@ -250,9 +296,9 @@ export default function TryEnforcementPage() {
                       target="_blank"
                       rel="noreferrer"
                     >
-                      <ShieldCheckIcon className="h-3 w-3" />
-                      {shortHash(tx.hash)}
-                      <ExternalLinkIcon className="h-3 w-3" />
+                      <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />
+                      <span translate="no">{shortHash(tx.hash)}</span>
+                      <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
                     </a>
                   ) : (
                     <span className="chain-proof-missing">pending vault canary</span>
@@ -298,9 +344,15 @@ export default function TryEnforcementPage() {
         </section>
 
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-glass-border)] pt-4 text-xs text-[var(--color-casper-faint)]">
-          <span>
-            {proof?.decisionId ? `decisionId ${proof.decisionId}` : 'Waiting for public proof'}
-            {proof?.proofDigest ? ` · ${shortHash(proof.proofDigest.replace(/^sha256:/, ''))}` : ''}
+          <span translate="no">
+            {loading
+              ? 'Loading public proof…'
+              : proof?.decisionId
+                ? `decisionId ${proof.decisionId}`
+                : 'Public proof unavailable'}
+            {!loading && proof?.proofDigest
+              ? ` · ${shortHash(proof.proofDigest.replace(/^sha256:/, ''))}`
+              : ''}
           </span>
           <a href="https://dorahacks.io/buidl/40823" target="_blank" rel="noreferrer">
             DoraHacks BUIDL 40823

@@ -56,7 +56,7 @@ function StatusItem({ icon: Icon, label, value, sub, tone = 'neutral' }: {
 }) {
   return (
     <div className={`flight-status-item is-${tone}`}>
-      <Icon className="h-4 w-4" />
+      <Icon className="h-4 w-4" aria-hidden="true" />
       <span>
         <small>{label}</small>
         <b>{value}</b>

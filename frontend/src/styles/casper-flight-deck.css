@@ -76,26 +76,57 @@
   color: var(--casper-red-soft);
 }
 
-.flight-rail-status {
+.flight-tabs button:focus-visible,
+.flight-refresh:focus-visible,
+.flight-rail-try:focus-visible,
+.judge-try-banner:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.judge-try-banner {
   display: grid;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 12px;
-  color: var(--muted);
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  margin: 0 0 0.65rem;
+  border: 1px solid rgba(230, 63, 55, 0.4);
+  border-radius: var(--radius-panel, 14px);
+  padding: 0.7rem 0.95rem;
+  color: var(--color-casper-cream, var(--text));
+  text-decoration: none;
+  background:
+    linear-gradient(90deg, rgba(230, 63, 55, 0.16), rgba(230, 63, 55, 0.04) 55%, transparent);
+  transition:
+    border-color 120ms var(--ease-smooth, ease),
+    background 120ms var(--ease-smooth, ease);
 }
 
-.flight-rail-status span {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+.judge-try-banner:hover {
+  border-color: rgba(230, 63, 55, 0.65);
+  background:
+    linear-gradient(90deg, rgba(230, 63, 55, 0.22), rgba(230, 63, 55, 0.08) 55%, transparent);
 }
 
-.flight-rail-status .is-ok { background: var(--green); }
-.flight-rail-status .is-blocked { background: var(--danger); }
-.flight-rail-status .is-loading {
-  background: var(--casper-red-soft);
-  animation: flight-pulse 1.2s ease-in-out infinite;
+.judge-try-banner span {
+  color: var(--color-casper-red-soft, var(--casper-red-soft));
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.judge-try-banner strong {
+  font-size: 0.98rem;
+  font-weight: 650;
+}
+
+.judge-try-banner em {
+  color: var(--color-casper-muted, var(--muted));
+  font-size: 0.78rem;
+  font-style: normal;
+  text-align: right;
 }
 
 .flight-rail-try {
@@ -119,6 +150,28 @@
 .flight-rail-try:hover {
   border-color: rgba(230, 63, 55, 0.55);
   background: rgba(230, 63, 55, 0.14);
+}
+
+.flight-rail-status {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--muted);
+}
+
+.flight-rail-status span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.flight-rail-status .is-ok { background: var(--green); }
+.flight-rail-status .is-blocked { background: var(--danger); }
+.flight-rail-status .is-loading {
+  background: var(--casper-red-soft);
+  animation: flight-pulse 1.2s ease-in-out infinite;
 }
 
 @keyframes flight-pulse {

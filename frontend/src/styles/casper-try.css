@@ -19,6 +19,11 @@
   background: var(--color-glass-strong);
 }
 
+.try-cta:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
 .try-cta-primary {
   border-color: rgba(230, 63, 55, 0.45);
   background: var(--color-casper-red-dim);
@@ -27,6 +32,42 @@
 
 .try-live-panel {
   gap: 1rem;
+}
+
+.try-live-panel.is-loading {
+  border-color: rgba(230, 191, 105, 0.28);
+}
+
+.try-skeleton-value {
+  display: block;
+  height: 1.15rem;
+  width: 72%;
+  margin-top: 0.15rem;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 248, 239, 0.06) 0%,
+    rgba(255, 248, 239, 0.14) 45%,
+    rgba(255, 248, 239, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: try-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .try-skeleton-value {
+    animation: none;
+    background: rgba(255, 248, 239, 0.1);
+  }
+}
+
+@keyframes try-skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
 }
 
 .try-live-grid {

@@ -38,6 +38,11 @@ export default function FlightDeckShell({
         refreshedAt={refreshedAt}
       />
       <div className="flight-main">
+        <a className="judge-try-banner" href="/try">
+          <span>Judges · start here</span>
+          <strong>Try the enforcement</strong>
+          <em>No login · before/after vault · explorer links</em>
+        </a>
         <FlightDeckStatusStrip
           runtime={runtime}
           bundle={bundle}
