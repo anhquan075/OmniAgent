@@ -34,6 +34,9 @@ pub extern "C" fn record_decision() {
     if decision_id.is_empty() || proof_digest.is_empty() {
         runtime::revert(ApiError::InvalidArgument);
     }
+    if !is_known_policy_gate(&policy_gate) {
+        runtime::revert(ApiError::InvalidArgument);
+    }
     // Receipt agent field must name the deploy signer, not an arbitrary claim.
     let caller_hex = caller_account_hex();
     let claimed = normalize_account_hash(&agent_account_hash);
@@ -53,17 +56,38 @@ pub extern "C" fn record_decision() {
         claimed,
         guardrail_hash
     );
-    write_string(LATEST_DECISION_ID_KEY, decision_id.clone());
-    write_string(LATEST_ACTION_KEY, action);
-    write_string(LATEST_PROOF_DIGEST_KEY, proof_digest);
-    write_string(LATEST_RATIONALE_HASH_KEY, rationale_hash);
-    write_string(LATEST_SOURCE_HASH_KEY, source_hash);
-    write_string(LATEST_TIMESTAMP_KEY, timestamp);
-    write_u64(LATEST_RISK_SCORE_KEY, risk_score);
-    write_string(LATEST_POLICY_GATE_KEY, policy_gate);
-    write_string(LATEST_AGENT_ACCOUNT_HASH_KEY, claimed);
-    write_string(LATEST_GUARDRAIL_HASH_KEY, guardrail_hash);
-    write_string(LATEST_RECEIPT_KEY, receipt.clone());
+    let approved = policy_gate.as_str() == "approved";
+    if approved {
+        write_string(LATEST_DECISION_ID_KEY, decision_id.clone());
+        write_string(LATEST_ACTION_KEY, action);
+        write_string(LATEST_PROOF_DIGEST_KEY, proof_digest);
+        write_string(LATEST_RATIONALE_HASH_KEY, rationale_hash);
+        write_string(LATEST_SOURCE_HASH_KEY, source_hash);
+        write_string(LATEST_TIMESTAMP_KEY, timestamp);
+        write_u64(LATEST_RISK_SCORE_KEY, risk_score);
+        write_string(LATEST_POLICY_GATE_KEY, policy_gate.clone());
+        write_string(LATEST_AGENT_ACCOUNT_HASH_KEY, claimed);
+        write_string(LATEST_GUARDRAIL_HASH_KEY, guardrail_hash);
+        write_string(LATEST_RECEIPT_KEY, receipt.clone());
+    } else {
+        // Fail-closed path: seal the reject on-chain without clobbering the
+        // approved live_verified latest_* surface desks/judges replay.
+        write_string(LATEST_BLOCKED_DECISION_ID_KEY, decision_id.clone());
+        write_string(LATEST_BLOCKED_POLICY_GATE_KEY, policy_gate.clone());
+        write_string(LATEST_BLOCKED_RECEIPT_KEY, receipt.clone());
+    }
+    let proposer = runtime::try_get_named_arg::<String>("proposer_verdict").unwrap_or_default();
+    let critic = runtime::try_get_named_arg::<String>("critic_verdict").unwrap_or_default();
+    let dissent = runtime::try_get_named_arg::<String>("dissent_digest").unwrap_or_default();
+    if !proposer.is_empty() {
+        write_string(LATEST_PROPOSER_VERDICT_KEY, proposer);
+    }
+    if !critic.is_empty() {
+        write_string(LATEST_CRITIC_VERDICT_KEY, critic);
+    }
+    if !dissent.is_empty() {
+        write_string(LATEST_DISSENT_DIGEST_KEY, dissent);
+    }
     storage::named_dictionary_put(DECISION_RECEIPTS_KEY, &decision_id, receipt);
 }
 
@@ -97,6 +121,12 @@ pub extern "C" fn get_authorized_agent() {
     runtime::ret(CLValue::from_t(agent).unwrap_or_revert());
 }
 
+#[no_mangle]
+pub extern "C" fn latest_blocked_receipt() {
+    let receipt = read_string_or_empty(LATEST_BLOCKED_RECEIPT_KEY);
+    runtime::ret(CLValue::from_t(receipt).unwrap_or_revert());
+}
+
 /// One-shot ACL correction used by the upgrade session.
 ///
 /// Requires `acl_rotation_enabled=true` (seeded in the same deploy), writes the
@@ -118,6 +148,24 @@ pub extern "C" fn rotate_authorized_agent() {
 #[no_mangle]
 pub extern "C" fn call() {
     install_contract();
+}
+
+fn is_known_policy_gate(gate: &str) -> bool {
+    matches!(gate, "approved" | "blocked" | "hold" | "warn")
+}
+
+fn read_string_or_empty(key: &str) -> String {
+    match runtime::get_key(key) {
+        Some(k) => {
+            let uref = k
+                .into_uref()
+                .unwrap_or_revert_with(ApiError::UnexpectedKeyVariant);
+            storage::read(uref)
+                .unwrap_or_revert_with(ApiError::Read)
+                .unwrap_or_default()
+        }
+        None => String::new(),
+    }
 }
 
 /// Only the install-time agent account may write receipts.

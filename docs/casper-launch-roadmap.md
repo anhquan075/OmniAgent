@@ -1,37 +1,48 @@
-# Casper Launch Roadmap
+# Casper Launch Roadmap — desk-pilot pack
 
-## 30 Days
+Buyer: **RWA collateral desk / financing committee** that needs a replayable
+financeability gate (keep / haircut / freeze) with auditor-friendly explorer
+proofs — not another chatty agent.
 
-- Keep the public proof packet schema stable and versioned.
-- Demo video published: https://youtu.be/wcVoqJXqPhc (replays the judge path + public proof).
-- Add one more RWA evidence source behind the same source-hash pipeline.
-- Turn the evidence graph digest into the primary public proof anchor for source freshness and provenance.
-- Document a signer rotation and live-submit runbook.
+Public audit pack (no keys):
 
-## 60 Days
+- https://omniyield.app/try#desk-story
+- https://omniyield.app/api/public/proof (`live_verified`, `authoring`, `deskStory`, `cheatReverts`)
+- https://omniyield.app/api/public/cheat
+- Committed snapshot: `proofs/casper-buildathon-submission-proof.json`
 
-- Add a real paid evidence provider when an x402 receipt source is available.
-- Promote x402 from configured to verified only after receipt binding checks pass.
-- Expand public verifier checks for account, contract package, decision id, and
-  receipt dictionary values.
-- Publish a reusable proof-receipt template for other Casper agents.
-- Add dashboard comparison for latest proof artifact vs public endpoint.
-- Use receipt-history trust metrics as the first reputation primitive for partner agents.
+Non-claims: no LOIs, no invented partners, no mainnet yet.
 
-## 90 Days
+## 30 days — Testnet audit pack (now)
 
-- Prepare a mainnet-readiness checklist with funding, signer policy, alerting,
-  and incident rollback.
-- Package the proof endpoint and receipt verifier as a Casper ecosystem example.
-- Add partner-facing docs for DeFi risk desks and RWA issuers.
-- Extend agent trace capture to multiple model providers while keeping the
-  deterministic policy gate authoritative.
+- Keep public proof schema stable; Desk Story + Cheat Lab 6/6 + paid-act 3/3
+- On-chain reject/dissent receipts + ACL authoring + cross-contract vault reads
+- Demo video: https://youtu.be/wcVoqJXqPhc (desk path + public proof)
+- Signer rotation + live-submit runbook: `docs/finals-ops-runbook.md`
+- One additional RWA evidence source behind the same source-hash pipeline
 
-## Ecosystem Impact
+## 60 days — Design-partner dry-run
 
-OmniAgent is intentionally narrow: it shows how a Casper agent can make a risky
-off-chain decision auditable without giving judges or integrators private keys.
-The reusable piece is the pattern:
+- Run one collateral desk through `/try` Desk Story with their sample position IDs
+- Capture feedback on LTV / freeze semantics and audit-pack export
+- Promote x402 from configured → verified only after receipt binding checks pass
+- Publish a reusable proof-receipt template other Casper agents can verify
+- Dashboard compare: tracked proof artifact vs live `/api/public/proof`
 
-public evidence -> deterministic proof digest -> Casper receipt -> public proof
-packet -> verifier script.
+## 90 days — Mainnet readiness
+
+- Mainnet checklist: funding, signer policy, alerting, incident rollback
+- Deploy decision-proof + verified vault with the same public proof pattern
+- Partner-facing docs for DeFi risk desks and RWA issuers
+- Multi-provider agent trace capture; deterministic policy gate stays authoritative
+
+## Ecosystem impact
+
+OmniAgent is intentionally narrow: a Casper agent that turns a risky off-chain
+financeability call into an ACL-gated receipt a vault can live-read — without
+giving judges private keys.
+
+Pattern:
+
+public evidence → proposer/critic/policy gate → Casper receipt (approve **or**
+reject) → vault enforce / fail-closed → public proof packet → verifier script

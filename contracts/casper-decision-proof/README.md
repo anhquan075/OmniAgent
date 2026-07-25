@@ -73,6 +73,19 @@ The live Testnet package for this submission is:
 
 Confirm live pins with `/api/public/proof` → `contractHash`, `authoring.mode=agent_acl`.
 
+## Blocked / dissent receipts
+
+`record_decision` accepts `policy_gate` in `{approved, blocked, hold, warn}` under the
+same Agent ACL.
+
+- **approved** — updates `latest_*` (live_verified surface)
+- **blocked / hold / warn** — writes `latest_blocked_*` without clobbering approved latest
+- Optional session args `proposer_verdict`, `critic_verdict`, `dissent_digest` are stored
+  for multi-agent audit readback
+- Vault still refuse-enforces non-approved receipts (`User(102)`)
+
+Read: `latest_blocked_receipt`. Public proof exposes `authoring.lastBlocked` + `deskStory`.
+
 ## Cheat Lab (ACL reverts)
 
 Published explorer canaries on `/try`:

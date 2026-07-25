@@ -133,6 +133,8 @@ if (proof.vault?.verificationMode !== "cross_contract") throw new Error("tracked
 if (proof.authoring?.mode !== "agent_acl") throw new Error("tracked proof authoring is not agent_acl");
 if (!proof.vault?.transactionHash) throw new Error("tracked proof missing verified vault canary");
 if ((proof.paidAct?.readyCount ?? 0) < 3) throw new Error("tracked proof missing paid-act steps");
+if ((proof.deskStory?.readyCount ?? 0) < 5) throw new Error("tracked proof missing desk story steps");
+if (!proof.authoring?.lastBlocked?.transactionHash) throw new Error("tracked proof missing lastBlocked canary");
 if (proof.x402?.status !== "verified") throw new Error("tracked proof x402 is not verified");
 if (/CASPER_SECRET_KEY_PATH|API_OPERATOR_TOKEN|secret\.pem|\.env/.test(text)) throw new Error("tracked proof leaked private material");
 console.log(`tracked proof: ${proof.status} action=${proof.action} deploy=${String(proof.deployHash).slice(0, 12)}…`);

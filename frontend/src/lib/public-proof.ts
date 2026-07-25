@@ -144,10 +144,41 @@ export type PublicProofAuthoring = {
   aclEnabled?: boolean;
   canaryTransactionHash?: string | null;
   explorerUrl?: string | null;
+  lastBlocked?: {
+    decisionId?: string | null;
+    transactionHash?: string | null;
+    explorerUrl?: string | null;
+    policyGate?: string | null;
+    enforceRevertTransactionHash?: string | null;
+    enforceRevertExplorerUrl?: string | null;
+    note?: string | null;
+  } | null;
   userErrors?: {
     unauthorizedCaller?: number;
     mismatchedAgentField?: number;
   };
+};
+
+export type DeskStoryStep = {
+  id: string;
+  title: string;
+  detail: string;
+  href?: string | null;
+  transactionHash?: string | null;
+  explorerUrl?: string | null;
+  enforceRevertTransactionHash?: string | null;
+  enforceRevertExplorerUrl?: string | null;
+  status: string;
+};
+
+export type DeskStory = {
+  status: string;
+  count: number;
+  readyCount: number;
+  tryPath: string;
+  videoUrl?: string | null;
+  videoNote?: string | null;
+  steps: DeskStoryStep[];
 };
 
 export type PublicProof = {
@@ -161,6 +192,7 @@ export type PublicProof = {
   videoUrl: string | null;
   proofDigest: string | null;
   authoring?: PublicProofAuthoring | null;
+  deskStory?: DeskStory | null;
   x402?: {
     status?: string | null;
     bindingStatus?: string | null;

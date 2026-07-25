@@ -32,18 +32,18 @@ RWA collateral financing gate on Casper — fail-closed AI risk loop, ACL-gated 
 
 ## Judge path (≈5 minutes)
 
-1. Open https://omniyield.app/try — live decision, vault entry, risk Cheat Lab, x402 buy→verify→act
-2. Open https://omniyield.app/api/public/proof — expect `status=live_verified`, `authoring.mode=agent_acl`, `vault.verificationMode=cross_contract`, `cheatReverts` **6/6**
-3. Open the latest `haircut` decision (row 5) and the cross-contract enforce (row 7)
+1. Open https://omniyield.app/try#desk-story — guided Desk Story (402 → haircut → enforce → **on-chain reject cannot-enforce** → ACL cheat)
+2. Open https://omniyield.app/api/public/proof — expect `status=live_verified`, `authoring.mode=agent_acl`, `authoring.lastBlocked`, `deskStory` 5/5, `vault.verificationMode=cross_contract`, `cheatReverts` **6/6**
+3. Open the latest `haircut` decision and the cross-contract enforce (proof table)
 4. On `/try`, run paid evidence: unpaid → HTTP **402** → verify settle → enforce from paid
 5. Click the six Cheat Lab attacks — vault and authoring fail-closed with explorer User errors
-6. Optional: freeze / unfreeze / set_ltv canaries (rows 8–10) — collateral state actually changed
+6. Optional: freeze / unfreeze / set_ltv canaries — collateral state actually changed
 
 Demo: https://omniyield.app  
-Desk console / try path: https://omniyield.app/try  
+Desk Story: https://omniyield.app/try#desk-story  
 Public proof: https://omniyield.app/api/public/proof  
 Repo: https://github.com/anhquan075/OmniAgent  
-Video: https://youtu.be/wcVoqJXqPhc
+Video (≤90s desk path): https://youtu.be/wcVoqJXqPhc
 
 ## The financing question
 
@@ -108,14 +108,18 @@ Setup: https://omniyield.app/api/x402/setup
 
 ## Differentiator
 
-OmniAgent is an **RWA collateral financing gate**, not an attestation toy. Fresh evidence feeds a fail-closed AI risk loop; only the authorized agent can seal the Casper receipt; the vault live-reads that receipt before changing financeability. Desks and judges can replay the whole path at `/try` and `/api/public/proof` without private keys.
+OmniAgent is an **RWA collateral financing gate**, not an attestation toy. Fresh evidence feeds a fail-closed AI risk loop; only the authorized agent can seal the Casper receipt (**including on-chain rejects with critic dissent**); the vault live-reads that receipt before changing financeability — and refuse-enforces blocked gates. Desks and judges replay the Desk Story at `/try#desk-story` without private keys.
 
-## Roadmap
+## Roadmap (desk-pilot pack)
 
-1. Keep high-frequency Testnet canaries through finals
-2. Mainnet decision-proof + vault with the same public proof pattern
-3. Pilot with an RWA collateral desk (financeability gate + audit pack)
+1. **30d** — Keep Testnet audit pack live (Desk Story, Cheat Lab 6/6, reject/dissent canaries)
+2. **60d** — One design-partner dry-run with a collateral desk on `/try`
+3. **90d** — Mainnet decision-proof + vault with the same public proof pattern
 4. Open the proof API so other Casper agents can verify OmniAgent receipts
+
+Full pack: https://github.com/anhquan075/OmniAgent/blob/main/docs/casper-launch-roadmap.md
+
+Explicit non-claims: no fabricated LOIs or partners.
 
 ## Socials / contact
 

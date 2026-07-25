@@ -34,14 +34,14 @@ script. It is built as a Casper-only demo for the
 
 ## Judge path (≈5 minutes)
 
-1. Open [https://omniyield.app](https://omniyield.app) — flight deck + latest proof
-2. Open [https://omniyield.app/try](https://omniyield.app/try) — Cheat Lab (6 intentional reverts) + x402 buy→verify→act
-3. Open [https://omniyield.app/api/public/proof](https://omniyield.app/api/public/proof) — public-safe JSON (`status=live_verified`, no keys)
-4. Confirm `authoring.mode=agent_acl`, `vault.verificationMode=cross_contract`, `cheatReverts` 6/6
-5. Hit [https://omniyield.app/api/x402/rwa-evidence](https://omniyield.app/api/x402/rwa-evidence) unpaid → HTTP **402** on `casper:casper-test`
-6. Open the latest decision / vault / Cheat Lab explorer links from the proof table
+1. Open [https://omniyield.app/try#desk-story](https://omniyield.app/try#desk-story) — guided Desk Story (402 → haircut → enforce → on-chain reject → ACL cheat)
+2. Open [https://omniyield.app/api/public/proof](https://omniyield.app/api/public/proof) — public-safe JSON (`status=live_verified`, `deskStory`, no keys)
+3. Confirm `authoring.mode=agent_acl`, `authoring.lastBlocked`, `vault.verificationMode=cross_contract`, `cheatReverts` 6/6
+4. Hit [https://omniyield.app/api/x402/rwa-evidence](https://omniyield.app/api/x402/rwa-evidence) unpaid → HTTP **402** on `casper:casper-test`
+5. Open the latest decision / vault / Cheat Lab explorer links from the proof table
 
 Full DoraHacks paste: [`docs/dorahacks-finals-description.md`](docs/dorahacks-finals-description.md)
+Desk-pilot launch pack: [`docs/casper-launch-roadmap.md`](docs/casper-launch-roadmap.md)
 
 ## Current Public Deployment
 

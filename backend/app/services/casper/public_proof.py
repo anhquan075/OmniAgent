@@ -56,6 +56,7 @@ class CasperPublicProofService:
             "contractHash": settings.casper_decision_contract_hash,
             "contractPackageHash": settings.casper_decision_contract_package_hash,
             "authoring": CasperPublicProofService._authoring(settings),
+            "deskStory": CasperPublicProofService._desk_story(settings),
             "contractLinks": CasperPublicProofService._contract_links(settings),
             "decisionReceipt": receipt,
             "evidenceGraph": CasperPublicProofService._evidence_graph(decision),
@@ -490,17 +491,121 @@ class CasperPublicProofService:
         canary = CasperPublicProofService._string_or_none(
             getattr(settings, "casper_decision_acl_canary_tx_hash", None)
         )
+        blocked_tx = CasperPublicProofService._string_or_none(
+            getattr(settings, "casper_decision_blocked_canary_tx_hash", None)
+        )
+        blocked_id = CasperPublicProofService._string_or_none(
+            getattr(settings, "casper_decision_blocked_decision_id", None)
+        )
+        blocked_enforce = CasperPublicProofService._string_or_none(
+            getattr(settings, "casper_decision_blocked_enforce_revert_tx_hash", None)
+        )
         explorer = str(settings.casper_explorer_url or "").rstrip("/")
+        last_blocked = None
+        if blocked_tx or blocked_id:
+            last_blocked = {
+                "decisionId": blocked_id,
+                "transactionHash": blocked_tx,
+                "explorerUrl": f"{explorer}/deploy/{blocked_tx}" if explorer and blocked_tx else None,
+                "policyGate": "blocked",
+                "enforceRevertTransactionHash": blocked_enforce,
+                "enforceRevertExplorerUrl": (
+                    f"{explorer}/deploy/{blocked_enforce}"
+                    if explorer and blocked_enforce
+                    else None
+                ),
+                "note": (
+                    "Fail-closed reject is sealed on-chain; vault still refuses "
+                    "to enforce from a non-approved receipt (User 102)."
+                ),
+            }
         return {
             "mode": "agent_acl" if acl_enabled else "public_record",
             "authorizedAgentAccountHash": authorized,
             "aclEnabled": acl_enabled,
             "canaryTransactionHash": canary,
             "explorerUrl": f"{explorer}/deploy/{canary}" if explorer and canary else None,
+            "lastBlocked": last_blocked,
             "userErrors": {
                 "unauthorizedCaller": 130,
                 "mismatchedAgentField": 131,
             },
+        }
+
+    @staticmethod
+    def _desk_story(settings: Any) -> dict[str, Any]:
+        explorer = str(settings.casper_explorer_url or "").rstrip("/")
+        blocked_tx = CasperPublicProofService._string_or_none(
+            getattr(settings, "casper_decision_blocked_canary_tx_hash", None)
+        )
+        blocked_enforce = CasperPublicProofService._string_or_none(
+            getattr(settings, "casper_decision_blocked_enforce_revert_tx_hash", None)
+        )
+        haircut_tx = "87734909bab1a83890228b59a66c64fd7636ce99eb4beeb4ac5d9c07b990bb22"
+        enforce_tx = "599dc698b0d7c52bd3d0ef86f819a47459100cf289b36db5f3fada0fe4354b1b"
+        cheat_tx = "1b6c37f5839881af4ee0f6e6f53c1061dc6897b09180904e7e404a3660bfd23b"
+
+        def _link(tx: str | None) -> str | None:
+            return f"{explorer}/deploy/{tx}" if explorer and tx else None
+
+        steps = [
+            {
+                "id": "probe_unpaid",
+                "title": "Probe unpaid evidence",
+                "detail": "GET /api/x402/rwa-evidence without payment returns HTTP 402 on casper:casper-test.",
+                "href": "/api/x402/rwa-evidence",
+                "status": "ready",
+            },
+            {
+                "id": "live_haircut",
+                "title": "Live haircut decision",
+                "detail": "ACL-gated record_decision seals an approved haircut receipt.",
+                "transactionHash": haircut_tx,
+                "explorerUrl": _link(haircut_tx),
+                "status": "ready",
+            },
+            {
+                "id": "cross_contract_enforce",
+                "title": "Cross-contract enforce",
+                "detail": "enforce_verified live-reads decision-proof and lowers LTV.",
+                "transactionHash": enforce_tx,
+                "explorerUrl": _link(enforce_tx),
+                "status": "ready",
+            },
+            {
+                "id": "onchain_reject",
+                "title": "On-chain reject cannot enforce",
+                "detail": (
+                    "A blocked policy-gate receipt is sealed on-chain with critic dissent; "
+                    "vault enforce from that receipt reverts (User 102)."
+                ),
+                "transactionHash": blocked_tx,
+                "explorerUrl": _link(blocked_tx),
+                "enforceRevertTransactionHash": blocked_enforce,
+                "enforceRevertExplorerUrl": _link(blocked_enforce),
+                "status": "ready" if blocked_tx and blocked_enforce else "pending",
+            },
+            {
+                "id": "cheat_acl",
+                "title": "Cheat Lab ACL reject",
+                "detail": "Unauthorized recorder reverts with User(130).",
+                "transactionHash": cheat_tx,
+                "explorerUrl": _link(cheat_tx),
+                "status": "ready",
+            },
+        ]
+        ready = sum(1 for step in steps if step.get("status") == "ready")
+        return {
+            "status": "ready" if ready == len(steps) else "partial",
+            "count": len(steps),
+            "readyCount": ready,
+            "tryPath": "/try#desk-story",
+            "videoUrl": CasperPublicProofService._string_or_none(settings.casper_demo_video_url),
+            "videoNote": (
+                "≤90s desk path: haircut enforce, then on-chain reject that cannot move collateral. "
+                "Replay the same steps live on /try."
+            ),
+            "steps": steps,
         }
 
     @staticmethod

@@ -43,6 +43,29 @@ class CasperDecisionContractService:
             or explicit_agent
             or ""
         )
+        roles = guardrails.get("roles") if isinstance(guardrails.get("roles"), list) else []
+        proposer_verdict = ""
+        critic_verdict = ""
+        for role in roles:
+            if not isinstance(role, dict):
+                continue
+            name = str(role.get("agentRole") or "")
+            verdict = str(role.get("verdict") or "")
+            if name == "proposer":
+                proposer_verdict = verdict
+            elif name == "critic":
+                critic_verdict = verdict
+        if args.get("proposerVerdict") or args.get("proposer_verdict"):
+            proposer_verdict = str(args.get("proposerVerdict") or args.get("proposer_verdict") or "")
+        if args.get("criticVerdict") or args.get("critic_verdict"):
+            critic_verdict = str(args.get("criticVerdict") or args.get("critic_verdict") or "")
+        dissent_digest = str(
+            args.get("dissentDigest")
+            or args.get("dissent_digest")
+            or ""
+        )
+        if not dissent_digest and (proposer_verdict or critic_verdict):
+            dissent_digest = sha256_text(f"{proposer_verdict}|{critic_verdict}|{policy_gate}")
         payload = {
             "network": "casper-testnet",
             "decisionId": str(args.get("decisionId") or args.get("decision_id") or "casper-decision"),
@@ -61,6 +84,9 @@ class CasperDecisionContractService:
                 or guardrails.get("guardrailHash")
                 or ""
             ),
+            "proposerVerdict": proposer_verdict,
+            "criticVerdict": critic_verdict,
+            "dissentDigest": dissent_digest,
             "materialityGate": {
                 "confidence": confidence,
                 "threshold": threshold,
@@ -107,8 +133,11 @@ class CasperDecisionContractService:
         blockers = list(preflight["hardBlockers"])
         if submit and not live_flag:
             blockers.append("casper_live_submit_flag_missing")
-        if submit and decision.get("policyGate") != "approved":
-            blockers.append("casper_policy_gate_blocked")
+        # Approved and blocked/hold/warn receipts may both be sealed on-chain.
+        # Vault enforcement still fail-closes unless policy_gate=approved.
+        known_gates = {"approved", "blocked", "hold", "warn"}
+        if submit and decision.get("policyGate") not in known_gates:
+            blockers.append("casper_policy_gate_invalid")
         if submit:
             blockers.extend(CasperDecisionContractService.live_payload_blockers(decision))
         submit_result: dict[str, Any] = {}

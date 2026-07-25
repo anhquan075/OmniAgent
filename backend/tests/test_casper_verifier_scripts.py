@@ -29,6 +29,8 @@ def test_tracked_proof_artifact_is_live_verified() -> None:
     assert proof["vault"]["verificationMode"] == "cross_contract"
     assert proof["authoring"]["mode"] == "agent_acl"
     assert proof["vault"]["transactionHash"]
+    assert proof["deskStory"]["readyCount"] >= 5
+    assert proof["authoring"]["lastBlocked"]["transactionHash"]
 
 
 def test_proof_artifact_verifier_script_exists() -> None:

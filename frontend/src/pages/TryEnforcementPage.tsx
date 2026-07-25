@@ -17,6 +17,7 @@ import {
   runPaidActStep,
   type CheatRunResult,
   type CheatScenario,
+  type DeskStoryStep,
   type PaidActRunResult,
   type PaidActStep,
   type PublicProof,
@@ -31,6 +32,50 @@ type StoryStep = {
   icon: 'freeze' | 'ltv' | 'unfreeze';
   canaryHash?: string;
 };
+
+const FALLBACK_DESK_STORY: DeskStoryStep[] = [
+  {
+    id: 'probe_unpaid',
+    title: 'Probe unpaid evidence',
+    detail: 'GET /api/x402/rwa-evidence without payment returns HTTP 402 on casper:casper-test.',
+    href: '/api/x402/rwa-evidence',
+    status: 'ready',
+  },
+  {
+    id: 'live_haircut',
+    title: 'Live haircut decision',
+    detail: 'ACL-gated record_decision seals an approved haircut receipt.',
+    transactionHash: '87734909bab1a83890228b59a66c64fd7636ce99eb4beeb4ac5d9c07b990bb22',
+    explorerUrl:
+      'https://testnet.cspr.live/deploy/87734909bab1a83890228b59a66c64fd7636ce99eb4beeb4ac5d9c07b990bb22',
+    status: 'ready',
+  },
+  {
+    id: 'cross_contract_enforce',
+    title: 'Cross-contract enforce',
+    detail: 'enforce_verified live-reads decision-proof and lowers LTV.',
+    transactionHash: '599dc698b0d7c52bd3d0ef86f819a47459100cf289b36db5f3fada0fe4354b1b',
+    explorerUrl:
+      'https://testnet.cspr.live/deploy/599dc698b0d7c52bd3d0ef86f819a47459100cf289b36db5f3fada0fe4354b1b',
+    status: 'ready',
+  },
+  {
+    id: 'onchain_reject',
+    title: 'On-chain reject cannot enforce',
+    detail:
+      'A blocked policy-gate receipt is sealed on-chain with critic dissent; vault enforce reverts (User 102).',
+    status: 'pending',
+  },
+  {
+    id: 'cheat_acl',
+    title: 'Cheat Lab ACL reject',
+    detail: 'Unauthorized recorder reverts with User(130).',
+    transactionHash: '1b6c37f5839881af4ee0f6e6f53c1061dc6897b09180904e7e404a3660bfd23b',
+    explorerUrl:
+      'https://testnet.cspr.live/deploy/1b6c37f5839881af4ee0f6e6f53c1061dc6897b09180904e7e404a3660bfd23b',
+    status: 'ready',
+  },
+];
 
 const STORY: StoryStep[] = [
   {
@@ -232,6 +277,7 @@ export default function TryEnforcementPage() {
   const [paidBusyId, setPaidBusyId] = useState<string | null>(null);
   const [paidResults, setPaidResults] = useState<Record<string, PaidActRunResult>>({});
   const [paidError, setPaidError] = useState<string | null>(null);
+  const [deskActive, setDeskActive] = useState(0);
 
   useEffect(() => {
     document.title = 'OmniAgent — Try the enforcement';
@@ -273,6 +319,11 @@ export default function TryEnforcementPage() {
   const cheatReady = proof?.cheatReverts?.readyCount ?? 0;
   const paidSteps = proof?.paidAct?.steps?.length ? proof.paidAct.steps : FALLBACK_PAID_ACT;
   const paidReady = proof?.paidAct?.readyCount ?? 0;
+  const deskSteps = proof?.deskStory?.steps?.length
+    ? proof.deskStory.steps
+    : FALLBACK_DESK_STORY;
+  const deskReady = proof?.deskStory?.readyCount ?? deskSteps.filter((s) => s.status === 'ready').length;
+  const deskVideo = proof?.deskStory?.videoUrl || proof?.videoUrl || 'https://youtu.be/wcVoqJXqPhc';
 
   async function onCheatClick(scenarioId: string) {
     setCheatError(null);
@@ -570,6 +621,122 @@ export default function TryEnforcementPage() {
           </div>
         </section>
 
+        </section>
+
+        <section className="try-page-section" id="desk-story">
+          <div className="try-page-section-head">
+            <h2>Desk Story — financeability gate</h2>
+            <p>
+              Five guided steps a collateral desk can replay: unpaid 402 → approved haircut →
+              cross-contract enforce → on-chain reject that cannot move collateral → ACL cheat.{' '}
+              {deskReady}/{deskSteps.length} explorer proofs ready.
+            </p>
+          </div>
+          <div className="try-desk-toolbar">
+            <a className="try-cta try-cta-primary" href={deskVideo} target="_blank" rel="noreferrer">
+              Watch ≤90s walkthrough
+              <ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+            </a>
+            <p className="try-desk-video-note">
+              {proof?.deskStory?.videoNote ||
+                'Filmed path covers enforce + reject-cannot-enforce; click each step for live explorer links.'}
+            </p>
+          </div>
+          <ol className="try-desk-steps">
+            {deskSteps.map((step, index) => {
+              const active = deskActive === index;
+              return (
+                <li key={step.id}>
+                  <button
+                    type="button"
+                    className={`flight-panel try-desk-step${active ? ' is-active' : ''}${
+                      step.status === 'ready' ? ' is-ready' : ''
+                    }`}
+                    onClick={() => setDeskActive(index)}
+                  >
+                    <span className="try-desk-index">{index + 1}</span>
+                    <span className="try-desk-copy">
+                      <strong>{step.title}</strong>
+                      <span>{step.detail}</span>
+                    </span>
+                    <span className="try-desk-status">{step.status}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+          {deskSteps[deskActive] ? (
+            <div className="flight-panel try-desk-detail">
+              <div className="flight-panel-head">
+                <h3>
+                  Step {deskActive + 1}: {deskSteps[deskActive].title}
+                </h3>
+                <span>{deskSteps[deskActive].status}</span>
+              </div>
+              <p>{deskSteps[deskActive].detail}</p>
+              <div className="try-link-row">
+                {deskSteps[deskActive].href ? (
+                  <a
+                    className="try-cta"
+                    href={deskSteps[deskActive].href!}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open endpoint
+                    <ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                  </a>
+                ) : null}
+                {deskSteps[deskActive].transactionHash && deskSteps[deskActive].explorerUrl ? (
+                  <a
+                    className="chain-proof-link"
+                    href={deskSteps[deskActive].explorerUrl!}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />
+                    <span translate="no">{shortHash(deskSteps[deskActive].transactionHash!)}</span>
+                    <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
+                  </a>
+                ) : null}
+                {deskSteps[deskActive].enforceRevertTransactionHash &&
+                deskSteps[deskActive].enforceRevertExplorerUrl ? (
+                  <a
+                    className="chain-proof-link"
+                    href={deskSteps[deskActive].enforceRevertExplorerUrl!}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ShieldXIcon className="h-3 w-3" aria-hidden="true" />
+                    <span translate="no">
+                      revert {shortHash(deskSteps[deskActive].enforceRevertTransactionHash!)}
+                    </span>
+                    <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
+                  </a>
+                ) : null}
+              </div>
+              <div className="try-desk-nav">
+                <button
+                  type="button"
+                  className="try-cta"
+                  disabled={deskActive <= 0}
+                  onClick={() => setDeskActive((n) => Math.max(0, n - 1))}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  className="try-cta try-cta-primary"
+                  disabled={deskActive >= deskSteps.length - 1}
+                  onClick={() => setDeskActive((n) => Math.min(deskSteps.length - 1, n + 1))}
+                >
+                  Next step
+                  <ArrowRightIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </section>
+
         <section className="try-page-section">
           <div className="try-page-section-head">
             <h2>Decision → vault state change</h2>
@@ -635,6 +802,10 @@ export default function TryEnforcementPage() {
             <span>no login</span>
           </div>
           <ol className="try-judge-list">
+            <li>
+              Walk the <a href="#desk-story">Desk Story</a> — unpaid 402 → haircut → enforce →
+              on-chain reject cannot-enforce → ACL cheat.
+            </li>
             <li>
               Open this page — confirm decision action and vault entry above.
             </li>

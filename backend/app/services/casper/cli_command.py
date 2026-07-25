@@ -91,6 +91,9 @@ class CasperCliCommand:
             "policy_gate": ("string", decision.get("policyGate")),
             "agent_account_hash": ("string", decision.get("agentAccountHash")),
             "guardrail_hash": ("string", decision.get("guardrailHash")),
+            "proposer_verdict": ("string", decision.get("proposerVerdict") or ""),
+            "critic_verdict": ("string", decision.get("criticVerdict") or ""),
+            "dissent_digest": ("string", decision.get("dissentDigest") or ""),
         }
         command_args: list[str] = []
         for name, (arg_type, value) in args.items():

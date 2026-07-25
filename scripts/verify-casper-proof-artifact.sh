@@ -24,6 +24,8 @@ if (!String(proof.authoring?.authorizedAgentAccountHash || "").startsWith("9b62e
 }
 if (!proof.vault?.transactionHash) fail("missing verified vault canary hash");
 if ((proof.paidAct?.readyCount ?? 0) < 3) fail("paidAct.readyCount < 3");
+if ((proof.deskStory?.readyCount ?? 0) < 5) fail("deskStory.readyCount < 5");
+if (!proof.authoring?.lastBlocked?.transactionHash) fail("authoring.lastBlocked missing");
 if (proof.x402?.status !== "verified") fail(`x402.status=${proof.x402?.status}`);
 const settle = proof.x402?.receipt?.settlementTxHash || proof.paidAct?.settlementTxHash;
 if (!settle) fail("missing x402 settlementTxHash");

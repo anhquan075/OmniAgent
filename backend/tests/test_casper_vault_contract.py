@@ -95,3 +95,19 @@ def test_decision_proof_record_decision_enforces_agent_acl() -> None:
     assert "ACL_ROTATION_ENABLED_KEY" in keys
     assert 'runtime::try_get_named_arg::<String>("agent_account_hash")' in install
     assert "omniagent_decision_proof_acl_seeded" in keys
+
+
+def test_decision_proof_sealed_blocked_receipts_and_dissent() -> None:
+    main = DECISION_MAIN.read_text(encoding="utf-8")
+    install = DECISION_INSTALL.read_text(encoding="utf-8")
+    keys = (ROOT / "contracts" / "casper-decision-proof" / "src" / "keys.rs").read_text(
+        encoding="utf-8"
+    )
+
+    assert "is_known_policy_gate" in main
+    assert "LATEST_BLOCKED_RECEIPT_KEY" in main
+    assert "LATEST_DISSENT_DIGEST_KEY" in main
+    assert "fn latest_blocked_receipt()" in main
+    assert "ENTRY_POINT_LATEST_BLOCKED_RECEIPT" in install
+    assert "proposer_verdict" in install
+    assert "BLOCKED_SEEDED_MARKER" in keys

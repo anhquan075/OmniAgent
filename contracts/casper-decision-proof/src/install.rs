@@ -46,6 +46,7 @@ pub fn install_contract() {
     );
     runtime::put_key(CONTRACT_KEY, contract_hash.into());
     runtime::put_key(ACL_SEEDED_MARKER, storage::new_uref(true).into());
+    runtime::put_key(BLOCKED_SEEDED_MARKER, storage::new_uref(true).into());
 }
 
 fn upgrade_contract() {
@@ -71,15 +72,35 @@ fn upgrade_contract() {
             );
             runtime::put_key(ACL_SEEDED_MARKER, storage::new_uref(true).into());
         } else {
-            // Same-deploy rotation: enable one-shot overwrite of a bad seed.
-            new_keys.insert(
-                ACL_ROTATION_ENABLED_KEY.to_string(),
-                storage::new_uref(true).into(),
-            );
-            rotate_agent = Some(authorized);
+            // authorized_agent lives on the contract, not the installer account.
+            // Re-passing the same agent on a feature upgrade must be a no-op:
+            // a prior rotation leaves acl_rotation_enabled=false on an inherited
+            // URef, and a fresh named-key insert does not override it (User 132).
+            // Opt-in rotation only via force_rotate_agent=true.
+            let force = runtime::try_get_named_arg::<bool>("force_rotate_agent").unwrap_or(false);
+            if force {
+                new_keys.insert(
+                    ACL_ROTATION_ENABLED_KEY.to_string(),
+                    storage::new_uref(true).into(),
+                );
+                rotate_agent = Some(authorized);
+            }
         }
     } else if runtime::get_key(ACL_SEEDED_MARKER).is_none() {
         runtime::revert(ApiError::MissingArgument);
+    }
+    if runtime::get_key(BLOCKED_SEEDED_MARKER).is_none() {
+        for key in [
+            LATEST_BLOCKED_DECISION_ID_KEY,
+            LATEST_BLOCKED_RECEIPT_KEY,
+            LATEST_BLOCKED_POLICY_GATE_KEY,
+            LATEST_PROPOSER_VERDICT_KEY,
+            LATEST_CRITIC_VERDICT_KEY,
+            LATEST_DISSENT_DIGEST_KEY,
+        ] {
+            new_keys.insert(key.to_string(), storage::new_uref(String::new()).into());
+        }
+        runtime::put_key(BLOCKED_SEEDED_MARKER, storage::new_uref(true).into());
     }
     let (contract_hash, contract_version) = storage::add_contract_version(
         package_hash.into(),
@@ -140,6 +161,16 @@ fn named_keys() -> NamedKeys {
         LATEST_RISK_SCORE_KEY.to_string(),
         storage::new_uref(0_u64).into(),
     );
+    for key in [
+        LATEST_BLOCKED_DECISION_ID_KEY,
+        LATEST_BLOCKED_RECEIPT_KEY,
+        LATEST_BLOCKED_POLICY_GATE_KEY,
+        LATEST_PROPOSER_VERDICT_KEY,
+        LATEST_CRITIC_VERDICT_KEY,
+        LATEST_DISSENT_DIGEST_KEY,
+    ] {
+        keys.insert(key.to_string(), storage::new_uref(String::new()).into());
+    }
     keys
 }
 
@@ -158,6 +189,9 @@ fn entry_points() -> EntryPoints {
             Parameter::new("policy_gate", CLType::String),
             Parameter::new("agent_account_hash", CLType::String),
             Parameter::new("guardrail_hash", CLType::String),
+            Parameter::new("proposer_verdict", CLType::String),
+            Parameter::new("critic_verdict", CLType::String),
+            Parameter::new("dissent_digest", CLType::String),
         ],
         CLType::Unit,
         EntryPointAccess::Public,
@@ -166,6 +200,7 @@ fn entry_points() -> EntryPoints {
     ));
     entry_points.add_entry_point(read_entry_point(ENTRY_POINT_LATEST_RECEIPT));
     entry_points.add_entry_point(read_entry_point(ENTRY_POINT_LATEST_DIGEST));
+    entry_points.add_entry_point(read_entry_point(ENTRY_POINT_LATEST_BLOCKED_RECEIPT));
     entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_GET_RECEIPT,
         vec![Parameter::new("decision_id", CLType::String)],
