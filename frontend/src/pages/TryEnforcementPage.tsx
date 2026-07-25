@@ -269,24 +269,20 @@ export default function TryEnforcementPage() {
 
   return (
     <div className="casper-shell relative min-h-[100dvh] w-full overflow-x-hidden">
-      <div className="relative z-10 mx-auto flex w-full max-w-[1100px] flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10">
-        <header className="flex flex-wrap items-end justify-between gap-4 border-b border-[var(--color-glass-border)] pb-6">
-          <div className="min-w-0 space-y-3">
-            <p className="text-xs font-semibold tracking-[0.18em] text-[var(--color-casper-red-soft)] uppercase">
-              OmniAgent
-            </p>
-            <h1 className="max-w-xl text-balance text-3xl font-semibold tracking-tight text-[var(--color-casper-cream)] sm:text-4xl">
-              Try the enforcement
-            </h1>
-            <p className="max-w-2xl text-sm leading-relaxed text-[var(--color-casper-muted)] sm:text-base">
+      <div className="try-page">
+        <header className="try-page-header">
+          <div className="try-page-brand">
+            <p className="try-page-brand-mark">OmniAgent</p>
+            <h1>Try the enforcement</h1>
+            <p className="try-page-lede">
               Most finalists attest. OmniAgent enforces. A fail-closed AI debate writes a Casper
               decision receipt, then the vault applies{' '}
-              <span className="text-[var(--color-casper-cream)]">freeze / unfreeze / set_ltv</span>
+              <span>freeze / unfreeze / set_ltv</span>
               . Pay for evidence over native x402, then act — cheat attempts revert on-chain.
               Replayable without private keys.
             </p>
           </div>
-          <nav className="flex flex-wrap gap-2">
+          <nav className="try-page-nav" aria-label="Try page links">
             <a className="try-cta try-cta-primary" href="/">
               Open cockpit
             </a>
@@ -307,7 +303,7 @@ export default function TryEnforcementPage() {
             <span>{statusChip}</span>
           </div>
           {error && !loading ? (
-            <p className="text-sm text-[var(--color-status-danger)]">
+            <p className="try-page-error" role="alert">
               {error}. Refresh this page, or open{' '}
               <a href="/api/public/proof" target="_blank" rel="noreferrer">
                 /api/public/proof
@@ -368,28 +364,26 @@ export default function TryEnforcementPage() {
                 ) : null}
               </div>
               {vault?.stateDelta?.summary ? (
-                <p className="text-sm text-[var(--color-casper-muted)]">{vault.stateDelta.summary}</p>
+                <p className="try-live-summary">{vault.stateDelta.summary}</p>
               ) : null}
             </>
           ) : null}
         </section>
 
-        <section className="space-y-4" id="cheat-lab">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-[var(--color-casper-cream)]">
-              Cheat Lab — try to break the vault
-            </h2>
-            <p className="text-sm text-[var(--color-casper-muted)]">
+        <section className="try-page-section" id="cheat-lab">
+          <div className="try-page-section-head">
+            <h2>Cheat Lab — try to break the vault</h2>
+            <p>
               Three intentional attacks. Each one should revert on Casper with a User error — no
               collateral moves. {cheatReady}/3 explorer proofs published.
             </p>
           </div>
           {cheatError ? (
-            <p className="text-sm text-[var(--color-status-danger)]" role="alert">
+            <p className="try-page-error" role="alert">
               {cheatError}
             </p>
           ) : null}
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="try-page-grid">
             {cheatScenarios.map((scenario) => {
               const result = cheatResults[scenario.id];
               const busy = cheatBusyId === scenario.id;
@@ -400,20 +394,38 @@ export default function TryEnforcementPage() {
               const shown = Boolean(result) || Boolean(txHash);
               return (
                 <article key={scenario.id} className="flight-panel try-cheat-card">
-                  <div className="flex items-center gap-2 text-[var(--color-casper-red-soft)]">
-                    <BanIcon className="h-4 w-4" aria-hidden="true" />
-                    <span className="text-xs font-semibold tracking-wide uppercase">
-                      User({scenario.expectedUserError})
-                    </span>
+                  <div className="try-card-body">
+                    <div className="try-card-kicker">
+                      <BanIcon className="h-4 w-4" aria-hidden="true" />
+                      <span>User({scenario.expectedUserError})</span>
+                    </div>
+                    <h3>{scenario.title}</h3>
+                    <p>{scenario.explanation}</p>
+                    <p className="try-cheat-attack">
+                      <ShieldXIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      <span>{scenario.attack}</span>
+                    </p>
+                    {shown ? (
+                      <div className="try-cheat-result" aria-live="polite">
+                        <strong translate="no">{errorLabel}</strong>
+                        <span>{scenario.expectedOutcome}</span>
+                        {txHash && explorerUrl ? (
+                          <a
+                            className="chain-proof-link"
+                            href={explorerUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />
+                            <span translate="no">{shortHash(txHash)}</span>
+                            <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
+                          </a>
+                        ) : (
+                          <span className="chain-proof-missing">canary pending — seed script required</span>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
-                  <h3 className="text-base font-semibold text-[var(--color-casper-cream)]">
-                    {scenario.title}
-                  </h3>
-                  <p className="text-sm text-[var(--color-casper-muted)]">{scenario.explanation}</p>
-                  <p className="try-cheat-attack">
-                    <ShieldXIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    <span>{scenario.attack}</span>
-                  </p>
                   <button
                     type="button"
                     className="try-cheat-btn"
@@ -422,48 +434,26 @@ export default function TryEnforcementPage() {
                   >
                     {busy ? 'Checking chain…' : 'Try to cheat'}
                   </button>
-                  {shown ? (
-                    <div className="try-cheat-result" aria-live="polite">
-                      <strong translate="no">{errorLabel}</strong>
-                      <span>{scenario.expectedOutcome}</span>
-                      {txHash && explorerUrl ? (
-                        <a
-                          className="chain-proof-link"
-                          href={explorerUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />
-                          <span translate="no">{shortHash(txHash)}</span>
-                          <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
-                        </a>
-                      ) : (
-                        <span className="chain-proof-missing">canary pending — seed script required</span>
-                      )}
-                    </div>
-                  ) : null}
                 </article>
               );
             })}
           </div>
         </section>
 
-        <section className="space-y-4" id="paid-act">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-[var(--color-casper-cream)]">
-              x402 buy → verify → act
-            </h2>
-            <p className="text-sm text-[var(--color-casper-muted)]">
+        <section className="try-page-section" id="paid-act">
+          <div className="try-page-section-head">
+            <h2>x402 buy → verify → act</h2>
+            <p>
               Unpaid evidence returns HTTP 402. A bound CEP-18 settle unlocks enforce. {paidReady}/3
               steps ready for judges (no wallet required).
             </p>
           </div>
           {paidError ? (
-            <p className="text-sm text-[var(--color-status-danger)]" role="alert">
+            <p className="try-page-error" role="alert">
               {paidError}
             </p>
           ) : null}
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="try-page-grid">
             {paidSteps.map((step) => {
               const result = paidResults[step.id];
               const busy = paidBusyId === step.id;
@@ -473,16 +463,53 @@ export default function TryEnforcementPage() {
               const contrast = result?.contrast;
               return (
                 <article key={step.id} className="flight-panel try-paid-card">
-                  <div className="flex items-center gap-2 text-[var(--color-casper-red-soft)]">
-                    <CoinsIcon className="h-4 w-4" aria-hidden="true" />
-                    <span className="text-xs font-semibold tracking-wide uppercase">
-                      Step {step.order}
-                    </span>
+                  <div className="try-card-body">
+                    <div className="try-card-kicker">
+                      <CoinsIcon className="h-4 w-4" aria-hidden="true" />
+                      <span>Step {step.order}</span>
+                    </div>
+                    <h3>{step.title}</h3>
+                    <p>{step.explanation}</p>
+                    {shown ? (
+                      <div className="try-paid-result" aria-live="polite">
+                        <strong translate="no">
+                          {result?.httpStatus
+                            ? `HTTP ${result.httpStatus}`
+                            : result?.status}
+                          {result?.unlocked ? ' · unlocked' : ''}
+                        </strong>
+                        <span>{result?.expectedOutcome || step.expectedOutcome}</span>
+                        {contrast ? (
+                          <div className="try-paid-contrast">
+                            <span>
+                              <em>Unpaid</em> {contrast.unpaid}
+                            </span>
+                            <span>
+                              <em>Paid</em> {contrast.paid}
+                            </span>
+                          </div>
+                        ) : null}
+                        {result?.decisionAction || result?.vaultEntry ? (
+                          <span translate="no">
+                            {result.decisionAction || '—'}
+                            {result.vaultEntry ? ` → ${result.vaultEntry}` : ''}
+                          </span>
+                        ) : null}
+                        {txHash && explorerUrl ? (
+                          <a
+                            className="chain-proof-link"
+                            href={explorerUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />
+                            <span translate="no">{shortHash(txHash)}</span>
+                            <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
+                          </a>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
-                  <h3 className="text-base font-semibold text-[var(--color-casper-cream)]">
-                    {step.title}
-                  </h3>
-                  <p className="text-sm text-[var(--color-casper-muted)]">{step.explanation}</p>
                   <button
                     type="button"
                     className="try-paid-btn"
@@ -491,62 +518,21 @@ export default function TryEnforcementPage() {
                   >
                     {busy ? 'Running…' : step.actionLabel}
                   </button>
-                  {shown ? (
-                    <div className="try-paid-result" aria-live="polite">
-                      <strong translate="no">
-                        {result?.httpStatus
-                          ? `HTTP ${result.httpStatus}`
-                          : result?.status}
-                        {result?.unlocked ? ' · unlocked' : ''}
-                      </strong>
-                      <span>{result?.expectedOutcome || step.expectedOutcome}</span>
-                      {contrast ? (
-                        <div className="try-paid-contrast">
-                          <span>
-                            <em>Unpaid</em> {contrast.unpaid}
-                          </span>
-                          <span>
-                            <em>Paid</em> {contrast.paid}
-                          </span>
-                        </div>
-                      ) : null}
-                      {result?.decisionAction || result?.vaultEntry ? (
-                        <span translate="no">
-                          {result.decisionAction || '—'}
-                          {result.vaultEntry ? ` → ${result.vaultEntry}` : ''}
-                        </span>
-                      ) : null}
-                      {txHash && explorerUrl ? (
-                        <a
-                          className="chain-proof-link"
-                          href={explorerUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />
-                          <span translate="no">{shortHash(txHash)}</span>
-                          <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
-                        </a>
-                      ) : null}
-                    </div>
-                  ) : null}
                 </article>
               );
             })}
           </div>
         </section>
 
-        <section className="space-y-4">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-[var(--color-casper-cream)]">
-              Decision → vault state change
-            </h2>
-            <p className="text-sm text-[var(--color-casper-muted)]">
+        <section className="try-page-section">
+          <div className="try-page-section-head">
+            <h2>Decision → vault state change</h2>
+            <p>
               Before / after semantics from the public action map. Explorer links are live canaries
               (ledger when available, otherwise Jul-23 finals hashes).
             </p>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="try-page-grid">
             {STORY.map((step) => {
               const tx = findVaultTx(vault?.recentActions, step.vault, step.canaryHash);
               const active =
@@ -557,9 +543,9 @@ export default function TryEnforcementPage() {
                   key={step.vault}
                   className={`flight-panel try-story-card ${active ? 'is-active' : ''}`}
                 >
-                  <div className="flex items-center gap-2 text-[var(--color-casper-red-soft)]">
+                  <div className="try-card-kicker">
                     <StepIcon kind={step.icon} />
-                    <span className="text-xs font-semibold tracking-wide uppercase">
+                    <span>
                       {step.decision} → {step.vault}
                     </span>
                   </div>
@@ -597,7 +583,7 @@ export default function TryEnforcementPage() {
           </div>
         </section>
 
-        <section className="flight-panel space-y-3">
+        <section className="flight-panel try-judge-panel">
           <div className="flight-panel-head">
             <h2>5-minute judge path</h2>
             <span>no login</span>
@@ -631,7 +617,7 @@ export default function TryEnforcementPage() {
           </ol>
         </section>
 
-        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-glass-border)] pt-4 text-xs text-[var(--color-casper-faint)]">
+        <footer className="try-page-footer">
           <span translate="no">
             {loading
               ? 'Loading public proof…'
