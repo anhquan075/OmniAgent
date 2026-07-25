@@ -621,8 +621,6 @@ export default function TryEnforcementPage() {
           </div>
         </section>
 
-        </section>
-
         <section className="try-page-section" id="desk-story">
           <div className="try-page-section-head">
             <h2>Desk Story — financeability gate</h2>
