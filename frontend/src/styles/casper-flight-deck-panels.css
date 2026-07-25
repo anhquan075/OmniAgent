@@ -378,6 +378,44 @@
   color: var(--casper-red-soft);
 }
 
+.raw-evidence-preview details {
+  min-width: 0;
+}
+
+.raw-evidence-preview summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.raw-evidence-preview summary::-webkit-details-marker {
+  display: none;
+}
+
+.raw-evidence-preview summary h2 {
+  margin: 0;
+  font-size: 0.96rem;
+}
+
+.raw-evidence-preview summary span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.raw-evidence-preview summary:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.raw-evidence-preview details[open] summary {
+  margin-bottom: 10px;
+}
+
 .raw-evidence-preview pre {
   max-height: 180px;
   overflow: auto;
@@ -542,6 +580,18 @@
 .receipt-ledger-row.is-selected,
 .receipt-ledger-row:hover {
   background: rgba(230, 63, 55, 0.12);
+}
+
+.receipt-status.is-ok {
+  color: var(--green);
+}
+
+.receipt-status.is-blocked {
+  color: var(--casper-red-soft);
+}
+
+.receipt-status.is-neutral {
+  color: var(--muted);
 }
 
 .receipt-ledger-row button {

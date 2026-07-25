@@ -6,9 +6,11 @@ import {
   outcomeSummary,
   policyRows,
   proofLinks,
+  receiptDecisionLabel,
   receiptDeployLabel,
   receiptProofCategory,
   receiptRowKey,
+  receiptStatusLabel,
   selectedReceiptProofState,
   trustRows,
   utcTime,
@@ -96,7 +98,7 @@ describe('flight deck model', () => {
     expect(receiptDeployLabel({
       eventType: 'casper_decision_live_submit_blocked',
       hardBlockers: ['casper_chain_duplicate_intent'],
-    })).toBe('already recorded');
+    })).toBe('—');
     for (const blocker of [
       'casper_submission_duplicate_intent',
       'casper_chain_semantic_id_collision',
@@ -113,6 +115,14 @@ describe('flight deck model', () => {
     expect(receiptDeployLabel({ eventType: 'casper_decision_submission_outcome_unknown' })).toBe('outcome unknown');
     expect(receiptDeployLabel({ eventType: 'casper_decision_submitted' })).toBe('pending');
     expect(receiptDeployLabel({ eventType: 'casper_decision_live_submit_blocked', deployHash: 'deploy-hash' })).toBe('');
+  });
+
+  it('formats ledger rows for fast visual comparison', () => {
+    expect(receiptDecisionLabel('rwa-collateral-81a3e0bc1d386aea9c58')).toBe('…e0bc1d386aea9c58');
+    expect(receiptDecisionLabel('short-id')).toBe('short-id');
+    expect(receiptStatusLabel({ eventType: 'casper_decision_readback_verified' })).toBe('verified');
+    expect(receiptStatusLabel({ eventType: 'casper_decision_live_submit_blocked' })).toBe('blocked');
+    expect(receiptStatusLabel({ eventType: 'casper_decision_dry_run' })).toBe('dry run');
   });
 
   it('classifies filters from proof events instead of treating every non-blocked row as verified', () => {

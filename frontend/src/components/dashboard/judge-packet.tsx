@@ -1,7 +1,6 @@
 import { ClipboardIcon, ExternalLinkIcon, ShieldCheckIcon } from 'lucide-react';
 import { useState } from 'react';
 
-import ChainProofLink from './chain-proof-link';
 import { decisionFromBundle, proofLinks, receiptFromBundle, shortValue, type Payload, type SourceState } from './flight-deck-model';
 import { isConcreteProofValue, proofLabel, proofText } from './proof-labels';
 
@@ -67,10 +66,6 @@ export default function JudgePacket({
         </a>
         <span className="copy-status" aria-live="polite">{copyStatus}</span>
         {verifyStatus && <span className="verify-status" aria-live="polite" data-verify-status>{verifyStatus}</span>}
-      </div>
-      <div className="contract-link-strip" aria-label="Casper contract links">
-        <ChainProofLink hash={runtime?.account?.contract?.hash} explorerBaseUrl={links.explorerBaseUrl} kind="contract" label="contract" />
-        <ChainProofLink hash={runtime?.account?.contract?.packageHash} explorerBaseUrl={links.explorerBaseUrl} kind="contract-package" label="package" />
       </div>
     </section>
   );

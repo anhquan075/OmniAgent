@@ -1,7 +1,14 @@
 import { EyeIcon } from 'lucide-react';
 
 import ChainProofLink from './chain-proof-link';
-import { receiptDeployLabel, receiptRowKey, receiptRowTime, shortValue, type ReceiptRow } from './flight-deck-model';
+import {
+  receiptDecisionLabel,
+  receiptDeployLabel,
+  receiptRowKey,
+  receiptRowTime,
+  receiptStatusLabel,
+  type ReceiptRow,
+} from './flight-deck-model';
 import { proofLabel, proofText } from './proof-labels';
 
 export default function ReceiptLedgerTable({
@@ -34,13 +41,22 @@ export default function ReceiptLedgerTable({
                 return (
                   <tr key={rowKey} className={`receipt-ledger-row ${selectedKey === rowKey ? 'is-selected' : ''}`}>
                     <td>{receiptRowTime(receipt)}</td>
-                    <td><b>{shortValue(receipt.decisionId)}</b></td>
-                    <td>{proofLabel(receipt.eventType, { stripCasperPrefix: true })}</td>
+                    <td>
+                      <b title={proofText(receipt.decisionId)} translate="no">
+                        {receiptDecisionLabel(receipt.decisionId)}
+                      </b>
+                    </td>
+                    <td
+                      className={`receipt-status is-${receiptProofTone(receipt)}`}
+                      title={proofLabel(receipt.eventType, { stripCasperPrefix: true })}
+                    >
+                      {receiptStatusLabel(receipt)}
+                    </td>
                     <td>{proofLabel(receipt.policyGate, { stripCasperPrefix: true })}</td>
                     <td><ChainProofLink hash={receipt.deployHash} kind="deploy" label="deploy" missingLabel={receiptDeployLabel(receipt)} /></td>
                     <td>
                       <button type="button" onClick={() => onSelect(receipt)} aria-label={`Inspect receipt ${proofText(receipt.decisionId, 'unknown')}`}>
-                        <EyeIcon className="h-4 w-4" />
+                        <EyeIcon className="h-4 w-4" aria-hidden="true" />
                         Inspect
                       </button>
                     </td>
@@ -55,13 +71,20 @@ export default function ReceiptLedgerTable({
               return (
                 <li key={rowKey} className={`receipt-ledger-card ${selectedKey === rowKey ? 'is-selected' : ''}`}>
                   <div className="receipt-ledger-card-head">
-                    <b>{shortValue(receipt.decisionId)}</b>
+                    <b title={proofText(receipt.decisionId)} translate="no">
+                      {receiptDecisionLabel(receipt.decisionId)}
+                    </b>
                     <small>{receiptRowTime(receipt)}</small>
                   </div>
                   <dl>
                     <div>
                       <dt>Status</dt>
-                      <dd>{proofLabel(receipt.eventType, { stripCasperPrefix: true })}</dd>
+                      <dd
+                        className={`receipt-status is-${receiptProofTone(receipt)}`}
+                        title={proofLabel(receipt.eventType, { stripCasperPrefix: true })}
+                      >
+                        {receiptStatusLabel(receipt)}
+                      </dd>
                     </div>
                     <div>
                       <dt>Policy</dt>
@@ -79,7 +102,7 @@ export default function ReceiptLedgerTable({
                     onClick={() => onSelect(receipt)}
                     aria-label={`Inspect receipt ${proofText(receipt.decisionId, 'unknown')}`}
                   >
-                    <EyeIcon className="h-4 w-4" />
+                    <EyeIcon className="h-4 w-4" aria-hidden="true" />
                     Inspect
                   </button>
                 </li>
@@ -95,4 +118,11 @@ export default function ReceiptLedgerTable({
       )}
     </div>
   );
+}
+
+function receiptProofTone(receipt: ReceiptRow): 'ok' | 'blocked' | 'neutral' {
+  const status = receiptStatusLabel(receipt);
+  if (status === 'verified') return 'ok';
+  if (status === 'blocked' || status === 'failed' || status === 'outcome unknown') return 'blocked';
+  return 'neutral';
 }

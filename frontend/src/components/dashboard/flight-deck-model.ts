@@ -176,10 +176,27 @@ export const receiptRowKey = (receipt: ReceiptRow, fallback = '') => {
   return parts.some(Boolean) ? parts.join('|') : fallback;
 };
 
+export const receiptDecisionLabel = (decisionId: unknown, fallback = 'pending') => {
+  const value = proofText(decisionId, fallback);
+  if (value.length <= 18) return value;
+  return `…${value.slice(-16)}`;
+};
+
+export const receiptStatusLabel = (receipt: ReceiptRow) => {
+  const eventType = proofText(receipt.eventType, '').toLowerCase();
+  if (eventType.includes('readback_verified')) return 'verified';
+  if (eventType.includes('outcome_unknown')) return 'outcome unknown';
+  if (eventType.includes('failed')) return 'failed';
+  if (eventType.includes('blocked')) return 'blocked';
+  if (eventType.includes('dry_run')) return 'dry run';
+  if (eventType.includes('submitted')) return 'submitted';
+  return proofLabel(receipt.eventType, { stripCasperPrefix: true }) || 'pending';
+};
+
 export const receiptDeployLabel = (receipt: ReceiptRow) => {
   if (receipt.deployHash) return '';
   const hardBlockers = Array.isArray(receipt.hardBlockers) ? receipt.hardBlockers : [];
-  if (hardBlockers.some(blocker => blocker.toLowerCase() === 'casper_chain_duplicate_intent')) return 'already recorded';
+  if (hardBlockers.some(blocker => blocker.toLowerCase() === 'casper_chain_duplicate_intent')) return '—';
   const eventType = proofText(receipt.eventType, '').toLowerCase();
   if (eventType.includes('dry_run')) return 'dry run';
   if (eventType.includes('outcome_unknown')) return 'outcome unknown';

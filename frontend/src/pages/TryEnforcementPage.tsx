@@ -134,7 +134,6 @@ export default function TryEnforcementPage() {
   const x402Status = proof?.x402?.status ?? null;
   const binding =
     proof?.x402?.receipt?.bindingStatus ?? proof?.x402?.bindingStatus ?? null;
-  const liveAction = (proof?.action || '').toLowerCase();
   const liveVault = (vault?.lastAction || '').toLowerCase();
   const statusChip = loading
     ? 'Loading…'
@@ -263,7 +262,7 @@ export default function TryEnforcementPage() {
               const tx = findVaultTx(vault?.recentActions, step.vault, step.canaryHash);
               const active =
                 !loading &&
-                (liveAction === step.decision || liveVault === step.vault.toLowerCase());
+                liveVault === step.vault.toLowerCase();
               return (
                 <article
                   key={step.vault}

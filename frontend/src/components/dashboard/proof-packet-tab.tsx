@@ -60,11 +60,13 @@ export default function ProofPacketTab({ runtime, bundle, sourceState }: {
         <EvidenceSummary evidence={sourceState === 'live' ? decision.evidenceBundle : {}} x402={sourceState === 'live' ? publicX402 : {}} />
       </div>
       <section className="flight-panel raw-evidence-preview">
-        <div className="flight-panel-head">
-          <h2>Raw evidence preview</h2>
-          <span>JSON</span>
-        </div>
-        <pre>{JSON.stringify(sourceState === 'live' ? decision.evidenceBundle ?? {} : { status: 'unavailable' }, null, 2)}</pre>
+        <details>
+          <summary>
+            <h2>Raw evidence preview</h2>
+            <span>JSON · expand</span>
+          </summary>
+          <pre>{JSON.stringify(sourceState === 'live' ? decision.evidenceBundle ?? {} : { status: 'unavailable' }, null, 2)}</pre>
+        </details>
       </section>
     </div>
   );
