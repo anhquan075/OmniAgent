@@ -1,0 +1,27 @@
+{
+  "network": "casper-test",
+  "updatedAt": "2026-07-25T16:25:30+00:00",
+  "scenarios": {
+    "malformed_receipt": {
+      "transactionHash": "2b7113b0d8a4d916b6c6b0263a500a5823970e920fdef318484a789ccb912d46",
+      "explorerUrl": "https://testnet.cspr.live/deploy/2b7113b0d8a4d916b6c6b0263a500a5823970e920fdef318484a789ccb912d46",
+      "errorMessage": "User error: 100",
+      "userErrorCode": 100,
+      "recordedAt": "2026-07-25T16:25:30+00:00"
+    },
+    "unapproved_gate": {
+      "transactionHash": "feb4d8b714dc66d9d19bd1a70cfd71e58f62884b8c3a76771875db92d018dff2",
+      "explorerUrl": "https://testnet.cspr.live/deploy/feb4d8b714dc66d9d19bd1a70cfd71e58f62884b8c3a76771875db92d018dff2",
+      "errorMessage": "User error: 102",
+      "userErrorCode": 102,
+      "recordedAt": "2026-07-25T16:25:30+00:00"
+    },
+    "wrong_action": {
+      "transactionHash": "307306b6dd7201466245464d5f3f9d8c7a4563eaac6057fd3a846dcd7322a6c4",
+      "explorerUrl": "https://testnet.cspr.live/deploy/307306b6dd7201466245464d5f3f9d8c7a4563eaac6057fd3a846dcd7322a6c4",
+      "errorMessage": "User error: 103",
+      "userErrorCode": 103,
+      "recordedAt": "2026-07-25T16:25:30+00:00"
+    }
+  }
+}

@@ -32,6 +32,54 @@ export type PublicProofVault = {
   stateDelta?: VaultStateDelta;
 };
 
+export type CheatScenario = {
+  id: string;
+  title: string;
+  expectedUserError: number;
+  entryPoint: string;
+  errorLabel: string;
+  explanation: string;
+  attack: string;
+  expectedOutcome: string;
+  status: string;
+  transactionHash: string | null;
+  explorerUrl: string | null;
+  errorMessage?: string | null;
+  recordedAt?: string | null;
+  liveEnabled?: boolean;
+};
+
+export type CheatReverts = {
+  status: string;
+  count: number;
+  readyCount: number;
+  liveEnabled: boolean;
+  tryPath: string;
+  endpoint: string;
+  scenarios: CheatScenario[];
+};
+
+export type CheatRunResult = {
+  ok: boolean;
+  status: string;
+  mode?: string;
+  scenarioId?: string;
+  title?: string;
+  expectedUserError?: number;
+  observedUserError?: number;
+  errorLabel?: string;
+  errorMessage?: string | null;
+  explanation?: string;
+  attack?: string;
+  expectedOutcome?: string;
+  transactionHash?: string | null;
+  explorerUrl?: string | null;
+  recordedAt?: string | null;
+  hardBlockers?: string[];
+  hint?: string;
+  retryAfterSec?: number;
+};
+
 export type PublicProof = {
   status: string | null;
   action: string | null;
@@ -48,6 +96,7 @@ export type PublicProof = {
     receipt?: { bindingStatus?: string | null } | null;
   } | null;
   vault?: PublicProofVault | null;
+  cheatReverts?: CheatReverts | null;
 };
 
 export async function fetchPublicProof(signal?: AbortSignal): Promise<PublicProof> {
@@ -61,4 +110,21 @@ export async function fetchPublicProof(signal?: AbortSignal): Promise<PublicProo
     throw new Error(`Public proof failed (${response.status})`);
   }
   return (await response.json()) as PublicProof;
+}
+
+export async function runCheatScenario(
+  scenarioId: string,
+  options?: { live?: boolean; signal?: AbortSignal },
+): Promise<CheatRunResult> {
+  const live = options?.live ? '?live=true' : '';
+  const response = await fetch(`/api/public/cheat/${encodeURIComponent(scenarioId)}${live}`, {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+    signal: options?.signal,
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    throw new Error(`Cheat run failed (${response.status})`);
+  }
+  return (await response.json()) as CheatRunResult;
 }

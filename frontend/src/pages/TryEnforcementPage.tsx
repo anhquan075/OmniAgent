@@ -6,10 +6,15 @@ import {
   ShieldCheckIcon,
   SnowflakeIcon,
   PercentIcon,
+  BanIcon,
+  ShieldXIcon,
 } from 'lucide-react';
 import ChainProofLink from '@/components/dashboard/chain-proof-link';
 import {
   fetchPublicProof,
+  runCheatScenario,
+  type CheatRunResult,
+  type CheatScenario,
   type PublicProof,
   type VaultRecentAction,
 } from '@/lib/public-proof';
@@ -47,6 +52,48 @@ const STORY: StoryStep[] = [
     after: 'Unfrozen',
     icon: 'unfreeze',
     canaryHash: '39dc155aac0a9be1a23aa424d60d5783d5ff75fb2cb9ab51d4a630a7ea245646',
+  },
+];
+
+const FALLBACK_CHEATS: CheatScenario[] = [
+  {
+    id: 'malformed_receipt',
+    title: 'Malformed receipt',
+    expectedUserError: 100,
+    entryPoint: 'freeze',
+    errorLabel: 'User error: 100',
+    explanation: 'Vault rejects a non-receipt string before any state change.',
+    attack: "Call freeze with receipt='not-a-receipt'",
+    expectedOutcome: 'Deploy reverts; collateral stays unfrozen',
+    status: 'canary_pending',
+    transactionHash: null,
+    explorerUrl: null,
+  },
+  {
+    id: 'unapproved_gate',
+    title: 'Unapproved policy gate',
+    expectedUserError: 102,
+    entryPoint: 'freeze',
+    errorLabel: 'User error: 102',
+    explanation: 'A blocked decision receipt cannot freeze. The chain is the final no.',
+    attack: 'Call freeze with policy_gate=blocked',
+    expectedOutcome: 'Deploy reverts with User(102)',
+    status: 'canary_pending',
+    transactionHash: null,
+    explorerUrl: null,
+  },
+  {
+    id: 'wrong_action',
+    title: 'Wrong action for entry point',
+    expectedUserError: 103,
+    entryPoint: 'freeze',
+    errorLabel: 'User error: 103',
+    explanation: 'An approve receipt cannot drive freeze.',
+    attack: 'Call freeze with an approve-action receipt',
+    expectedOutcome: 'Deploy reverts with User(103)',
+    status: 'canary_pending',
+    transactionHash: null,
+    explorerUrl: null,
   },
 ];
 
@@ -104,6 +151,9 @@ export default function TryEnforcementPage() {
   const [proof, setProof] = useState<PublicProof | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cheatBusyId, setCheatBusyId] = useState<string | null>(null);
+  const [cheatResults, setCheatResults] = useState<Record<string, CheatRunResult>>({});
+  const [cheatError, setCheatError] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = 'OmniAgent — Try the enforcement';
@@ -140,6 +190,25 @@ export default function TryEnforcementPage() {
     : error
       ? 'unavailable'
       : proof?.status || 'unavailable';
+  const cheatScenarios =
+    proof?.cheatReverts?.scenarios?.length ? proof.cheatReverts.scenarios : FALLBACK_CHEATS;
+  const cheatReady = proof?.cheatReverts?.readyCount ?? 0;
+
+  async function onCheatClick(scenarioId: string) {
+    setCheatError(null);
+    setCheatBusyId(scenarioId);
+    try {
+      const result = await runCheatScenario(scenarioId, { live: false });
+      setCheatResults((prev) => ({ ...prev, [scenarioId]: result }));
+      if (!result.ok && result.status === 'canary_pending') {
+        setCheatError(result.hint || 'Cheat canary not published yet.');
+      }
+    } catch (err) {
+      setCheatError(err instanceof Error ? err.message : 'Cheat run failed');
+    } finally {
+      setCheatBusyId(null);
+    }
+  }
 
   return (
     <div className="casper-shell relative min-h-[100dvh] w-full overflow-x-hidden">
@@ -156,7 +225,7 @@ export default function TryEnforcementPage() {
               Most finalists attest. OmniAgent enforces. A fail-closed AI debate writes a Casper
               decision receipt, then the vault applies{' '}
               <span className="text-[var(--color-casper-cream)]">freeze / unfreeze / set_ltv</span>{' '}
-              — replayable without private keys.
+              — and cheat attempts revert on-chain. Replayable without private keys.
             </p>
           </div>
           <nav className="flex flex-wrap gap-2">
@@ -247,6 +316,80 @@ export default function TryEnforcementPage() {
           ) : null}
         </section>
 
+        <section className="space-y-4" id="cheat-lab">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-[var(--color-casper-cream)]">
+              Cheat Lab — try to break the vault
+            </h2>
+            <p className="text-sm text-[var(--color-casper-muted)]">
+              Three intentional attacks. Each one should revert on Casper with a User error — no
+              collateral moves. {cheatReady}/3 explorer proofs published.
+            </p>
+          </div>
+          {cheatError ? (
+            <p className="text-sm text-[var(--color-status-danger)]" role="alert">
+              {cheatError}
+            </p>
+          ) : null}
+          <div className="grid gap-4 md:grid-cols-3">
+            {cheatScenarios.map((scenario) => {
+              const result = cheatResults[scenario.id];
+              const busy = cheatBusyId === scenario.id;
+              const txHash = result?.transactionHash || scenario.transactionHash;
+              const explorerUrl = result?.explorerUrl || scenario.explorerUrl;
+              const errorLabel =
+                result?.errorMessage || result?.errorLabel || scenario.errorLabel;
+              const shown = Boolean(result) || Boolean(txHash);
+              return (
+                <article key={scenario.id} className="flight-panel try-cheat-card">
+                  <div className="flex items-center gap-2 text-[var(--color-casper-red-soft)]">
+                    <BanIcon className="h-4 w-4" aria-hidden="true" />
+                    <span className="text-xs font-semibold tracking-wide uppercase">
+                      User({scenario.expectedUserError})
+                    </span>
+                  </div>
+                  <h3 className="text-base font-semibold text-[var(--color-casper-cream)]">
+                    {scenario.title}
+                  </h3>
+                  <p className="text-sm text-[var(--color-casper-muted)]">{scenario.explanation}</p>
+                  <p className="try-cheat-attack">
+                    <ShieldXIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span>{scenario.attack}</span>
+                  </p>
+                  <button
+                    type="button"
+                    className="try-cheat-btn"
+                    disabled={busy}
+                    onClick={() => void onCheatClick(scenario.id)}
+                  >
+                    {busy ? 'Checking chain…' : 'Try to cheat'}
+                  </button>
+                  {shown ? (
+                    <div className="try-cheat-result" aria-live="polite">
+                      <strong translate="no">{errorLabel}</strong>
+                      <span>{scenario.expectedOutcome}</span>
+                      {txHash && explorerUrl ? (
+                        <a
+                          className="chain-proof-link"
+                          href={explorerUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />
+                          <span translate="no">{shortHash(txHash)}</span>
+                          <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
+                        </a>
+                      ) : (
+                        <span className="chain-proof-missing">canary pending — seed script required</span>
+                      )}
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
         <section className="space-y-4">
           <div className="space-y-1">
             <h2 className="text-lg font-semibold text-[var(--color-casper-cream)]">
@@ -318,11 +461,15 @@ export default function TryEnforcementPage() {
               Open this page — confirm decision action and vault entry above.
             </li>
             <li>
+              Click <strong>Try to cheat</strong> on each Cheat Lab card — open the explorer link and
+              confirm the User error.
+            </li>
+            <li>
               Open{' '}
               <a href="/api/public/proof" target="_blank" rel="noreferrer">
                 /api/public/proof
               </a>{' '}
-              and match deploy hashes.
+              and match <code>cheatReverts</code> + deploy hashes.
             </li>
             <li>
               Hit{' '}
@@ -331,7 +478,6 @@ export default function TryEnforcementPage() {
               </a>{' '}
               unpaid → HTTP <strong>402</strong> on <code>casper:casper-test</code>.
             </li>
-            <li>Click a vault explorer link — enforcement is a real state-changing deploy.</li>
             <li>
               Optional:{' '}
               <a href={proof?.videoUrl || 'https://youtu.be/wcVoqJXqPhc'} target="_blank" rel="noreferrer">

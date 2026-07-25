@@ -75,11 +75,22 @@ class CasperCliSubmitter:
         result = CasperCliSubmitter.run_command(command, "casper_cli_status")
         if result["hardBlockers"]:
             return {"status": "unverified", **result}
-        status = CasperCliOutput.extract_execution_status(str(result.get("cliOutput") or ""))
+        cli_output = str(result.get("cliOutput") or "")
+        status = CasperCliOutput.extract_execution_status(cli_output)
+        error_message = CasperCliOutput.extract_error_message(cli_output)
+        user_error = CasperCliOutput.extract_user_error_code(cli_output)
+        hard_blockers: list[str] = []
+        if status == "failed":
+            hard_blockers = ["casper_deploy_execution_failed"]
+        elif status != "confirmed":
+            hard_blockers = ["casper_deploy_not_confirmed"]
         return {
             "status": status,
-            "hardBlockers": [] if status == "confirmed" else ["casper_deploy_not_confirmed"],
+            "errorMessage": error_message,
+            "userErrorCode": user_error,
+            "hardBlockers": hard_blockers,
             "cliCommand": result["cliCommand"],
+            "cliOutput": cli_output if status == "failed" else None,
         }
 
     @staticmethod

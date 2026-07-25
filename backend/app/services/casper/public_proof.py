@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from app.core.settings import get_settings
+from app.services.casper.cheat_lab import CasperCheatLabService
 from app.services.casper.ledger import CasperDecisionLedger
 from app.services.casper.loop import get_loop_status
 from app.services.casper.proof_bundle import CasperProofBundleService
@@ -65,6 +66,7 @@ class CasperPublicProofService:
             ),
             "x402": CasperPublicProofService._x402(decision),
             "vault": CasperPublicProofService._vault(settings),
+            "cheatReverts": CasperCheatLabService.public_cheat_reverts(),
             "trustSummary": bundle.get("trustSummary"),
             "llmTrace": CasperPublicProofService._llm_trace(decision),
             "liveProof": CasperPublicProofService._live_proof(settings, decision, receipt),

@@ -126,6 +126,13 @@ def create_app() -> FastAPI:
                     "authentication": "public",
                 },
                 {
+                    "id": "casper-cheat-lab",
+                    "name": "Cheat Lab intentional vault reverts",
+                    "endpoint": "/api/public/cheat",
+                    "authentication": "public",
+                    "tryPath": "/try",
+                },
+                {
                     "id": "x402-paid-evidence",
                     "name": "x402 paid evidence URL",
                     "endpoint": X402_EVIDENCE_ROUTE_PATH,
@@ -144,10 +151,12 @@ def create_app() -> FastAPI:
             ],
             "endpoints": {
                 "publicProof": "/api/public/proof",
+                "cheatLab": "/api/public/cheat",
                 "x402Evidence": X402_EVIDENCE_ROUTE_PATH,
                 "x402Setup": "/api/x402/setup",
                 "mcp": "/api/mcp",
                 "dashboardStream": "/api/dashboard/stream?limit=8",
+                "tryEnforcement": "/try",
             },
             "useCase": {
                 "id": "rwa-collateral-nav-risk-receipt",

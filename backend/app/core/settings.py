@@ -94,6 +94,12 @@ class Settings(BaseSettings):
     casper_vault_package_hash: str | None = None
     casper_vault_enforce_enabled: bool = False
     casper_vault_asset_id: str = "rwa-demo-collateral-001"
+    # Cheat Lab: public judge demos that intentionally revert on-chain.
+    casper_cheat_lab_live_enabled: bool = False
+    casper_cheat_lab_live_min_interval_sec: int = 300
+    casper_cheat_lab_canaries_path: str | None = None
+    casper_cheat_lab_poll_max_retries: int = 12
+    casper_cheat_lab_poll_interval_sec: float = 4.0
     casper_llm_trace_enabled: bool = False
     casper_llm_trace_provider: str = "openrouter"
     casper_llm_trace_model: str = "deepseek/deepseek-v4-flash"

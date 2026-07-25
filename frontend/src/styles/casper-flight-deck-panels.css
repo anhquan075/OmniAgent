@@ -472,6 +472,47 @@
 
 .receipt-ledger-empty { display: grid; gap: 4px; }
 
+.receipt-ledger-table.is-loading .receipt-ledger-row td,
+.receipt-ledger-card.is-skeleton {
+  vertical-align: middle;
+}
+
+.receipt-skeleton-cell {
+  min-height: 18px;
+  width: 100%;
+}
+
+.receipt-skeleton-cell.is-short {
+  width: 56%;
+}
+
+.receipt-skeleton-cell.is-action {
+  width: 72px;
+  min-height: 28px;
+}
+
+.receipt-inspector.is-loading dl div {
+  display: grid;
+  gap: 6px;
+}
+
+.receipt-inspector.is-loading .receipt-skeleton-cell {
+  min-height: 14px;
+}
+
+.receipt-inspector.is-loading .receipt-skeleton-cell + .receipt-skeleton-cell {
+  min-height: 18px;
+  width: 78%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .receipt-ledger-table.is-loading .skeleton-block,
+  .receipt-inspector.is-loading .skeleton-block {
+    animation: none;
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
 .receipt-ledger-controls {
   display: flex;
   flex-wrap: wrap;

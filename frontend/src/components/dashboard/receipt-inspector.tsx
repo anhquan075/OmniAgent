@@ -2,7 +2,34 @@ import ChainProofLink from './chain-proof-link';
 import { receiptRowTime, selectedReceiptProofState, shortValue, type Payload, type ReceiptRow } from './flight-deck-model';
 import { proofLabel, proofText } from './proof-labels';
 
-export default function ReceiptInspector({ receipt, bundle }: { receipt?: ReceiptRow; bundle?: Payload }) {
+export default function ReceiptInspector({
+  receipt,
+  bundle,
+  loading = false,
+}: {
+  receipt?: ReceiptRow;
+  bundle?: Payload;
+  loading?: boolean;
+}) {
+  if (loading) {
+    return (
+      <aside className="flight-panel receipt-inspector is-loading" aria-busy="true" aria-label="Loading receipt inspector">
+        <div className="flight-panel-head">
+          <h2>Receipt Inspector</h2>
+          <span>Loading…</span>
+        </div>
+        <dl aria-hidden="true">
+          {Array.from({ length: 6 }, (_, index) => (
+            <div key={`inspector-skeleton-${index}`}>
+              <span className="skeleton-block receipt-skeleton-cell is-short" />
+              <span className="skeleton-block receipt-skeleton-cell" />
+            </div>
+          ))}
+        </dl>
+      </aside>
+    );
+  }
+
   const proofState = selectedReceiptProofState(receipt, bundle);
   if (!receipt) {
     return (

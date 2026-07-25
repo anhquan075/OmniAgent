@@ -24,6 +24,11 @@ class CasperCliOutput:
         match = CasperCliOutput.HASH_PATTERN.search(output)
         return match.group("hash") if match else None
 
+    USER_ERROR_PATTERN = re.compile(
+        r"User error:\s*(?P<code>\d+)|ApiError::User\((?P<code2>\d+)\)",
+        re.IGNORECASE,
+    )
+
     @staticmethod
     def extract_execution_status(output: str) -> str:
         parsed = CasperCliOutput.json_data(output)
@@ -39,6 +44,31 @@ class CasperCliOutput:
         if "success" in lowered or "processed" in lowered:
             return "confirmed"
         return "pending_or_unverified"
+
+    @staticmethod
+    def extract_error_message(output: str) -> str | None:
+        parsed = CasperCliOutput.json_data(output)
+        if isinstance(parsed, dict):
+            error_message = CasperCliOutput.find_key(parsed, "error_message")
+            if isinstance(error_message, str) and error_message.strip():
+                return error_message.strip()
+        match = CasperCliOutput.USER_ERROR_PATTERN.search(output)
+        if match:
+            code = match.group("code") or match.group("code2")
+            return f"User error: {code}"
+        return None
+
+    @staticmethod
+    def extract_user_error_code(output: str) -> int | None:
+        message = CasperCliOutput.extract_error_message(output) or output
+        match = CasperCliOutput.USER_ERROR_PATTERN.search(message)
+        if not match:
+            return None
+        code = match.group("code") or match.group("code2")
+        try:
+            return int(code)
+        except (TypeError, ValueError):
+            return None
 
     @staticmethod
     def extract_state_root_hash(output: str) -> str | None:

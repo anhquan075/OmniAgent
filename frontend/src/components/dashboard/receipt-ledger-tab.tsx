@@ -22,7 +22,7 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [totalReceipts, setTotalReceipts] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     let cancelled = false;
     const offset = (page - 1) * PAGE_SIZE;
@@ -79,11 +79,11 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
   const pageEnd = Math.min(page * PAGE_SIZE, totalReceipts);
   return (
     <div className="receipt-ledger-tab">
-      <section className="flight-panel receipt-ledger-panel">
+      <section className="flight-panel receipt-ledger-panel" aria-busy={loading || undefined}>
         <div className="receipt-ledger-toolbar">
           <div className="flight-panel-head">
             <h2>Receipt Ledger</h2>
-            <span>{loading ? 'Loading receipts' : `Rows ${pageStart}-${pageEnd} of ${totalReceipts}`}</span>
+            <span>{loading ? 'Loading…' : `Rows ${pageStart}-${pageEnd} of ${totalReceipts}`}</span>
           </div>
           <div className="receipt-ledger-controls">
             {(['all', 'verified', 'blocked'] as LedgerFilter[]).map(item => (
@@ -91,6 +91,7 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
                 key={item}
                 type="button"
                 className={filter === item ? 'is-active' : ''}
+                disabled={loading}
                 onClick={() => {
                   setFilter(item);
                   setSelectedKey('');
@@ -107,6 +108,7 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
               }}
               placeholder="Search current page"
               aria-label="Search current receipt page"
+              disabled={loading}
             />
           </div>
           <div className="receipt-ledger-pagination" aria-label="Receipt ledger pagination">
@@ -116,11 +118,11 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
               disabled={page <= 1 || loading}
               aria-label="Previous receipt page"
             >
-              <ChevronLeftIcon className="h-4 w-4" />
+              <ChevronLeftIcon className="h-4 w-4" aria-hidden="true" />
             </button>
             <span>
               <small>Page</small>
-              <b>{page} / {totalPages}</b>
+              <b>{loading ? '…' : `${page} / ${totalPages}`}</b>
             </span>
             <button
               type="button"
@@ -128,7 +130,7 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
               disabled={page >= totalPages || loading}
               aria-label="Next receipt page"
             >
-              <ChevronRightIcon className="h-4 w-4" />
+              <ChevronRightIcon className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -137,10 +139,11 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
             receipts={filteredReceipts}
             selectedKey={selected ? receiptRowKey(selected) : ''}
             onSelect={(receipt) => setSelectedKey(receiptRowKey(receipt))}
+            loading={loading}
           />
         </div>
       </section>
-      <ReceiptInspector receipt={selected} bundle={bundle} />
+      <ReceiptInspector receipt={selected} bundle={bundle} loading={loading} />
     </div>
   );
 }

@@ -11,15 +11,60 @@ import {
 } from './flight-deck-model';
 import { proofLabel, proofText } from './proof-labels';
 
+const SKELETON_ROWS = 8;
+
 export default function ReceiptLedgerTable({
   receipts,
   selectedKey,
   onSelect,
+  loading = false,
 }: {
   receipts: ReceiptRow[];
   selectedKey?: string;
   onSelect: (receipt: ReceiptRow) => void;
+  loading?: boolean;
 }) {
+  if (loading) {
+    return (
+      <div className="receipt-ledger-table is-loading" data-receipt-ledger aria-busy="true" aria-label="Loading receipts">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Time UTC</th>
+              <th scope="col">Decision ID</th>
+              <th scope="col">Status</th>
+              <th scope="col">Policy Gate</th>
+              <th scope="col">Deploy</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: SKELETON_ROWS }, (_, index) => (
+              <tr key={`skeleton-row-${index}`} className="receipt-ledger-row is-skeleton" aria-hidden="true">
+                <td><span className="skeleton-block receipt-skeleton-cell" /></td>
+                <td><span className="skeleton-block receipt-skeleton-cell" /></td>
+                <td><span className="skeleton-block receipt-skeleton-cell is-short" /></td>
+                <td><span className="skeleton-block receipt-skeleton-cell is-short" /></td>
+                <td><span className="skeleton-block receipt-skeleton-cell" /></td>
+                <td><span className="skeleton-block receipt-skeleton-cell is-action" /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <ul className="receipt-ledger-cards" aria-hidden="true">
+          {Array.from({ length: 4 }, (_, index) => (
+            <li key={`skeleton-card-${index}`} className="receipt-ledger-card is-skeleton">
+              <span className="skeleton-block receipt-skeleton-cell" />
+              <span className="skeleton-block receipt-skeleton-cell is-short" />
+              <span className="skeleton-block receipt-skeleton-cell" />
+              <span className="skeleton-block receipt-skeleton-cell is-action" />
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
   return (
     <div className="receipt-ledger-table" data-receipt-ledger>
       {receipts.length ? (
@@ -113,7 +158,7 @@ export default function ReceiptLedgerTable({
       ) : (
         <div className="receipt-ledger-empty">
           <b>No receipts yet</b>
-          <small>{proofText('Run a decision cycle to write receipts to this ledger.')}</small>
+          <small>Run a decision cycle to write receipts to this ledger.</small>
         </div>
       )}
     </div>

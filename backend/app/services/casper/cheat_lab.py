@@ -1,0 +1,440 @@
+"""Cheat Lab — intentional vault reverts judges can click on /try.
+
+Three public scenarios map to collateral-vault User errors:
+  - malformed_receipt → User(100)
+  - unapproved_gate → User(102)
+  - wrong_action → User(103)
+
+Default mode returns published canary deploy hashes (no keys / no gas).
+Optional live mode submits a bad vault call when CASPER_CHEAT_LAB_LIVE_ENABLED=true.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+import threading
+import time
+from typing import Any
+
+from app.core.settings import REPO_ROOT, get_settings
+from app.services.casper.submitter import CasperCliSubmitter
+from app.services.casper.vault import CasperVaultService
+
+SCENARIOS: tuple[dict[str, Any], ...] = (
+    {
+        "id": "malformed_receipt",
+        "title": "Malformed receipt",
+        "expectedUserError": 100,
+        "entryPoint": "freeze",
+        "errorLabel": "User error: 100",
+        "explanation": (
+            "Vault rejects a non-receipt string before any state change. "
+            "Parse fails → ApiError::User(100)."
+        ),
+        "attack": "Call freeze with receipt='not-a-receipt'",
+        "expectedOutcome": "Deploy executes and reverts; collateral stays unfrozen",
+    },
+    {
+        "id": "unapproved_gate",
+        "title": "Unapproved policy gate",
+        "expectedUserError": 102,
+        "entryPoint": "freeze",
+        "errorLabel": "User error: 102",
+        "explanation": (
+            "A well-formed receipt with policy_gate=blocked cannot freeze. "
+            "AI may debate; the chain is the final no."
+        ),
+        "attack": "Call freeze with a blocked decision receipt",
+        "expectedOutcome": "Deploy reverts with User(102); no freeze",
+    },
+    {
+        "id": "wrong_action",
+        "title": "Wrong action for entry point",
+        "expectedUserError": 103,
+        "entryPoint": "freeze",
+        "errorLabel": "User error: 103",
+        "explanation": (
+            "An approve receipt cannot drive freeze. Action must match the "
+            "vault entry point (block→freeze / approve→unfreeze / haircut→set_ltv)."
+        ),
+        "attack": "Call freeze with an approve-action receipt",
+        "expectedOutcome": "Deploy reverts with User(103); no freeze",
+    },
+)
+
+_LIVE_LOCK = threading.Lock()
+_LAST_LIVE_AT: dict[str, float] = {}
+
+
+class CasperCheatLabService:
+    @staticmethod
+    def canaries_path() -> Path:
+        settings = get_settings()
+        if settings.casper_cheat_lab_canaries_path:
+            return Path(settings.casper_cheat_lab_canaries_path).expanduser()
+        return REPO_ROOT / "proofs" / "cheat-lab-canaries.json"
+
+    @staticmethod
+    def load_canaries() -> dict[str, Any]:
+        path = CasperCheatLabService.canaries_path()
+        if not path.exists():
+            return {"updatedAt": None, "scenarios": {}}
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return {"updatedAt": None, "scenarios": {}}
+        if not isinstance(data, dict):
+            return {"updatedAt": None, "scenarios": {}}
+        scenarios = data.get("scenarios")
+        if not isinstance(scenarios, dict):
+            scenarios = {}
+        return {
+            "updatedAt": data.get("updatedAt"),
+            "scenarios": scenarios,
+        }
+
+    @staticmethod
+    def save_canaries(scenarios: dict[str, Any]) -> Path:
+        path = CasperCheatLabService.canaries_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "updatedAt": datetime.now(timezone.utc).isoformat(),
+            "network": get_settings().casper_network,
+            "scenarios": scenarios,
+        }
+        path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        return path
+
+    @staticmethod
+    def list_scenarios() -> list[dict[str, Any]]:
+        canaries = CasperCheatLabService.load_canaries().get("scenarios") or {}
+        explorer = get_settings().casper_explorer_url.rstrip("/")
+        items: list[dict[str, Any]] = []
+        for scenario in SCENARIOS:
+            canary = canaries.get(scenario["id"]) if isinstance(canaries, dict) else None
+            canary = canary if isinstance(canary, dict) else {}
+            tx_hash = str(canary.get("transactionHash") or "").strip() or None
+            explorer_url = str(canary.get("explorerUrl") or "").strip() or None
+            if tx_hash and not explorer_url and explorer:
+                explorer_url = f"{explorer}/deploy/{tx_hash}"
+            items.append(
+                {
+                    **scenario,
+                    "status": "ready" if tx_hash else "canary_pending",
+                    "transactionHash": tx_hash,
+                    "explorerUrl": explorer_url,
+                    "errorMessage": canary.get("errorMessage") or scenario["errorLabel"],
+                    "recordedAt": canary.get("recordedAt"),
+                    "liveEnabled": bool(get_settings().casper_cheat_lab_live_enabled),
+                }
+            )
+        return items
+
+    @staticmethod
+    def public_cheat_reverts() -> dict[str, Any]:
+        items = CasperCheatLabService.list_scenarios()
+        ready = [item for item in items if item.get("transactionHash")]
+        return {
+            "status": "ready" if len(ready) == len(items) else "partial" if ready else "pending",
+            "count": len(items),
+            "readyCount": len(ready),
+            "liveEnabled": bool(get_settings().casper_cheat_lab_live_enabled),
+            "tryPath": "/try",
+            "endpoint": "/api/public/cheat",
+            "scenarios": items,
+        }
+
+    @staticmethod
+    def get_scenario(scenario_id: str) -> dict[str, Any] | None:
+        for item in CasperCheatLabService.list_scenarios():
+            if item["id"] == scenario_id:
+                return item
+        return None
+
+    @staticmethod
+    def build_attack_args(scenario_id: str) -> dict[str, Any]:
+        """Build the intentional bad vault call arguments for a scenario."""
+        settings = get_settings()
+        decision_id = f"cheat-{scenario_id}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+        if scenario_id == "malformed_receipt":
+            return {
+                "entryPoint": "freeze",
+                "assetId": settings.casper_vault_asset_id,
+                "decisionId": decision_id,
+                "receipt": "not-a-receipt",
+                "expectedUserError": 100,
+            }
+        if scenario_id == "unapproved_gate":
+            return {
+                "entryPoint": "freeze",
+                "assetId": settings.casper_vault_asset_id,
+                "decisionId": decision_id,
+                "receipt": CasperCheatLabService._receipt(
+                    decision_id=decision_id,
+                    action="block",
+                    policy_gate="blocked",
+                ),
+                "expectedUserError": 102,
+            }
+        if scenario_id == "wrong_action":
+            return {
+                "entryPoint": "freeze",
+                "assetId": settings.casper_vault_asset_id,
+                "decisionId": decision_id,
+                "receipt": CasperCheatLabService._receipt(
+                    decision_id=decision_id,
+                    action="approve",
+                    policy_gate="approved",
+                ),
+                "expectedUserError": 103,
+            }
+        raise ValueError(f"unknown cheat scenario: {scenario_id}")
+
+    @staticmethod
+    def _receipt(*, decision_id: str, action: str, policy_gate: str) -> str:
+        now = datetime.now(timezone.utc).isoformat()
+        return "|".join(
+            [
+                decision_id,
+                action,
+                "99",
+                "sha256:cheat-proof",
+                "sha256:cheat-rationale",
+                "sha256:cheat-source",
+                now,
+                policy_gate,
+                "sha256:cheat-agent",
+                "sha256:cheat-guardrail",
+            ]
+        )
+
+    @staticmethod
+    def run_scenario(scenario_id: str, *, live: bool = False) -> dict[str, Any]:
+        scenario = CasperCheatLabService.get_scenario(scenario_id)
+        if scenario is None:
+            return {
+                "ok": False,
+                "status": "unknown_scenario",
+                "hardBlockers": ["cheat_scenario_unknown"],
+                "scenarioId": scenario_id,
+            }
+        if live:
+            return CasperCheatLabService._run_live(scenario)
+        return CasperCheatLabService._run_canary(scenario)
+
+    @staticmethod
+    def _run_canary(scenario: dict[str, Any]) -> dict[str, Any]:
+        tx_hash = scenario.get("transactionHash")
+        if not tx_hash:
+            return {
+                "ok": False,
+                "status": "canary_pending",
+                "mode": "canary",
+                "scenarioId": scenario["id"],
+                "title": scenario["title"],
+                "expectedUserError": scenario["expectedUserError"],
+                "errorLabel": scenario["errorLabel"],
+                "explanation": scenario["explanation"],
+                "attack": scenario["attack"],
+                "expectedOutcome": scenario["expectedOutcome"],
+                "hardBlockers": ["cheat_canary_missing"],
+                "hint": (
+                    "Publish explorer proofs with: "
+                    "cd backend && uv run python scripts/cheat_lab_seed.py"
+                ),
+            }
+        return {
+            "ok": True,
+            "status": "reverted",
+            "mode": "canary",
+            "scenarioId": scenario["id"],
+            "title": scenario["title"],
+            "expectedUserError": scenario["expectedUserError"],
+            "errorLabel": scenario["errorLabel"],
+            "errorMessage": scenario.get("errorMessage") or scenario["errorLabel"],
+            "explanation": scenario["explanation"],
+            "attack": scenario["attack"],
+            "expectedOutcome": scenario["expectedOutcome"],
+            "transactionHash": tx_hash,
+            "explorerUrl": scenario.get("explorerUrl"),
+            "recordedAt": scenario.get("recordedAt"),
+            "hardBlockers": [],
+        }
+
+    @staticmethod
+    def _run_live(scenario: dict[str, Any]) -> dict[str, Any]:
+        settings = get_settings()
+        if not settings.casper_cheat_lab_live_enabled:
+            return {
+                "ok": False,
+                "status": "live_disabled",
+                "mode": "live",
+                "scenarioId": scenario["id"],
+                "hardBlockers": ["cheat_lab_live_disabled"],
+                "hint": "Set CASPER_CHEAT_LAB_LIVE_ENABLED=true to submit intentional reverts.",
+            }
+        scenario_id = str(scenario["id"])
+        now = time.monotonic()
+        with _LIVE_LOCK:
+            last = _LAST_LIVE_AT.get(scenario_id, 0.0)
+            wait = settings.casper_cheat_lab_live_min_interval_sec - (now - last)
+            if wait > 0:
+                return {
+                    "ok": False,
+                    "status": "rate_limited",
+                    "mode": "live",
+                    "scenarioId": scenario_id,
+                    "retryAfterSec": int(wait) + 1,
+                    "hardBlockers": ["cheat_lab_rate_limited"],
+                }
+            # Fall back to canary while holding the lock reservation intent.
+            if not (
+                settings.casper_vault_contract_hash or settings.casper_vault_package_hash
+            ):
+                canary = CasperCheatLabService._run_canary(scenario)
+                canary["mode"] = "canary_fallback"
+                canary["hardBlockers"] = list(canary.get("hardBlockers") or []) + [
+                    "casper_vault_contract_missing"
+                ]
+                return canary
+            _LAST_LIVE_AT[scenario_id] = now
+
+        attack = CasperCheatLabService.build_attack_args(scenario_id)
+        submit = CasperVaultService.submit_entry(
+            entry_point=str(attack["entryPoint"]),
+            asset_id=str(attack["assetId"]),
+            decision_id=str(attack["decisionId"]),
+            receipt=str(attack["receipt"]),
+        )
+        if not submit.get("submitted"):
+            # Prefer serving the canary so judges still see a revert proof.
+            canary = CasperCheatLabService._run_canary(scenario)
+            if canary.get("ok"):
+                canary["mode"] = "canary_fallback"
+                canary["liveAttempt"] = submit
+                return canary
+            return {
+                "ok": False,
+                "status": "submit_blocked",
+                "mode": "live",
+                "scenarioId": scenario_id,
+                "hardBlockers": submit.get("hardBlockers") or ["cheat_live_submit_blocked"],
+                "liveAttempt": submit,
+            }
+
+        tx_hash = str(submit.get("transactionHash") or "")
+        poll = CasperCheatLabService._poll_until_settled(tx_hash)
+        error_message = poll.get("errorMessage") or scenario["errorLabel"]
+        user_error = poll.get("userErrorCode") or scenario["expectedUserError"]
+        explorer_url = submit.get("explorerUrl")
+        recorded = {
+            "transactionHash": tx_hash,
+            "explorerUrl": explorer_url,
+            "errorMessage": error_message,
+            "userErrorCode": user_error,
+            "recordedAt": datetime.now(timezone.utc).isoformat(),
+            "decisionId": attack["decisionId"],
+            "entryPoint": attack["entryPoint"],
+            "status": poll.get("status"),
+        }
+        if poll.get("status") == "failed":
+            CasperCheatLabService._upsert_canary(scenario_id, recorded)
+        return {
+            "ok": poll.get("status") == "failed",
+            "status": "reverted" if poll.get("status") == "failed" else poll.get("status"),
+            "mode": "live",
+            "scenarioId": scenario_id,
+            "title": scenario["title"],
+            "expectedUserError": scenario["expectedUserError"],
+            "observedUserError": user_error,
+            "errorLabel": scenario["errorLabel"],
+            "errorMessage": error_message,
+            "explanation": scenario["explanation"],
+            "attack": scenario["attack"],
+            "expectedOutcome": scenario["expectedOutcome"],
+            "transactionHash": tx_hash,
+            "explorerUrl": explorer_url,
+            "recordedAt": recorded["recordedAt"],
+            "hardBlockers": []
+            if poll.get("status") == "failed"
+            else list(poll.get("hardBlockers") or ["cheat_live_not_reverted"]),
+        }
+
+    @staticmethod
+    def _poll_until_settled(tx_hash: str) -> dict[str, Any]:
+        settings = get_settings()
+        last: dict[str, Any] = {"status": "pending_or_unverified", "hardBlockers": []}
+        for _ in range(max(1, settings.casper_cheat_lab_poll_max_retries)):
+            last = CasperCliSubmitter.get_transaction_status(tx_hash)
+            if last.get("status") in {"failed", "confirmed"}:
+                return last
+            time.sleep(settings.casper_cheat_lab_poll_interval_sec)
+        return last
+
+    @staticmethod
+    def _upsert_canary(scenario_id: str, recorded: dict[str, Any]) -> None:
+        store = CasperCheatLabService.load_canaries()
+        scenarios = dict(store.get("scenarios") or {})
+        scenarios[scenario_id] = recorded
+        CasperCheatLabService.save_canaries(scenarios)
+
+    @staticmethod
+    def seed_all(*, dry_run: bool = False) -> dict[str, Any]:
+        """Operator helper: submit all three cheat scenarios (or print attack args)."""
+        results: list[dict[str, Any]] = []
+        for scenario in SCENARIOS:
+            scenario_id = str(scenario["id"])
+            attack = CasperCheatLabService.build_attack_args(scenario_id)
+            if dry_run:
+                results.append({"scenarioId": scenario_id, "dryRun": True, "attack": attack})
+                continue
+            submit = CasperVaultService.submit_entry(
+                entry_point=str(attack["entryPoint"]),
+                asset_id=str(attack["assetId"]),
+                decision_id=str(attack["decisionId"]),
+                receipt=str(attack["receipt"]),
+            )
+            if not submit.get("submitted"):
+                results.append(
+                    {
+                        "ok": False,
+                        "scenarioId": scenario_id,
+                        "status": "submit_blocked",
+                        "hardBlockers": submit.get("hardBlockers") or [],
+                        "liveAttempt": submit,
+                    }
+                )
+                continue
+            tx_hash = str(submit.get("transactionHash") or "")
+            poll = CasperCheatLabService._poll_until_settled(tx_hash)
+            recorded = {
+                "transactionHash": tx_hash,
+                "explorerUrl": submit.get("explorerUrl"),
+                "errorMessage": poll.get("errorMessage") or scenario["errorLabel"],
+                "userErrorCode": poll.get("userErrorCode") or scenario["expectedUserError"],
+                "recordedAt": datetime.now(timezone.utc).isoformat(),
+                "decisionId": attack["decisionId"],
+                "entryPoint": attack["entryPoint"],
+                "status": poll.get("status"),
+            }
+            if poll.get("status") == "failed":
+                CasperCheatLabService._upsert_canary(scenario_id, recorded)
+            results.append(
+                {
+                    "ok": poll.get("status") == "failed",
+                    "scenarioId": scenario_id,
+                    "status": "reverted" if poll.get("status") == "failed" else poll.get("status"),
+                    **recorded,
+                    "hardBlockers": []
+                    if poll.get("status") == "failed"
+                    else list(poll.get("hardBlockers") or ["cheat_seed_not_reverted"]),
+                }
+            )
+        return {
+            "dryRun": dry_run,
+            "results": results,
+            "canariesPath": str(CasperCheatLabService.canaries_path()),
+            "public": CasperCheatLabService.public_cheat_reverts(),
+        }
