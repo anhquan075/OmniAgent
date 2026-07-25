@@ -18,7 +18,7 @@ import threading
 import time
 from typing import Any
 
-from app.core.settings import REPO_ROOT, get_settings
+from app.core.settings import BACKEND_ROOT, REPO_ROOT, get_settings
 from app.services.casper.submitter import CasperCliSubmitter
 from app.services.casper.vault import CasperVaultService
 
@@ -71,9 +71,19 @@ _LAST_LIVE_AT: dict[str, float] = {}
 class CasperCheatLabService:
     @staticmethod
     def canaries_path() -> Path:
+        """Resolve canary JSON path for judge-facing revert proofs.
+
+        Preference order:
+        1. ``CASPER_CHEAT_LAB_CANARIES_PATH`` (Railway volume ``/data/...``)
+        2. Backend image ``data/cheat-lab-canaries.json`` (always shipped)
+        3. Monorepo ``proofs/cheat-lab-canaries.json`` (local / CI checkout)
+        """
         settings = get_settings()
         if settings.casper_cheat_lab_canaries_path:
             return Path(settings.casper_cheat_lab_canaries_path).expanduser()
+        packaged = BACKEND_ROOT / "data" / "cheat-lab-canaries.json"
+        if packaged.exists():
+            return packaged
         return REPO_ROOT / "proofs" / "cheat-lab-canaries.json"
 
     @staticmethod

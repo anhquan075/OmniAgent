@@ -29,6 +29,7 @@ RUN uv sync --frozen --no-dev
 
 COPY app ./app
 COPY scripts ./scripts
+COPY data ./data
 COPY README.md ./
 
 EXPOSE 8000
