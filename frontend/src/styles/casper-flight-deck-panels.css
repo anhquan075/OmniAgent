@@ -472,6 +472,48 @@
 
 .receipt-ledger-empty { display: grid; gap: 4px; }
 
+/* Proof Packet loading skeletons keep panel shape while the backend responds. */
+.packet-skeleton-cell {
+  min-height: 18px;
+  width: 100%;
+}
+
+.judge-field-skeleton {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 8px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.judge-field-skeleton small {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.evidence-provenance li.is-skeleton {
+  justify-content: center;
+}
+
+.packet-skeleton-cell.is-chip {
+  min-height: 16px;
+}
+
+.evidence-field.is-skeleton small {
+  margin-bottom: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .packet-skeleton-cell {
+    animation: none;
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
 .receipt-ledger-table.is-loading .receipt-ledger-row td,
 .receipt-ledger-card.is-skeleton {
   vertical-align: middle;

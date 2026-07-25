@@ -2,12 +2,23 @@ import { ExternalLinkIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import { proofLabel, proofText } from './proof-labels';
-import { hasX402Receipt } from './flight-deck-model';
+import { hasX402Receipt, type SourceState } from './flight-deck-model';
 
 type Payload = Record<string, any>;
 
-export function EvidenceSummary({ evidence, x402 }: { evidence?: Payload; x402?: Payload }) {
+const FIELD_LABELS = ['Scenario', 'Source', 'Observed', 'Freshness', 'Threshold', 'Risk factor', 'x402'];
+
+export function EvidenceSummary({
+  evidence,
+  x402,
+  sourceState,
+}: {
+  evidence?: Payload;
+  x402?: Payload;
+  sourceState?: SourceState;
+}) {
   const [copyStatus, setCopyStatus] = useState('');
+  const loading = sourceState === 'loading';
   const scenario = proofText(evidence?.scenario, 'no evidence');
   const sources: Payload[] = Array.isArray(evidence?.sources) ? evidence.sources : [];
   const factors: Payload[] = Array.isArray(evidence?.riskFactors) ? evidence.riskFactors : [];
@@ -26,6 +37,31 @@ export function EvidenceSummary({ evidence, x402 }: { evidence?: Payload; x402?:
       .then(() => setCopyStatus('Source hash copied'))
       .catch(() => setCopyStatus('Copy failed'));
   };
+
+  if (loading) {
+    return (
+      <section className="flight-panel evidence-summary" aria-busy="true" aria-label="Loading RWA evidence summary">
+        <div className="flight-panel-head">
+          <h2>Evidence summary</h2>
+          <span>Loading…</span>
+        </div>
+        <div className="evidence-grid" aria-hidden="true">
+          {FIELD_LABELS.map((label) => (
+            <span key={label} className="evidence-field is-skeleton">
+              <small>{label}</small>
+              <span className="skeleton-block packet-skeleton-cell" />
+            </span>
+          ))}
+        </div>
+        <div className="evidence-hash-row" aria-hidden="true">
+          <span className="evidence-field is-skeleton">
+            <small>Source hash</small>
+            <span className="skeleton-block packet-skeleton-cell" />
+          </span>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="flight-panel evidence-summary" aria-label="RWA evidence summary">

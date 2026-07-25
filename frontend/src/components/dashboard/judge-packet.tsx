@@ -22,26 +22,48 @@ export default function JudgePacket({
   const receipt = receiptFromBundle(bundle);
   const links = proofLinks(runtime, bundle);
   const enabled = sourceState === 'live';
+  const loading = sourceState === 'loading';
   const replayCommand = 'scripts/verify-casper-buildathon-stack.sh';
   const copyValue = (name: string, value: string) => {
     if (!enabled || !navigator.clipboard || !value) return;
     void navigator.clipboard.writeText(value).then(() => setCopyStatus(`${name} copied`)).catch(() => setCopyStatus('Copy failed'));
   };
+  const fieldLabels = [
+    'Decision ID',
+    'Receipt digest',
+    'Deploy hash',
+    'Account',
+    'Contract',
+    'Package',
+    'Readback',
+    'Policy gate',
+  ];
   return (
-    <section className="flight-panel judge-packet">
+    <section className="flight-panel judge-packet" aria-busy={loading || undefined}>
       <div className="flight-panel-head">
         <h2>Judge packet</h2>
-        <span>{enabled ? proofLabel(bundle?.status) : 'unavailable'}</span>
+        <span>{enabled ? proofLabel(bundle?.status) : loading ? 'Loading…' : 'unavailable'}</span>
       </div>
       <div className="judge-grid">
-        <JudgeField label="Decision ID" value={proofText(receipt.decisionId ?? decision.decisionId)} href={links.deploy} />
-        <JudgeField label="Receipt digest" value={proofText(receipt.proofDigest ?? decision.proofDigest)} />
-        <JudgeField label="Deploy hash" value={proofText(bundle?.deployStatus?.deployHash)} href={links.deploy} />
-        <JudgeField label="Account" value={proofText(runtime?.account?.publicKey, 'missing')} href={links.account} />
-        <JudgeField label="Contract" value={proofText(runtime?.account?.contract?.hash, 'missing')} href={links.contract} />
-        <JudgeField label="Package" value={proofText(runtime?.account?.contract?.packageHash, 'missing')} href={links.package} />
-        <JudgeField label="Readback" value={bundle?.readback?.verified ? 'verified' : proofLabel(bundle?.readback?.status)} />
-        <JudgeField label="Policy gate" value={proofLabel(receipt.policyGate ?? decision.policyGate)} />
+        {loading ? (
+          fieldLabels.map((label) => (
+            <span key={label} className="judge-field-skeleton" aria-hidden="true">
+              <small>{label}</small>
+              <span className="skeleton-block packet-skeleton-cell" />
+            </span>
+          ))
+        ) : (
+          <>
+            <JudgeField label="Decision ID" value={proofText(receipt.decisionId ?? decision.decisionId)} href={links.deploy} />
+            <JudgeField label="Receipt digest" value={proofText(receipt.proofDigest ?? decision.proofDigest)} />
+            <JudgeField label="Deploy hash" value={proofText(bundle?.deployStatus?.deployHash)} href={links.deploy} />
+            <JudgeField label="Account" value={proofText(runtime?.account?.publicKey, 'missing')} href={links.account} />
+            <JudgeField label="Contract" value={proofText(runtime?.account?.contract?.hash, 'missing')} href={links.contract} />
+            <JudgeField label="Package" value={proofText(runtime?.account?.contract?.packageHash, 'missing')} href={links.package} />
+            <JudgeField label="Readback" value={bundle?.readback?.verified ? 'verified' : proofLabel(bundle?.readback?.status)} />
+            <JudgeField label="Policy gate" value={proofLabel(receipt.policyGate ?? decision.policyGate)} />
+          </>
+        )}
       </div>
       <div className="judge-actions">
         <button type="button" disabled={!enabled} onClick={() => copyValue('Replay command', replayCommand)} aria-label="Copy replay command">
