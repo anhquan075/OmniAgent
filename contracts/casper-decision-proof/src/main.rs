@@ -14,15 +14,13 @@ use casper_contract::{
     contract_api::{runtime, storage},
     unwrap_or_revert::UnwrapOrRevert,
 };
-use casper_types::{
-    api_error::ApiError,
-    CLValue, URef,
-};
-use install::install_contract;
+use casper_types::{api_error::ApiError, CLValue, URef};
+use install::{install_contract, normalize_account_hash};
 use keys::*;
 
 #[no_mangle]
 pub extern "C" fn record_decision() {
+    require_authorized_agent();
     let decision_id: String = runtime::get_named_arg("decision_id");
     let action: String = runtime::get_named_arg("action");
     let proof_digest: String = runtime::get_named_arg("proof_digest");
@@ -36,6 +34,12 @@ pub extern "C" fn record_decision() {
     if decision_id.is_empty() || proof_digest.is_empty() {
         runtime::revert(ApiError::InvalidArgument);
     }
+    // Receipt agent field must name the deploy signer, not an arbitrary claim.
+    let caller_hex = caller_account_hex();
+    let claimed = normalize_account_hash(&agent_account_hash);
+    if claimed.is_empty() || claimed != caller_hex {
+        runtime::revert(ApiError::User(131));
+    }
     let receipt = format!(
         "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
         decision_id,
@@ -46,7 +50,7 @@ pub extern "C" fn record_decision() {
         source_hash,
         timestamp,
         policy_gate,
-        agent_account_hash,
+        claimed,
         guardrail_hash
     );
     write_string(LATEST_DECISION_ID_KEY, decision_id.clone());
@@ -57,7 +61,7 @@ pub extern "C" fn record_decision() {
     write_string(LATEST_TIMESTAMP_KEY, timestamp);
     write_u64(LATEST_RISK_SCORE_KEY, risk_score);
     write_string(LATEST_POLICY_GATE_KEY, policy_gate);
-    write_string(LATEST_AGENT_ACCOUNT_HASH_KEY, agent_account_hash);
+    write_string(LATEST_AGENT_ACCOUNT_HASH_KEY, claimed);
     write_string(LATEST_GUARDRAIL_HASH_KEY, guardrail_hash);
     write_string(LATEST_RECEIPT_KEY, receipt.clone());
     storage::named_dictionary_put(DECISION_RECEIPTS_KEY, &decision_id, receipt);
@@ -78,8 +82,9 @@ pub extern "C" fn latest_decision_receipt() {
 #[no_mangle]
 pub extern "C" fn get_decision_receipt() {
     let decision_id: String = runtime::get_named_arg("decision_id");
-    let receipt_result: Option<String> = storage::named_dictionary_get(DECISION_RECEIPTS_KEY, &decision_id)
-        .unwrap_or_revert_with(ApiError::Read);
+    let receipt_result: Option<String> =
+        storage::named_dictionary_get(DECISION_RECEIPTS_KEY, &decision_id)
+            .unwrap_or_revert_with(ApiError::Read);
     match receipt_result {
         Some(value) => runtime::ret(CLValue::from_t(value).unwrap_or_revert()),
         None => runtime::revert(ApiError::ValueNotFound),
@@ -87,8 +92,55 @@ pub extern "C" fn get_decision_receipt() {
 }
 
 #[no_mangle]
+pub extern "C" fn get_authorized_agent() {
+    let agent = read_string(AUTHORIZED_AGENT_KEY);
+    runtime::ret(CLValue::from_t(agent).unwrap_or_revert());
+}
+
+/// One-shot ACL correction used by the upgrade session.
+///
+/// Requires `acl_rotation_enabled=true` (seeded in the same deploy), writes the
+/// new authorized agent, then clears the flag so later public calls revert.
+#[no_mangle]
+pub extern "C" fn rotate_authorized_agent() {
+    if !read_bool(ACL_ROTATION_ENABLED_KEY) {
+        runtime::revert(ApiError::User(132));
+    }
+    let agent_account_hash: String = runtime::get_named_arg("agent_account_hash");
+    let authorized = normalize_account_hash(&agent_account_hash);
+    if authorized.is_empty() {
+        runtime::revert(ApiError::InvalidArgument);
+    }
+    write_string(AUTHORIZED_AGENT_KEY, authorized);
+    write_bool(ACL_ROTATION_ENABLED_KEY, false);
+}
+
+#[no_mangle]
 pub extern "C" fn call() {
     install_contract();
+}
+
+/// Only the install-time agent account may write receipts.
+///
+/// User(130): deploy signer is not the stored `authorized_agent`.
+fn require_authorized_agent() {
+    let authorized = normalize_account_hash(&read_string(AUTHORIZED_AGENT_KEY));
+    let caller = caller_account_hex();
+    if authorized.is_empty() || authorized != caller {
+        runtime::revert(ApiError::User(130));
+    }
+}
+
+fn caller_account_hex() -> String {
+    let caller = runtime::get_caller();
+    let bytes = caller.as_bytes();
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        out.push(HEX[(byte >> 4) as usize] as char);
+        out.push(HEX[(byte & 0xf) as usize] as char);
+    }
+    out
 }
 
 fn write_string(key: &str, value: String) {
@@ -101,11 +153,28 @@ fn write_u64(key: &str, value: u64) {
     storage::write(uref, value);
 }
 
+fn write_bool(key: &str, value: bool) {
+    let uref = named_uref(key);
+    storage::write(uref, value);
+}
+
 fn read_string(key: &str) -> String {
     let uref = named_uref(key);
     storage::read(uref)
         .unwrap_or_revert_with(ApiError::Read)
         .unwrap_or_revert_with(ApiError::ValueNotFound)
+}
+
+fn read_bool(key: &str) -> bool {
+    let uref = match runtime::get_key(key) {
+        Some(key) => key
+            .into_uref()
+            .unwrap_or_revert_with(ApiError::UnexpectedKeyVariant),
+        None => return false,
+    };
+    storage::read(uref)
+        .unwrap_or_revert_with(ApiError::Read)
+        .unwrap_or(false)
 }
 
 fn named_uref(key: &str) -> URef {

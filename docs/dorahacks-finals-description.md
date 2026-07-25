@@ -33,7 +33,7 @@ Most finalists attest. OmniAgent enforces — fail-closed AI risk loop → Caspe
 2. Open https://omniyield.app/api/public/proof (public-safe JSON, no keys) — `status=live_verified`
 3. Open the latest decision deploy on cspr.live (proof table row 5)
 4. Run paid-act on `/try`: Probe unpaid → HTTP **402**, Verify settle, Enforce from paid
-5. Click Cheat Lab attacks → explorer User(100/102/103) reverts (rows 13–15)
+5. Click Cheat Lab attacks → explorer User(100/102/103/104) vault + User(130/131) ACL reverts (rows 13–15, 19, 25–26)
 6. Open vault freeze / unfreeze / set_ltv deploys (rows 8–9, 12) — enforcement is real state change
 
 Demo: https://omniyield.app  
@@ -108,7 +108,7 @@ Most finalists attest. OmniAgent **enforces collateral** after a fail-closed AI 
 | # | Item | Link |
 |---|------|------|
 | 1 | Decision contract install | https://testnet.cspr.live/deploy/0444471ab96e840e25d69f525341ee95f014137ebda3e3c0a838eb46b31267f1 |
-| 2 | Decision contract | https://testnet.cspr.live/contract/5a82529f9ba05e716933384ddc9862710ba9a0fd3a7347ab1e8c6e60b1a4c861 |
+| 2 | Decision contract v1 | https://testnet.cspr.live/contract/5a82529f9ba05e716933384ddc9862710ba9a0fd3a7347ab1e8c6e60b1a4c861 |
 | 3 | Contract package | https://testnet.cspr.live/contract-package/46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea |
 | 4 | Reference demo decision | https://testnet.cspr.live/deploy/ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736 |
 | 5 | Latest live decision (`haircut`, live_verified) | https://testnet.cspr.live/deploy/87734909bab1a83890228b59a66c64fd7636ce99eb4beeb4ac5d9c07b990bb22 |
@@ -122,6 +122,17 @@ Most finalists attest. OmniAgent **enforces collateral** after a fail-closed AI 
 | 13 | Cheat Lab User(100) malformed receipt | https://testnet.cspr.live/deploy/2b7113b0d8a4d916b6c6b0263a500a5823970e920fdef318484a789ccb912d46 |
 | 14 | Cheat Lab User(102) unapproved gate | https://testnet.cspr.live/deploy/feb4d8b714dc66d9d19bd1a70cfd71e58f62884b8c3a76771875db92d018dff2 |
 | 15 | Cheat Lab User(103) wrong action | https://testnet.cspr.live/deploy/307306b6dd7201466245464d5f3f9d8c7a4563eaac6057fd3a846dcd7322a6c4 |
+| 16 | Decision-proof v2 upgrade (`get_decision_receipt`) | https://testnet.cspr.live/deploy/b1ec74679ca73128450d2b9e46ddd99d578d889498afee06eed52f08db1bb3f7 |
+| 17 | Verified vault v3 install (pins decision package) | https://testnet.cspr.live/deploy/a1850caeb822fb885cce79bfd0430905021844023d5eaa91fa38abe14fed0638 |
+| 18 | Cross-contract `haircut → enforce_verified` succeeds | https://testnet.cspr.live/deploy/599dc698b0d7c52bd3d0ef86f819a47459100cf289b36db5f3fada0fe4354b1b |
+| 19 | Cheat Lab User(104): tampered receipt rejected | https://testnet.cspr.live/deploy/ddfdf698ea96e12f439438797d66ff81efdfbb6b5827e0d0849c946dd9109d93 |
+| 20 | Active decision-proof v2 contract | https://testnet.cspr.live/contract/9bdd21204d0786256d4cf4ce1325bc16b49558ab1df411d9d3f32c9c34305747 |
+| 21 | Active verified vault v3 contract | https://testnet.cspr.live/contract/d286dfb5a15f935ee02c415e478fa08e2b4b2d8c35232002028904ba0f39c5b3 |
+| 22 | Decision-proof agent ACL upgrade + rotation | https://testnet.cspr.live/deploy/303561726e466a9b7ed4915d20212199ee1c335745f33dac38c63d21ab2a21a2 |
+| 23 | Active decision-proof ACL contract | https://testnet.cspr.live/contract/5270823ca6fb8c4cf5c1f83af53e889ec1f39bbd3532c2088175bb40ca97fc18 |
+| 24 | Authorized `record_decision` under ACL | https://testnet.cspr.live/deploy/424467b1ec5dbf6d4d79bdbfac192217ebb36e3f2c1ca448549a5494c8e2b383 |
+| 25 | Unauthorized ACL reject User(130) | https://testnet.cspr.live/deploy/1b6c37f5839881af4ee0f6e6f53c1061dc6897b09180904e7e404a3660bfd23b |
+| 26 | Mismatched agent field User(131) | https://testnet.cspr.live/deploy/c1daf818ceae217176270ff0d6a16fc16fc7a3280985619c738e518470056cf8 |
 
 Committed artifact: https://github.com/anhquan075/OmniAgent/blob/main/proofs/casper-buildathon-submission-proof.json (`status=live_verified`, includes `cheatReverts` + `paidAct`).
 
@@ -132,5 +143,7 @@ Committed artifact: https://github.com/anhquan075/OmniAgent/blob/main/proofs/cas
 - **Technical execution** — live demo, public proof (`live_verified`), explorer canaries, payment/budget guardrails
 - **Real-world applicability** — RWA collateral financing gate for risk desks
 - **x402 ecosystem** — native Casper facilitator settle + buy→verify→act on `/try`
-- **Cheat Lab** — intentional User(100/102/103) vault reverts judges can click
+- **Cross-contract enforcement** — vault reads the authoritative receipt from the latest decision-proof package version
+- **Agent ACL** — only the installed OmniAgent account can `record_decision` (User 130/131)
+- **Cheat Lab** — six intentional reverts judges can click: vault User(100/102/103/104) + ACL User(130/131)
 ```

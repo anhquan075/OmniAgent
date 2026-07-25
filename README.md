@@ -8,7 +8,7 @@
   <a href="frontend/public/imgs/omniagent-mascot.png"><img alt="OmniAgent ghost mascot" src="frontend/public/imgs/omniagent-mascot.png" width="26" /></a>
   <a href="https://dorahacks.io/hackathon/casper-agentic-buildathon/detail"><img alt="Casper Agentic Buildathon" src="https://img.shields.io/badge/Casper-Agentic%20Buildathon-D7352E?logo=casper&logoColor=white" /></a>
   <a href="contracts/casper-decision-proof"><img alt="Native Casper contract" src="https://img.shields.io/badge/Contract-Native%20Casper%20Rust-2B6CB0?logo=rust&logoColor=white" /></a>
-  <a href="https://testnet.cspr.live/contract/5a82529f9ba05e716933384ddc9862710ba9a0fd3a7347ab1e8c6e60b1a4c861"><img alt="Casper Testnet proof" src="https://img.shields.io/badge/Testnet-Casper%20Proof-D7352E" /></a>
+  <a href="https://testnet.cspr.live/contract/5270823ca6fb8c4cf5c1f83af53e889ec1f39bbd3532c2088175bb40ca97fc18"><img alt="Casper Testnet proof" src="https://img.shields.io/badge/Testnet-Casper%20Proof-D7352E" /></a>
 </p>
 
 # OmniAgent Casper
@@ -35,28 +35,35 @@ script. It is built as a Casper-only demo for the
 ## Judge path (≈5 minutes)
 
 1. Open [https://omniyield.app](https://omniyield.app) — flight deck + latest proof
-2. Open [https://omniyield.app/api/public/proof](https://omniyield.app/api/public/proof) — public-safe JSON (no keys)
-3. Open the latest decision deploy from the proof payload / table below
-4. Hit [https://omniyield.app/api/x402/rwa-evidence](https://omniyield.app/api/x402/rwa-evidence) unpaid → HTTP **402** on `casper:casper-test`
-5. Open vault freeze / unfreeze / `set_ltv` deploys — enforcement is real state change
+2. Open [https://omniyield.app/try](https://omniyield.app/try) — Cheat Lab (6 intentional reverts) + x402 buy→verify→act
+3. Open [https://omniyield.app/api/public/proof](https://omniyield.app/api/public/proof) — public-safe JSON (`status=live_verified`, no keys)
+4. Confirm `authoring.mode=agent_acl`, `vault.verificationMode=cross_contract`, `cheatReverts` 6/6
+5. Hit [https://omniyield.app/api/x402/rwa-evidence](https://omniyield.app/api/x402/rwa-evidence) unpaid → HTTP **402** on `casper:casper-test`
+6. Open the latest decision / vault / Cheat Lab explorer links from the proof table
 
 Full DoraHacks paste: [`docs/dorahacks-finals-description.md`](docs/dorahacks-finals-description.md)
 
 ## Current Public Deployment
 
-Last verified: 2026-07-23.
+Last verified: 2026-07-26.
 
 | Surface | URL / Status |
 |---------|--------------|
 | Frontend proof console | [https://omniyield.app](https://omniyield.app) |
-| Backend public proof | [https://omniagent-production.up.railway.app/api/public/proof](https://omniagent-production.up.railway.app/api/public/proof) |
-| Agent card | [https://omniagent-production.up.railway.app/.well-known/casper-agent-card.json](https://omniagent-production.up.railway.app/.well-known/casper-agent-card.json) |
+| Try enforcement (Cheat Lab + paid-act) | [https://omniyield.app/try](https://omniyield.app/try) |
+| Backend public proof | [https://omniyield.app/api/public/proof](https://omniyield.app/api/public/proof) (`live_verified`) |
+| Agent card | [https://omniyield.app/.well-known/casper-agent-card.json](https://omniyield.app/.well-known/casper-agent-card.json) |
 | Paywalled x402 evidence | [https://omniyield.app/api/x402/rwa-evidence](https://omniyield.app/api/x402/rwa-evidence) |
+| Authoring ACL | `agent_acl` — only OmniAgent can `record_decision` (User 130/131) |
+| Vault verification | `cross_contract` — `enforce_verified` live-reads decision-proof package |
+| Cheat Lab | 6/6 canaries: vault User(100/102/103/104) + ACL User(130/131) |
+| Paid-act lab | 3/3 x402 buy→verify→act steps on `/try` |
 | x402 status | `verified`, `bindingStatus=bound`, WCSPR `3d80df21…`, facilitator `x402-facilitator.cspr.cloud` |
 | x402 settle (row 6) | [`93074ccb…`](https://testnet.cspr.live/deploy/93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5) |
 | Live submit | Enabled with a `2.5 CSPR` payment cap, `4` submissions/day, `10 CSPR`/day budget, and `50 CSPR` reserve |
 | Autonomous loop | Armed at `1800s` interval with fail-closed guardrails |
-| Latest live decision | [`87734909…`](https://testnet.cspr.live/deploy/87734909bab1a83890228b59a66c64fd7636ce99eb4beeb4ac5d9c07b990bb22) (`haircut`, 2026-07-23) |
+| Latest live decision | [`87734909…`](https://testnet.cspr.live/deploy/87734909bab1a83890228b59a66c64fd7636ce99eb4beeb4ac5d9c07b990bb22) (`haircut`) |
+| Cross-contract enforce | [`599dc698…`](https://testnet.cspr.live/deploy/599dc698b0d7c52bd3d0ef86f819a47459100cf289b36db5f3fada0fe4354b1b) |
 | Vault freeze / unfreeze / set_ltv | [`36d1f699…`](https://testnet.cspr.live/deploy/36d1f699ebf201e1c2617a16ee9152a56c567351ba733e2e87b944db7c325176) / [`39dc155a…`](https://testnet.cspr.live/deploy/39dc155aac0a9be1a23aa424d60d5783d5ff75fb2cb9ab51d4a630a7ea245646) / [`43a8c497…`](https://testnet.cspr.live/deploy/43a8c497166b0d219a9867464b6de2ea66c5a6512f725f51df9bd89341612604) |
 
 The x402 evidence paywall settles **natively on Casper Testnet** via the
@@ -83,17 +90,44 @@ anchored to Casper.
 ### Collateral vault (enforcement)
 
 After a verified decision readback, the autonomous loop can map policy actions to
-vault entry points (`block→freeze`, `approve→unfreeze`, `haircut→set_ltv`). Arm with:
+vault entry points (`block→freeze`, `approve→unfreeze`, `haircut→set_ltv`). The
+verified path uses `enforce_verified`, which **live-reads** the authoritative
+receipt from the decision-proof package (caller-supplied receipts cannot forge
+LTV / freeze state). Arm with:
 
 ```bash
-CASPER_VAULT_CONTRACT_HASH=<hash>
+CASPER_VAULT_CONTRACT_HASH=<legacy-hash>
 CASPER_VAULT_ENFORCE_ENABLED=true
 CASPER_VAULT_ASSET_ID=rwa-demo-collateral-001
+CASPER_VAULT_VERIFIED_CONTRACT_HASH=<v3-hash>
+CASPER_VAULT_VERIFIED_PACKAGE_HASH=<v3-package-hash>
+CASPER_VAULT_VERIFIED_ENABLED=true
 ```
 
 Install helper: [`scripts/install-collateral-vault.sh`](scripts/install-collateral-vault.sh).
+Build both contracts (MVP Wasm + size gate): [`scripts/build-casper-contracts.sh`](scripts/build-casper-contracts.sh).
 Canary: `cd backend && uv run python scripts/vault_demo_cycle.py`.
-Public proof exposes the latest vault action under `vault` (and `contractLinks.vaultContractHash` when configured).
+Public proof exposes `vault.verificationMode=cross_contract` and
+`contractLinks.vaultContractHash` when configured.
+
+### Decision-proof agent ACL
+
+`record_decision` fail-closes unless the deploy signer is the installed
+`authorized_agent` (User 130) and the receipt's `agent_account_hash` matches
+that signer (User 131). Upgrade helper:
+[`scripts/upgrade-decision-proof-acl.sh`](scripts/upgrade-decision-proof-acl.sh).
+Public proof exposes `authoring.mode=agent_acl`.
+
+### Cheat Lab + paid-act
+
+Judges click intentional attacks on [`/try`](https://omniyield.app/try):
+
+- Vault reverts: User(100/102/103/104)
+- ACL reverts: User(130/131) — canary-only (OmniAgent is the authorized signer)
+- x402 buy→verify→act: unpaid 402 → settle → enforce from paid evidence
+
+Catalog: `GET /api/public/cheat`. Canaries live in
+[`proofs/cheat-lab-canaries.json`](proofs/cheat-lab-canaries.json).
 
 ## Safety Model (Dry Run vs Live Submit)
 
@@ -252,8 +286,13 @@ Only claim stack items backed by code or verifier evidence:
 | `CASPER_ACCOUNT_PUBLIC_KEY` | Funded Casper Testnet account public key |
 | `CASPER_SECRET_KEY_PATH` | Local signer path (must stay outside git) |
 | `CASPER_CONTRACT_INSTALL_DEPLOY_HASH` | Optional contract install deploy hash for live proof verification |
-| `CASPER_DECISION_CONTRACT_HASH` | Deployed decision contract hash |
-| `CASPER_DECISION_CONTRACT_PACKAGE_HASH` | Deployed decision contract package hash |
+| `CASPER_DECISION_CONTRACT_HASH` | Deployed decision contract hash (pin the active ACL version) |
+| `CASPER_DECISION_CONTRACT_PACKAGE_HASH` | Deployed decision contract package hash (stable across versions) |
+| `CASPER_DECISION_AUTHORIZED_AGENT_HASH` | Bare 64-hex account hash allowed to `record_decision` |
+| `CASPER_DECISION_ACL_ENABLED` | Exposes `authoring.mode=agent_acl` in public proof when true |
+| `CASPER_VAULT_VERIFIED_CONTRACT_HASH` | Active verified vault contract hash (`enforce_verified`) |
+| `CASPER_VAULT_VERIFIED_PACKAGE_HASH` | Verified vault package hash |
+| `CASPER_VAULT_VERIFIED_ENABLED` | Prefer cross-contract enforcement when true |
 | `CASPER_LIVE_SUBMIT_ENABLED` | Enables guarded live-submit prerequisite validation |
 | `CASPER_PAYMENT_AMOUNT_MOTES` | Legacy deploy gas/payment cap; `2500000000` for the measured Testnet canary path |
 | `CASPER_CLIENT_PATH` | Casper CLI binary, default `casper-client` |
@@ -341,10 +380,11 @@ Public replay surfaces:
 - Submission checklist: [docs/casper-buildathon-submission-checklist.md](docs/casper-buildathon-submission-checklist.md)
 - Launch roadmap: [docs/casper-launch-roadmap.md](docs/casper-launch-roadmap.md)
 
-Build the Casper contract directly:
+Build both Casper contracts (preferred — MVP Wasm + install-lane size gate):
 
 ```bash
-cargo +nightly-2025-03-01 build --manifest-path contracts/casper-decision-proof/Cargo.toml --release --target wasm32v1-none
+./scripts/build-casper-contracts.sh
+# artifacts: contracts/*/wasm/*.wasm
 ```
 
 ## Casper Testnet & Blockchain Links
@@ -358,20 +398,24 @@ public proof response with verified readback.
 |------|------|
 | Casper Testnet explorer | [testnet.cspr.live](https://testnet.cspr.live/) |
 | Casper Testnet RPC | [node.testnet.casper.network/rpc](https://node.testnet.casper.network/rpc) |
-| Decision contract | [5a82529f9ba05e716933384ddc9862710ba9a0fd3a7347ab1e8c6e60b1a4c861](https://testnet.cspr.live/contract/5a82529f9ba05e716933384ddc9862710ba9a0fd3a7347ab1e8c6e60b1a4c861) |
-| Contract package | [46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea](https://testnet.cspr.live/contract-package/46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea) |
+| Active decision-proof (ACL) | [5270823ca6fb8c4cf5c1f83af53e889ec1f39bbd3532c2088175bb40ca97fc18](https://testnet.cspr.live/contract/5270823ca6fb8c4cf5c1f83af53e889ec1f39bbd3532c2088175bb40ca97fc18) |
+| Decision package (stable) | [46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea](https://testnet.cspr.live/contract-package/46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea) |
+| Authorized agent | `account-hash-9b62ecfba326c1ab3f249b0f39f457d8fcb0bc7f68f59b7357d4667339ee1f04` |
 | Contract install deploy | [0444471ab96e840e25d69f525341ee95f014137ebda3e3c0a838eb46b31267f1](https://testnet.cspr.live/deploy/0444471ab96e840e25d69f525341ee95f014137ebda3e3c0a838eb46b31267f1) |
+| ACL upgrade + rotation | [303561726e466a9b7ed4915d20212199ee1c335745f33dac38c63d21ab2a21a2](https://testnet.cspr.live/deploy/303561726e466a9b7ed4915d20212199ee1c335745f33dac38c63d21ab2a21a2) |
 | Reference demo decision deploy | [ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736](https://testnet.cspr.live/deploy/ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736) |
 | Contract source | [contracts/casper-decision-proof](contracts/casper-decision-proof) |
 | Collateral vault source | [contracts/collateral-vault](contracts/collateral-vault) |
-| Vault contract | [66969eead67ac3cb07e131dc86bf4e6b7e63d2c2a33fb1779f705d79878bb55f](https://testnet.cspr.live/contract/66969eead67ac3cb07e131dc86bf4e6b7e63d2c2a33fb1779f705d79878bb55f) |
-| Vault package | [5868d6d6bc65f0e6e1aba462eaf6bf2850075313ae576e49f640864f4e1abed3](https://testnet.cspr.live/contract-package/5868d6d6bc65f0e6e1aba462eaf6bf2850075313ae576e49f640864f4e1abed3) |
-| Vault install deploy | [21437ac6d7da2965e632d2f931678f6484707474b5b10204be55184076e45946](https://testnet.cspr.live/deploy/21437ac6d7da2965e632d2f931678f6484707474b5b10204be55184076e45946) |
-| Vault freeze canary | [8d7912626337e21cbb483554bca310f0e00c198c82a990b6bbe7cd6cad6a7591](https://testnet.cspr.live/deploy/8d7912626337e21cbb483554bca310f0e00c198c82a990b6bbe7cd6cad6a7591) |
-| Vault unfreeze canary | [7b24ab0e262f62960edbb6c24aaa1dfef8fdc9aba4eb4237671b2ce5b734c078](https://testnet.cspr.live/deploy/7b24ab0e262f62960edbb6c24aaa1dfef8fdc9aba4eb4237671b2ce5b734c078) |
+| Legacy vault contract | [66969eead67ac3cb07e131dc86bf4e6b7e63d2c2a33fb1779f705d79878bb55f](https://testnet.cspr.live/contract/66969eead67ac3cb07e131dc86bf4e6b7e63d2c2a33fb1779f705d79878bb55f) |
+| Verified vault v3 | [d286dfb5a15f935ee02c415e478fa08e2b4b2d8c35232002028904ba0f39c5b3](https://testnet.cspr.live/contract/d286dfb5a15f935ee02c415e478fa08e2b4b2d8c35232002028904ba0f39c5b3) |
+| Verified vault package | [cd2c2dea8b12da453351090bcd003db38718f301c419c2033701147a897f7883](https://testnet.cspr.live/contract-package/cd2c2dea8b12da453351090bcd003db38718f301c419c2033701147a897f7883) |
+| Vault freeze / unfreeze canaries | [36d1f699…](https://testnet.cspr.live/deploy/36d1f699ebf201e1c2617a16ee9152a56c567351ba733e2e87b944db7c325176) / [39dc155a…](https://testnet.cspr.live/deploy/39dc155aac0a9be1a23aa424d60d5783d5ff75fb2cb9ab51d4a630a7ea245646) |
+| Cross-contract haircut enforce | [599dc698…](https://testnet.cspr.live/deploy/599dc698b0d7c52bd3d0ef86f819a47459100cf289b36db5f3fada0fe4354b1b) |
+| Cheat Lab User(130/131) | [1b6c37f5…](https://testnet.cspr.live/deploy/1b6c37f5839881af4ee0f6e6f53c1061dc6897b09180904e7e404a3660bfd23b) / [c1daf818…](https://testnet.cspr.live/deploy/c1daf818ceae217176270ff0d6a16fc16fc7a3280985619c738e518470056cf8) |
 | Vault install script | [scripts/install-collateral-vault.sh](scripts/install-collateral-vault.sh) |
+| ACL upgrade script | [scripts/upgrade-decision-proof-acl.sh](scripts/upgrade-decision-proof-acl.sh) |
 | Receipt verifier | [scripts/verify-casper-receipt.sh](scripts/verify-casper-receipt.sh) |
 
-Vault install / freeze / unfreeze explorer rows are live; refresh the
-DoraHacks proof table from
+Full explorer proof table:
 [`docs/dorahacks-finals-description.md`](docs/dorahacks-finals-description.md).
+Ops status: [`docs/finals-ops-runbook.md`](docs/finals-ops-runbook.md).

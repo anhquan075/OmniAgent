@@ -1,6 +1,6 @@
 {
   "network": "casper-test",
-  "updatedAt": "2026-07-25T16:25:30+00:00",
+  "updatedAt": "2026-07-25T17:34:00+00:00",
   "scenarios": {
     "malformed_receipt": {
       "transactionHash": "2b7113b0d8a4d916b6c6b0263a500a5823970e920fdef318484a789ccb912d46",
@@ -22,6 +22,27 @@
       "errorMessage": "User error: 103",
       "userErrorCode": 103,
       "recordedAt": "2026-07-25T16:25:30+00:00"
+    },
+    "tampered_authoritative_receipt": {
+      "transactionHash": "ddfdf698ea96e12f439438797d66ff81efdfbb6b5827e0d0849c946dd9109d93",
+      "explorerUrl": "https://testnet.cspr.live/deploy/ddfdf698ea96e12f439438797d66ff81efdfbb6b5827e0d0849c946dd9109d93",
+      "errorMessage": "User error: 104",
+      "userErrorCode": 104,
+      "recordedAt": "2026-07-25T17:34:00+00:00"
+    },
+    "unauthorized_recorder": {
+      "transactionHash": "1b6c37f5839881af4ee0f6e6f53c1061dc6897b09180904e7e404a3660bfd23b",
+      "explorerUrl": "https://testnet.cspr.live/deploy/1b6c37f5839881af4ee0f6e6f53c1061dc6897b09180904e7e404a3660bfd23b",
+      "errorMessage": "User error: 130",
+      "userErrorCode": 130,
+      "recordedAt": "2026-07-25T18:10:00+00:00"
+    },
+    "forged_agent_identity": {
+      "transactionHash": "c1daf818ceae217176270ff0d6a16fc16fc7a3280985619c738e518470056cf8",
+      "explorerUrl": "https://testnet.cspr.live/deploy/c1daf818ceae217176270ff0d6a16fc16fc7a3280985619c738e518470056cf8",
+      "errorMessage": "User error: 131",
+      "userErrorCode": 131,
+      "recordedAt": "2026-07-25T18:18:00+00:00"
     }
   }
 }

@@ -55,6 +55,7 @@ class CasperPublicProofService:
             "accountPublicKey": settings.casper_account_public_key,
             "contractHash": settings.casper_decision_contract_hash,
             "contractPackageHash": settings.casper_decision_contract_package_hash,
+            "authoring": CasperPublicProofService._authoring(settings),
             "contractLinks": CasperPublicProofService._contract_links(settings),
             "decisionReceipt": receipt,
             "evidenceGraph": CasperPublicProofService._evidence_graph(decision),
@@ -233,6 +234,7 @@ class CasperPublicProofService:
     @staticmethod
     def _vault(settings: Any) -> dict[str, Any]:
         explorer = str(settings.casper_explorer_url or "").rstrip("/")
+        verified = bool(settings.casper_vault_verified_enabled)
         loop = get_loop_status()
         ledger_vault = CasperPublicProofService._latest_vault_ledger_event()
         payload = ledger_vault.get("payload") if isinstance(ledger_vault.get("payload"), dict) else {}
@@ -240,18 +242,45 @@ class CasperPublicProofService:
             CasperPublicProofService._string_or_none(loop.get("lastVaultAction"))
             or CasperPublicProofService._string_or_none(payload.get("entryPoint"))
             or CasperPublicProofService._string_or_none(ledger_vault.get("action"))
+            or (
+                CasperPublicProofService._string_or_none(
+                    settings.casper_vault_verified_canary_action
+                )
+                if verified and settings.casper_vault_verified_canary_tx_hash
+                else None
+            )
         )
         status = (
             CasperPublicProofService._string_or_none(loop.get("lastVaultStatus"))
             or CasperPublicProofService._string_or_none(payload.get("status"))
             or ("submitted" if payload.get("submitted") else None)
+            or (
+                "confirmed"
+                if verified and settings.casper_vault_verified_canary_tx_hash
+                else None
+            )
         )
         tx_hash = (
             CasperPublicProofService._string_or_none(loop.get("lastVaultTx"))
             or CasperPublicProofService._string_or_none(payload.get("transactionHash"))
             or CasperPublicProofService._string_or_none(payload.get("deployHash"))
+            or (
+                CasperPublicProofService._string_or_none(
+                    settings.casper_vault_verified_canary_tx_hash
+                )
+                if verified
+                else None
+            )
         )
-        decision_id = CasperPublicProofService._string_or_none(payload.get("decisionId"))
+        decision_id = CasperPublicProofService._string_or_none(
+            payload.get("decisionId")
+        ) or (
+            CasperPublicProofService._string_or_none(
+                settings.casper_vault_verified_canary_decision_id
+            )
+            if verified
+            else None
+        )
         asset_id = (
             CasperPublicProofService._string_or_none(payload.get("assetId"))
             or settings.casper_vault_asset_id
@@ -261,8 +290,16 @@ class CasperPublicProofService:
             explorer_url = f"{explorer}/deploy/{tx_hash}"
         elif CasperPublicProofService._string_or_none(payload.get("explorerUrl")):
             explorer_url = str(payload.get("explorerUrl"))
-        contract_hash = settings.casper_vault_contract_hash
-        package_hash = settings.casper_vault_package_hash
+        contract_hash = (
+            settings.casper_vault_verified_contract_hash
+            if verified
+            else settings.casper_vault_contract_hash
+        )
+        package_hash = (
+            settings.casper_vault_verified_package_hash
+            if verified
+            else settings.casper_vault_package_hash
+        )
         links: dict[str, str] = {}
         if explorer and contract_hash:
             links["contractHash"] = f"{explorer}/contract/{contract_hash}"
@@ -272,6 +309,8 @@ class CasperPublicProofService:
         recent_actions = CasperPublicProofService._recent_vault_actions(explorer)
         return {
             "enforceEnabled": bool(settings.casper_vault_enforce_enabled),
+            "verificationMode": "cross_contract" if verified else "legacy_receipt",
+            "proofContractHash": settings.casper_decision_contract_hash if verified else None,
             "configured": configured,
             "contractHash": contract_hash,
             "packageHash": package_hash,
@@ -283,9 +322,9 @@ class CasperPublicProofService:
             "explorerUrl": explorer_url,
             "contractLinks": links,
             "actionMap": {
-                "block": "freeze",
-                "approve": "unfreeze",
-                "haircut": "set_ltv",
+                "block": "enforce_verified" if verified else "freeze",
+                "approve": "enforce_verified" if verified else "unfreeze",
+                "haircut": "enforce_verified" if verified else "set_ltv",
             },
             "recentActions": recent_actions,
             "stateDelta": CasperPublicProofService._vault_state_delta(action),
@@ -294,7 +333,12 @@ class CasperPublicProofService:
     @staticmethod
     def _vault_state_delta(vault_action: str | None) -> dict[str, Any]:
         """Public-safe before/after semantics for the latest vault entry point."""
-        action = (vault_action or "").strip().lower()
+        action = (vault_action or "").strip().lower().removesuffix("_verified")
+        action = {
+            "block": "freeze",
+            "approve": "unfreeze",
+            "haircut": "set_ltv",
+        }.get(action, action)
         if action == "freeze":
             return {
                 "entryPoint": "freeze",
@@ -434,6 +478,32 @@ class CasperPublicProofService:
         return {key: role.get(key) for key in allowed if role.get(key) is not None}
 
     @staticmethod
+    def _authoring(settings: Any) -> dict[str, Any]:
+        from app.services.casper.account import CasperAccountService
+
+        authorized = CasperAccountService.normalize_account_hash(
+            getattr(settings, "casper_decision_authorized_agent_hash", None)
+        ) or CasperAccountService.account_hash_from_public_key(
+            getattr(settings, "casper_account_public_key", None)
+        )
+        acl_enabled = bool(getattr(settings, "casper_decision_acl_enabled", False))
+        canary = CasperPublicProofService._string_or_none(
+            getattr(settings, "casper_decision_acl_canary_tx_hash", None)
+        )
+        explorer = str(settings.casper_explorer_url or "").rstrip("/")
+        return {
+            "mode": "agent_acl" if acl_enabled else "public_record",
+            "authorizedAgentAccountHash": authorized,
+            "aclEnabled": acl_enabled,
+            "canaryTransactionHash": canary,
+            "explorerUrl": f"{explorer}/deploy/{canary}" if explorer and canary else None,
+            "userErrors": {
+                "unauthorizedCaller": 130,
+                "mismatchedAgentField": 131,
+            },
+        }
+
+    @staticmethod
     def _live_proof(settings: Any, decision: dict[str, Any], receipt: dict[str, Any] | None) -> dict[str, Any]:
         return {
             "contractInstallDeployHash": getattr(settings, "casper_contract_install_deploy_hash", None),
@@ -443,6 +513,9 @@ class CasperPublicProofService:
             "proofDigest": decision.get("proofDigest"),
             "decisionId": decision.get("decisionId"),
             "decisionReceipt": (receipt or {}).get("receiptValue"),
+            "authoringMode": (
+                "agent_acl" if bool(getattr(settings, "casper_decision_acl_enabled", False)) else "public_record"
+            ),
         }
 
     @staticmethod
@@ -455,11 +528,22 @@ class CasperPublicProofService:
             links["contractPackageHash"] = (
                 f"{explorer}/contract-package/{settings.casper_decision_contract_package_hash}"
             )
-        if explorer and settings.casper_vault_contract_hash:
-            links["vaultContractHash"] = f"{explorer}/contract/{settings.casper_vault_contract_hash}"
-        if explorer and settings.casper_vault_package_hash:
+        verified = bool(settings.casper_vault_verified_enabled)
+        vault_contract_hash = (
+            settings.casper_vault_verified_contract_hash
+            if verified
+            else settings.casper_vault_contract_hash
+        )
+        vault_package_hash = (
+            settings.casper_vault_verified_package_hash
+            if verified
+            else settings.casper_vault_package_hash
+        )
+        if explorer and vault_contract_hash:
+            links["vaultContractHash"] = f"{explorer}/contract/{vault_contract_hash}"
+        if explorer and vault_package_hash:
             links["vaultContractPackageHash"] = (
-                f"{explorer}/contract-package/{settings.casper_vault_package_hash}"
+                f"{explorer}/contract-package/{vault_package_hash}"
             )
         return links
 

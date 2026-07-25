@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.core.settings import get_settings
+from app.services.casper.account import CasperAccountService
 from app.services.casper.cycle_context import cycle_payload, normalize_cycle_context
 from app.services.casper.cycle_history import CasperCycleHistoryService
 from app.services.casper.hashing import sha256_json, sha256_text
@@ -29,6 +30,19 @@ class CasperDecisionContractService:
             or "manual-source"
         )
         policy_gate = resolve_policy_gate(args, evidence, guardrails)
+        settings = get_settings()
+        explicit_agent = str(args.get("agentAccountHash") or args.get("agent_account_hash") or "").strip()
+        derived_agent = CasperAccountService.account_hash_from_public_key(settings.casper_account_public_key)
+        configured_agent = CasperAccountService.normalize_account_hash(
+            settings.casper_decision_authorized_agent_hash
+        )
+        agent_account_hash = (
+            CasperAccountService.normalize_account_hash(explicit_agent)
+            or configured_agent
+            or derived_agent
+            or explicit_agent
+            or ""
+        )
         payload = {
             "network": "casper-testnet",
             "decisionId": str(args.get("decisionId") or args.get("decision_id") or "casper-decision"),
@@ -40,7 +54,7 @@ class CasperDecisionContractService:
             "sourceHash": source_hash,
             "timestamp": str(args.get("timestamp") or datetime.now(timezone.utc).isoformat()),
             "policyGate": policy_gate,
-            "agentAccountHash": str(args.get("agentAccountHash") or args.get("agent_account_hash") or ""),
+            "agentAccountHash": agent_account_hash,
             "guardrailHash": str(
                 args.get("guardrailHash")
                 or args.get("guardrail_hash")

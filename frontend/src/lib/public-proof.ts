@@ -17,6 +17,8 @@ export type VaultRecentAction = {
 
 export type PublicProofVault = {
   enforceEnabled: boolean;
+  verificationMode?: 'cross_contract' | 'legacy_receipt';
+  proofContractHash?: string | null;
   configured: boolean;
   contractHash: string | null;
   packageHash: string | null;
@@ -136,6 +138,18 @@ export type PaidActRunResult = {
   contrast?: { unpaid?: string; paid?: string };
 };
 
+export type PublicProofAuthoring = {
+  mode?: 'agent_acl' | 'public_record';
+  authorizedAgentAccountHash?: string | null;
+  aclEnabled?: boolean;
+  canaryTransactionHash?: string | null;
+  explorerUrl?: string | null;
+  userErrors?: {
+    unauthorizedCaller?: number;
+    mismatchedAgentField?: number;
+  };
+};
+
 export type PublicProof = {
   status: string | null;
   action: string | null;
@@ -146,6 +160,7 @@ export type PublicProof = {
   demoUrl: string | null;
   videoUrl: string | null;
   proofDigest: string | null;
+  authoring?: PublicProofAuthoring | null;
   x402?: {
     status?: string | null;
     bindingStatus?: string | null;

@@ -23,9 +23,12 @@ def test_tracked_proof_artifact_is_live_verified() -> None:
     assert proof["status"] == "live_verified"
     assert proof["readback"]["verified"] is True
     assert proof["deployHash"]
-    assert proof["cheatReverts"]["readyCount"] >= 3
+    assert proof["cheatReverts"]["readyCount"] >= 6
     assert proof["paidAct"]["readyCount"] >= 3
     assert proof["x402"]["status"] == "verified"
+    assert proof["vault"]["verificationMode"] == "cross_contract"
+    assert proof["authoring"]["mode"] == "agent_acl"
+    assert proof["vault"]["transactionHash"]
 
 
 def test_proof_artifact_verifier_script_exists() -> None:

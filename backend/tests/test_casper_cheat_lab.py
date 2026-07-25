@@ -19,14 +19,17 @@ def test_cli_output_extracts_user_error_code() -> None:
     assert CasperCliOutput.extract_user_error_code(output) == 102
 
 
-def test_cheat_scenarios_cover_user_errors_100_102_103() -> None:
+def test_cheat_scenarios_cover_vault_and_acl_user_errors() -> None:
     items = CasperCheatLabService.list_scenarios()
     codes = {item["expectedUserError"] for item in items}
-    assert codes == {100, 102, 103}
+    assert codes == {100, 102, 103, 104, 130, 131}
     assert {item["id"] for item in items} == {
         "malformed_receipt",
         "unapproved_gate",
         "wrong_action",
+        "tampered_authoritative_receipt",
+        "unauthorized_recorder",
+        "forged_agent_identity",
     }
 
 
@@ -46,6 +49,41 @@ def test_build_attack_args_shapes(monkeypatch) -> None:
     assert wrong["receipt"].split("|")[1] == "approve"
     assert wrong["entryPoint"] == "freeze"
     assert wrong["expectedUserError"] == 103
+
+    from app.services.casper.proof_bundle import CasperProofBundleService
+
+    monkeypatch.setattr(
+        CasperProofBundleService,
+        "get_live_proof_bundle",
+        staticmethod(
+            lambda _args: {
+                "latestDecision": {
+                    "decisionId": "real-decision",
+                    "decisionReceipt": {
+                        "receiptValue": (
+                            "real-decision|haircut|22|sha256:real|why|source|time|"
+                            "approved||guardrail"
+                        )
+                    },
+                }
+            }
+        ),
+    )
+    tampered = CasperCheatLabService.build_attack_args("tampered_authoritative_receipt")
+    assert tampered["decisionId"] == "real-decision"
+    assert tampered["receipt"].split("|")[3] == "sha256:tampered"
+    assert tampered["verified"] is True
+    assert tampered["expectedUserError"] == 104
+
+    unauthorized = CasperCheatLabService.build_attack_args("unauthorized_recorder")
+    assert unauthorized["entryPoint"] == "record_decision"
+    assert unauthorized["liveSupported"] is False
+    assert unauthorized["expectedUserError"] == 130
+
+    forged = CasperCheatLabService.build_attack_args("forged_agent_identity")
+    assert forged["entryPoint"] == "record_decision"
+    assert forged["liveSupported"] is False
+    assert forged["expectedUserError"] == 131
 
 
 def test_canary_run_returns_ready_hash(monkeypatch, tmp_path: Path) -> None:
@@ -95,7 +133,7 @@ def test_public_proof_includes_cheat_reverts(monkeypatch, tmp_path: Path) -> Non
 
     proof = CasperPublicProofService.get_public_proof({})
     assert "cheatReverts" in proof
-    assert proof["cheatReverts"]["count"] == 3
+    assert proof["cheatReverts"]["count"] == 6
     assert proof["cheatReverts"]["readyCount"] == 1
     assert proof["cheatReverts"]["endpoint"] == "/api/public/cheat"
 
@@ -116,7 +154,7 @@ def test_public_cheat_endpoints(monkeypatch, tmp_path: Path) -> None:
     catalog = client.get("/api/public/cheat")
     assert catalog.status_code == 200
     body = catalog.json()
-    assert body["count"] == 3
+    assert body["count"] == 6
     assert body["readyCount"] == 1
 
     run = client.post("/api/public/cheat/wrong_action")

@@ -1,4 +1,5 @@
 use alloc::{
+    collections::BTreeMap,
     string::{String, ToString},
     vec,
 };
@@ -8,13 +9,21 @@ use casper_contract::{
 };
 use casper_types::{
     addressable_entity::{EntityEntryPoint as EntryPoint, EntryPoints},
+    api_error::ApiError,
     contracts::NamedKeys,
-    CLType, EntryPointAccess, EntryPointPayment, EntryPointType, Parameter,
+    CLType, EntityAddr, EntryPointAccess, EntryPointPayment, EntryPointType, Key, Parameter,
 };
 
 use crate::keys::*;
 
 pub fn install_contract() {
+    // Re-running this Wasm upgrades the existing package in place. A second
+    // `new_contract` would revert on the account named keys and would orphan
+    // the `positions` dictionary of the live vault.
+    if runtime::get_key(CONTRACT_ACCESS_UREF).is_some() {
+        upgrade_contract();
+        return;
+    }
     let proof_contract_hash: String = runtime::get_named_arg("proof_contract_hash");
     let agent_account_hash: String = runtime::get_named_arg("agent_account_hash");
     let (entry_points, mut named_keys) = (entry_points(), named_keys());
@@ -32,6 +41,30 @@ pub fn install_contract() {
         Some(CONTRACT_PACKAGE_NAME.to_string()),
         Some(CONTRACT_ACCESS_UREF.to_string()),
         None,
+    );
+    runtime::put_key(
+        CONTRACT_VERSION_KEY,
+        storage::new_uref(contract_version).into(),
+    );
+    runtime::put_key(CONTRACT_KEY, contract_hash.into());
+}
+
+/// Add a new version to the existing vault package.
+///
+/// Passing empty named keys keeps the live `positions` dictionary plus the
+/// stored `proof_contract_hash` / `agent_account_hash` audit values intact.
+fn upgrade_contract() {
+    let package_hash =
+        match runtime::get_key(CONTRACT_PACKAGE_NAME).unwrap_or_revert_with(ApiError::MissingKey) {
+            Key::Hash(hash) => hash,
+            Key::AddressableEntity(EntityAddr::SmartContract(hash)) => hash,
+            _ => runtime::revert(ApiError::UnexpectedKeyVariant),
+        };
+    let (contract_hash, contract_version) = storage::add_contract_version(
+        package_hash.into(),
+        entry_points(),
+        NamedKeys::default(),
+        BTreeMap::new(),
     );
     runtime::put_key(
         CONTRACT_VERSION_KEY,
@@ -98,6 +131,19 @@ fn entry_points() -> EntryPoints {
     ));
     entry_points.add_entry_point(EntryPoint::new(
         ENTRY_POINT_SET_LTV,
+        vec![
+            Parameter::new("asset_id", CLType::String),
+            Parameter::new("decision_id", CLType::String),
+            Parameter::new("receipt", CLType::String),
+            Parameter::new("ltv_bps", CLType::U64),
+        ],
+        CLType::Unit,
+        EntryPointAccess::Public,
+        EntryPointType::Called,
+        EntryPointPayment::Caller,
+    ));
+    entry_points.add_entry_point(EntryPoint::new(
+        ENTRY_POINT_ENFORCE_VERIFIED,
         vec![
             Parameter::new("asset_id", CLType::String),
             Parameter::new("decision_id", CLType::String),

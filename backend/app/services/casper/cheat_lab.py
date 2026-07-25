@@ -1,12 +1,17 @@
-"""Cheat Lab — intentional vault reverts judges can click on /try.
+"""Cheat Lab — intentional on-chain reverts judges can click on /try.
 
-Three public scenarios map to collateral-vault User errors:
-  - malformed_receipt → User(100)
-  - unapproved_gate → User(102)
-  - wrong_action → User(103)
+Public scenarios map to contract User errors:
+  - malformed_receipt → vault User(100)
+  - unapproved_gate → vault User(102)
+  - wrong_action → vault User(103)
+  - tampered_authoritative_receipt → vault User(104)
+  - unauthorized_recorder → decision-proof User(130)
+  - forged_agent_identity → decision-proof User(131)
 
 Default mode returns published canary deploy hashes (no keys / no gas).
-Optional live mode submits a bad vault call when CASPER_CHEAT_LAB_LIVE_ENABLED=true.
+Optional live mode submits a bad vault call when CASPER_CHEAT_LAB_LIVE_ENABLED=true;
+decision-proof ACL scenarios are canary-only (OmniAgent is the authorized signer,
+so it cannot reproduce User(130) against itself).
 """
 
 from __future__ import annotations
@@ -61,6 +66,47 @@ SCENARIOS: tuple[dict[str, Any], ...] = (
         ),
         "attack": "Call freeze with an approve-action receipt",
         "expectedOutcome": "Deploy reverts with User(103); no freeze",
+    },
+    {
+        "id": "tampered_authoritative_receipt",
+        "title": "Tampered authoritative receipt",
+        "expectedUserError": 104,
+        "entryPoint": "enforce_verified",
+        "errorLabel": "User error: 104",
+        "explanation": (
+            "The verified vault live-reads decision-proof by decision_id. "
+            "A caller-modified receipt cannot substitute for the on-chain value."
+        ),
+        "attack": "Change proof_digest while keeping a real on-chain decision_id",
+        "expectedOutcome": "Deploy reverts with User(104); LTV remains unchanged",
+    },
+    {
+        "id": "unauthorized_recorder",
+        "title": "Unauthorized decision recorder",
+        "expectedUserError": 130,
+        "entryPoint": "record_decision",
+        "errorLabel": "User error: 130",
+        "explanation": (
+            "record_decision fail-closes unless the deploy signer is the "
+            "installed agent account. Rogue accounts cannot plant approved receipts."
+        ),
+        "attack": "Call record_decision from a signer that is not the authorized agent",
+        "expectedOutcome": "Deploy reverts with User(130); no receipt is written",
+        "liveSupported": False,
+    },
+    {
+        "id": "forged_agent_identity",
+        "title": "Forged agent identity in receipt",
+        "expectedUserError": 131,
+        "entryPoint": "record_decision",
+        "errorLabel": "User error: 131",
+        "explanation": (
+            "The receipt's agent_account_hash must equal the deploy signer. "
+            "Even the authorized agent cannot attribute a decision to someone else."
+        ),
+        "attack": "Submit record_decision with agent_account_hash != deploy signer",
+        "expectedOutcome": "Deploy reverts with User(131); no receipt is written",
+        "liveSupported": False,
     },
 )
 
@@ -200,6 +246,53 @@ class CasperCheatLabService:
                 ),
                 "expectedUserError": 103,
             }
+        if scenario_id == "unauthorized_recorder":
+            return {
+                "entryPoint": "record_decision",
+                "decisionId": decision_id,
+                "attackNote": "sign with a non-agent account",
+                "liveSupported": False,
+                "expectedUserError": 130,
+            }
+        if scenario_id == "forged_agent_identity":
+            return {
+                "entryPoint": "record_decision",
+                "decisionId": decision_id,
+                "agentAccountHash": "00" * 31 + "01",
+                "liveSupported": False,
+                "expectedUserError": 131,
+            }
+        if scenario_id == "tampered_authoritative_receipt":
+            from app.services.casper.proof_bundle import CasperProofBundleService
+
+            bundle = CasperProofBundleService.get_live_proof_bundle({"limit": 10})
+            decision = (
+                bundle.get("latestDecision")
+                if isinstance(bundle.get("latestDecision"), dict)
+                else {}
+            )
+            authoritative_id = str(decision.get("decisionId") or "")
+            receipt_obj = decision.get("decisionReceipt")
+            authoritative_receipt = (
+                str(receipt_obj.get("receiptValue") or "")
+                if isinstance(receipt_obj, dict)
+                else str(receipt_obj or "")
+            )
+            if not authoritative_id or not authoritative_receipt:
+                raise ValueError("authoritative decision receipt unavailable")
+            parts = authoritative_receipt.split("|")
+            if len(parts) < 10:
+                raise ValueError("authoritative decision receipt malformed")
+            parts[3] = "sha256:tampered"
+            return {
+                "entryPoint": "set_ltv",
+                "assetId": settings.casper_vault_asset_id,
+                "decisionId": authoritative_id,
+                "receipt": "|".join(parts),
+                "ltvBps": 2500,
+                "verified": True,
+                "expectedUserError": 104,
+            }
         raise ValueError(f"unknown cheat scenario: {scenario_id}")
 
     @staticmethod
@@ -286,6 +379,12 @@ class CasperCheatLabService:
                 "hint": "Set CASPER_CHEAT_LAB_LIVE_ENABLED=true to submit intentional reverts.",
             }
         scenario_id = str(scenario["id"])
+        if scenario.get("liveSupported") is False:
+            # Decision-proof ACL reverts cannot be reproduced by the authorized
+            # signer; the published canary is the proof.
+            canary = CasperCheatLabService._run_canary(scenario)
+            canary["mode"] = "canary_fallback"
+            return canary
         now = time.monotonic()
         with _LIVE_LOCK:
             last = _LAST_LIVE_AT.get(scenario_id, 0.0)
@@ -300,9 +399,14 @@ class CasperCheatLabService:
                     "hardBlockers": ["cheat_lab_rate_limited"],
                 }
             # Fall back to canary while holding the lock reservation intent.
-            if not (
-                settings.casper_vault_contract_hash or settings.casper_vault_package_hash
-            ):
+            verified = scenario_id == "tampered_authoritative_receipt"
+            configured = (
+                settings.casper_vault_verified_contract_hash
+                or settings.casper_vault_verified_package_hash
+                if verified
+                else settings.casper_vault_contract_hash or settings.casper_vault_package_hash
+            )
+            if not configured:
                 canary = CasperCheatLabService._run_canary(scenario)
                 canary["mode"] = "canary_fallback"
                 canary["hardBlockers"] = list(canary.get("hardBlockers") or []) + [
@@ -317,6 +421,8 @@ class CasperCheatLabService:
             asset_id=str(attack["assetId"]),
             decision_id=str(attack["decisionId"]),
             receipt=str(attack["receipt"]),
+            ltv_bps=int(attack.get("ltvBps") or 5000),
+            verified=bool(attack.get("verified")),
         )
         if not submit.get("submitted"):
             # Prefer serving the canary so judges still see a revert proof.
@@ -392,7 +498,7 @@ class CasperCheatLabService:
 
     @staticmethod
     def seed_all(*, dry_run: bool = False) -> dict[str, Any]:
-        """Operator helper: submit all three cheat scenarios (or print attack args)."""
+        """Submit every Cheat Lab scenario, or print the attack arguments."""
         results: list[dict[str, Any]] = []
         for scenario in SCENARIOS:
             scenario_id = str(scenario["id"])
@@ -400,11 +506,23 @@ class CasperCheatLabService:
             if dry_run:
                 results.append({"scenarioId": scenario_id, "dryRun": True, "attack": attack})
                 continue
+            if attack.get("liveSupported") is False:
+                results.append(
+                    {
+                        "ok": True,
+                        "scenarioId": scenario_id,
+                        "status": "canary_only",
+                        "hardBlockers": [],
+                    }
+                )
+                continue
             submit = CasperVaultService.submit_entry(
                 entry_point=str(attack["entryPoint"]),
                 asset_id=str(attack["assetId"]),
                 decision_id=str(attack["decisionId"]),
                 receipt=str(attack["receipt"]),
+                ltv_bps=int(attack.get("ltvBps") or 5000),
+                verified=bool(attack.get("verified")),
             )
             if not submit.get("submitted"):
                 results.append(

@@ -6,7 +6,7 @@
 #   AGENT_ACCOUNT_HASH       account-hash-... (or bare hex) for install audit key
 #
 # Optional env:
-#   PROOF_CONTRACT_HASH      default: live decision-proof contract hash
+#   PROOF_CONTRACT_PACKAGE_HASH  default: live decision-proof package hash
 #   CASPER_NODE_ADDRESS      default: http://node.testnet.casper.network:7777
 #   CASPER_NETWORK           default: casper-test
 #   CASPER_PAYMENT_AMOUNT_MOTES  default: 2500000000
@@ -23,7 +23,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WASM_PATH="${WASM_PATH:-$ROOT/contracts/collateral-vault/wasm/collateral-vault.wasm}"
-PROOF_CONTRACT_HASH="${PROOF_CONTRACT_HASH:-5a82529f9ba05e716933384ddc9862710ba9a0fd3a7347ab1e8c6e60b1a4c861}"
+PROOF_CONTRACT_PACKAGE_HASH="${PROOF_CONTRACT_PACKAGE_HASH:-46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea}"
 CASPER_NODE_ADDRESS="${CASPER_NODE_ADDRESS:-http://node.testnet.casper.network:7777}"
 CASPER_NETWORK="${CASPER_NETWORK:-casper-test}"
 CASPER_PAYMENT_AMOUNT_MOTES="${CASPER_PAYMENT_AMOUNT_MOTES:-100000000000}"
@@ -48,7 +48,7 @@ fi
 
 echo "Installing collateral-vault"
 echo "  wasm:   $WASM_PATH"
-echo "  proof:  $PROOF_CONTRACT_HASH"
+echo "  proof package:  $PROOF_CONTRACT_PACKAGE_HASH"
 echo "  agent:  $AGENT_ACCOUNT_HASH"
 echo "  node:   $CASPER_NODE_ADDRESS"
 echo "  chain:  $CASPER_NETWORK"
@@ -61,7 +61,7 @@ set -x
   --secret-key "$CASPER_SECRET_KEY_PATH" \
   --payment-amount "$CASPER_PAYMENT_AMOUNT_MOTES" \
   --session-path "$WASM_PATH" \
-  --session-arg "proof_contract_hash:string='${PROOF_CONTRACT_HASH}'" \
+  --session-arg "proof_contract_hash:string='${PROOF_CONTRACT_PACKAGE_HASH}'" \
   --session-arg "agent_account_hash:string='${AGENT_ACCOUNT_HASH}'"
 set +x
 

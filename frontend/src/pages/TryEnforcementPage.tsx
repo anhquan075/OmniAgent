@@ -99,6 +99,45 @@ const FALLBACK_CHEATS: CheatScenario[] = [
     transactionHash: null,
     explorerUrl: null,
   },
+  {
+    id: 'tampered_authoritative_receipt',
+    title: 'Tampered authoritative receipt',
+    expectedUserError: 104,
+    entryPoint: 'enforce_verified',
+    errorLabel: 'User error: 104',
+    explanation: 'The vault live-reads decision-proof; a caller-modified receipt cannot replace it.',
+    attack: 'Change proof_digest for a real on-chain decision_id',
+    expectedOutcome: 'Deploy reverts with User(104); LTV is unchanged',
+    status: 'canary_pending',
+    transactionHash: null,
+    explorerUrl: null,
+  },
+  {
+    id: 'unauthorized_recorder',
+    title: 'Unauthorized decision recorder',
+    expectedUserError: 130,
+    entryPoint: 'record_decision',
+    errorLabel: 'User error: 130',
+    explanation: 'Only the installed agent account can record decisions on-chain.',
+    attack: 'Call record_decision from a signer that is not the authorized agent',
+    expectedOutcome: 'Deploy reverts with User(130); no receipt is written',
+    status: 'canary_pending',
+    transactionHash: null,
+    explorerUrl: null,
+  },
+  {
+    id: 'forged_agent_identity',
+    title: 'Forged agent identity',
+    expectedUserError: 131,
+    entryPoint: 'record_decision',
+    errorLabel: 'User error: 131',
+    explanation: "The receipt's agent field must equal the deploy signer.",
+    attack: 'Submit record_decision with agent_account_hash != signer',
+    expectedOutcome: 'Deploy reverts with User(131); no receipt is written',
+    status: 'canary_pending',
+    transactionHash: null,
+    explorerUrl: null,
+  },
 ];
 
 const FALLBACK_PAID_ACT: PaidActStep[] = [
@@ -336,7 +375,13 @@ export default function TryEnforcementPage() {
                 </div>
                 <div>
                   <span>Enforce</span>
-                  <strong>{vault?.enforceEnabled ? 'armed' : 'off'}</strong>
+                  <strong>
+                    {vault?.enforceEnabled
+                      ? vault.verificationMode === 'cross_contract'
+                        ? 'proof-read'
+                        : 'armed'
+                      : 'off'}
+                  </strong>
                 </div>
               </div>
               <div className="try-link-row">
@@ -374,8 +419,9 @@ export default function TryEnforcementPage() {
           <div className="try-page-section-head">
             <h2>Cheat Lab — try to break the vault</h2>
             <p>
-              Three intentional attacks. Each one should revert on Casper with a User error — no
-              collateral moves. {cheatReady}/3 explorer proofs published.
+              Six intentional attacks against the vault and the decision-proof ACL. Each one should
+              revert on Casper with a User error — no collateral moves, no forged receipts.{' '}
+              {cheatReady}/{cheatScenarios.length} explorer proofs published.
             </p>
           </div>
           {cheatError ? (

@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     casper_contract_install_deploy_hash: str | None = None
     casper_decision_contract_hash: str | None = None
     casper_decision_contract_package_hash: str | None = None
+    # Authoring ACL: decision-proof stores this agent and reverts User(130/131)
+    # for any other deploy signer / mismatched receipt agent field.
+    casper_decision_authorized_agent_hash: str | None = None
+    casper_decision_acl_enabled: bool = False
+    casper_decision_acl_canary_tx_hash: str | None = None
     casper_live_submit_enabled: bool = False
     casper_client_path: str = "casper-client"
     casper_transaction_command: str = "put-deploy"
@@ -94,6 +99,14 @@ class Settings(BaseSettings):
     casper_vault_package_hash: str | None = None
     casper_vault_enforce_enabled: bool = False
     casper_vault_asset_id: str = "rwa-demo-collateral-001"
+    # Authoritative path: vault calls decision-proof.get_decision_receipt.
+    # Separate hashes keep the legacy vault available for immediate rollback.
+    casper_vault_verified_contract_hash: str | None = None
+    casper_vault_verified_package_hash: str | None = None
+    casper_vault_verified_enabled: bool = False
+    casper_vault_verified_canary_tx_hash: str | None = None
+    casper_vault_verified_canary_decision_id: str | None = None
+    casper_vault_verified_canary_action: str = "haircut"
     # Cheat Lab: public judge demos that intentionally revert on-chain.
     casper_cheat_lab_live_enabled: bool = False
     casper_cheat_lab_live_min_interval_sec: int = 300

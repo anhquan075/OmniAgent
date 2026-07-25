@@ -9,12 +9,18 @@ extern crate alloc;
 mod install;
 mod keys;
 
-use alloc::{format, string::{String, ToString}, vec::Vec};
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 use casper_contract::{
     contract_api::{runtime, storage},
     unwrap_or_revert::UnwrapOrRevert,
 };
-use casper_types::{api_error::ApiError, CLValue, URef};
+use casper_types::{
+    api_error::ApiError, contracts::ContractPackageHash, runtime_args, CLValue, URef,
+};
 use install::install_contract;
 use keys::*;
 
@@ -42,15 +48,21 @@ fn decode_position(raw: &str) -> (u64, bool, u64, String) {
 }
 
 fn read_position(asset_id: &str) -> (u64, bool, u64, String) {
-    let existing: Option<String> =
-        storage::named_dictionary_get(POSITIONS_KEY, asset_id).unwrap_or_revert_with(ApiError::Read);
+    let existing: Option<String> = storage::named_dictionary_get(POSITIONS_KEY, asset_id)
+        .unwrap_or_revert_with(ApiError::Read);
     match existing {
         Some(raw) => decode_position(&raw),
         None => (0, false, 7500, String::new()),
     }
 }
 
-fn write_position(asset_id: &str, deposited: u64, frozen: bool, ltv_bps: u64, last_decision_id: &str) {
+fn write_position(
+    asset_id: &str,
+    deposited: u64,
+    frozen: bool,
+    ltv_bps: u64,
+    last_decision_id: &str,
+) {
     let encoded = encode_position(deposited, frozen, ltv_bps, last_decision_id);
     storage::named_dictionary_put(POSITIONS_KEY, asset_id, encoded);
 }
@@ -83,6 +95,58 @@ fn require_approved_receipt(decision_id: &str, expected_action: &str, receipt: &
     if action != expected_action {
         runtime::revert(ApiError::User(103));
     }
+}
+
+fn decode_package_hash(raw: &str) -> Result<ContractPackageHash, ()> {
+    let normalized = raw
+        .strip_prefix("contract-package-")
+        .or_else(|| raw.strip_prefix("contract-hash-"))
+        .or_else(|| raw.strip_prefix("contract-"))
+        .or_else(|| raw.strip_prefix("hash-"))
+        .unwrap_or(raw);
+    if normalized.len() != 64 {
+        return Err(());
+    }
+    let mut bytes = [0_u8; 32];
+    for (index, pair) in normalized.as_bytes().chunks_exact(2).enumerate() {
+        let high = hex_nibble(pair[0]).ok_or(())?;
+        let low = hex_nibble(pair[1]).ok_or(())?;
+        bytes[index] = (high << 4) | low;
+    }
+    Ok(ContractPackageHash::new(bytes))
+}
+
+fn hex_nibble(value: u8) -> Option<u8> {
+    match value {
+        b'0'..=b'9' => Some(value - b'0'),
+        b'a'..=b'f' => Some(value - b'a' + 10),
+        b'A'..=b'F' => Some(value - b'A' + 10),
+        _ => None,
+    }
+}
+
+fn authoritative_receipt(decision_id: &str) -> String {
+    let proof_package_hash: String = storage::read(named_uref(PROOF_CONTRACT_HASH_KEY))
+        .unwrap_or_revert_with(ApiError::Read)
+        .unwrap_or_revert_with(ApiError::ValueNotFound);
+    let package_hash = decode_package_hash(&proof_package_hash)
+        .unwrap_or_else(|_| runtime::revert(ApiError::User(120)));
+    runtime::call_versioned_contract::<String>(
+        package_hash,
+        None,
+        "get_decision_receipt",
+        runtime_args! {
+            "decision_id" => decision_id.to_string(),
+        },
+    )
+}
+
+fn require_authoritative_receipt(decision_id: &str, claimed_receipt: &str) -> String {
+    let receipt = authoritative_receipt(decision_id);
+    if receipt != claimed_receipt {
+        runtime::revert(ApiError::User(104));
+    }
+    receipt
 }
 
 fn write_string(key: &str, value: String) {
@@ -164,6 +228,38 @@ pub extern "C" fn set_ltv() {
     let (deposited, frozen, _, _) = read_position(&asset_id);
     write_position(&asset_id, deposited, frozen, ltv_bps, &decision_id);
     record_enforcement(&decision_id, "haircut", &receipt);
+}
+
+#[no_mangle]
+pub extern "C" fn enforce_verified() {
+    let asset_id: String = runtime::get_named_arg("asset_id");
+    let decision_id: String = runtime::get_named_arg("decision_id");
+    let claimed_receipt: String = runtime::get_named_arg("receipt");
+    let ltv_bps: u64 = runtime::get_named_arg("ltv_bps");
+    if ltv_bps > 10_000 {
+        runtime::revert(ApiError::InvalidArgument);
+    }
+    let receipt = require_authoritative_receipt(&decision_id, &claimed_receipt);
+    let (_, action, _) =
+        parse_receipt(&receipt).unwrap_or_else(|_| runtime::revert(ApiError::User(100)));
+    require_approved_receipt(&decision_id, &action, &receipt);
+    let (deposited, frozen, current_ltv_bps, _) = read_position(&asset_id);
+    match action.as_str() {
+        "block" => {
+            if deposited == 0 {
+                runtime::revert(ApiError::User(111));
+            }
+            write_position(&asset_id, deposited, true, current_ltv_bps, &decision_id);
+        }
+        "approve" => {
+            write_position(&asset_id, deposited, false, current_ltv_bps, &decision_id);
+        }
+        "haircut" => {
+            write_position(&asset_id, deposited, frozen, ltv_bps, &decision_id);
+        }
+        _ => runtime::revert(ApiError::User(103)),
+    }
+    record_enforcement(&decision_id, &action, &receipt);
 }
 
 #[no_mangle]

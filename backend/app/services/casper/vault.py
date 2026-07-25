@@ -17,6 +17,11 @@ ACTION_TO_VAULT_EP = {
     "approve": "unfreeze",
     "haircut": "set_ltv",
 }
+VERIFIED_ENTRY_POINTS = {
+    "freeze": "enforce_verified",
+    "unfreeze": "enforce_verified",
+    "set_ltv": "enforce_verified",
+}
 
 
 class CasperVaultService:
@@ -27,17 +32,33 @@ class CasperVaultService:
     @staticmethod
     def is_configured() -> bool:
         settings = get_settings()
+        target_configured = (
+            settings.casper_vault_verified_contract_hash
+            or settings.casper_vault_verified_package_hash
+            if settings.casper_vault_verified_enabled
+            else settings.casper_vault_contract_hash or settings.casper_vault_package_hash
+        )
         return bool(
             settings.casper_vault_enforce_enabled
-            and (settings.casper_vault_contract_hash or settings.casper_vault_package_hash)
+            and target_configured
         )
 
     @staticmethod
-    def session_target_args() -> list[str]:
+    def session_target_args(*, verified: bool = False) -> list[str]:
         settings = get_settings()
-        if settings.casper_vault_contract_hash:
-            return ["--session-hash", settings.casper_vault_contract_hash]
-        return ["--session-package-hash", str(settings.casper_vault_package_hash)]
+        contract_hash = (
+            settings.casper_vault_verified_contract_hash
+            if verified
+            else settings.casper_vault_contract_hash
+        )
+        package_hash = (
+            settings.casper_vault_verified_package_hash
+            if verified
+            else settings.casper_vault_package_hash
+        )
+        if contract_hash:
+            return ["--session-hash", contract_hash]
+        return ["--session-package-hash", str(package_hash)]
 
     @staticmethod
     def build_vault_command(
@@ -48,6 +69,7 @@ class CasperVaultService:
         receipt: str = "",
         amount: int | None = None,
         ltv_bps: int | None = None,
+        verified: bool = False,
     ) -> list[str]:
         settings = get_settings()
         secret_path = CasperAccountService.secret_key_path()
@@ -64,9 +86,9 @@ class CasperVaultService:
             str(secret_path),
             "--payment-amount",
             str(settings.casper_payment_amount_motes),
-            *CasperVaultService.session_target_args(),
+            *CasperVaultService.session_target_args(verified=verified),
             "--session-entry-point",
-            entry_point,
+            VERIFIED_ENTRY_POINTS.get(entry_point, entry_point) if verified else entry_point,
             "--session-arg",
             f"asset_id:string='{asset_id.replace(chr(39), '')}'",
         ]
@@ -81,7 +103,7 @@ class CasperVaultService:
                 f"receipt:string='{receipt.replace(chr(39), '')}'",
             ]
         )
-        if entry_point == "set_ltv":
+        if entry_point == "set_ltv" or verified:
             command.extend(["--session-arg", f"ltv_bps:u64='{int(ltv_bps or 5000)}'"])
         return command
 
@@ -94,6 +116,7 @@ class CasperVaultService:
         receipt: str = "",
         amount: int | None = None,
         ltv_bps: int | None = None,
+        verified: bool = False,
     ) -> dict[str, Any]:
         if not CasperCliSubmitter.is_client_available():
             return {
@@ -101,13 +124,22 @@ class CasperVaultService:
                 "status": "blocked",
                 "hardBlockers": ["casper_client_missing"],
             }
-        if not (
-            get_settings().casper_vault_contract_hash or get_settings().casper_vault_package_hash
-        ):
+        settings = get_settings()
+        target_configured = (
+            settings.casper_vault_verified_contract_hash
+            or settings.casper_vault_verified_package_hash
+            if verified
+            else settings.casper_vault_contract_hash or settings.casper_vault_package_hash
+        )
+        if not target_configured:
             return {
                 "submitted": False,
                 "status": "blocked",
-                "hardBlockers": ["casper_vault_contract_missing"],
+                "hardBlockers": [
+                    "casper_vault_verified_contract_missing"
+                    if verified
+                    else "casper_vault_contract_missing"
+                ],
             }
         if not CasperCliSubmitter._submit_lock.acquire(blocking=False):
             return CasperCliSubmitter.failure("casper_submit_in_progress", [])
@@ -119,6 +151,7 @@ class CasperVaultService:
                 receipt=receipt,
                 amount=amount,
                 ltv_bps=ltv_bps,
+                verified=verified,
             )
             result = CasperCliSubmitter.run_command(command, "casper_cli_vault_submit")
             if result["hardBlockers"]:
@@ -137,10 +170,14 @@ class CasperVaultService:
                     outcome_unknown=True,
                 )
             explorer = get_settings().casper_explorer_url.rstrip("/")
+            effective_entry_point = (
+                VERIFIED_ENTRY_POINTS.get(entry_point, entry_point) if verified else entry_point
+            )
             return {
                 "submitted": True,
                 "status": "submitted",
-                "entryPoint": entry_point,
+                "entryPoint": effective_entry_point,
+                "verificationMode": "cross_contract" if verified else "legacy_receipt",
                 "assetId": asset_id,
                 "decisionId": decision_id,
                 "transactionHash": transaction_hash,
@@ -187,4 +224,5 @@ class CasperVaultService:
             decision_id=decision_id,
             receipt=receipt,
             ltv_bps=ltv_bps,
+            verified=settings.casper_vault_verified_enabled,
         )

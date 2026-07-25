@@ -17,7 +17,11 @@ WAF-blocked.
 | Vault install / freeze / unfreeze / set_ltv | live; freeze `36d1f699…`, unfreeze `39dc155a…`, set_ltv `43a8c497…` |
 | Vault Railway env | hashes set; `CASPER_VAULT_ENFORCE_ENABLED=true` |
 | x402 asset | bare WCSPR `3d80df21…`; receipt bound (`bindingStatus=bound`) |
-| Cheat Lab | User(100/102/103) canaries on `/try` + `cheatReverts` |
+| Decision-proof v2 | package `46cf5754…`, active contract `5270823c…`; `get_decision_receipt` + agent ACL |
+| Decision-proof agent ACL | `record_decision` reverts User(130/131) unless deploy signer is account-hash `9b62ecfb…`; canary `424467b1…`; public proof `authoring.mode=agent_acl` |
+| Verified vault v3 | package `cd2c2dea…`, contract `d286dfb5…`; `enforce_verified` live-reads decision package |
+| Authoritative enforce canary | haircut succeeds `599dc698…`; tampered claim reverts User(104) `ddfdf698…` |
+| Cheat Lab | User(100/102/103/104) vault + User(130/131) ACL canaries on `/try` + `cheatReverts` (6/6) |
 | Paid-act | buy→verify→act on `/try` + `paidAct` (`readyCount=3`) |
 | Committed proof artifact | `proofs/casper-buildathon-submission-proof.json` must stay `live_verified` |
 

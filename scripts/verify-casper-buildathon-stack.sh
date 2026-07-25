@@ -29,15 +29,18 @@ echo "[casper] backend tests"
 uv run --project backend python -m pytest -q backend/tests
 
 echo "[casper] contract check"
-cargo +nightly-2025-03-01 check \
-  --manifest-path contracts/casper-decision-proof/Cargo.toml \
-  --target wasm32v1-none
+for manifest in \
+  contracts/casper-decision-proof/Cargo.toml \
+  contracts/collateral-vault/Cargo.toml; do
+  cargo +nightly-2025-03-01 check --manifest-path "$manifest" --target wasm32v1-none
+done
 
 echo "[casper] contract release build"
-cargo +nightly-2025-03-01 build \
-  --manifest-path contracts/casper-decision-proof/Cargo.toml \
-  --release \
-  --target wasm32v1-none
+for manifest in \
+  contracts/casper-decision-proof/Cargo.toml \
+  contracts/collateral-vault/Cargo.toml; do
+  cargo +nightly-2025-03-01 build --manifest-path "$manifest" --release --target wasm32v1-none
+done
 
 echo "[casper] frontend tests"
 pnpm -C frontend test -- --run
@@ -125,7 +128,10 @@ if (proof.scenario !== "rwa-collateral-nav-risk-receipt") throw new Error("track
 if (proof.status !== "live_verified") throw new Error(`tracked proof status=${proof.status}, expected live_verified`);
 if (proof.readback?.verified !== true) throw new Error("tracked proof missing verified readback");
 if (!proof.deployHash || !proof.explorerUrl) throw new Error("tracked proof missing decision deploy explorer link");
-if ((proof.cheatReverts?.readyCount ?? 0) < 3) throw new Error("tracked proof missing Cheat Lab canaries");
+if ((proof.cheatReverts?.readyCount ?? 0) < 6) throw new Error("tracked proof missing Cheat Lab canaries");
+if (proof.vault?.verificationMode !== "cross_contract") throw new Error("tracked proof vault is not cross-contract verified");
+if (proof.authoring?.mode !== "agent_acl") throw new Error("tracked proof authoring is not agent_acl");
+if (!proof.vault?.transactionHash) throw new Error("tracked proof missing verified vault canary");
 if ((proof.paidAct?.readyCount ?? 0) < 3) throw new Error("tracked proof missing paid-act steps");
 if (proof.x402?.status !== "verified") throw new Error("tracked proof x402 is not verified");
 if (/CASPER_SECRET_KEY_PATH|API_OPERATOR_TOKEN|secret\.pem|\.env/.test(text)) throw new Error("tracked proof leaked private material");
