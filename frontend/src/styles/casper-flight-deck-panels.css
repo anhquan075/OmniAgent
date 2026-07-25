@@ -43,7 +43,7 @@
 
 .proof-outcome-panel {
   display: grid;
-  grid-template-columns: minmax(180px, 0.28fr) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 0.32fr) minmax(0, 1fr);
   gap: 10px;
   align-items: stretch;
 }
@@ -67,10 +67,29 @@
   background: rgba(255, 255, 255, 0.025);
 }
 
+.receipt-flow-timeline.is-compact .receipt-flow-placeholder {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .proof-outcome-title {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* The hash link has a nowrap intrinsic width, so the cell must clip rather than
+   let it spill over the metrics column. */
+.proof-outcome-title > div {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.proof-outcome-title .chain-proof-link {
+  max-width: 100%;
+  margin-top: 6px;
 }
 
 .proof-outcome-title h2 {

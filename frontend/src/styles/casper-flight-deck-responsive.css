@@ -18,8 +18,13 @@
     grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr)) auto auto;
   }
 
-  .flight-status-item:nth-child(4),
-  .flight-status-item:nth-child(5) {
+  .flight-status-strip[data-density='compact'] {
+    grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr)) auto;
+  }
+
+  /* Proof score and loop state must survive the narrow strip. */
+  .flight-status-item[data-strip-item='health'],
+  .flight-status-item[data-strip-item='network'] {
     display: none;
   }
 

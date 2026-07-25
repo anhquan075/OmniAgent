@@ -78,7 +78,6 @@
 
 .flight-tabs button:focus-visible,
 .flight-refresh:focus-visible,
-.flight-rail-try:focus-visible,
 .judge-try-banner:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);
@@ -127,29 +126,6 @@
   font-size: 0.78rem;
   font-style: normal;
   text-align: right;
-}
-
-.flight-rail-try {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 1.9rem;
-  margin-top: 2px;
-  border: 1px solid rgba(230, 63, 55, 0.35);
-  border-radius: 8px;
-  padding: 0 0.65rem;
-  color: var(--casper-red-soft);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-decoration: none;
-  text-transform: uppercase;
-  background: rgba(230, 63, 55, 0.08);
-}
-
-.flight-rail-try:hover {
-  border-color: rgba(230, 63, 55, 0.55);
-  background: rgba(230, 63, 55, 0.14);
 }
 
 .flight-rail-status {
@@ -230,6 +206,11 @@
   min-height: 72px;
   border-bottom: 1px solid var(--line);
   background: rgba(5, 12, 14, 0.72);
+}
+
+/* Pre-live paint keeps only the signals that mean something without a snapshot. */
+.flight-status-strip[data-density='compact'] {
+  grid-template-columns: minmax(190px, 1.1fr) repeat(2, minmax(118px, 0.78fr)) 40px;
 }
 
 .flight-title,
@@ -347,20 +328,20 @@
   height: auto;
 }
 
-.cockpit-side > * {
+/* The side column is the only scroller here; panels keep their natural height
+   so a judge never lands inside a nested scroll region. */
+.cockpit-side {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Specificity has to clear `.loop-status-panel { height: 100% }` in casper-proof.css. */
+.cockpit-tab .cockpit-side > * {
+  flex: 0 0 auto;
   min-height: 0;
-}
-
-.cockpit-side .loop-status-panel {
-  flex: 0 1 auto;
-  max-height: 42%;
-  overflow: auto;
-}
-
-.cockpit-side .policy-gate-summary,
-.cockpit-side .recovery-queue {
-  flex: 1 1 0;
-  overflow: auto;
+  height: auto;
+  max-height: none;
+  overflow: visible;
 }
 
 .proof-packet-tab {

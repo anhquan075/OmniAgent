@@ -1,6 +1,7 @@
 import { BadgeCheckIcon, ShieldAlertIcon } from 'lucide-react';
 
-import { outcomeSummary, shortValue, type Payload, type SourceState } from './flight-deck-model';
+import ChainProofLink from './chain-proof-link';
+import { decisionFromBundle, outcomeSummary, shortValue, type Payload, type SourceState } from './flight-deck-model';
 
 export default function ProofOutcomePanel({
   bundle,
@@ -10,6 +11,7 @@ export default function ProofOutcomePanel({
   sourceState: SourceState;
 }) {
   const outcome = outcomeSummary(bundle);
+  const decision = decisionFromBundle(bundle);
   const verified = sourceState === 'live' && outcome.readback === 'verified';
   const loading = sourceState === 'loading';
   const Icon = verified ? BadgeCheckIcon : ShieldAlertIcon;
@@ -18,6 +20,9 @@ export default function ProofOutcomePanel({
     : loading
       ? 'Loading snapshot…'
       : 'Snapshot unavailable';
+  const deployHash = sourceState === 'live'
+    ? (decision.deployHash ?? decision.transactionHash ?? '')
+    : '';
   return (
     <section
       className={`flight-panel proof-outcome-panel ${verified ? 'is-verified' : 'is-guarded'} ${loading ? 'is-loading' : ''}`}
@@ -25,10 +30,17 @@ export default function ProofOutcomePanel({
       aria-busy={loading || undefined}
     >
       <div className="proof-outcome-title">
-        <Icon className="h-5 w-5" />
+        <Icon className="h-5 w-5" aria-hidden="true" />
         <div>
           <small>RWA collateral outcome</small>
           <h2>{headline}</h2>
+          {deployHash ? (
+            <ChainProofLink
+              hash={String(deployHash)}
+              explorerUrl={decision.explorerUrl}
+              label="deploy"
+            />
+          ) : null}
         </div>
       </div>
       <div className="proof-outcome-metrics">
@@ -60,7 +72,10 @@ export default function ProofOutcomePanel({
           ) : (
             <>
               <span><small>Template</small><b>{outcome.template}</b></span>
-              <span className="proof-outcome-hash"><small>Evidence graph</small><b>{shortValue(outcome.evidenceGraph)}</b></span>
+              <span className="proof-outcome-hash">
+                <small>Evidence graph</small>
+                <b translate="no">{shortValue(outcome.evidenceGraph)}</b>
+              </span>
             </>
           )}
         </div>
