@@ -6,5 +6,8 @@
 .ruff_cache
 __pycache__
 *.pyc
-data
+# Runtime ledger / local artifacts — keep published Cheat Lab canaries in the image
+data/**
+!data/
+!data/cheat-lab-canaries.json
 *.log
