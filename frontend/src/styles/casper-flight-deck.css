@@ -504,8 +504,9 @@
   grid-template-rows: auto auto auto;
   gap: 0.75rem;
   align-content: start;
-  min-height: 0;
-  height: 100%;
+  min-width: 0;
+  min-height: 100%;
+  height: auto;
 }
 
 .proof-packet-hero {
@@ -529,7 +530,10 @@
 .raw-evidence-preview {
   position: relative;
   z-index: 1;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
+  overflow: hidden;
 }
 
 .receipt-ledger-tab {

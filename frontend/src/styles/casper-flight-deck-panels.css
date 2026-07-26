@@ -484,10 +484,17 @@
   border-style: dashed;
   border-color: rgba(255, 248, 239, 0.14);
   background: rgba(255, 248, 239, 0.02);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .raw-evidence-preview details {
+  display: grid;
+  gap: 0;
   min-width: 0;
+  max-width: 100%;
 }
 
 .raw-evidence-preview summary {
@@ -495,6 +502,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
   color: var(--text);
   cursor: pointer;
 }
@@ -505,11 +513,13 @@
 
 .raw-evidence-preview summary h2 {
   margin: 0;
+  min-width: 0;
   font-size: 0.96rem;
   letter-spacing: -0.015em;
 }
 
 .raw-evidence-preview summary span {
+  flex: 0 0 auto;
   color: var(--muted);
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.68rem;
@@ -527,19 +537,35 @@
   margin-bottom: 10px;
 }
 
-.raw-evidence-preview pre {
-  max-height: 180px;
+/* Own scrollport so long digests cannot widen the proof packet. */
+.raw-evidence-scroll {
+  box-sizing: border-box;
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
+  max-height: min(22rem, 50vh);
   overflow: auto;
-  overflow-wrap: anywhere;
-  margin: 0;
+  overscroll-behavior: contain;
   border: 1px solid rgba(255, 248, 239, 0.08);
   border-radius: 0.9rem;
-  padding: 0.85rem;
-  color: var(--muted);
   background: rgba(8, 5, 4, 0.65);
+  -webkit-overflow-scrolling: touch;
+}
+
+.raw-evidence-scroll pre {
+  box-sizing: border-box;
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  padding: 0.85rem;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
   font-size: 0.78rem;
-  white-space: pre-wrap;
+  line-height: 1.45;
+  white-space: pre;
+  overflow: visible;
 }
 
 .x402-proof {

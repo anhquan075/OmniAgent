@@ -71,7 +71,9 @@ export default function ProofPacketTab({ runtime, bundle, sourceState }: {
             <h2>Raw evidence preview</h2>
             <span>JSON · expand</span>
           </summary>
-          <pre>{JSON.stringify(sourceState === 'live' ? decision.evidenceBundle ?? {} : { status: 'unavailable' }, null, 2)}</pre>
+          <div className="raw-evidence-scroll">
+            <pre>{JSON.stringify(sourceState === 'live' ? decision.evidenceBundle ?? {} : { status: 'unavailable' }, null, 2)}</pre>
+          </div>
         </details>
       </section>
     </div>
