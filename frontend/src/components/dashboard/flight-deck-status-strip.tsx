@@ -27,8 +27,8 @@ export default function FlightDeckStatusStrip({
   return (
     <header className="flight-status-strip" data-density={live ? 'full' : 'compact'}>
       <div className="flight-title">
-        <small>Receipt Flight Deck</small>
-        <h1>Casper proof console</h1>
+        <small>Live instrument strip</small>
+        <h1>{live ? 'Proof console armed' : 'Proof console standby'}</h1>
       </div>
       <StatusItem
         id="score"

@@ -149,6 +149,9 @@ export type PublicProofAuthoring = {
     transactionHash?: string | null;
     explorerUrl?: string | null;
     policyGate?: string | null;
+    proposerVerdict?: string | null;
+    criticVerdict?: string | null;
+    dissentDigest?: string | null;
     enforceRevertTransactionHash?: string | null;
     enforceRevertExplorerUrl?: string | null;
     note?: string | null;
@@ -177,8 +180,66 @@ export type DeskStory = {
   readyCount: number;
   tryPath: string;
   videoUrl?: string | null;
+  rejectVideoUrl?: string | null;
   videoNote?: string | null;
   steps: DeskStoryStep[];
+};
+
+export type PublicProofRoleTrace = {
+  agentRole?: string | null;
+  verdict?: string | null;
+  traceSource?: string | null;
+  traceProvider?: string | null;
+  modelName?: string | null;
+  promptHash?: string | null;
+  outputHash?: string | null;
+  modelClaimHash?: string | null;
+  modelGenerationHash?: string | null;
+  rationaleHash?: string | null;
+};
+
+export type PublicProofTrustSummary = {
+  status?: string | null;
+  sampleSize?: number | null;
+  minSampleSize?: number | null;
+  verifiedReadbackRate?: number | null;
+  policyBlockedRate?: number | null;
+  staleEvidenceRate?: number | null;
+  paidEvidenceVerifiedRate?: number | null;
+};
+
+export type DecisionLifecycle = {
+  status?: string | null;
+  envelopeId?: string | null;
+  blockedDecisionId?: string | null;
+  blockedTransactionHash?: string | null;
+  blockedExplorerUrl?: string | null;
+  approvedDecisionId?: string | null;
+  approvedTransactionHash?: string | null;
+  approvedExplorerUrl?: string | null;
+  enforceTransactionHash?: string | null;
+  enforceExplorerUrl?: string | null;
+};
+
+export type RiskVerdictOffer = {
+  status?: string | null;
+  endpoint?: string | null;
+  amount?: string | null;
+  currency?: string | null;
+  network?: string | null;
+  unit?: string | null;
+  sampleReceiptHash?: string | null;
+  settlementTxHash?: string | null;
+  explorerUrl?: string | null;
+};
+
+export type PublicProofVerifier = {
+  source?: string | null;
+  proofFile?: string | null;
+  liveProofCommand?: string | null;
+  oneCommand?: string | null;
+  usesPublicProofEndpoint?: boolean;
+  usesDashboardReceiptEndpoint?: boolean;
 };
 
 export type PublicProof = {
@@ -205,6 +266,11 @@ export type PublicProof = {
   vault?: PublicProofVault | null;
   cheatReverts?: CheatReverts | null;
   paidAct?: PaidAct | null;
+  trustSummary?: PublicProofTrustSummary | null;
+  llmTrace?: { roles?: PublicProofRoleTrace[] } | null;
+  decisionLifecycle?: DecisionLifecycle | null;
+  riskVerdict?: RiskVerdictOffer | null;
+  verifier?: PublicProofVerifier | null;
 };
 
 export async function fetchPublicProof(signal?: AbortSignal): Promise<PublicProof> {

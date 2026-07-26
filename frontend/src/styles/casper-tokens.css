@@ -71,6 +71,20 @@
   /* ── Transitions ── */
   --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-instrument: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* ── Instrument panel language (shared with /try) ── */
+  --panel-radius: 1.25rem;
+  --panel-radius-lg: 1.55rem;
+  --panel-bezel: 0.4rem;
+  --panel-inset: inset 0 1px rgba(255, 255, 255, 0.055);
+  --panel-surface: rgba(14, 9, 8, 0.78);
+  --panel-shell: rgba(255, 248, 239, 0.035);
+  --panel-hairline: rgba(255, 248, 239, 0.12);
+  --control-height: 2.75rem;
+  --motion-fast: 280ms;
+  --motion-med: 450ms;
 
   /* ── Legacy shorthand aliases ── */
   --bg: var(--color-casper-bg);

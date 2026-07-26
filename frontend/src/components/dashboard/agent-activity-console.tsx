@@ -55,7 +55,15 @@ export default function AgentActivityConsole({
 
   return (
     <div className="agent-activity-console">
-      <AgentLoopMascot bundle={bundle} refreshedAt={refreshedAt} isLoading={isLoading} error={error} />
+      <div className="agent-decision-column">
+        <AiOutputPanel
+          bundle={activeBundle}
+          streamMeta={historicalStreamMeta}
+          streamClockMs={streamClockMs}
+          cycleId={selectedCycle?.cycleId}
+        />
+        <AgentLoopMascot bundle={bundle} refreshedAt={refreshedAt} isLoading={isLoading} error={error} />
+      </div>
       <div className="agent-output-column">
         <div className="cycle-history-control" data-cycle-history>
           <div className="cycle-history-field">
@@ -75,22 +83,16 @@ export default function AgentActivityConsole({
           </div>
           <p className="cycle-history-summary" role="status" aria-live="polite">
             {selectedCycle
-              ? `Recorded cycle ${selectedCycle.cycleId} · ${selectedCycle.status || 'complete'} · MCP and AI output pinned.`
-              : `Following the latest live MCP and AI output${cycles.length ? ` · ${cycles.length} recorded cycles available.` : '.'}`}
+              ? `Recorded cycle ${selectedCycle.cycleId}. ${selectedCycle.status || 'Complete'}. MCP and AI output pinned.`
+              : `Following the latest live MCP and AI output${cycles.length ? `. ${cycles.length} recorded cycles available.` : '.'}`}
           </p>
         </div>
         <div
-          className="agent-stream-grid"
+          className="agent-log-stage"
           data-cycle-id={selectedCycle?.cycleId ?? 'latest-live'}
         >
           <McpActivityLog
             rows={rows}
-            streamMeta={historicalStreamMeta}
-            streamClockMs={streamClockMs}
-            cycleId={selectedCycle?.cycleId}
-          />
-          <AiOutputPanel
-            bundle={activeBundle}
             streamMeta={historicalStreamMeta}
             streamClockMs={streamClockMs}
             cycleId={selectedCycle?.cycleId}
@@ -111,7 +113,7 @@ function cycleOptionLabel(cycle: Payload) {
   const time = Number.isFinite(parsed) ? `${new Date(parsed).toISOString().slice(11, 19)} UTC` : 'time pending';
   const status = String(cycle.status || 'complete').replaceAll('_', ' ');
   const decisionId = shortDecisionId(cycle.decisionId || cycle.bundle?.latestDecision?.decisionId || 'decision pending');
-  return `${time} · ${status} · ${decisionId} · ${shortCycleId(cycle.cycleId)}`;
+  return `${time} | ${status} | ${decisionId} | ${shortCycleId(cycle.cycleId)}`;
 }
 
 function shortDecisionId(value: unknown) {

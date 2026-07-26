@@ -38,7 +38,7 @@ export default function ReceiptFlowTimeline({ bundle, sourceState }: { bundle?: 
           return (
             <li key={`${row.state}-${index}`} className={row.complete ? 'is-complete' : blocked ? 'is-blocked' : ''}>
               <Icon className="h-5 w-5" aria-hidden="true" />
-              <b>{index + 1}. {proofLabel(row.state, { stripCasperPrefix: true })}</b>
+              <b>{proofLabel(row.state, { stripCasperPrefix: true })}</b>
               <span>{proofLabel(row.status, { stripCasperPrefix: true })}</span>
             </li>
           );

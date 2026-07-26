@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { ArrowRightIcon } from 'lucide-react';
 
 import type { Payload, SourceState } from './flight-deck-model';
 import FlightDeckRail, { type FlightDeckTab } from './flight-deck-rail';
@@ -39,9 +40,17 @@ export default function FlightDeckShell({
       />
       <div className="flight-main">
         <a className="judge-try-banner" href="/try">
-          <span>Judges · start here</span>
-          <strong>Try the enforcement</strong>
-          <em>No login · before/after vault · explorer links</em>
+          <span className="judge-try-kicker">Judges · start here</span>
+          <span className="judge-try-copy">
+            <strong>Try the enforcement</strong>
+            <em>No login · before/after vault · explorer links</em>
+          </span>
+          <span className="judge-try-cta" aria-hidden="true">
+            Open
+            <span className="judge-try-cta-icon">
+              <ArrowRightIcon />
+            </span>
+          </span>
         </a>
         <FlightDeckStatusStrip
           runtime={runtime}

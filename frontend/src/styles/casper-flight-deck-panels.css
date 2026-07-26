@@ -1,9 +1,19 @@
 .flight-panel {
   min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 10px;
-  background: rgba(9, 18, 20, 0.82);
+  border: 1px solid var(--panel-hairline, var(--line));
+  border-radius: var(--panel-radius, 1.25rem);
+  padding: 0.95rem 1.05rem;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(230, 63, 55, 0.05), transparent 36%),
+    var(--panel-surface, rgba(14, 9, 8, 0.78));
+  box-shadow: var(--panel-inset, inset 0 1px rgba(255, 255, 255, 0.055));
+  transition:
+    transform var(--motion-med, 450ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1)),
+    border-color var(--motion-med, 450ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1));
+}
+
+.flight-panel:hover {
+  border-color: rgba(255, 248, 239, 0.16);
 }
 
 .flight-panel-head {
@@ -11,19 +21,23 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 0.75rem;
 }
 
 .flight-panel-head h2 {
   margin: 0;
   color: var(--text);
-  font-weight: 760;
+  font-size: 1rem;
+  font-weight: 680;
+  letter-spacing: -0.02em;
 }
 
 .flight-panel-head span {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
   font-weight: 650;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -43,9 +57,12 @@
 
 .proof-outcome-panel {
   display: grid;
-  grid-template-columns: minmax(220px, 0.32fr) minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: minmax(230px, 0.34fr) minmax(0, 1fr);
+  gap: 0.85rem;
   align-items: stretch;
+  padding: 0.45rem;
+  border-radius: var(--panel-radius-lg);
+  background: var(--panel-shell);
 }
 
 .proof-outcome-panel.is-verified {
@@ -61,10 +78,10 @@
 .proof-outcome-secondary span,
 .trust-mini-grid span {
   min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 248, 239, 0.08);
+  border-radius: 0.9rem;
+  padding: 0.7rem 0.8rem;
+  background: rgba(255, 248, 239, 0.025);
 }
 
 .receipt-flow-timeline.is-compact .receipt-flow-placeholder {
@@ -76,7 +93,13 @@
 .proof-outcome-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.85rem;
+  border-color: rgba(230, 63, 55, 0.18);
+  border-radius: 1.15rem;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(230, 63, 55, 0.13), transparent 42%),
+    rgba(12, 8, 7, 0.82);
 }
 
 /* The hash link has a nowrap intrinsic width, so the cell must clip rather than
@@ -95,7 +118,10 @@
 .proof-outcome-title h2 {
   margin: 2px 0 0;
   color: var(--text);
-  font-size: 1.1rem;
+  font-size: clamp(1.45rem, 2vw, 2rem);
+  font-weight: 680;
+  letter-spacing: -0.04em;
+  line-height: 1;
   text-transform: capitalize;
 }
 
@@ -118,14 +144,28 @@
 
 .proof-outcome-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.proof-outcome-grid > span {
+  grid-column: span 2;
+}
+
+.proof-outcome-grid > span:first-child {
+  grid-column: span 4;
+  background: rgba(230, 63, 55, 0.075);
+}
+
+.proof-outcome-grid > span:first-child b {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 1.25rem;
 }
 
 .proof-outcome-secondary {
   display: grid;
-  grid-template-columns: minmax(120px, 0.35fr) minmax(0, 1fr);
-  gap: 6px;
+  grid-template-columns: minmax(140px, 0.35fr) minmax(0, 1fr);
+  gap: 0.5rem;
 }
 
 .proof-outcome-grid b,
@@ -185,11 +225,15 @@
   display: grid;
   min-width: 0;
   gap: 4px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 7px;
+  border: 1px solid rgba(255, 248, 239, 0.08);
+  border-radius: 0.85rem;
+  padding: 0.65rem 0.7rem;
   color: var(--muted);
   overflow: hidden;
+  background: rgba(255, 248, 239, 0.02);
+  transition:
+    border-color var(--motion-fast, 280ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1)),
+    background var(--motion-fast, 280ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1));
 }
 
 .policy-grid b,
@@ -232,33 +276,52 @@
   overflow: hidden;
 }
 
+.judge-packet {
+  border-color: rgba(230, 63, 55, 0.22);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(230, 63, 55, 0.1), transparent 32%),
+    var(--panel-surface, rgba(14, 9, 8, 0.78));
+}
+
 .judge-packet .judge-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.55rem;
 }
 
 .judge-packet .judge-grid span {
+  grid-column: span 2;
   min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 7px 8px;
-  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 248, 239, 0.08);
+  border-radius: 0.9rem;
+  padding: 0.7rem 0.8rem;
+  background: rgba(255, 248, 239, 0.02);
+}
+
+.judge-packet .judge-grid span[data-priority='true'] {
+  grid-column: span 4;
+  border-color: rgba(230, 63, 55, 0.18);
+  background: rgba(230, 63, 55, 0.055);
+}
+
+.judge-packet .judge-grid .judge-field-skeleton:nth-child(-n + 3) {
+  grid-column: span 4;
 }
 
 .judge-packet .judge-grid small {
   display: block;
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .judge-packet .judge-grid b {
   display: block;
-  margin-top: 3px;
+  margin-top: 0.35rem;
   color: var(--text);
-  font-size: 0.84rem;
+  font-size: 0.9rem;
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
@@ -267,31 +330,47 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 0.55rem;
+  margin-top: 1rem;
 }
 
 .judge-actions button,
 .judge-actions .chain-proof-link {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  min-height: 34px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 0 10px;
+  gap: 0.45rem;
+  min-height: var(--control-height, 2.75rem);
+  border: 1px solid var(--panel-hairline, var(--line));
+  border-radius: 999px;
+  padding: 0 1rem;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 248, 239, 0.035);
   text-decoration: none;
   cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+  transition:
+    transform var(--motion-med, 450ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1)),
+    border-color var(--motion-med, 450ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1)),
+    background var(--motion-med, 450ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1)),
+    color var(--motion-med, 450ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1));
 }
 
 .judge-actions button:hover:not(:disabled),
 .judge-actions .chain-proof-link:hover {
+  transform: translateY(-1px);
   border-color: rgba(230, 63, 55, 0.45);
   background: rgba(230, 63, 55, 0.12);
   color: var(--casper-red-soft);
+}
+
+.judge-actions button.is-primary {
+  border-color: rgba(230, 63, 55, 0.55);
+  color: #fff8ef;
+  background: var(--color-casper-red);
+}
+
+.judge-actions button.is-primary:hover:not(:disabled) {
+  color: #fff8ef;
+  background: #ed4c43;
 }
 
 .judge-actions button:disabled {
@@ -301,7 +380,13 @@
 
 .judge-actions button:active:not(:disabled),
 .judge-actions .chain-proof-link:active {
-  transform: translateY(1px);
+  transform: scale(0.98);
+}
+
+.judge-actions button:focus-visible,
+.judge-actions .chain-proof-link:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .evidence-summary {
@@ -319,10 +404,10 @@
 
 .evidence-summary .evidence-field {
   min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 7px 8px;
-  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 248, 239, 0.08);
+  border-radius: 0.85rem;
+  padding: 0.7rem 0.8rem;
+  background: rgba(255, 248, 239, 0.025);
 }
 
 .evidence-summary .evidence-field small {
@@ -378,6 +463,12 @@
   color: var(--casper-red-soft);
 }
 
+.raw-evidence-preview {
+  border-style: dashed;
+  border-color: rgba(255, 248, 239, 0.14);
+  background: rgba(255, 248, 239, 0.02);
+}
+
 .raw-evidence-preview details {
   min-width: 0;
 }
@@ -398,12 +489,15 @@
 .raw-evidence-preview summary h2 {
   margin: 0;
   font-size: 0.96rem;
+  letter-spacing: -0.015em;
 }
 
 .raw-evidence-preview summary span {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
   font-weight: 650;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -420,7 +514,11 @@
   max-height: 180px;
   overflow: auto;
   margin: 0;
+  border: 1px solid rgba(255, 248, 239, 0.08);
+  border-radius: 0.9rem;
+  padding: 0.85rem;
   color: var(--muted);
+  background: rgba(8, 5, 4, 0.65);
   font-size: 0.78rem;
 }
 
@@ -450,10 +548,10 @@
 .receipt-ledger-toolbar {
   flex: 0 0 auto;
   display: grid;
-  gap: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 8px;
+  gap: 0.75rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(255, 248, 239, 0.08);
+  margin-bottom: 0.85rem;
 }
 
 .receipt-ledger-toolbar .flight-panel-head {
@@ -471,6 +569,82 @@
 }
 
 .receipt-ledger-empty { display: grid; gap: 4px; }
+
+.receipt-ledger-controls {
+  display: grid;
+  grid-template-columns: auto minmax(15rem, 1fr);
+  align-items: end;
+  gap: 0.75rem;
+  margin-bottom: 0;
+}
+
+.receipt-ledger-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.receipt-ledger-search {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.receipt-ledger-search > span {
+  padding-left: 0.75rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.receipt-ledger-controls button,
+.receipt-ledger-controls input {
+  min-height: var(--control-height, 2.75rem);
+  border: 1px solid var(--panel-hairline, var(--line));
+  border-radius: 999px;
+  padding: 0 0.95rem;
+  color: var(--text);
+  background: rgba(255, 248, 239, 0.03);
+}
+
+.receipt-ledger-controls button {
+  cursor: pointer;
+  text-transform: capitalize;
+  transition:
+    transform var(--motion-med, 450ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1)),
+    border-color var(--motion-med, 450ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1)),
+    background var(--motion-med, 450ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1)),
+    color var(--motion-med, 450ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1));
+}
+
+.receipt-ledger-controls button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(255, 248, 239, 0.18);
+}
+
+.receipt-ledger-controls button.is-active {
+  border-color: rgba(230, 63, 55, 0.45);
+  background: rgba(230, 63, 55, 0.14);
+  color: var(--casper-red-soft);
+}
+
+.receipt-ledger-controls input {
+  width: 100%;
+  min-width: 0;
+}
+
+.receipt-ledger-controls input:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.receipt-ledger-controls input:focus-visible,
+.receipt-ledger-controls button:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
 
 /* Proof Packet loading skeletons keep panel shape while the backend responds. */
 .packet-skeleton-cell {
@@ -555,49 +729,11 @@
   }
 }
 
-.receipt-ledger-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 0;
-}
-
-.receipt-ledger-controls button,
-.receipt-ledger-controls input {
-  min-height: 36px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 0 10px;
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.receipt-ledger-controls button {
-  cursor: pointer;
-  text-transform: capitalize;
-  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
-}
-
-.receipt-ledger-controls button:hover {
-  border-color: rgba(230, 63, 55, 0.35);
-}
-
-.receipt-ledger-controls button.is-active {
-  border-color: rgba(230, 63, 55, 0.5);
-  color: var(--casper-red-soft);
-  background: rgba(230, 63, 55, 0.12);
-}
-
-.receipt-ledger-controls input {
-  flex: 1 1 180px;
-  min-width: 0;
-}
-
 .receipt-ledger-pagination {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 0.5rem;
   margin: 0;
 }
 
@@ -605,18 +741,33 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  width: var(--control-height, 2.75rem);
+  height: var(--control-height, 2.75rem);
+  border: 1px solid var(--panel-hairline, var(--line));
+  border-radius: 999px;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 248, 239, 0.03);
   cursor: pointer;
+  transition:
+    transform var(--motion-med, 450ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1)),
+    border-color var(--motion-med, 450ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1)),
+    background var(--motion-med, 450ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1));
+}
+
+.receipt-ledger-pagination button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(230, 63, 55, 0.4);
+  background: rgba(230, 63, 55, 0.1);
 }
 
 .receipt-ledger-pagination button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.receipt-ledger-pagination button:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .receipt-ledger-pagination span {
@@ -628,6 +779,7 @@
 .receipt-ledger-pagination small {
   color: var(--muted);
   font-size: 0.68rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -639,8 +791,8 @@
 
 .receipt-ledger-table th,
 .receipt-ledger-table td {
-  border-bottom: 1px solid var(--line);
-  padding: 8px;
+  border-bottom: 1px solid rgba(255, 248, 239, 0.08);
+  padding: 0.75rem 0.65rem;
   text-align: left;
 }
 
@@ -649,20 +801,26 @@
   top: 0;
   z-index: 1;
   color: var(--muted);
-  font-size: 0.74rem;
-  font-weight: 650;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: rgba(9, 18, 20, 0.96);
+  background: rgba(12, 8, 7, 0.96);
 }
 
 .receipt-ledger-row {
   color: var(--text);
   background: transparent;
+  transition: background var(--motion-fast, 280ms) var(--ease-instrument, cubic-bezier(0.32, 0.72, 0, 1));
 }
 
 .receipt-ledger-row.is-selected,
 .receipt-ledger-row:hover {
-  background: rgba(230, 63, 55, 0.12);
+  background: rgba(230, 63, 55, 0.1);
+}
+
+.receipt-ledger-row.is-selected {
+  box-shadow: inset 3px 0 var(--casper-red);
 }
 
 .receipt-status.is-ok {
@@ -682,12 +840,28 @@
   align-items: center;
   gap: 6px;
   width: fit-content;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 6px 8px;
+  min-height: 2.75rem;
+  border: 1px solid var(--panel-hairline, var(--line));
+  border-radius: 999px;
+  padding: 0.4rem 0.75rem;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 248, 239, 0.03);
   cursor: pointer;
+  transition:
+    transform var(--motion-fast) var(--ease-instrument),
+    border-color var(--motion-fast) var(--ease-instrument),
+    background var(--motion-fast) var(--ease-instrument);
+}
+
+.receipt-ledger-row button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(230, 63, 55, 0.4);
+  background: rgba(230, 63, 55, 0.09);
+}
+
+.receipt-ledger-row button:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .receipt-ledger-cards {
@@ -701,10 +875,10 @@
 .receipt-ledger-card {
   display: grid;
   gap: 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--panel-hairline);
+  border-radius: var(--panel-radius);
+  padding: 0.9rem;
+  background: rgba(255, 248, 239, 0.025);
 }
 
 .receipt-ledger-card.is-selected {
@@ -783,18 +957,73 @@
   justify-content: flex-start;
 }
 
+.receipt-inspector-identity {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(230, 63, 55, 0.2);
+  border-radius: 1rem;
+  padding: 0.9rem;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(230, 63, 55, 0.1), transparent 42%),
+    rgba(255, 248, 239, 0.025);
+}
+
+.receipt-inspector-identity small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.receipt-inspector-identity b {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.88rem;
+}
+
+.receipt-inspector-identity span {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.28rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.receipt-inspector-identity span.is-ok {
+  color: var(--green);
+  background: rgba(88, 207, 159, 0.09);
+}
+
+.receipt-inspector-identity span.is-guarded {
+  color: var(--muted);
+  background: rgba(255, 248, 239, 0.05);
+}
+
 .receipt-inspector dl {
   display: grid;
-  gap: 10px;
+  gap: 0;
   margin: 0 0 12px;
 }
 
 .receipt-inspector div {
   min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 7px 8px;
-  background: rgba(255, 255, 255, 0.025);
+}
+
+.receipt-inspector dl div {
+  display: grid;
+  gap: 0.25rem;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 248, 239, 0.075);
+  border-radius: 0;
+  padding: 0.72rem 0.15rem;
+  background: transparent;
+}
+
+.receipt-inspector dl div:last-child {
+  border-bottom: 0;
 }
 
 .receipt-inspector dt {

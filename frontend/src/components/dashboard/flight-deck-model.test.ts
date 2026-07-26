@@ -98,7 +98,7 @@ describe('flight deck model', () => {
     expect(receiptDeployLabel({
       eventType: 'casper_decision_live_submit_blocked',
       hardBlockers: ['casper_chain_duplicate_intent'],
-    })).toBe('—');
+    })).toBe('Not submitted');
     for (const blocker of [
       'casper_submission_duplicate_intent',
       'casper_chain_semantic_id_collision',

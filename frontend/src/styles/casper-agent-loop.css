@@ -1,6 +1,8 @@
 .agent-main-stack,
 .agent-activity-console,
+.agent-decision-column,
 .agent-output-column,
+.agent-log-stage,
 .agent-stream-grid,
 .agent-loop-mascot,
 .mcp-log-panel,
@@ -16,10 +18,26 @@
 
 .agent-activity-console {
   display: grid;
-  grid-template-columns: minmax(210px, 0.48fr) minmax(0, 1.52fr);
-  gap: 8px;
+  grid-template-columns: minmax(300px, 0.72fr) minmax(0, 1.28fr);
+  gap: 0.75rem;
   align-items: stretch;
   height: 100%;
+  min-height: 0;
+}
+
+.agent-decision-column {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.agent-log-stage {
+  display: grid;
+  min-height: 0;
+}
+
+.agent-log-stage .mcp-log-panel {
   min-height: 0;
 }
 
@@ -34,31 +52,34 @@
 .agent-output-column {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.75rem;
   min-height: 0;
 }
 
-.agent-output-column .agent-stream-grid {
+.agent-output-column .agent-stream-grid,
+.agent-output-column .agent-log-stage {
   flex: 1 1 auto;
 }
 
 .agent-loop-mascot,
 .mcp-log-panel,
 .ai-output-panel {
-  border: 1px solid var(--color-glass-border);
-  border-radius: var(--radius-lg);
-  padding: 10px;
-  background: linear-gradient(135deg, var(--color-glass), var(--color-glass-strong));
-  backdrop-filter: blur(var(--blur-glass));
-  box-shadow: var(--shadow-card);
-  transition: all 0.35s var(--ease-smooth);
+  border: 1px solid var(--panel-hairline);
+  border-radius: var(--panel-radius);
+  padding: 0.95rem 1rem;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(230, 63, 55, 0.05), transparent 36%),
+    var(--panel-surface);
+  box-shadow: var(--panel-inset);
+  transition:
+    transform var(--motion-med) var(--ease-instrument),
+    border-color var(--motion-med) var(--ease-instrument);
 }
 
 .agent-loop-mascot:hover,
 .mcp-log-panel:hover,
 .ai-output-panel:hover {
-  box-shadow: var(--shadow-card-hover);
-  border-color: var(--color-glass-border-strong);
+  border-color: rgba(255, 248, 239, 0.16);
 }
 
 .agent-loop-mascot {

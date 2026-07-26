@@ -87,7 +87,7 @@ export function EvidenceSummary({
         </span>
         <span className="evidence-field" data-evidence-field="observed-value">
           <small>Observed</small>
-          <b>{proofText(primarySource.observedValue, '—')} {proofText(primarySource.unit, '')}</b>
+          <b>{proofText(primarySource.observedValue, 'Not reported')} {proofText(primarySource.unit, '')}</b>
         </span>
         <span className="evidence-field" data-evidence-field="freshness">
           <small>Freshness</small>
@@ -95,7 +95,7 @@ export function EvidenceSummary({
         </span>
         <span className="evidence-field" data-evidence-field="threshold">
           <small>Threshold</small>
-          <b>{proofText(primarySource.threshold, '—')} {proofText(primarySource.unit, '')}</b>
+          <b>{proofText(primarySource.threshold, 'Not set')} {proofText(primarySource.unit, '')}</b>
         </span>
         <span className="evidence-field" data-evidence-field="risk-factor">
           <small>Risk factor</small>

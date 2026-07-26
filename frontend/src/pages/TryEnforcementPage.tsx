@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  ArrowLeftIcon,
   ArrowRightIcon,
   ExternalLinkIcon,
   LockIcon,
@@ -31,6 +32,18 @@ type StoryStep = {
   after: string;
   icon: 'freeze' | 'ltv' | 'unfreeze';
   canaryHash?: string;
+};
+
+type EnhancementState = 'live' | 'partial' | 'planned';
+
+type EnhancementItem = {
+  id: string;
+  title: string;
+  state: EnhancementState;
+  metric: string;
+  detail: string;
+  href?: string | null;
+  hrefLabel?: string;
 };
 
 const FALLBACK_DESK_STORY: DeskStoryStep[] = [
@@ -188,7 +201,7 @@ const FALLBACK_CHEATS: CheatScenario[] = [
 const FALLBACK_PAID_ACT: PaidActStep[] = [
   {
     id: 'probe_unpaid',
-    title: 'Buy — unpaid evidence',
+    title: 'Buy: unpaid evidence',
     order: 1,
     explanation: 'Premium RWA evidence is paywalled with native Casper x402.',
     actionLabel: 'Probe unpaid',
@@ -197,7 +210,7 @@ const FALLBACK_PAID_ACT: PaidActStep[] = [
   },
   {
     id: 'verify_settle',
-    title: 'Verify — settle canary',
+    title: 'Verify: settle canary',
     order: 2,
     explanation: 'Finals CEP-18 settle is bound into the decision receipt.',
     actionLabel: 'Verify settle',
@@ -208,7 +221,7 @@ const FALLBACK_PAID_ACT: PaidActStep[] = [
   },
   {
     id: 'enforce_from_paid',
-    title: 'Act — enforce from paid evidence',
+    title: 'Act: enforce paid evidence',
     order: 3,
     explanation: 'Without payment, enforce stays locked. Paid unlocks the vault path.',
     actionLabel: 'Enforce from paid',
@@ -222,6 +235,11 @@ const LIVE_METRIC_LABELS = ['Decision', 'Vault entry', 'x402', 'Enforce'] as con
 function shortHash(hash: string): string {
   if (hash.length < 20) return hash;
   return `${hash.slice(0, 10)}…${hash.slice(-8)}`;
+}
+
+function percent(value: number | null | undefined): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 'Not available';
+  return `${Math.round(value * 100)}%`;
 }
 
 function findVaultTx(
@@ -280,7 +298,7 @@ export default function TryEnforcementPage() {
   const [deskActive, setDeskActive] = useState(0);
 
   useEffect(() => {
-    document.title = 'OmniAgent — Try the enforcement';
+    document.title = 'OmniAgent - Try the enforcement';
     const controller = new AbortController();
     void (async () => {
       try {
@@ -324,6 +342,102 @@ export default function TryEnforcementPage() {
     : FALLBACK_DESK_STORY;
   const deskReady = proof?.deskStory?.readyCount ?? deskSteps.filter((s) => s.status === 'ready').length;
   const deskVideo = proof?.deskStory?.videoUrl || proof?.videoUrl || 'https://youtu.be/wcVoqJXqPhc';
+  const rejectVideo = proof?.deskStory?.rejectVideoUrl ?? null;
+  const roleTraces = proof?.llmTrace?.roles ?? [];
+  const liveRoleTraces = roleTraces.filter(
+    (role) => role.traceSource && role.traceSource.toLowerCase() !== 'deterministic',
+  );
+  const liveRolesReady =
+    roleTraces.length >= 3 &&
+    liveRoleTraces.length === roleTraces.length &&
+    roleTraces.every((role) => role.promptHash && role.outputHash);
+  const trust = proof?.trustSummary;
+  const trustSampleReady =
+    typeof trust?.sampleSize === 'number' &&
+    trust.sampleSize >= (trust.minSampleSize ?? 1);
+  const trustRatesAgree =
+    trustSampleReady &&
+    (trust?.verifiedReadbackRate ?? 0) > 0 &&
+    (trust?.policyBlockedRate ?? 0) > 0;
+  const lifecycle = proof?.decisionLifecycle;
+  const lifecycleReady =
+    ['live', 'ready', 'verified'].includes((lifecycle?.status || '').toLowerCase()) &&
+    Boolean(lifecycle?.blockedTransactionHash && lifecycle?.approvedTransactionHash);
+  const verifier = proof?.verifier;
+  const verifierReady = Boolean(verifier?.oneCommand);
+  const riskVerdict = proof?.riskVerdict;
+  const riskVerdictReady =
+    ['live', 'ready', 'verified'].includes((riskVerdict?.status || '').toLowerCase()) &&
+    Boolean(riskVerdict?.endpoint && riskVerdict?.amount && riskVerdict?.currency);
+  const enhancements: EnhancementItem[] = [
+    {
+      id: 'paired-lifecycle',
+      title: 'Reject → appeal → approve',
+      state: lifecycleReady ? 'live' : proof?.authoring?.lastBlocked?.transactionHash ? 'partial' : 'planned',
+      metric: lifecycleReady ? 'paired on-chain' : 'reject proof only',
+      detail: lifecycleReady
+        ? 'The same desk envelope shows a blocked receipt, improved evidence, then an approved enforce.'
+        : 'Blocked + cannot-enforce is live. The paired approved envelope has not been published yet.',
+      href: lifecycle?.blockedExplorerUrl || proof?.authoring?.lastBlocked?.explorerUrl,
+      hrefLabel: 'Open reject',
+    },
+    {
+      id: 'live-roles',
+      title: 'Live proposer / critic / gate',
+      state: liveRolesReady ? 'live' : roleTraces.length ? 'partial' : 'planned',
+      metric: `${liveRoleTraces.length}/${Math.max(roleTraces.length, 3)} model traces`,
+      detail: liveRolesReady
+        ? 'Every role exposes a non-deterministic provider trace plus prompt and output hashes.'
+        : roleTraces.length
+          ? 'Role verdicts are visible, but at least one trace is deterministic or missing prompt/output hashes.'
+          : 'No public role traces are present in this proof window.',
+    },
+    {
+      id: 'trust-summary',
+      title: 'Measured trust summary',
+      state: trustRatesAgree ? 'live' : trustSampleReady ? 'partial' : 'planned',
+      metric: `${trust?.sampleSize ?? 0} decisions sampled`,
+      detail: trustRatesAgree
+        ? 'Verified readbacks and blocked policy decisions are both reflected in the measured rates.'
+        : 'The summary is public, but its rates do not yet reflect both verified readbacks and the blocked canary.',
+    },
+    {
+      id: 'reject-film',
+      title: 'Dedicated reject film',
+      state: rejectVideo ? 'live' : deskVideo ? 'partial' : 'planned',
+      metric: rejectVideo ? 'reject cut linked' : 'overview only',
+      detail: rejectVideo
+        ? 'A focused clip shows reject sealing and the User(102) cannot-enforce result.'
+        : 'The general walkthrough is linked; a dedicated reject-only cut is still pending.',
+      href: rejectVideo || deskVideo,
+      hrefLabel: rejectVideo ? 'Watch reject cut' : 'Watch overview',
+    },
+    {
+      id: 'one-command',
+      title: 'One-command verification',
+      state: verifierReady ? 'live' : verifier?.liveProofCommand ? 'partial' : 'planned',
+      metric: verifierReady ? 'copy / run / pass' : 'repo script only',
+      detail: verifierReady
+        ? 'Judges can verify Desk Story, Cheat Lab, blocked receipt, and deploy hashes in one command.'
+        : verifier?.liveProofCommand
+          ? 'A repository verifier exists, but there is no zero-setup one-command wrapper yet.'
+          : 'No public verifier command is advertised in the proof.',
+    },
+    {
+      id: 'paid-verdict',
+      title: 'Paid sealed risk verdict',
+      state: riskVerdictReady ? 'live' : riskVerdict?.endpoint ? 'partial' : 'planned',
+      metric: riskVerdictReady
+        ? `${riskVerdict.amount} ${riskVerdict.currency} / ${riskVerdict.unit || 'verdict'}`
+        : 'pricing not live',
+      detail: riskVerdictReady
+        ? 'Other agents can pay over x402 for a sealed decision ID, digest, and explorer proof.'
+        : 'Paid evidence is live; the sell-side x402 risk-verdict product and pricing are not published yet.',
+      href: riskVerdict?.explorerUrl || riskVerdict?.endpoint,
+      hrefLabel: riskVerdict?.explorerUrl ? 'Open settlement' : 'Open endpoint',
+    },
+  ];
+  const enhancementLiveCount = enhancements.filter((item) => item.state === 'live').length;
 
   async function onCheatClick(scenarioId: string) {
     setCheatError(null);
@@ -359,28 +473,101 @@ export default function TryEnforcementPage() {
 
   return (
     <div className="casper-shell relative min-h-[100dvh] w-full overflow-x-hidden">
-      <div className="try-page">
+      <a className="try-skip-link" href="#try-main">
+        Skip to proof
+      </a>
+      <div className="try-page-topbar">
+        <a className="try-back-link" href="/">
+          <span className="try-back-icon" aria-hidden="true">
+            <ArrowLeftIcon />
+          </span>
+          Back to proof console
+        </a>
+      </div>
+      <main className="try-page" id="try-main">
         <header className="try-page-header">
           <div className="try-page-brand">
-            <p className="try-page-brand-mark">OmniAgent</p>
-            <h1>Try the enforcement</h1>
-            <p className="try-page-lede">
-              Most finalists attest. OmniAgent enforces. A fail-closed AI debate writes a Casper
-              decision receipt, then the vault applies{' '}
-              <span>freeze / unfreeze / set_ltv</span>
-              . Pay for evidence over native x402, then act — cheat attempts revert on-chain.
-              Replayable without private keys.
+            <p className="try-page-brand-mark">
+              <span aria-hidden="true" />
+              OmniAgent / enforcement lab
             </p>
+            <p className="try-page-eyebrow">Casper testnet · no wallet · replayable proof</p>
+            <h1>
+              Watch the agent get
+              <em> overruled.</em>
+            </h1>
+            <p className="try-page-lede">
+              A fail-closed AI debate seals its verdict on Casper. Approved decisions can move the
+              vault; blocked decisions cannot. Follow one evidence packet from{' '}
+              <span>HTTP 402 → debate → receipt → enforcement</span>.
+            </p>
+            <div className="try-proof-spine" aria-label="Proof lifecycle">
+              {['Paid evidence', 'AI debate', 'Sealed receipt', 'Vault action'].map((label, index) => (
+                <span key={label}>
+                  <b>{String(index + 1).padStart(2, '0')}</b>
+                  {label}
+                </span>
+              ))}
+            </div>
+            <nav className="try-page-nav" aria-label="Primary Try page actions">
+              <a className="try-cta try-cta-primary" href="#desk-story">
+                Start Desk Story
+                <span className="try-cta-icon" aria-hidden="true">
+                  <ArrowRightIcon />
+                </span>
+              </a>
+              <a className="try-cta" href="/api/public/proof" target="_blank" rel="noreferrer">
+                Raw proof JSON
+                <span className="try-cta-icon" aria-hidden="true">
+                  <ExternalLinkIcon />
+                </span>
+              </a>
+            </nav>
           </div>
-          <nav className="try-page-nav" aria-label="Try page links">
-            <a className="try-cta try-cta-primary" href="/">
-              Open cockpit
-            </a>
-            <a className="try-cta" href="/api/public/proof" target="_blank" rel="noreferrer">
-              Raw proof JSON
-              <ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
-            </a>
-          </nav>
+          <aside className="try-judge-route" aria-labelledby="judge-route-title">
+            <div className="try-judge-route-head">
+              <div>
+                <p>Judge route</p>
+                <h2 id="judge-route-title">Proof in five minutes</h2>
+              </div>
+              <span
+                className={`try-proof-status${error ? ' is-error' : loading ? ' is-loading' : ''}`}
+                aria-live="polite"
+              >
+                {statusChip}
+              </span>
+            </div>
+            <ol>
+              <li>
+                <a href="#desk-story">
+                  <span>01</span>
+                  Replay the decision
+                  <small>{deskReady}/{deskSteps.length} proofs</small>
+                </a>
+              </li>
+              <li>
+                <a href="#paid-act">
+                  <span>02</span>
+                  Buy → verify → act
+                  <small>{paidReady}/3 ready</small>
+                </a>
+              </li>
+              <li>
+                <a href="#cheat-lab">
+                  <span>03</span>
+                  Break the vault
+                  <small>{cheatReady}/{cheatScenarios.length} canaries</small>
+                </a>
+              </li>
+              <li>
+                <a href="#enhancement-board">
+                  <span>04</span>
+                  Audit the roadmap
+                  <small>{enhancementLiveCount}/{enhancements.length} live</small>
+                </a>
+              </li>
+            </ol>
+          </aside>
         </header>
 
         <section
@@ -468,10 +655,10 @@ export default function TryEnforcementPage() {
 
         <section className="try-page-section" id="cheat-lab">
           <div className="try-page-section-head">
-            <h2>Cheat Lab — try to break the vault</h2>
+            <h2>Cheat Lab: try to break the vault</h2>
             <p>
               Six intentional attacks against the vault and the decision-proof ACL. Each one should
-              revert on Casper with a User error — no collateral moves, no forged receipts.{' '}
+              revert on Casper with a User error. No collateral moves and no forged receipts.{' '}
               {cheatReady}/{cheatScenarios.length} explorer proofs published.
             </p>
           </div>
@@ -518,7 +705,7 @@ export default function TryEnforcementPage() {
                             <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
                           </a>
                         ) : (
-                          <span className="chain-proof-missing">canary pending — seed script required</span>
+                          <span className="chain-proof-missing">Canary pending. Seed script required.</span>
                         )}
                       </div>
                     ) : null}
@@ -526,6 +713,7 @@ export default function TryEnforcementPage() {
                   <button
                     type="button"
                     className="try-cheat-btn"
+                    aria-label={`Try ${scenario.title} attack`}
                     disabled={busy}
                     onClick={() => void onCheatClick(scenario.id)}
                   >
@@ -588,7 +776,7 @@ export default function TryEnforcementPage() {
                         ) : null}
                         {result?.decisionAction || result?.vaultEntry ? (
                           <span translate="no">
-                            {result.decisionAction || '—'}
+                            {result.decisionAction || 'Not available'}
                             {result.vaultEntry ? ` → ${result.vaultEntry}` : ''}
                           </span>
                         ) : null}
@@ -623,7 +811,7 @@ export default function TryEnforcementPage() {
 
         <section className="try-page-section" id="desk-story">
           <div className="try-page-section-head">
-            <h2>Desk Story — financeability gate</h2>
+            <h2>Desk Story: financeability gate</h2>
             <p>
               Five guided steps a collateral desk can replay: unpaid 402 → approved haircut →
               cross-contract enforce → on-chain reject that cannot move collateral → ACL cheat.{' '}
@@ -633,106 +821,216 @@ export default function TryEnforcementPage() {
           <div className="try-desk-toolbar">
             <a className="try-cta try-cta-primary" href={deskVideo} target="_blank" rel="noreferrer">
               Watch ≤90s walkthrough
-              <ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="try-cta-icon" aria-hidden="true">
+                <ExternalLinkIcon />
+              </span>
             </a>
             <p className="try-desk-video-note">
               {proof?.deskStory?.videoNote ||
                 'Filmed path covers enforce + reject-cannot-enforce; click each step for live explorer links.'}
             </p>
           </div>
-          <ol className="try-desk-steps">
-            {deskSteps.map((step, index) => {
-              const active = deskActive === index;
-              return (
-                <li key={step.id}>
-                  <button
-                    type="button"
-                    className={`flight-panel try-desk-step${active ? ' is-active' : ''}${
-                      step.status === 'ready' ? ' is-ready' : ''
-                    }`}
-                    onClick={() => setDeskActive(index)}
-                  >
-                    <span className="try-desk-index">{index + 1}</span>
-                    <span className="try-desk-copy">
-                      <strong>{step.title}</strong>
-                      <span>{step.detail}</span>
-                    </span>
-                    <span className="try-desk-status">{step.status}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-          {deskSteps[deskActive] ? (
-            <div className="flight-panel try-desk-detail">
-              <div className="flight-panel-head">
-                <h3>
-                  Step {deskActive + 1}: {deskSteps[deskActive].title}
-                </h3>
-                <span>{deskSteps[deskActive].status}</span>
+          <div className="try-desk-stage">
+            <ol className="try-desk-steps">
+              {deskSteps.map((step, index) => {
+                const active = deskActive === index;
+                return (
+                  <li key={step.id}>
+                    <button
+                      type="button"
+                      className={`flight-panel try-desk-step${active ? ' is-active' : ''}${
+                        step.status === 'ready' ? ' is-ready' : ''
+                      }`}
+                      aria-current={active ? 'step' : undefined}
+                      onClick={() => setDeskActive(index)}
+                    >
+                      <span className="try-desk-index">{String(index + 1).padStart(2, '0')}</span>
+                      <span className="try-desk-copy">
+                        <strong>{step.title}</strong>
+                        <span>{step.detail}</span>
+                      </span>
+                      <span className="try-desk-status">{step.status}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+            {deskSteps[deskActive] ? (
+              <div className="try-desk-detail-shell">
+                <div className="flight-panel try-desk-detail">
+                  <div className="flight-panel-head">
+                    <h3>
+                      Step {deskActive + 1}: {deskSteps[deskActive].title}
+                    </h3>
+                    <span>{deskSteps[deskActive].status}</span>
+                  </div>
+                  <p>{deskSteps[deskActive].detail}</p>
+                  <div className="try-link-row">
+                    {deskSteps[deskActive].href ? (
+                      <a
+                        className="try-cta"
+                        href={deskSteps[deskActive].href!}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open endpoint
+                        <ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                      </a>
+                    ) : null}
+                    {deskSteps[deskActive].transactionHash && deskSteps[deskActive].explorerUrl ? (
+                      <a
+                        className="chain-proof-link"
+                        href={deskSteps[deskActive].explorerUrl!}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />
+                        <span translate="no">{shortHash(deskSteps[deskActive].transactionHash!)}</span>
+                        <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
+                      </a>
+                    ) : null}
+                    {deskSteps[deskActive].enforceRevertTransactionHash &&
+                    deskSteps[deskActive].enforceRevertExplorerUrl ? (
+                      <a
+                        className="chain-proof-link"
+                        href={deskSteps[deskActive].enforceRevertExplorerUrl!}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <ShieldXIcon className="h-3 w-3" aria-hidden="true" />
+                        <span translate="no">
+                          revert {shortHash(deskSteps[deskActive].enforceRevertTransactionHash!)}
+                        </span>
+                        <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
+                      </a>
+                    ) : null}
+                  </div>
+                  <div className="try-desk-nav">
+                    <button
+                      type="button"
+                      className="try-cta"
+                      disabled={deskActive <= 0}
+                      onClick={() => setDeskActive((n) => Math.max(0, n - 1))}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      className="try-cta try-cta-primary"
+                      disabled={deskActive >= deskSteps.length - 1}
+                      onClick={() => setDeskActive((n) => Math.min(deskSteps.length - 1, n + 1))}
+                    >
+                      Next step
+                      <ArrowRightIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
               </div>
-              <p>{deskSteps[deskActive].detail}</p>
-              <div className="try-link-row">
-                {deskSteps[deskActive].href ? (
-                  <a
-                    className="try-cta"
-                    href={deskSteps[deskActive].href!}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open endpoint
+            ) : null}
+          </div>
+        </section>
+
+        <section className="try-page-section" id="enhancement-board">
+          <div className="try-page-section-head try-enhancement-head">
+            <div>
+              <p className="try-enhancement-eyebrow">Podium proof manifest</p>
+              <h2>Enhancement board</h2>
+            </div>
+            <span className="try-enhancement-count">
+              {enhancementLiveCount}/{enhancements.length} live
+            </span>
+          </div>
+          <p className="try-enhancement-intro">
+            This board reads the public proof API. A card turns green only when its required hashes,
+            metrics, or product fields are published; planned work is never presented as shipped.
+          </p>
+          <div className="try-enhancement-grid">
+            {enhancements.map((item, index) => (
+              <article
+                key={item.id}
+                className={`flight-panel try-enhancement-card is-${item.state}`}
+              >
+                <div className="try-enhancement-card-head">
+                  <span className="try-enhancement-sequence">{String(index + 1).padStart(2, '0')}</span>
+                  <span className={`try-enhancement-state is-${item.state}`}>{item.state}</span>
+                </div>
+                <div className="try-enhancement-copy">
+                  <h3>{item.title}</h3>
+                  <strong>{item.metric}</strong>
+                  <p>{item.detail}</p>
+                </div>
+
+                {item.id === 'live-roles' && roleTraces.length ? (
+                  <div className="try-enhancement-evidence">
+                    {roleTraces.map((role) => (
+                      <div key={`${role.agentRole}-${role.verdict}`}>
+                        <span>{role.agentRole || 'role'}</span>
+                        <strong>{role.verdict || 'unknown'}</strong>
+                        <code>{role.traceSource || 'source missing'}</code>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                {item.id === 'trust-summary' && trust ? (
+                  <div className="try-enhancement-evidence try-trust-evidence">
+                    <div>
+                      <span>Readback</span>
+                      <strong>{percent(trust.verifiedReadbackRate)}</strong>
+                    </div>
+                    <div>
+                      <span>Blocked</span>
+                      <strong>{percent(trust.policyBlockedRate)}</strong>
+                    </div>
+                    <div>
+                      <span>Paid evidence</span>
+                      <strong>{percent(trust.paidEvidenceVerifiedRate)}</strong>
+                    </div>
+                  </div>
+                ) : null}
+
+                {item.id === 'paired-lifecycle' && lifecycleReady ? (
+                  <div className="try-link-row">
+                    {lifecycle?.blockedExplorerUrl ? (
+                      <a
+                        className="chain-proof-link"
+                        href={lifecycle.blockedExplorerUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <ShieldXIcon className="h-3 w-3" aria-hidden="true" />
+                        blocked {shortHash(lifecycle.blockedTransactionHash!)}
+                      </a>
+                    ) : null}
+                    {lifecycle?.approvedExplorerUrl ? (
+                      <a
+                        className="chain-proof-link"
+                        href={lifecycle.approvedExplorerUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />
+                        approved {shortHash(lifecycle.approvedTransactionHash!)}
+                      </a>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {item.id === 'one-command' && verifier?.oneCommand ? (
+                  <code className="try-enhancement-command">{verifier.oneCommand}</code>
+                ) : null}
+
+                {item.href ? (
+                  <a className="try-enhancement-link" href={item.href} target="_blank" rel="noreferrer">
+                    {item.hrefLabel || 'Open proof'}
                     <ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
                   </a>
-                ) : null}
-                {deskSteps[deskActive].transactionHash && deskSteps[deskActive].explorerUrl ? (
-                  <a
-                    className="chain-proof-link"
-                    href={deskSteps[deskActive].explorerUrl!}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />
-                    <span translate="no">{shortHash(deskSteps[deskActive].transactionHash!)}</span>
-                    <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
-                  </a>
-                ) : null}
-                {deskSteps[deskActive].enforceRevertTransactionHash &&
-                deskSteps[deskActive].enforceRevertExplorerUrl ? (
-                  <a
-                    className="chain-proof-link"
-                    href={deskSteps[deskActive].enforceRevertExplorerUrl!}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <ShieldXIcon className="h-3 w-3" aria-hidden="true" />
-                    <span translate="no">
-                      revert {shortHash(deskSteps[deskActive].enforceRevertTransactionHash!)}
-                    </span>
-                    <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
-                  </a>
-                ) : null}
-              </div>
-              <div className="try-desk-nav">
-                <button
-                  type="button"
-                  className="try-cta"
-                  disabled={deskActive <= 0}
-                  onClick={() => setDeskActive((n) => Math.max(0, n - 1))}
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  className="try-cta try-cta-primary"
-                  disabled={deskActive >= deskSteps.length - 1}
-                  onClick={() => setDeskActive((n) => Math.min(deskSteps.length - 1, n + 1))}
-                >
-                  Next step
-                  <ArrowRightIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                </button>
-              </div>
-            </div>
-          ) : null}
+                ) : (
+                  <span className="try-enhancement-pending">Waiting for public proof fields</span>
+                )}
+              </article>
+            ))}
+          </div>
         </section>
 
         <section className="try-page-section">
@@ -801,18 +1099,18 @@ export default function TryEnforcementPage() {
           </div>
           <ol className="try-judge-list">
             <li>
-              Walk the <a href="#desk-story">Desk Story</a> — unpaid 402 → haircut → enforce →
+              Walk the <a href="#desk-story">Desk Story</a>: unpaid 402 → haircut → enforce →
               on-chain reject cannot-enforce → ACL cheat.
             </li>
             <li>
-              Open this page — confirm decision action and vault entry above.
+              Open this page, then confirm the decision action and vault entry above.
             </li>
             <li>
               Run <strong>x402 buy → verify → act</strong>: Probe unpaid (402) → Verify settle →
               Enforce from paid.
             </li>
             <li>
-              Click <strong>Try to cheat</strong> on each Cheat Lab card — open the explorer link and
+              Click <strong>Try to cheat</strong> on each Cheat Lab card, then open the explorer link and
               confirm the User error.
             </li>
             <li>
@@ -821,6 +1119,10 @@ export default function TryEnforcementPage() {
                 /api/public/proof
               </a>{' '}
               and match <code>paidAct</code> + <code>cheatReverts</code> + deploy hashes.
+            </li>
+            <li>
+              Review the <a href="#enhancement-board">Enhancement board</a>. Green means the required
+              public proof fields are live; partial and planned items are explicitly labeled.
             </li>
             <li>
               Optional:{' '}
@@ -833,6 +1135,12 @@ export default function TryEnforcementPage() {
         </section>
 
         <footer className="try-page-footer">
+          <a className="try-back-link" href="/">
+            <span className="try-back-icon" aria-hidden="true">
+              <ArrowLeftIcon />
+            </span>
+            Back to proof console
+          </a>
           <span translate="no">
             {loading
               ? 'Loading public proof…'
@@ -847,7 +1155,7 @@ export default function TryEnforcementPage() {
             DoraHacks BUIDL 40823
           </a>
         </footer>
-      </div>
+      </main>
     </div>
   );
 }

@@ -82,34 +82,41 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
       <section className="flight-panel receipt-ledger-panel" aria-busy={loading || undefined}>
         <div className="receipt-ledger-toolbar">
           <div className="flight-panel-head">
-            <h2>Receipt Ledger</h2>
+            <h2>Receipt ledger</h2>
             <span>{loading ? 'Loading…' : `Rows ${pageStart}-${pageEnd} of ${totalReceipts}`}</span>
           </div>
           <div className="receipt-ledger-controls">
-            {(['all', 'verified', 'blocked'] as LedgerFilter[]).map(item => (
-              <button
-                key={item}
-                type="button"
-                className={filter === item ? 'is-active' : ''}
-                disabled={loading}
-                onClick={() => {
-                  setFilter(item);
+            <div className="receipt-ledger-filters" role="group" aria-label="Filter receipts by status">
+              {(['all', 'verified', 'blocked'] as LedgerFilter[]).map(item => (
+                <button
+                  key={item}
+                  type="button"
+                  className={filter === item ? 'is-active' : ''}
+                  aria-pressed={filter === item}
+                  disabled={loading}
+                  onClick={() => {
+                    setFilter(item);
+                    setSelectedKey('');
+                  }}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+            <label className="receipt-ledger-search" htmlFor="receipt-ledger-search">
+              <span>Search receipts</span>
+              <input
+                id="receipt-ledger-search"
+                type="search"
+                value={query}
+                onChange={event => {
+                  setQuery(event.target.value);
                   setSelectedKey('');
                 }}
-              >
-                {item}
-              </button>
-            ))}
-            <input
-              value={query}
-              onChange={event => {
-                setQuery(event.target.value);
-                setSelectedKey('');
-              }}
-              placeholder="Search current page"
-              aria-label="Search current receipt page"
-              disabled={loading}
-            />
+                placeholder="Decision ID, digest, or status"
+                disabled={loading}
+              />
+            </label>
           </div>
           <div className="receipt-ledger-pagination" aria-label="Receipt ledger pagination">
             <button

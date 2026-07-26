@@ -24,14 +24,17 @@ export default function FlightDeckRail({
   return (
     <aside className="flight-rail" aria-label="Flight Deck navigation">
       <div className="flight-brand">
-        <img src="/imgs/casper-icon.png" alt="OmniAgent mascot" width="66" height="66" />
+        <div className="flight-brand-mark">
+          <img src="/imgs/casper-icon.png" alt="" width="66" height="66" />
+        </div>
         <div>
+          <p className="flight-brand-eyebrow">Casper proof console</p>
           <b>OmniAgent</b>
-          <span>Casper</span>
+          <span>Enforcement cockpit</span>
         </div>
       </div>
       <nav className="flight-tabs" aria-label="Receipt Flight Deck tabs">
-        {tabs.map(({ id, label, icon: Icon }) => (
+        {tabs.map(({ id, label, icon: Icon }, index) => (
           <button
             key={id}
             type="button"
@@ -39,15 +42,27 @@ export default function FlightDeckRail({
             aria-current={activeTab === id ? 'page' : undefined}
             onClick={() => onTabChange(id)}
           >
-            <Icon className="h-4 w-4" />
-            {label}
+            <span className="flight-tab-index" aria-hidden="true">
+              {String(index + 1).padStart(2, '0')}
+            </span>
+            <Icon className="h-4 w-4" aria-hidden="true" />
+            <span className="flight-tab-label">{label}</span>
           </button>
         ))}
       </nav>
       <div className="flight-rail-status">
-        <span className={sourceState === 'live' ? 'is-ok' : sourceState === 'loading' ? 'is-loading' : 'is-blocked'} />
-        <b>{sourceStateLabel(sourceState)}</b>
-        <small>Last sync: {refreshedAt ? new Date(refreshedAt).toISOString().slice(11, 19) : 'pending'} UTC</small>
+        <div className="flight-rail-status-row">
+          <span
+            className={
+              sourceState === 'live' ? 'is-ok' : sourceState === 'loading' ? 'is-loading' : 'is-blocked'
+            }
+            aria-hidden="true"
+          />
+          <b>{sourceStateLabel(sourceState)}</b>
+        </div>
+        <small>
+          Last sync: {refreshedAt ? new Date(refreshedAt).toISOString().slice(11, 19) : 'pending'} UTC
+        </small>
       </div>
     </aside>
   );

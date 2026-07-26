@@ -56,9 +56,9 @@ export function ReceiptHistory({ refreshKey = '' }: { refreshKey?: string } = {}
       <div className="receipt-history-list" data-page-decision-log data-receipt-history>
         {receipts.length ? receipts.map((receipt, idx) => (
           <span key={receipt.decisionId ?? idx} className="receipt-row">
-            <small className="receipt-id">{proofText(receipt.decisionId, '—')}</small>
+            <small className="receipt-id">{proofText(receipt.decisionId, 'Pending')}</small>
             <b className={`receipt-action ${receipt.action ?? ''}`}>{proofLabel(receipt.action)}</b>
-            <small className="receipt-risk">risk {proofText(receipt.riskScore, '—')}</small>
+            <small className="receipt-risk">risk {proofText(receipt.riskScore, 'Pending')}</small>
             <small className="receipt-event">{proofLabel(receipt.eventType, { stripCasperPrefix: true })}</small>
             <small className="receipt-policy">{proofLabel(receipt.policyGate, { stripCasperPrefix: true })}</small>
             <small className="receipt-time">{proofText(receipt.timestamp ?? receipt.createdAt, '').slice(0, 19)}</small>
