@@ -63,6 +63,21 @@ export default function EvidenceProvenance({
           </li>
         ))}
       </ol>
+      {roles.length ? (
+        <ul className="role-reason-list" aria-label="Role reason codes">
+          {roles.map((role: Payload) => {
+            const name = String(role.agentRole || 'role');
+            const codes = Array.isArray(role.reasonCodes) ? role.reasonCodes.map(String) : [];
+            const summary = codes.length ? codes.slice(0, 4).join(', ') : proofText(role.verdict);
+            return (
+              <li key={name}>
+                <b>{proofLabel(name)}</b>
+                <span>{summary}</span>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
       {x402Loading ? (
         <div className="x402-proof is-loading" data-x402-status="loading" aria-busy="true" aria-label="Settling x402 payment proof">
           <b>

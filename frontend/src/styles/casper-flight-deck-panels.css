@@ -254,6 +254,39 @@
 .policy-grid .is-fail { border-color: var(--color-status-danger-border); color: var(--casper-red-soft); }
 .policy-grid .is-blocked { border-color: var(--color-status-warn-border); color: var(--amber); }
 
+.role-reason-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.role-reason-list li {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: baseline;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.role-reason-list b {
+  color: var(--text);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+}
+
+.role-reason-list span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+}
+
 .policy-grid,
 .recovery-list {
   display: grid;

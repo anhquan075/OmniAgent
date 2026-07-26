@@ -20,7 +20,6 @@ class CasperProofBundleService:
         ledger = CasperDecisionLedger.get_ledger_summary(
             limit=max(limit, get_settings().casper_ledger_max_events)
         )
-        trust_events = ledger["events"][:max(1, limit)]
         latest = CasperProofBundleService.latest_casper_event(ledger["events"])
         decision = CasperProofBundleService.enrich_decision_for_proof(
             CasperProofBundleService.decision_from_event(latest)
@@ -46,7 +45,11 @@ class CasperProofBundleService:
             "deployStatus": deploy_status,
             "readback": readback,
             "proofScore": proof_score,
-            "trustSummary": CasperTrustService.get_trust_summary(trust_events),
+            "trustSummary": CasperTrustService.get_trust_summary(
+                ledger["events"],
+                max_decisions=max(1, limit),
+                seeds=CasperProofBundleService.trust_seeds(),
+            ),
             "recoveryCandidates": CasperProofBundleService.recovery_candidates(blockers),
             "ledger": {
                 "configured": True,
@@ -255,6 +258,30 @@ class CasperProofBundleService:
             "score": sum(1 for passed in checks.values() if passed),
             "total": len(checks),
         }
+
+    @staticmethod
+    def trust_seeds() -> list[dict[str, Any]]:
+        """Optional labeled samples from env-pinned on-chain canaries.
+
+        Used only when the canary decisionId is absent from the ledger sample
+        (e.g. seeded from a workstation SQLite, while Railway never saw the row).
+        """
+        settings = get_settings()
+        decision_id = str(settings.casper_decision_blocked_decision_id or "").strip()
+        tx_hash = str(settings.casper_decision_blocked_canary_tx_hash or "").strip()
+        if not decision_id and not tx_hash:
+            return []
+        return [
+            {
+                "decisionId": decision_id or f"blocked-canary-{tx_hash[:12]}",
+                "policyGate": "blocked",
+                "transactionHash": tx_hash or None,
+                "source": "settings_blocked_canary",
+                "evidenceBundle": {"hardBlockers": []},
+                "x402": {},
+                "readbackVerified": False,
+            }
+        ]
 
     @staticmethod
     def lifecycle(

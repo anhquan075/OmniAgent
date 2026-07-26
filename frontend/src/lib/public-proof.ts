@@ -188,6 +188,9 @@ export type DeskStory = {
 export type PublicProofRoleTrace = {
   agentRole?: string | null;
   verdict?: string | null;
+  action?: string | null;
+  reasonCodes?: string[] | null;
+  reasonSummary?: string | null;
   traceSource?: string | null;
   traceProvider?: string | null;
   modelName?: string | null;

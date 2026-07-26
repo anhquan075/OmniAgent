@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     casper_explorer_url: str = "https://testnet.cspr.live"
     casper_demo_url: str = "https://omniyield.app"
     casper_demo_video_url: str = "https://youtu.be/wcVoqJXqPhc"
+    casper_demo_reject_video_url: str | None = None
     casper_account_public_key: str | None = None
     casper_secret_key_path: str | None = None
     casper_contract_install_deploy_hash: str | None = None
@@ -136,7 +137,7 @@ class Settings(BaseSettings):
     casper_agent_loop_auto_readback: bool = True
     casper_agent_loop_poll_max_retries: int = 10
     casper_agent_loop_poll_interval_sec: float = 5.0
-    casper_ledger_max_events: int = 500
+    casper_ledger_max_events: int = 2_000
     casper_cspr_cloud_api_key: str | None = None
     casper_cspr_cloud_url: str = "https://api.testnet.cspr.cloud"
     casper_min_balance_cspr: float = 50.0

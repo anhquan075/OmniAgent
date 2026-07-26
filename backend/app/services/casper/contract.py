@@ -314,6 +314,37 @@ class CasperDecisionContractService:
         preflight: dict[str, Any] | None = None,
         cycle: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        duplicate_blockers = {
+            CasperSubmissionGuard.DUPLICATE_BLOCKER,
+            CasperSubmissionGuard.CHAIN_DUPLICATE_BLOCKER,
+        }
+        blocker_set = {str(item) for item in blockers if item}
+        # Duplicate-intent retries were flooding the ledger (~48/day) and
+        # rotating real readback/blocked history out of the 500-row window.
+        if (
+            event_type == "casper_decision_live_submit_blocked"
+            and blocker_set
+            and blocker_set.issubset(duplicate_blockers)
+        ):
+            latest = CasperDecisionLedger.get_ledger_summary(limit=1).get("events") or []
+            prior = latest[0] if latest and isinstance(latest[0], dict) else None
+            if prior:
+                prior_payload = prior.get("payload") if isinstance(prior.get("payload"), dict) else {}
+                prior_decision = (
+                    prior_payload.get("decision")
+                    if isinstance(prior_payload.get("decision"), dict)
+                    else {}
+                )
+                prior_blockers = {
+                    str(item) for item in (prior_payload.get("hardBlockers") or []) if item
+                }
+                same_decision = str(prior_decision.get("decisionId") or "") == str(
+                    decision.get("decisionId") or ""
+                )
+                same_type = prior.get("eventType") == event_type
+                if same_decision and same_type and prior_blockers == blocker_set:
+                    return prior
+
         return CasperDecisionLedger.append_event({
             "eventType": event_type,
             "action": decision["action"],

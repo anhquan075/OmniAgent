@@ -10,6 +10,7 @@ from app.core.security_middleware import RequestSecurityMiddleware
 from app.core.settings import get_settings
 from app.services.casper.ledger import CasperDecisionLedger
 from app.services.casper.loop import agent_loop, loop_state, start_loop, stop_loop
+from app.services.casper.proof_bundle import CasperProofBundleService
 from app.services.casper.trust import CasperTrustService
 from app.services.casper.x402_endpoint import (
     CasperX402EvidenceEndpointService,
@@ -184,7 +185,11 @@ def create_app() -> FastAPI:
                 "React proof cockpit",
             ],
             "trustSummary": CasperTrustService.get_trust_summary(
-                CasperDecisionLedger.get_ledger_summary(limit=25)["events"],
+                CasperDecisionLedger.get_ledger_summary(
+                    limit=get_settings().casper_ledger_max_events
+                )["events"],
+                max_decisions=25,
+                seeds=CasperProofBundleService.trust_seeds(),
             ),
             "skills": [
                 {

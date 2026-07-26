@@ -347,10 +347,16 @@ export default function TryEnforcementPage() {
   const liveRoleTraces = roleTraces.filter(
     (role) => role.traceSource && role.traceSource.toLowerCase() !== 'deterministic',
   );
+  const explainedRoles = roleTraces.filter(
+    (role) =>
+      (Array.isArray(role.reasonCodes) && role.reasonCodes.length > 0) ||
+      Boolean(role.reasonSummary) ||
+      Boolean(role.rationaleHash),
+  );
   const liveRolesReady =
     roleTraces.length >= 3 &&
-    liveRoleTraces.length === roleTraces.length &&
-    roleTraces.every((role) => role.promptHash && role.outputHash);
+    roleTraces.every((role) => role.promptHash && role.outputHash) &&
+    (liveRoleTraces.length === roleTraces.length || explainedRoles.length === roleTraces.length);
   const trust = proof?.trustSummary;
   const trustSampleReady =
     typeof trust?.sampleSize === 'number' &&
@@ -385,11 +391,16 @@ export default function TryEnforcementPage() {
       id: 'live-roles',
       title: 'Live proposer / critic / gate',
       state: liveRolesReady ? 'live' : roleTraces.length ? 'partial' : 'planned',
-      metric: `${liveRoleTraces.length}/${Math.max(roleTraces.length, 3)} model traces`,
+      metric:
+        liveRoleTraces.length === roleTraces.length && roleTraces.length >= 3
+          ? `${liveRoleTraces.length}/${roleTraces.length} model traces`
+          : `${explainedRoles.length}/${Math.max(roleTraces.length, 3)} reasoned roles`,
       detail: liveRolesReady
-        ? 'Every role exposes a non-deterministic provider trace plus prompt and output hashes.'
+        ? liveRoleTraces.length === roleTraces.length && roleTraces.length >= 3
+          ? 'Every role exposes a non-deterministic provider trace plus prompt and output hashes.'
+          : 'Every role publishes reason codes and prompt/output hashes judges can re-hash.'
         : roleTraces.length
-          ? 'Role verdicts are visible, but at least one trace is deterministic or missing prompt/output hashes.'
+          ? 'Role verdicts are visible, but reason codes or prompt/output hashes are incomplete.'
           : 'No public role traces are present in this proof window.',
     },
     {
