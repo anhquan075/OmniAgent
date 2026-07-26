@@ -150,11 +150,11 @@
   "recoveryCandidates": [],
   "x402": {
     "status": "verified",
-    "endpoint": "https://omniagent-production.up.railway.app/api/x402/rwa-evidence",
+    "endpoint": "https://api.omniyield.app/api/x402/rwa-evidence",
     "receipt": {
       "receiptId": "93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5",
       "provider": "x402",
-      "resourceUrl": "https://omniagent-production.up.railway.app/api/x402/rwa-evidence",
+      "resourceUrl": "https://api.omniyield.app/api/x402/rwa-evidence",
       "paidAt": "2026-07-23T00:00:00+00:00",
       "amount": "1000000",
       "currency": "WCSPR",

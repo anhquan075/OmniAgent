@@ -69,8 +69,8 @@ Set these on the `backend` service.
 | `API_SECURITY_ENABLED` | `true` |
 | `API_SECURITY_HEADERS_ENABLED` | `true` |
 | `API_RATE_LIMIT_ENABLED` | `true` |
-| `API_TRUSTED_HOSTS` | `localhost,127.0.0.1,testserver,healthcheck.railway.app,*.up.railway.app,*.railway.internal` plus any custom backend domain |
-| `ALLOWED_FRONTEND_ORIGINS` | Frontend public URL, for example `https://<frontend>.up.railway.app` |
+| `API_TRUSTED_HOSTS` | `localhost,127.0.0.1,testserver,healthcheck.railway.app,api.omniyield.app,omniyield.app,*.railway.internal` |
+| `ALLOWED_FRONTEND_ORIGINS` | Frontend public URL, for example `https://omniyield.app` |
 | `AGENT_RUNTIME_ADAPTER` | `fastapi-casper-agent` |
 | `MCP_ALLOWED_TOOLS` | `casper_agent_cockpit_snapshot,casper_get_account,casper_runtime_snapshot,casper_live_preflight,casper_run_autonomous_cycle,casper_live_proof_bundle,casper_get_deploy_status,casper_get_decision_receipt,casper_verify_decision_receipt,casper_record_decision,casper_record_readback` |
 

@@ -156,11 +156,11 @@ cycle until **Latest live cycle** is selected again.
 The deployed proof surfaces require no private key:
 
 ```bash
-curl -fsS https://omniagent-production.up.railway.app/api/public/proof \
+curl -fsS https://api.omniyield.app/api/public/proof \
   | jq '{status,decisionId,deployHash,contractHash,readback}'
 
 curl -fsS \
-  https://omniagent-production.up.railway.app/.well-known/casper-agent-card.json \
+  https://api.omniyield.app/.well-known/casper-agent-card.json \
   | jq '{name,network,contractHash,contractPackageHash}'
 ```
 
@@ -169,7 +169,7 @@ For a decision ID shown by the public proof endpoint:
 ```bash
 CASPER_DECISION_CONTRACT_HASH=<contract-hash> \
 scripts/verify-casper-receipt.sh <decision-id> \
-  --api-url https://omniagent-production.up.railway.app \
+  --api-url https://api.omniyield.app \
   --use-rpc
 ```
 

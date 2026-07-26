@@ -39,8 +39,8 @@ CASPER_MIN_BALANCE_CSPR=50
 CASPER_DECISION_LEDGER_PATH=/data/casper-decision-log.sqlite3
 API_SESSION_SECRET=<sealed-secret>
 API_OPERATOR_TOKEN=<sealed-secret>
-API_TRUSTED_HOSTS=localhost,127.0.0.1,testserver,healthcheck.railway.app,*.up.railway.app,*.railway.internal
-ALLOWED_FRONTEND_ORIGINS=https://<frontend-public-domain>.up.railway.app
+API_TRUSTED_HOSTS=localhost,127.0.0.1,testserver,healthcheck.railway.app,api.omniyield.app,omniyield.app,*.railway.internal
+ALLOWED_FRONTEND_ORIGINS=https://omniyield.app
 ```
 
 The backend image installs `casper-client` 5.0.1 at `/usr/local/bin/casper-client`. Mount a backend volume at `/data`; the same SQLite file stores the dashboard log and the atomic submission budget/idempotency guard.
@@ -60,7 +60,8 @@ The frontend serves browser traffic and proxies `/api/*` to `BACKEND_INTERNAL_UR
 ## Post-Deploy Checks
 
 ```bash
-curl https://<frontend-public-domain>.up.railway.app/api/health
+curl https://api.omniyield.app/api/health
+curl https://omniyield.app/api/health
 ```
 
 Then call these MCP tools through the deployed frontend origin:

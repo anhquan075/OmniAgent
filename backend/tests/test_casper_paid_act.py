@@ -17,7 +17,7 @@ def _receipt_json(**overrides: Any) -> str:
     base = {
         "receiptId": "93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5",
         "provider": "x402",
-        "resourceUrl": "https://omniagent-production.up.railway.app/api/x402/rwa-evidence",
+        "resourceUrl": "https://api.omniyield.app/api/x402/rwa-evidence",
         "paidAt": "2026-07-23T12:00:00+00:00",
         "amount": "1000000",
         "currency": "WCSPR",
@@ -34,7 +34,7 @@ def _receipt_json(**overrides: Any) -> str:
 def _configure_x402(monkeypatch, *, with_receipt: bool = True) -> None:
     monkeypatch.setenv(
         "CASPER_X402_EVIDENCE_URL",
-        "https://omniagent-production.up.railway.app/api/x402/rwa-evidence",
+        "https://api.omniyield.app/api/x402/rwa-evidence",
     )
     monkeypatch.setenv(
         "CASPER_X402_PAY_TO_ADDRESS",

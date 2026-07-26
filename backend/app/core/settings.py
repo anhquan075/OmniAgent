@@ -31,7 +31,8 @@ class Settings(BaseSettings):
     api_rate_limit_window_sec: int = 60
     api_max_body_bytes: int = 1_048_576
     api_trusted_hosts: str = (
-        "localhost,127.0.0.1,testserver,healthcheck.railway.app,*.up.railway.app,*.railway.internal"
+        "localhost,127.0.0.1,testserver,healthcheck.railway.app,"
+        "api.omniyield.app,omniyield.app,*.railway.internal"
     )
     allowed_frontend_origins: str = (
         "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"

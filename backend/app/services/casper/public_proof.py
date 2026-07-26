@@ -80,7 +80,7 @@ class CasperPublicProofService:
                 "proofFile": "proofs/casper-buildathon-submission-proof.json",
                 "liveProofCommand": "scripts/verify-casper-live-proof.sh --proof-file proofs/casper-buildathon-submission-proof.json",
                 "oneCommand": (
-                    "curl -fsS https://omniyield.app/api/public/proof | "
+                    "curl -fsS https://api.omniyield.app/api/public/proof | "
                     "python3 -c \"import sys,json; p=json.load(sys.stdin); "
                     "assert p.get('status')=='live_verified'; "
                     "assert (p.get('authoring') or {}).get('lastBlocked'); "
