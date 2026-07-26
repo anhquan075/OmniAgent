@@ -5,6 +5,7 @@ import { extname, join, normalize, resolve } from "node:path";
 import {
   fetchUpstreamWithRetry,
   proxyRetryConfigFromEnv,
+  shouldProxyUpstream,
   shouldStreamUpstream,
   upstreamErrorReason,
 } from "./server-proxy.mjs";
@@ -270,7 +271,7 @@ async function serveStatic(req, res, url) {
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
-    if (url.pathname.startsWith("/api/")) {
+    if (shouldProxyUpstream(url.pathname)) {
       await proxyApi(req, res, url);
       return;
     }

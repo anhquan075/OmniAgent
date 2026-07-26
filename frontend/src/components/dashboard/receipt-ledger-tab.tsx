@@ -26,6 +26,8 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
   useEffect(() => {
     let cancelled = false;
     const offset = (page - 1) * PAGE_SIZE;
+    // Keep the last good page on screen while a refresh is in flight.
+    // Skeletons only appear on the cold first load (no rows yet).
     setLoading(true);
     void apiFetch(`/api/dashboard/receipts?limit=${PAGE_SIZE}&offset=${offset}`)
       .then(res => (res.ok ? res.json() : Promise.reject(new Error(`receipts ${res.status}`))))
@@ -77,13 +79,19 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
   ), [bundle, filteredReceipts, selectedKey]);
   const pageStart = totalReceipts ? (page - 1) * PAGE_SIZE + 1 : 0;
   const pageEnd = Math.min(page * PAGE_SIZE, totalReceipts);
+  const showSkeleton = loading && receipts.length === 0;
+  const statusLabel = showSkeleton
+    ? 'Loading…'
+    : loading
+      ? 'Refreshing…'
+      : `Rows ${pageStart}-${pageEnd} of ${totalReceipts}`;
   return (
     <div className="receipt-ledger-tab">
       <section className="flight-panel receipt-ledger-panel" aria-busy={loading || undefined}>
         <div className="receipt-ledger-toolbar">
           <div className="flight-panel-head">
             <h2>Receipt ledger</h2>
-            <span>{loading ? 'Loading…' : `Rows ${pageStart}-${pageEnd} of ${totalReceipts}`}</span>
+            <span>{statusLabel}</span>
           </div>
           <div className="receipt-ledger-controls">
             <div className="receipt-ledger-filters" role="group" aria-label="Filter receipts by status">
@@ -93,7 +101,7 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
                   type="button"
                   className={filter === item ? 'is-active' : ''}
                   aria-pressed={filter === item}
-                  disabled={loading}
+                  disabled={showSkeleton}
                   onClick={() => {
                     setFilter(item);
                     setSelectedKey('');
@@ -114,7 +122,7 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
                   setSelectedKey('');
                 }}
                 placeholder="Decision ID, digest, or status"
-                disabled={loading}
+                disabled={showSkeleton}
               />
             </label>
           </div>
@@ -129,7 +137,7 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
             </button>
             <span>
               <small>Page</small>
-              <b>{loading ? '…' : `${page} / ${totalPages}`}</b>
+              <b>{showSkeleton ? '…' : `${page} / ${totalPages}`}</b>
             </span>
             <button
               type="button"
@@ -146,11 +154,11 @@ export default function ReceiptLedgerTab({ bundle, refreshKey = '' }: { bundle?:
             receipts={filteredReceipts}
             selectedKey={selected ? receiptRowKey(selected) : ''}
             onSelect={(receipt) => setSelectedKey(receiptRowKey(receipt))}
-            loading={loading}
+            loading={showSkeleton}
           />
         </div>
       </section>
-      <ReceiptInspector receipt={selected} bundle={bundle} loading={loading} />
+      <ReceiptInspector receipt={selected} bundle={bundle} loading={showSkeleton} />
     </div>
   );
 }

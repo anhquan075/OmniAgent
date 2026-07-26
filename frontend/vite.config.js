@@ -19,6 +19,12 @@ export default defineConfig(({ mode }) => {
           timeout: 60000,
           proxyTimeout: 60000,
         },
+        '/.well-known': {
+          target: env.VITE_API_URL || 'http://localhost:8000',
+          changeOrigin: true,
+          timeout: 60000,
+          proxyTimeout: 60000,
+        },
       },
     },
     resolve: {

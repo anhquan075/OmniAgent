@@ -1,12 +1,21 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { fetchUpstreamWithRetry, shouldStreamUpstream } from "./server-proxy.mjs";
+import { fetchUpstreamWithRetry, shouldProxyUpstream, shouldStreamUpstream } from "./server-proxy.mjs";
 
 function timeoutError() {
   const error = new TypeError("fetch failed");
   error.cause = { code: "ETIMEDOUT" };
   return error;
 }
+
+describe("shouldProxyUpstream", () => {
+  it("proxies API and well-known agent discovery paths", () => {
+    expect(shouldProxyUpstream("/api/public/proof")).toBe(true);
+    expect(shouldProxyUpstream("/.well-known/casper-agent-card.json")).toBe(true);
+    expect(shouldProxyUpstream("/try")).toBe(false);
+    expect(shouldProxyUpstream("/assets/index.js")).toBe(false);
+  });
+});
 
 describe("shouldStreamUpstream", () => {
   it("streams the dashboard SSE path", () => {

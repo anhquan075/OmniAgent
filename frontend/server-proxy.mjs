@@ -25,6 +25,12 @@ export function upstreamErrorReason(error) {
   return error?.cause?.code || error?.code || error?.name || "upstream_fetch_failed";
 }
 
+/** Paths the frontend Node server must reverse-proxy to the backend. */
+export function shouldProxyUpstream(pathname = "") {
+  const path = String(pathname || "");
+  return path.startsWith("/api/") || path.startsWith("/.well-known/");
+}
+
 /** SSE must be streamed; buffering with arrayBuffer() never finishes. */
 export function shouldStreamUpstream(pathname = "", contentType = "") {
   const path = String(pathname || "");

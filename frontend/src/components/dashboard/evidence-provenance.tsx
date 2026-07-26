@@ -9,10 +9,12 @@ export default function EvidenceProvenance({
   bundle,
   x402,
   sourceState,
+  x402Loading = false,
 }: {
   bundle?: Payload;
   x402?: Payload;
   sourceState?: SourceState;
+  x402Loading?: boolean;
 }) {
   const loading = sourceState === 'loading';
   const decision = decisionFromBundle(bundle);
@@ -61,10 +63,20 @@ export default function EvidenceProvenance({
           </li>
         ))}
       </ol>
-      <div className={`x402-proof ${x402Ready ? 'is-ok' : 'is-guarded'}`} data-x402-status={x402Ready ? 'verified' : 'unavailable'}>
-        <b>x402 settlement proof</b>
-        <span>{x402Ready ? `Receipt ${proofText(x402Proof.receipt?.receiptHash)}` : 'Unavailable until public receipt metadata exists'}</span>
-      </div>
+      {x402Loading ? (
+        <div className="x402-proof is-loading" data-x402-status="loading" aria-busy="true" aria-label="Settling x402 payment proof">
+          <b>
+            <span className="x402-spinner" aria-hidden="true" />
+            x402 settlement proof
+          </b>
+          <span className="x402-loading-text">Settling payment proof…</span>
+        </div>
+      ) : (
+        <div className={`x402-proof ${x402Ready ? 'is-ok' : 'is-guarded'}`} data-x402-status={x402Ready ? 'verified' : 'unavailable'}>
+          <b>x402 settlement proof</b>
+          <span>{x402Ready ? `Receipt ${proofText(x402Proof.receipt?.receiptHash)}` : 'Unavailable until public receipt metadata exists'}</span>
+        </div>
+      )}
     </section>
   );
 }

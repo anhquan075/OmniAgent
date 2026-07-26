@@ -521,8 +521,15 @@
 }
 
 .proof-packet-mid > * {
+  min-width: 0;
   min-height: 0;
-  overflow: visible;
+  overflow: hidden;
+}
+
+.raw-evidence-preview {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
 }
 
 .receipt-ledger-tab {

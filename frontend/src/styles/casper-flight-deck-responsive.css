@@ -147,6 +147,13 @@
     height: auto;
   }
 
+  /* Keep long digests clipped so they cannot paint over Raw evidence preview. */
+  .proof-packet-mid > .evidence-summary,
+  .proof-packet-mid > .evidence-provenance {
+    overflow: hidden;
+    min-width: 0;
+  }
+
   .raw-evidence-preview pre {
     max-height: 240px;
   }

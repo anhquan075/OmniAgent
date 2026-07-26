@@ -12,10 +12,12 @@ export function EvidenceSummary({
   evidence,
   x402,
   sourceState,
+  x402Loading = false,
 }: {
   evidence?: Payload;
   x402?: Payload;
   sourceState?: SourceState;
+  x402Loading?: boolean;
 }) {
   const [copyStatus, setCopyStatus] = useState('');
   const loading = sourceState === 'loading';
@@ -67,7 +69,7 @@ export function EvidenceSummary({
     <section className="flight-panel evidence-summary" aria-label="RWA evidence summary">
       <div className="flight-panel-head">
         <h2>Evidence summary</h2>
-        <span>{x402Verified ? 'x402 verified' : proofLabel(x402Status)}</span>
+        <span>{x402Loading ? 'x402 settling…' : x402Verified ? 'x402 verified' : proofLabel(x402Status)}</span>
       </div>
       <div className="evidence-grid">
         <span className="evidence-field" data-evidence-field="scenario">
@@ -103,7 +105,14 @@ export function EvidenceSummary({
         </span>
         <span className="evidence-field" data-evidence-field="x402">
           <small>x402</small>
-          <b className={x402Verified ? 'is-ok' : 'is-blocked'}>{proofLabel(x402Display)}</b>
+          {x402Loading ? (
+            <b className="x402-inline-loading" aria-busy="true" aria-label="Settling x402 payment">
+              <span className="x402-spinner" aria-hidden="true" />
+              settling…
+            </b>
+          ) : (
+            <b className={x402Verified ? 'is-ok' : 'is-blocked'}>{proofLabel(x402Display)}</b>
+          )}
         </span>
       </div>
       <div className="evidence-hash-row">

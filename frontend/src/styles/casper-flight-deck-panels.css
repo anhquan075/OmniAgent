@@ -393,7 +393,9 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .evidence-summary .evidence-grid {
@@ -436,19 +438,34 @@
 
 .evidence-summary .evidence-hash-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   flex-wrap: wrap;
+  min-width: 0;
   margin-top: auto;
 }
 
-.evidence-summary .hash-value {
+.evidence-summary .evidence-hash-row .evidence-field {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.evidence-summary .evidence-field b.hash-value {
+  display: block;
+  max-width: 100%;
+  margin-top: 3px;
+  color: var(--text);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.74rem;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
   word-break: break-all;
 }
 
 .evidence-summary .copy-hash-btn {
+  flex: 0 0 auto;
+  align-self: center;
   min-height: 30px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -512,7 +529,9 @@
 
 .raw-evidence-preview pre {
   max-height: 180px;
+  max-width: 100%;
   overflow: auto;
+  overflow-wrap: anywhere;
   margin: 0;
   border: 1px solid rgba(255, 248, 239, 0.08);
   border-radius: 0.9rem;
@@ -520,6 +539,7 @@
   color: var(--muted);
   background: rgba(8, 5, 4, 0.65);
   font-size: 0.78rem;
+  white-space: pre-wrap;
 }
 
 .x402-proof {
@@ -536,6 +556,70 @@
 
 .x402-proof b,
 .x402-proof span { min-width: 0; overflow-wrap: anywhere; }
+
+/* x402 settlement is fetched after the packet loads, so it gets its own
+   in-flight animation instead of the full-panel skeleton. */
+.x402-proof.is-loading {
+  border-color: rgba(230, 63, 55, 0.34);
+  animation: x402-loading-border 1.6s ease-in-out infinite;
+}
+
+.x402-proof.is-loading b {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.x402-loading-text {
+  color: var(--muted);
+  animation: x402-loading-pulse 1.4s ease-in-out infinite;
+}
+
+.x402-inline-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--casper-red-soft, #e8a39e);
+  animation: x402-loading-pulse 1.4s ease-in-out infinite;
+}
+
+.x402-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 2px solid rgba(230, 63, 55, 0.28);
+  border-top-color: var(--casper-red, #e63f37);
+  animation: x402-spin 0.7s linear infinite;
+}
+
+@keyframes x402-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes x402-loading-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@keyframes x402-loading-border {
+  0%, 100% { border-color: rgba(230, 63, 55, 0.24); }
+  50% { border-color: rgba(230, 63, 55, 0.55); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .x402-proof.is-loading,
+  .x402-loading-text,
+  .x402-inline-loading,
+  .x402-spinner {
+    animation: none;
+  }
+
+  .x402-spinner {
+    border-top-color: rgba(230, 63, 55, 0.5);
+  }
+}
 
 .receipt-ledger-panel {
   display: flex;

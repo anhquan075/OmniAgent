@@ -13,14 +13,17 @@ export default function ProofPacketTab({ runtime, bundle, sourceState }: {
 }) {
   const [verifyStatus, setVerifyStatus] = useState('');
   const [publicX402, setPublicX402] = useState<Payload>({});
+  const [x402Loading, setX402Loading] = useState(false);
   const decision = decisionFromBundle(bundle);
   const receipt = receiptFromBundle(bundle);
   useEffect(() => {
     let cancelled = false;
     if (sourceState !== 'live') {
       setPublicX402({});
+      setX402Loading(false);
       return () => { cancelled = true; };
     }
+    setX402Loading(true);
     void apiFetch('/api/public/proof')
       .then(res => (res.ok ? res.json() : Promise.reject(new Error(`public proof ${res.status}`))))
       .then((data: Payload) => {
@@ -28,6 +31,9 @@ export default function ProofPacketTab({ runtime, bundle, sourceState }: {
       })
       .catch(() => {
         if (!cancelled) setPublicX402({});
+      })
+      .finally(() => {
+        if (!cancelled) setX402Loading(false);
       });
     return () => { cancelled = true; };
   }, [sourceState, decision.decisionId]);
@@ -56,8 +62,8 @@ export default function ProofPacketTab({ runtime, bundle, sourceState }: {
         <JudgePacket runtime={runtime} bundle={bundle} sourceState={sourceState} onVerify={handleVerify} verifyStatus={verifyStatus} />
       </div>
       <div className="proof-packet-mid">
-        <EvidenceProvenance bundle={sourceState === 'live' ? bundle : {}} x402={sourceState === 'live' ? publicX402 : {}} sourceState={sourceState} />
-        <EvidenceSummary evidence={sourceState === 'live' ? decision.evidenceBundle : {}} x402={sourceState === 'live' ? publicX402 : {}} sourceState={sourceState} />
+        <EvidenceProvenance bundle={sourceState === 'live' ? bundle : {}} x402={sourceState === 'live' ? publicX402 : {}} sourceState={sourceState} x402Loading={sourceState === 'live' && x402Loading} />
+        <EvidenceSummary evidence={sourceState === 'live' ? decision.evidenceBundle : {}} x402={sourceState === 'live' ? publicX402 : {}} sourceState={sourceState} x402Loading={sourceState === 'live' && x402Loading} />
       </div>
       <section className="flight-panel raw-evidence-preview">
         <details>
