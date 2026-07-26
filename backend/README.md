@@ -21,10 +21,15 @@ VITE_API_URL=http://localhost:8000 pnpm -C ../frontend run dev
 
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /api/public/proof` | Judge packet (`live_verified`, ACL + vault + Cheat Lab + paid-act) |
+| `GET /api/public/proof` | Judge packet (`live_verified`, ACL + vault + Cheat Lab + paid-act, lifecycle, trust, risk verdict) |
 | `GET /api/public/cheat` | Six intentional revert scenarios with explorer canaries |
 | `POST /api/public/cheat/{id}` | Replay a canary (or live vault attack when armed) |
 | `GET /api/x402/rwa-evidence` | Unpaid → HTTP 402 on `casper:casper-test` |
+| `GET /.well-known/casper-agent-card.json` | Discoverable agent card with the same trust aggregate |
+
+The deployed host is `https://api.omniyield.app`; `API_TRUSTED_HOSTS` and
+`ALLOWED_FRONTEND_ORIGINS` must list it (plus `omniyield.app`) or requests are
+rejected with `Host is not trusted`.
 
 Cheat Lab canaries ship in `data/cheat-lab-canaries.json` (and the Railway
 `/data` volume). ACL scenarios (`unauthorized_recorder` / `forged_agent_identity`)
@@ -57,6 +62,30 @@ CASPER_VAULT_ENFORCE_ENABLED=true
 
 `enforce_verified` live-reads the decision-proof package; public proof reports
 `vault.verificationMode=cross_contract`.
+
+## Trust metrics
+
+`app/services/casper/trust.py` aggregates over **decisions**, not ledger rows.
+The ledger writes a submit row and a later readback row for the same
+`decisionId`, so the service groups by `decisionId`, OR-joins readback
+verification across that decision's rows, and reads the whole ledger window
+(`CASPER_LEDGER_MAX_EVENTS`, default `2000`) instead of the newest N rows.
+Duplicate-intent retries no longer append a row at all
+(`app/services/casper/contract.py`), so a retry burst cannot dilute the sample.
+
+An on-chain blocked decision can be pinned with
+`CASPER_DECISION_BLOCKED_DECISION_ID` / `CASPER_DECISION_BLOCKED_CANARY_TX_HASH`
+and is merged only when that `decisionId` is missing from the ledger — useful
+when the blocked receipt was authored from a workstation SQLite the deployed
+service never saw. Seeded samples stay auditable via `sampleSources` and
+`components.seededBlockedDecisions`.
+
+## LLM traces
+
+Set `CASPER_LLM_TRACE_ENABLED=true` with a valid `OPENROUTER_API_KEY` to publish
+public-safe role traces. Each of `proposer`, `critic`, and `policy_gate` exposes
+`action`, `reasonCodes`, `reasonSummary`, and prompt/output hashes — never raw
+prompts or completions.
 
 ## Live Gates
 

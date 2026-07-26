@@ -37,8 +37,15 @@ script. It is built as a Casper-only demo for the
 1. Open [https://omniyield.app/try#desk-story](https://omniyield.app/try#desk-story) — guided Desk Story (402 → haircut → enforce → on-chain reject → ACL cheat)
 2. Open [https://omniyield.app/api/public/proof](https://omniyield.app/api/public/proof) — public-safe JSON (`status=live_verified`, `deskStory`, no keys)
 3. Confirm `authoring.mode=agent_acl`, `authoring.lastBlocked`, `vault.verificationMode=cross_contract`, `cheatReverts` 6/6
-4. Hit [https://omniyield.app/api/x402/rwa-evidence](https://omniyield.app/api/x402/rwa-evidence) unpaid → HTTP **402** on `casper:casper-test`
-5. Open the latest decision / vault / Cheat Lab explorer links from the proof table
+4. Confirm `trustSummary` reports non-zero `verifiedReadbackRate` and `policyBlockedRate`, and `decisionLifecycle.status=live`
+5. Hit [https://omniyield.app/api/x402/rwa-evidence](https://omniyield.app/api/x402/rwa-evidence) unpaid → HTTP **402** on `casper:casper-test`
+6. Open the latest decision / vault / Cheat Lab explorer links from the proof table
+
+One-command check (the same string is published at `verifier.oneCommand`):
+
+```bash
+curl -fsS https://api.omniyield.app/api/public/proof | python3 -c "import sys,json; p=json.load(sys.stdin); assert p.get('status')=='live_verified'; assert (p.get('authoring') or {}).get('lastBlocked'); assert (p.get('trustSummary') or {}).get('verifiedReadbackRate',0)>0; assert (p.get('trustSummary') or {}).get('policyBlockedRate',0)>0; print('ok', p.get('decisionId'), p.get('deployHash'))"
+```
 
 Full DoraHacks paste: [`docs/dorahacks-finals-description.md`](docs/dorahacks-finals-description.md)
 Desk-pilot launch pack: [`docs/casper-launch-roadmap.md`](docs/casper-launch-roadmap.md)
@@ -49,15 +56,19 @@ Last verified: 2026-07-26.
 
 | Surface | URL / Status |
 |---------|--------------|
-| Frontend proof console | [https://omniyield.app](https://omniyield.app) |
+| Frontend proof console | [https://omniyield.app](https://omniyield.app) (Railway, `asia-southeast1`) |
 | Try enforcement (Cheat Lab + paid-act) | [https://omniyield.app/try](https://omniyield.app/try) |
-| Backend public proof | [https://omniyield.app/api/public/proof](https://omniyield.app/api/public/proof) (`live_verified`) |
+| Backend API host | [https://api.omniyield.app](https://api.omniyield.app) (Railway, `asia-southeast1`) |
+| Backend public proof | [https://api.omniyield.app/api/public/proof](https://api.omniyield.app/api/public/proof) (`live_verified`) |
 | Agent card | [https://omniyield.app/.well-known/casper-agent-card.json](https://omniyield.app/.well-known/casper-agent-card.json) |
-| Paywalled x402 evidence | [https://omniyield.app/api/x402/rwa-evidence](https://omniyield.app/api/x402/rwa-evidence) |
+| Paywalled x402 evidence | [https://api.omniyield.app/api/x402/rwa-evidence](https://api.omniyield.app/api/x402/rwa-evidence) |
 | Authoring ACL | `agent_acl` — only OmniAgent can `record_decision` (User 130/131) |
 | Vault verification | `cross_contract` — `enforce_verified` live-reads decision-proof package |
 | Cheat Lab | 6/6 canaries: vault User(100/102/103/104) + ACL User(130/131) |
 | Paid-act lab | 3/3 x402 buy→verify→act steps on `/try` |
+| Decision lifecycle | `live` — paired blocked receipt → approved haircut → cross-contract enforce |
+| Trust summary | `measured` — non-zero verified-readback and policy-blocked rates over distinct decisions |
+| Sealed risk verdict | `live` — `1000000` WCSPR per verdict, settled over x402 |
 | x402 status | `verified`, `bindingStatus=bound`, WCSPR `3d80df21…`, facilitator `x402-facilitator.cspr.cloud` |
 | x402 settle (row 6) | [`93074ccb…`](https://testnet.cspr.live/deploy/93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5) |
 | Live submit | Enabled with a `2.5 CSPR` payment cap, `4` submissions/day, `10 CSPR`/day budget, and `50 CSPR` reserve |
@@ -85,7 +96,7 @@ anchored to Casper.
 - **Backend runtime:** `fastapi-casper-agent`
 - **MCP tool family:** `casper_*`
 - **On-chain component:** [contracts/casper-decision-proof](contracts/casper-decision-proof) (receipts) + [contracts/collateral-vault](contracts/collateral-vault) (enforcement)
-- **Frontend:** a Casper proof cockpit for decision traces, policy gates, deploy status, readback checks, judge packet, and recovery actions
+- **Frontend:** a Casper proof cockpit for decision traces, policy gates, deploy status, readback checks, judge packet, and recovery actions. The Node server proxies both `/api/*` and `/.well-known/*` to the backend, so the agent card resolves on the console origin.
 
 ### Collateral vault (enforcement)
 
@@ -128,6 +139,12 @@ Judges click intentional attacks on [`/try`](https://omniyield.app/try):
 
 Catalog: `GET /api/public/cheat`. Canaries live in
 [`proofs/cheat-lab-canaries.json`](proofs/cheat-lab-canaries.json).
+
+`/try` also tracks proof-hardening work as a live checklist: paired
+reject→approve lifecycle, reasoned proposer/critic/gate roles, measured trust
+summary, dedicated reject film, one-command verification, and the paid sealed
+risk verdict. Each item reads its state from the public proof rather than from
+hardcoded copy.
 
 ## Safety Model (Dry Run vs Live Submit)
 
@@ -253,7 +270,8 @@ the recurring loop disabled and creates no Casper transaction.
 | Explorer | `https://testnet.cspr.live` |
 | Decision log | Receipt stream via `/api/dashboard/receipts`; correlated AI/MCP loop history via `/api/dashboard/cycles` |
 | Evidence graph | Deterministic source graph with per-source hashes, freshness, and graph digest |
-| Receipt trust | Public-safe aggregate readback, policy-block, stale-evidence, and paid-evidence metrics |
+| Receipt trust | Public-safe aggregate readback, policy-block, stale-evidence, and paid-evidence metrics, sampled per decision |
+| Hosting | Railway; backend `api.omniyield.app` and frontend `omniyield.app`, both pinned to `asia-southeast1` |
 
 ## Contract Source
 
@@ -299,6 +317,11 @@ Only claim stack items backed by code or verifier evidence:
 | `CASPER_TRANSACTION_COMMAND` | Casper CLI decision-call command, default `put-deploy` |
 | `CASPER_TRANSACTION_WASM_PATH` | Optional compiled Wasm path for contract install/session mode |
 | `CASPER_DECISION_LEDGER_PATH` | Persistent SQLite decision log and atomic submission-intent guard; mount it on a volume in live mode |
+| `CASPER_LEDGER_MAX_EVENTS` | Ledger retention before rotation; default `2000` so retry rows cannot evict proof history |
+| `CASPER_DECISION_BLOCKED_DECISION_ID` | On-chain blocked decision id surfaced in `decisionLifecycle` and, when absent from the ledger, seeded into `trustSummary` |
+| `CASPER_DECISION_BLOCKED_CANARY_TX_HASH` | Deploy hash for that blocked receipt |
+| `API_TRUSTED_HOSTS` | Hosts allowed to reach the API; must include the public backend domain (`api.omniyield.app`) |
+| `CASPER_DEMO_REJECT_VIDEO_URL` | Optional dedicated reject-only cut; falls back to the desk video deep-linked at the reject segment |
 | `CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED` | Independently arms paid autonomous submissions; default `false` |
 | `CASPER_LIVE_MIN_SUBMIT_INTERVAL_SEC` | Cross-restart/local cooldown; default 21600 (six hours) |
 | `CASPER_LIVE_MAX_SUBMISSIONS_PER_UTC_DAY` | Daily live reservation cap; default 4 |
@@ -354,7 +377,32 @@ The public proof packet now includes additive proof-hardening fields:
 - `evidenceGraph` — public summary of source count, freshness state, and graph digest.
 - `policyTemplate` — deterministic policy template id and hash.
 - `trustSummary` — aggregate receipt-history metrics with insufficient-data labeling.
+- `decisionLifecycle` — the paired desk envelope: blocked receipt, approved decision, and cross-contract enforce, each with an explorer link.
+- `riskVerdict` — the sell-side offer (endpoint, price, currency, settlement tx) for a sealed decision id + digest, backed by the live x402 settlement.
+- `llmTrace.roles[].reasonCodes` / `reasonSummary` — the codes behind each proposer, critic, and policy-gate verdict, alongside the existing prompt/output hashes.
+- `deskStory.rejectVideoUrl` — the reject-only cut of the desk walkthrough.
+- `verifier.oneCommand` — a copy-paste command that asserts live status, blocked receipt, and non-zero trust rates.
 - `x402.status == verified` only when public receipt metadata is present and bound; `configured` and `unavailable` are not paid-evidence claims.
+
+### Trust summary sampling
+
+`trustSummary` is **decision-shaped, not row-shaped**. The ledger records several
+rows per decision (submit, duplicate-intent retries, and a later readback row),
+so the aggregate:
+
+- groups rows by `decisionId` and counts each decision once;
+- OR-joins readback verification across every row for that decision, since
+  `readback` is written on a separate follow-up event rather than the submit row;
+- reads the full ledger window instead of the newest N rows, so a burst of retry
+  rows cannot hide real readback and blocked history;
+- may add the env-pinned on-chain blocked canary when that `decisionId` is absent
+  from the ledger, labeled through `sampleSources` and
+  `components.seededBlockedDecisions` so seeded and observed samples stay
+  distinguishable.
+
+Duplicate-intent retry rows that match the previous ledger entry are no longer
+appended, and `CASPER_LEDGER_MAX_EVENTS` defaults to `2000` so proof history is
+not rotated out by loop retries.
 
 Verify a single receipt without `casper-client`:
 

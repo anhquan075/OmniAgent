@@ -21,12 +21,19 @@ dashboard, and submission flow for the Casper Agentic Buildathon Finals.
 |---------|-----|
 | Proof console | https://omniyield.app |
 | Try enforcement (Cheat Lab + paid-act) | https://omniyield.app/try |
-| Public proof JSON | https://omniyield.app/api/public/proof |
-| Cheat catalog | https://omniyield.app/api/public/cheat |
-| x402 unpaid probe | https://omniyield.app/api/x402/rwa-evidence |
+| Backend API host | https://api.omniyield.app |
+| Public proof JSON | https://api.omniyield.app/api/public/proof |
+| Cheat catalog | https://api.omniyield.app/api/public/cheat |
+| x402 unpaid probe | https://api.omniyield.app/api/x402/rwa-evidence |
+| Agent card | https://omniyield.app/.well-known/casper-agent-card.json |
+
+The console origin proxies `/api/*` and `/.well-known/*` to the backend, so the
+`omniyield.app` equivalents of these paths resolve to the same responses.
 
 Expect `status=live_verified`, `authoring.mode=agent_acl`,
-`vault.verificationMode=cross_contract`, and `cheatReverts.readyCount=6`.
+`vault.verificationMode=cross_contract`, `cheatReverts.readyCount=6`,
+`decisionLifecycle.status=live`, and a `trustSummary` with non-zero
+`verifiedReadbackRate` and `policyBlockedRate`.
 
 ## Contract docs
 
