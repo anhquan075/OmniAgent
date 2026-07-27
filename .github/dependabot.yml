@@ -23,3 +23,20 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Keep exact pins in Cargo.toml. Solo Dependabot bumps of casper-contract /
+    # casper-types are incompatible (5.1.1 needs types ^6; types 7 has no matching
+    # casper-contract yet) and any Wasm rebuild requires a Testnet reinstall.
+    ignore:
+      - dependency-name: "casper-contract"
+      - dependency-name: "casper-types"
+      - dependency-name: "base64ct"
+
+  - package-ecosystem: cargo
+    directory: /contracts/collateral-vault
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "casper-contract"
+      - dependency-name: "casper-types"
+      - dependency-name: "base64ct"
