@@ -1,68 +1,65 @@
-# OmniAgent Collateral Vault
+# OmniAgent collateral vault
 
-Native Casper Rust contract that **enforces** AI risk decisions on-chain.
+Native Casper Rust contract that **enforces** AI risk decisions on-chain — freeze, unfreeze, or change LTV only when the decision-proof receipt says so.
 
 ## Entry points
 
-| Entry point | Requires approved receipt action | Effect |
-|-------------|----------------------------------|--------|
-| `deposit(asset_id, amount)` | — | Credit demo collateral balance |
-| `freeze(asset_id, decision_id, receipt)` | `block` | Freeze position |
-| `unfreeze(asset_id, decision_id, receipt)` | `approve` | Unfreeze position |
-| `set_ltv(asset_id, decision_id, receipt, ltv_bps)` | `haircut` | Set LTV in basis points |
-| `enforce_verified(asset_id, decision_id, receipt, ltv_bps)` | live-read from decision-proof package | Dispatch `block` / `approve` / `haircut` only when the claim exactly matches on-chain |
+| Entry point | Needs approved receipt action | Effect |
+|-------------|-------------------------------|--------|
+| `deposit(asset_id, amount)` | — | Credit demo collateral |
+| `freeze(...)` | `block` | Freeze the position |
+| `unfreeze(...)` | `approve` | Unfreeze |
+| `set_ltv(..., ltv_bps)` | `haircut` | Set LTV in basis points |
+| `enforce_verified(...)` | Live-read from decision-proof package | Run freeze / unfreeze / haircut only if the claim matches on-chain |
 | `get_position` / `is_frozen` / `get_ltv` | — | Reads |
 
-Receipt format must match `casper-decision-proof`:
+Receipt format matches the decision-proof contract:
 
 ```text
 decision_id|action|risk_score|proof_digest|rationale|source|timestamp|policy_gate|agent|guardrail
 ```
 
-`policy_gate` must be `approved`. User error codes: `100` bad receipt, `101` id mismatch, `102` gate not approved, `103` action mismatch, `104` caller receipt differs from decision-proof, `110` deposit while frozen, `111` freeze with zero deposit, `120` invalid proof package hash.
+`policy_gate` must be `approved`.
+
+### User error codes
+
+| Code | Meaning |
+|------|---------|
+| 100 | Bad receipt |
+| 101 | Decision id mismatch |
+| 102 | Gate not approved |
+| 103 | Action mismatch |
+| 104 | Caller receipt differs from decision-proof |
+| 110 | Deposit while frozen |
+| 111 | Freeze with zero deposit |
+| 120 | Invalid proof package hash |
 
 ## Install args
 
-- `proof_contract_hash` (string) — decision-proof **package** hash. The historical arg name is retained for deploy compatibility; `enforce_verified` calls the latest package version.
-- `agent_account_hash` (string) — agent account hash (stored for audit)
+- `proof_contract_hash` — decision-proof **package** hash (name kept for deploy compatibility; `enforce_verified` always uses the latest package version)
+- `agent_account_hash` — agent account hash (stored for audit)
 
 ## Build
 
 ```bash
-./scripts/build-casper-contracts.sh   # both contracts -> contracts/*/wasm/
+./scripts/build-casper-contracts.sh   # both contracts → contracts/*/wasm/
 ```
 
-Use the script rather than a bare `cargo build`. The raw release artifact is
-**not installable** on `casper-test`: it is over the install-lane size limit and
-carries sign-extension opcodes the MVP-only Casper VM rejects, so the install
-deploy fails late with `ApiError::InvalidArgument [3]` *after* consuming the
-full payment. The script runs `wasm-opt -Oz --mvp-features --signext-lowering`
-and hard-fails if the result exceeds the lane budget.
+Prefer this script over a bare `cargo build`. The raw release Wasm is **not installable** on `casper-test`: it is over the install-lane size limit and includes sign-extension opcodes the MVP Casper VM rejects. Installs then fail late with `ApiError::InvalidArgument [3]` after burning the full payment. The script runs `wasm-opt -Oz --mvp-features --signext-lowering` and fails if the result still exceeds the lane budget.
 
 ## Upgrade vs fresh install
 
-Re-running the Wasm now **upgrades the package in place** (`add_contract_version`
-with empty named keys) whenever the installer account already holds
-`omniagent_vault_v3_access`. A second `new_contract` would revert on the
-existing account named keys and would strand the live `positions_v3`
-dictionary on the old package.
+Re-running the Wasm **upgrades the package in place** (`add_contract_version`) when the installer already holds `omniagent_vault_v3_access`. A second `new_contract` would clash with existing named keys and strand the live `positions_v3` dictionary on the old package.
 
-Consequences when you next deploy:
+What that means for the next deploy:
 
-- `CASPER_VAULT_VERIFIED_PACKAGE_HASH` stays valid — the package hash is stable
-  across versions, and `enforce_verified` resolves the decision-proof package's
-  latest version.
-- `CASPER_VAULT_VERIFIED_CONTRACT_HASH` **changes** per version and must be
-  re-pinned in Railway, after which the enforce canary and
-  `/api/public/proof` → `contractLinks.vaultContractHash` need refreshing.
-- Rollback is another `add_contract_version` with the previous Wasm.
+- `CASPER_VAULT_VERIFIED_PACKAGE_HASH` stays valid (package hash is stable)
+- `CASPER_VAULT_VERIFIED_CONTRACT_HASH` **changes** — re-pin it in Railway, then refresh the enforce canary and `/api/public/proof` → `contractLinks.vaultContractHash`
+- Rollback = another `add_contract_version` with the previous Wasm
 
-The v3 contract currently live on Testnet was built before this upgrade branch
-existed, so `wasm/collateral-vault.wasm` in the repo (which tracks the source)
-is intentionally a couple of KB larger than the deployed bytes. The deployed
-version is unaffected; the next deploy picks up the upgrade path.
+The live Testnet v3 was built before this upgrade path landed, so the repo’s `wasm/collateral-vault.wasm` can be a couple of KB larger than the deployed bytes. The next deploy picks up the upgrade path; the current on-chain version is unchanged until then.
 
-## Arm in backend
+## Arm in the backend
 
 ```bash
 CASPER_VAULT_CONTRACT_HASH=<hash>
@@ -73,16 +70,14 @@ CASPER_VAULT_VERIFIED_PACKAGE_HASH=<v3 package hash>
 CASPER_VAULT_VERIFIED_ENABLED=true
 ```
 
-Install on Testnet: [`scripts/install-collateral-vault.sh`](../../scripts/install-collateral-vault.sh).
-Canary cycle: `cd backend && uv run python scripts/vault_demo_cycle.py`.
+Install: [`scripts/install-collateral-vault.sh`](../../scripts/install-collateral-vault.sh)  
+Canary: `cd backend && uv run python scripts/vault_demo_cycle.py`
 
-The autonomous loop maps `block→freeze`, `approve→unfreeze`, `haircut→set_ltv`
-(or `enforce_verified` when verified mode is armed) after a verified decision
-readback.
+After a verified decision readback, the loop maps `block→freeze`, `approve→unfreeze`, `haircut→set_ltv` (or `enforce_verified` when verified mode is on).
 
 ## Cheat Lab (vault reverts)
 
-Published explorer canaries on `/try` (also under `cheatReverts` in public proof):
+Published canaries on `/try` (also under `cheatReverts` in public proof):
 
 | Scenario | User | Entry |
 |----------|------|-------|
@@ -91,13 +86,12 @@ Published explorer canaries on `/try` (also under `cheatReverts` in public proof
 | Wrong action | 103 | `freeze` |
 | Tampered authoritative receipt | 104 | `enforce_verified` |
 
-ACL authoring attacks (User 130/131) live on the decision-proof package — see
-[`../casper-decision-proof/README.md`](../casper-decision-proof/README.md).
+ACL authoring attacks (User 130 / 131) live on the decision-proof package — see [casper-decision-proof/README.md](../casper-decision-proof/README.md).
 
-## Deploy checklist (ops)
+## Ops checklist
 
-1. Ensure `casper-client` is on PATH and `CASPER_SECRET_KEY_PATH` points at a funded Testnet key.
+1. Put `casper-client` on PATH; point `CASPER_SECRET_KEY_PATH` at a funded Testnet key.
 2. Set `AGENT_ACCOUNT_HASH` and `PROOF_CONTRACT_PACKAGE_HASH`, then run `scripts/install-collateral-vault.sh`.
-3. Copy contract/package hashes from the install deploy on cspr.live into Railway (`CASPER_VAULT_*` and `CASPER_VAULT_VERIFIED_*`).
-4. Keep `CASPER_VAULT_ENFORCE_ENABLED=false` until `vault_demo_cycle.py` deposit+freeze+unfreeze succeeds.
-5. Arm verified enforce; confirm `/api/public/proof` → `vault.verificationMode=cross_contract` and `vault.explorerUrl`.
+3. Copy contract/package hashes from cspr.live into Railway (`CASPER_VAULT_*` and `CASPER_VAULT_VERIFIED_*`).
+4. Keep `CASPER_VAULT_ENFORCE_ENABLED=false` until `vault_demo_cycle.py` deposit → freeze → unfreeze succeeds.
+5. Arm verified enforce; confirm `/api/public/proof` shows `vault.verificationMode=cross_contract` and a vault explorer URL.

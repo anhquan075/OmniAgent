@@ -1,8 +1,8 @@
-# OmniAgent Casper Backend
+# OmniAgent backend
 
-FastAPI backend for the Casper-only OmniAgent runtime.
+FastAPI service that runs the Casper agent loop, public proof APIs, MCP tools, and (when armed) live Testnet submits.
 
-## Run
+## Run locally (safe mode)
 
 ```bash
 uv sync --group dev
@@ -11,34 +11,31 @@ CASPER_LIVE_SUBMIT_ENABLED=false \
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Frontend can point to it with:
+Point the frontend at it:
 
 ```bash
 VITE_API_URL=http://localhost:8000 pnpm -C ../frontend run dev
 ```
 
-## Public surfaces
+## Public endpoints
 
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /api/public/proof` | Judge packet (`live_verified`, ACL + vault + Cheat Lab + paid-act, lifecycle, trust, risk verdict) |
-| `GET /api/public/cheat` | Six intentional revert scenarios with explorer canaries |
-| `POST /api/public/cheat/{id}` | Replay a canary (or live vault attack when armed) |
-| `GET /api/x402/rwa-evidence` | Unpaid → HTTP 402 on `casper:casper-test` |
-| `GET /.well-known/casper-agent-card.json` | Discoverable agent card with the same trust aggregate |
+| Endpoint | What a visitor gets |
+|----------|---------------------|
+| `GET /api/public/proof` | Judge packet: live status, ACL, vault, Cheat Lab, lifecycle, trust, risk verdict |
+| `GET /api/public/cheat` | Six intentional revert scenarios + explorer canaries |
+| `POST /api/public/cheat/{id}` | Replay a canary (live vault attack only when armed) |
+| `GET /api/x402/rwa-evidence` | Unpaid → HTTP **402** on Casper Testnet |
+| `GET /.well-known/casper-agent-card.json` | Discoverable agent card (includes trust summary) |
 
-The deployed host is `https://api.omniyield.app`; `API_TRUSTED_HOSTS` and
-`ALLOWED_FRONTEND_ORIGINS` must list it (plus `omniyield.app`) or requests are
-rejected with `Host is not trusted`.
+Production host: **https://api.omniyield.app**
 
-Cheat Lab canaries ship in `data/cheat-lab-canaries.json` (and the Railway
-`/data` volume). ACL scenarios (`unauthorized_recorder` / `forged_agent_identity`)
-are canary-only — OmniAgent is the authorized signer and cannot reproduce
-User(130) against itself.
+Set `API_TRUSTED_HOSTS` and `ALLOWED_FRONTEND_ORIGINS` to include `api.omniyield.app` and `omniyield.app`, or the API answers with `Host is not trusted`.
+
+Cheat Lab canaries live in `data/cheat-lab-canaries.json` (and the Railway `/data` volume). ACL cases (`unauthorized_recorder`, `forged_agent_identity`) are **canary-only** — the live signer *is* the authorized agent, so it cannot reproduce User(130) against itself.
 
 ## Decision-proof ACL
 
-Set these for production authoring:
+Only the installed agent may author receipts:
 
 ```bash
 CASPER_DECISION_CONTRACT_HASH=<active-acl-version>
@@ -47,9 +44,7 @@ CASPER_DECISION_AUTHORIZED_AGENT_HASH=<bare-64-hex>
 CASPER_DECISION_ACL_ENABLED=true
 ```
 
-Account hashes must be derived with Casper's preimage
-(`ascii(ed25519|secp256k1) || 0x00 || raw_key`), not a raw blake2b of the
-public-key hex. See `app/services/casper/account.py`.
+Account hashes must use Casper’s preimage (`ascii(ed25519|secp256k1) || 0x00 || raw_key`) — not a raw blake2b of the public-key hex. See `app/services/casper/account.py`.
 
 ## Verified vault
 
@@ -60,59 +55,48 @@ CASPER_VAULT_VERIFIED_ENABLED=true
 CASPER_VAULT_ENFORCE_ENABLED=true
 ```
 
-`enforce_verified` live-reads the decision-proof package; public proof reports
-`vault.verificationMode=cross_contract`.
+`enforce_verified` live-reads the decision-proof package. Public proof should report `vault.verificationMode=cross_contract`.
 
 ## Trust metrics
 
-`app/services/casper/trust.py` aggregates over **decisions**, not ledger rows.
-The ledger writes a submit row and a later readback row for the same
-`decisionId`, so the service groups by `decisionId`, OR-joins readback
-verification across that decision's rows, and reads the whole ledger window
-(`CASPER_LEDGER_MAX_EVENTS`, default `2000`) instead of the newest N rows.
-Duplicate-intent retries no longer append a row at all
-(`app/services/casper/contract.py`), so a retry burst cannot dilute the sample.
+`app/services/casper/trust.py` counts **decisions**, not every ledger row.
 
-An on-chain blocked decision can be pinned with
-`CASPER_DECISION_BLOCKED_DECISION_ID` / `CASPER_DECISION_BLOCKED_CANARY_TX_HASH`
-and is merged only when that `decisionId` is missing from the ledger — useful
-when the blocked receipt was authored from a workstation SQLite the deployed
-service never saw. Seeded samples stay auditable via `sampleSources` and
-`components.seededBlockedDecisions`.
+Why that matters: each decision usually gets a submit row and a later readback row. The aggregator:
+
+- groups by `decisionId` (one vote per decision)
+- OR-joins readback across that decision’s rows
+- reads the full ledger window (`CASPER_LEDGER_MAX_EVENTS`, default **2000**)
+
+Duplicate-intent retries are no longer appended (`app/services/casper/contract.py`), so a retry storm cannot wash out real history.
+
+You can pin an on-chain blocked canary with `CASPER_DECISION_BLOCKED_DECISION_ID` / `CASPER_DECISION_BLOCKED_CANARY_TX_HASH`. It only seeds when that id is missing from the ledger, and it stays labeled via `sampleSources` / `seededBlockedDecisions`.
 
 ## LLM traces
 
-Set `CASPER_LLM_TRACE_ENABLED=true` with a valid `OPENROUTER_API_KEY` to publish
-public-safe role traces. Each of `proposer`, `critic`, and `policy_gate` exposes
-`action`, `reasonCodes`, `reasonSummary`, and prompt/output hashes — never raw
-prompts or completions.
+```bash
+CASPER_LLM_TRACE_ENABLED=true
+OPENROUTER_API_KEY=...
+```
 
-## Live Gates
+Publishes public-safe role traces for `proposer`, `critic`, and `policy_gate`: action, reason codes, summary, and prompt/output hashes — never raw prompts or completions.
 
-Live submit prerequisite validation stays blocked unless all of these are true:
+## Live submit gates
 
-- `CASPER_ACCOUNT_PUBLIC_KEY` is configured.
-- `CASPER_SECRET_KEY_PATH` points to signer material outside git.
-- `CASPER_DECISION_CONTRACT_HASH` is configured.
-- `CASPER_DECISION_CONTRACT_PACKAGE_HASH` is configured.
-- `CASPER_CLIENT_PATH` resolves to `casper-client`.
-- `CASPER_DECISION_LEDGER_PATH` is on a mounted persistent volume for live mode.
-- Casper responds to a state-root probe from `casper-client`.
-- The account balance is readable and remains above `CASPER_MIN_BALANCE_CSPR` after the offered payment.
-- `CASPER_LIVE_SUBMIT_ENABLED=true`.
-- `API_OPERATOR_TOKEN` authenticates dashboard/MCP mutation controls.
-- The command includes `--i-understand-this-submits-casper-testnet`.
+Live submit stays blocked until all of these are true:
 
-When those gates pass, the backend still requires chain/local semantic dedupe,
-cooldown, daily count/payment budgets, bounded receipt arguments, and an atomic
-SQLite intent reservation before invoking `casper-client put-deploy`. The
-default payment cap is 2.5 CSPR and recurring live submit requires the separate
-`CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED=true` arm. The experimental `put-txn`
-builder is blocked from live submit until its pricing can be budgeted
-independently. Status remains pending until readback confirms the deploy and
-receipt.
+- Funded account public key + signer path outside git  
+- Decision contract + package hashes  
+- `casper-client` on PATH (or `CASPER_CLIENT_PATH`)  
+- Persistent ledger path on a volume (live mode)  
+- Casper answers a state-root probe  
+- Balance stays above `CASPER_MIN_BALANCE_CSPR` after the offered payment  
+- `CASPER_LIVE_SUBMIT_ENABLED=true`  
+- Valid `API_OPERATOR_TOKEN`  
+- One-shot scripts include `--i-understand-this-submits-casper-testnet`
 
-## Verify
+Even then: semantic dedupe, cooldown, daily count/budget caps, bounded receipt args, and an atomic SQLite intent reservation run before `put-deploy`. Default payment cap is **2.5 CSPR**. The recurring loop needs a separate `CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED=true`. Status stays pending until readback confirms the deploy and receipt.
+
+## Tests
 
 ```bash
 uv run pytest -q

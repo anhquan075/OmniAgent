@@ -1,168 +1,146 @@
 <p align="center">
-  <a href="https://dorahacks.io/hackathon/casper-agentic-buildathon/detail">
+  <a href="https://dorahacks.io/hackathon/casper-agentic-buildathon-finals/detail">
     <img src="frontend/public/imgs/logo.png" alt="OmniAgent Casper proof console" width="460" />
   </a>
 </p>
 
 <p align="center">
   <a href="frontend/public/imgs/omniagent-mascot.png"><img alt="OmniAgent ghost mascot" src="frontend/public/imgs/omniagent-mascot.png" width="26" /></a>
-  <a href="https://dorahacks.io/hackathon/casper-agentic-buildathon/detail"><img alt="Casper Agentic Buildathon" src="https://img.shields.io/badge/Casper-Agentic%20Buildathon-D7352E?logo=casper&logoColor=white" /></a>
+  <a href="https://dorahacks.io/hackathon/casper-agentic-buildathon-finals/detail"><img alt="Casper Agentic Buildathon" src="https://img.shields.io/badge/Casper-Agentic%20Buildathon-D7352E?logo=casper&logoColor=white" /></a>
   <a href="contracts/casper-decision-proof"><img alt="Native Casper contract" src="https://img.shields.io/badge/Contract-Native%20Casper%20Rust-2B6CB0?logo=rust&logoColor=white" /></a>
   <a href="https://testnet.cspr.live/contract/5270823ca6fb8c4cf5c1f83af53e889ec1f39bbd3532c2088175bb40ca97fc18"><img alt="Casper Testnet proof" src="https://img.shields.io/badge/Testnet-Casper%20Proof-D7352E" /></a>
 </p>
 
 # OmniAgent Casper
 
-OmniAgent Casper is a verifiable AI agent for **RWA collateral risk decisions**
-on Casper Testnet. It answers a practical financing question:
+OmniAgent is an AI risk desk for **tokenized collateral on Casper Testnet**.
 
-> Should this tokenized collateral remain financeable after fresh public market
-> evidence changes its risk profile?
+It answers one practical question:
 
-The project exists because DeFi credit and RWA financing workflows need more
-than an AI recommendation. They need a replayable trail: source evidence,
-agent reasoning, deterministic policy gates, a Casper transaction, contract
-readback, and a public verifier that does not require private keys or internal
-operator access.
+> After fresh public market evidence, should this collateral still be financeable — or should we haircut or freeze it?
 
-OmniAgent reads public RWA evidence, runs a proposer/critic/policy-gate agent
-loop, writes a decision receipt to a native Casper Rust contract, optionally
-enforces collateral state via a vault (`freeze` / `unfreeze` / `set_ltv`), and
-exposes everything through a dashboard, public proof endpoint, and verifier
-script. It is built as a Casper-only demo for the
-[Casper Agentic Buildathon Finals](https://dorahacks.io/hackathon/casper-agentic-buildathon-finals/detail).
+A chatty score is not enough for credit desks. OmniAgent leaves a trail anyone can replay: evidence → agent reasoning → policy gate → Casper receipt → vault action → public proof. No private keys required to verify.
 
-## Judge path (≈5 minutes)
+Built for the [Casper Agentic Buildathon Finals](https://dorahacks.io/hackathon/casper-agentic-buildathon-finals/detail).
 
-1. Open [https://omniyield.app/try#desk-story](https://omniyield.app/try#desk-story) — guided Desk Story (402 → haircut → enforce → on-chain reject → ACL cheat)
-2. Open [https://omniyield.app/api/public/proof](https://omniyield.app/api/public/proof) — public-safe JSON (`status=live_verified`, `deskStory`, no keys)
-3. Confirm `authoring.mode=agent_acl`, `authoring.lastBlocked`, `vault.verificationMode=cross_contract`, `cheatReverts` 6/6
-4. Confirm `trustSummary` reports non-zero `verifiedReadbackRate` and `policyBlockedRate`, and `decisionLifecycle.status=live`
-5. Hit [https://omniyield.app/api/x402/rwa-evidence](https://omniyield.app/api/x402/rwa-evidence) unpaid → HTTP **402** on `casper:casper-test`
-6. Open the latest decision / vault / Cheat Lab explorer links from the proof table
+---
 
-One-command check (the same string is published at `verifier.oneCommand`):
+## Try it in about five minutes
+
+1. **Walk the desk story** — [omniyield.app/try#desk-story](https://omniyield.app/try#desk-story)  
+   Unpaid evidence (402) → haircut → on-chain enforce → reject that cannot enforce → ACL cheat.
+2. **Open the public proof** — [omniyield.app/api/public/proof](https://omniyield.app/api/public/proof)  
+   You should see `status=live_verified` and a `deskStory` (no secrets).
+3. **Spot-check the hard parts**  
+   - Only OmniAgent can author receipts (`authoring.mode=agent_acl`)  
+   - There is a blocked receipt (`authoring.lastBlocked`)  
+   - The vault live-reads the decision contract (`vault.verificationMode=cross_contract`)  
+   - Cheat Lab shows **6/6** intentional reverts  
+   - Trust rates are non-zero (`verifiedReadbackRate`, `policyBlockedRate`)  
+   - Lifecycle is live (`decisionLifecycle.status=live`)
+4. **Probe unpaid evidence** — [omniyield.app/api/x402/rwa-evidence](https://omniyield.app/api/x402/rwa-evidence) → HTTP **402**
+5. **Click explorer links** from the proof table for the latest decision, vault, and Cheat Lab deploys
+
+Or paste this one-liner (also published as `verifier.oneCommand`):
 
 ```bash
 curl -fsS https://api.omniyield.app/api/public/proof | python3 -c "import sys,json; p=json.load(sys.stdin); assert p.get('status')=='live_verified'; assert (p.get('authoring') or {}).get('lastBlocked'); assert (p.get('trustSummary') or {}).get('verifiedReadbackRate',0)>0; assert (p.get('trustSummary') or {}).get('policyBlockedRate',0)>0; print('ok', p.get('decisionId'), p.get('deployHash'))"
 ```
 
-Full DoraHacks paste: [`docs/dorahacks-finals-description.md`](docs/dorahacks-finals-description.md)
-Desk-pilot launch pack: [`docs/casper-launch-roadmap.md`](docs/casper-launch-roadmap.md)
+More for judges: [`docs/dorahacks-finals-description.md`](docs/dorahacks-finals-description.md) · [`docs/judge-reproduction.md`](docs/judge-reproduction.md) · [demo video](https://youtu.be/wcVoqJXqPhc)
 
-## Current Public Deployment
+---
 
-Last verified: 2026-07-26.
+## What’s live today
 
-| Surface | URL / Status |
-|---------|--------------|
-| Frontend proof console | [https://omniyield.app](https://omniyield.app) (Railway, `asia-southeast1`) |
-| Try enforcement (Cheat Lab + paid-act) | [https://omniyield.app/try](https://omniyield.app/try) |
-| Backend API host | [https://api.omniyield.app](https://api.omniyield.app) (Railway, `asia-southeast1`) |
-| Backend public proof | [https://api.omniyield.app/api/public/proof](https://api.omniyield.app/api/public/proof) (`live_verified`) |
-| Agent card | [https://omniyield.app/.well-known/casper-agent-card.json](https://omniyield.app/.well-known/casper-agent-card.json) |
-| Paywalled x402 evidence | [https://api.omniyield.app/api/x402/rwa-evidence](https://api.omniyield.app/api/x402/rwa-evidence) |
-| Authoring ACL | `agent_acl` — only OmniAgent can `record_decision` (User 130/131) |
-| Vault verification | `cross_contract` — `enforce_verified` live-reads decision-proof package |
-| Cheat Lab | 6/6 canaries: vault User(100/102/103/104) + ACL User(130/131) |
-| Paid-act lab | 3/3 x402 buy→verify→act steps on `/try` |
-| Decision lifecycle | `live` — paired blocked receipt → approved haircut → cross-contract enforce |
-| Trust summary | `measured` — non-zero verified-readback and policy-blocked rates over distinct decisions |
-| Sealed risk verdict | `live` — `1000000` WCSPR per verdict, settled over x402 |
-| x402 status | `verified`, `bindingStatus=bound`, WCSPR `3d80df21…`, facilitator `x402-facilitator.cspr.cloud` |
-| x402 settle (row 6) | [`93074ccb…`](https://testnet.cspr.live/deploy/93074ccb7f55f7a6eac5f4acdf5de21943c43384a1bfb0f1e194c736eed3bae5) |
-| Live submit | Enabled with a `2.5 CSPR` payment cap, `4` submissions/day, `10 CSPR`/day budget, and `50 CSPR` reserve |
-| Autonomous loop | Armed at `1800s` interval with fail-closed guardrails |
-| Latest live decision | [`87734909…`](https://testnet.cspr.live/deploy/87734909bab1a83890228b59a66c64fd7636ce99eb4beeb4ac5d9c07b990bb22) (`haircut`) |
-| Cross-contract enforce | [`599dc698…`](https://testnet.cspr.live/deploy/599dc698b0d7c52bd3d0ef86f819a47459100cf289b36db5f3fada0fe4354b1b) |
-| Vault freeze / unfreeze / set_ltv | [`36d1f699…`](https://testnet.cspr.live/deploy/36d1f699ebf201e1c2617a16ee9152a56c567351ba733e2e87b944db7c325176) / [`39dc155a…`](https://testnet.cspr.live/deploy/39dc155aac0a9be1a23aa424d60d5783d5ff75fb2cb9ab51d4a630a7ea245646) / [`43a8c497…`](https://testnet.cspr.live/deploy/43a8c497166b0d219a9867464b6de2ea66c5a6512f725f51df9bd89341612604) |
+Last checked: **2026-07-26**. Both apps run on Railway in Southeast Asia.
 
-The x402 evidence paywall settles **natively on Casper Testnet** via the
-CSPR.cloud facilitator (`x402-facilitator.cspr.cloud`) using CEP-18
-`transfer_with_authorization` (Wrapped CSPR package `3d80df21…`). Decision
-receipts, proof digests, contract readback, and the public verifier remain
-anchored to Casper.
+| What | Where |
+|------|--------|
+| Proof console | [omniyield.app](https://omniyield.app) |
+| Try / Cheat Lab | [omniyield.app/try](https://omniyield.app/try) |
+| API | [api.omniyield.app](https://api.omniyield.app) |
+| Public proof JSON | [api.omniyield.app/api/public/proof](https://api.omniyield.app/api/public/proof) |
+| Agent card | [omniyield.app/.well-known/casper-agent-card.json](https://omniyield.app/.well-known/casper-agent-card.json) |
+| Paid evidence (x402) | [api.omniyield.app/api/x402/rwa-evidence](https://api.omniyield.app/api/x402/rwa-evidence) |
 
-![Self-generated OmniAgent Casper architecture PNG](frontend/public/imgs/omniagent-casper-architecture.png)
+**What that proof should show**
 
-## High-Level Design
+| Claim | Meaning |
+|-------|---------|
+| Authoring ACL | Only OmniAgent can call `record_decision` (User 130 / 131) |
+| Vault mode | `cross_contract` — vault reads the decision package before freeze / LTV |
+| Cheat Lab | 6/6 canaries (vault + ACL) |
+| Paid-act lab | 3/3 buy → verify → act on `/try` |
+| Decision lifecycle | Blocked receipt → approved haircut → cross-contract enforce |
+| Trust summary | Measured rates over distinct decisions (not raw ledger spam) |
+| Risk verdict | Sealed offer settled over x402 (1,000,000 WCSPR unit) |
 
-1. Public RWA evidence is normalized into a source hash and risk score.
-2. The agent runtime proposes an action, critiques it, and applies a deterministic policy gate.
-3. FastAPI exposes the Casper MCP tools, dashboard API, public proof API, and verifier inputs.
-4. The Casper Testnet contract stores the latest proof digest and per-decision receipt.
-5. The public dashboard and verifier replay the receipt path without exposing signer paths, operator tokens, or raw runtime logs; mutations require a separate authenticated API operator session.
+Evidence paywall settles on Casper Testnet through CSPR.cloud’s x402 facilitator (Wrapped CSPR). Receipts and readback stay on Casper.
 
-- **Backend runtime:** `fastapi-casper-agent`
-- **MCP tool family:** `casper_*`
-- **On-chain component:** [contracts/casper-decision-proof](contracts/casper-decision-proof) (receipts) + [contracts/collateral-vault](contracts/collateral-vault) (enforcement)
-- **Frontend:** a Casper proof cockpit for decision traces, policy gates, deploy status, readback checks, judge packet, and recovery actions. The Node server proxies both `/api/*` and `/.well-known/*` to the backend, so the agent card resolves on the console origin.
+![OmniAgent architecture](frontend/public/imgs/omniagent-casper-architecture.png)
 
-### Collateral vault (enforcement)
+---
 
-After a verified decision readback, the autonomous loop can map policy actions to
-vault entry points (`block→freeze`, `approve→unfreeze`, `haircut→set_ltv`). The
-verified path uses `enforce_verified`, which **live-reads** the authoritative
-receipt from the decision-proof package (caller-supplied receipts cannot forge
-LTV / freeze state). Arm with:
+## How it works (plain English)
+
+1. Pull public RWA evidence and hash it.
+2. Run a small agent loop: **propose → critique → policy gate**.
+3. If the gate approves, write a receipt on Casper (native Rust contract).
+4. Optionally enforce on a collateral vault: freeze, unfreeze, or set LTV.
+5. Publish a public proof page anyone can open without operator access.
+
+| Piece | Role |
+|-------|------|
+| Backend | FastAPI + `casper_*` MCP tools |
+| Decision contract | [casper-decision-proof](contracts/casper-decision-proof) — receipts + ACL |
+| Vault contract | [collateral-vault](contracts/collateral-vault) — freeze / LTV |
+| Frontend | Proof cockpit; proxies `/api/*` and `/.well-known/*` to the API |
+
+### Vault enforcement
+
+After a verified readback, policy maps to vault actions:
+
+- `block` → freeze  
+- `approve` → unfreeze  
+- `haircut` → set LTV  
+
+The safe path is `enforce_verified`: the vault **reads the live receipt from the decision package**. You cannot pass a fake receipt to invent freeze/LTV state.
 
 ```bash
-CASPER_VAULT_CONTRACT_HASH=<legacy-hash>
 CASPER_VAULT_ENFORCE_ENABLED=true
-CASPER_VAULT_ASSET_ID=rwa-demo-collateral-001
-CASPER_VAULT_VERIFIED_CONTRACT_HASH=<v3-hash>
-CASPER_VAULT_VERIFIED_PACKAGE_HASH=<v3-package-hash>
 CASPER_VAULT_VERIFIED_ENABLED=true
+CASPER_VAULT_ASSET_ID=rwa-demo-collateral-001
+# plus verified contract + package hashes
 ```
 
-Install helper: [`scripts/install-collateral-vault.sh`](scripts/install-collateral-vault.sh).
-Build both contracts (MVP Wasm + size gate): [`scripts/build-casper-contracts.sh`](scripts/build-casper-contracts.sh).
-Canary: `cd backend && uv run python scripts/vault_demo_cycle.py`.
-Public proof exposes `vault.verificationMode=cross_contract` and
-`contractLinks.vaultContractHash` when configured.
+Helpers: [`scripts/install-collateral-vault.sh`](scripts/install-collateral-vault.sh) · [`scripts/build-casper-contracts.sh`](scripts/build-casper-contracts.sh)
 
-### Decision-proof agent ACL
+### Who can write decisions (ACL)
 
-`record_decision` fail-closes unless the deploy signer is the installed
-`authorized_agent` (User 130) and the receipt's `agent_account_hash` matches
-that signer (User 131). Upgrade helper:
-[`scripts/upgrade-decision-proof-acl.sh`](scripts/upgrade-decision-proof-acl.sh).
-Public proof exposes `authoring.mode=agent_acl`.
+Only the installed agent account may call `record_decision`. Wrong signer → User **130**. Mismatched `agent_account_hash` → User **131**. Upgrade helper: [`scripts/upgrade-decision-proof-acl.sh`](scripts/upgrade-decision-proof-acl.sh).
 
-### Cheat Lab + paid-act
+### Cheat Lab
 
-Judges click intentional attacks on [`/try`](https://omniyield.app/try):
+On [`/try`](https://omniyield.app/try), judges can click attacks that **should** fail:
 
-- Vault reverts: User(100/102/103/104)
-- ACL reverts: User(130/131) — canary-only (OmniAgent is the authorized signer)
-- x402 buy→verify→act: unpaid 402 → settle → enforce from paid evidence
+- Vault: User 100 / 102 / 103 / 104  
+- ACL: User 130 / 131 (canary-only — live OmniAgent *is* the authorized signer)  
+- x402: unpaid 402 → settle → enforce from paid evidence  
 
-Catalog: `GET /api/public/cheat`. Canaries live in
-[`proofs/cheat-lab-canaries.json`](proofs/cheat-lab-canaries.json).
+Canaries: [`proofs/cheat-lab-canaries.json`](proofs/cheat-lab-canaries.json). The same page also tracks lifecycle, role reasons, trust rates, reject film, one-command verify, and the paid risk verdict — all driven by live public proof, not hardcoded marketing copy.
 
-`/try` also tracks proof-hardening work as a live checklist: paired
-reject→approve lifecycle, reasoned proposer/critic/gate roles, measured trust
-summary, dedicated reject film, one-command verification, and the paid sealed
-risk verdict. Each item reads its state from the public proof rather than from
-hardcoded copy.
+---
 
-## Safety Model (Dry Run vs Live Submit)
+## Safety: dry run vs live chain
 
-Live Casper submission is **off by default** in local/source configuration.
-The frontend is a read-only public proof console and does not drive recurring
-execution. Operator mutations use the authenticated API/CLI path. The current
-Railway live loop was armed only after a 2.5-CSPR canary confirmed with matching
-contract receipt readback; persistent dedupe, count/budget caps, and the balance
-reserve remain enforced on every cycle.
+Live Casper submit is **off by default** locally. The public UI is read-only. Spending CSPR needs an authenticated operator path and explicit arms.
 
-## Autonomous Agent Loop
+The live loop only writes when something materially new appears, and still respects:
 
-The agent can continuously fetch RWA evidence without continuously spending
-CSPR. It writes only a materially new decision, subject to a persistent intent
-lock, an on-chain replay check, a six-hour cooldown, a daily count/budget cap,
-and a protected balance reserve.
-
-Enable the loop via environment variables:
+- intent lock + on-chain replay check  
+- cooldown and daily count/budget caps  
+- a minimum CSPR reserve  
 
 ```bash
 cd backend
@@ -172,60 +150,23 @@ CASPER_AGENT_LOOP_DRY_RUN=true \
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-- `CASPER_AGENT_LOOP_ENABLED` — starts the background asyncio loop on boot
-- `CASPER_AGENT_LOOP_INTERVAL_SEC` — seconds between evidence checks (default: 3600)
-- `CASPER_AGENT_LOOP_DRY_RUN` — defaults to true and writes local ledger entries only
-- `CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED` — independent arm required before a non-dry loop may submit; defaults to false
+Evidence comes from the public US Treasury 10-Year series. If that feed is down, the loop **fails closed** — it does not invent a static rate.
 
-The loop fetches live US Treasury 10-Year yield from the public fiscaldata.treasury.gov API. If that API is unreachable or does not return a 10-Year observation, the loop fails closed and records the error instead of substituting static evidence. Loop status is visible in the dashboard and via `GET /api/dashboard/loop`. The dashboard keeps the latest live view and a bounded per-cycle history so judges can select one loop attempt and inspect its matching AI trace and MCP-compatible tool output together.
+**Live submit needs** a funded Testnet account, a signer outside git, deployed contract hashes, `casper-client`, `CASPER_LIVE_SUBMIT_ENABLED=true`, an operator token, a persistent ledger volume, and (for the recurring loop) `CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED=true`. Full checklist lives in [`docs/judge-reproduction.md`](docs/judge-reproduction.md).
 
-- Dry runs are local-only proof checks; do not use them as the recorded demo path.
-- Live submission is allowed only when all runtime proof gates pass and live-submit is explicitly enabled.
-- Configured live submission runs `casper-client`, probes Casper state, captures a Casper Testnet transaction hash, and records it in the dashboard proof log.
-- When live submit returns a deploy hash, the loop can poll confirmation and attach readback evidence automatically.
+---
 
-Live mode requires:
-
-1. A funded Casper Testnet account
-2. A signer path outside git
-3. Deployed decision contract hash and package hash
-4. `casper-client` available on PATH or via `CASPER_CLIENT_PATH`
-5. `CASPER_LIVE_SUBMIT_ENABLED=true`
-6. A non-empty `API_OPERATOR_TOKEN`; in this patched version anonymous sessions are never operators (deploy it before relying on this guarantee)
-7. A persistent `CASPER_DECISION_LEDGER_PATH` on a mounted volume
-8. For an autonomous live loop only: `CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED=true`; source defaults require 21600 seconds, while the current guarded Railway deployment explicitly overrides the interval and cooldown to 1800 seconds
-9. The explicit live-submit command flag when running the one-shot script path
-10. Optional: `CASPER_CSPR_CLOUD_API_KEY` if you want CSPR.cloud-backed balance/block probes instead of Casper RPC/CLI only
-11. Optional for self-hosted deployments, required for paid-evidence claims: real `CASPER_X402_EVIDENCE_URL` and public-safe `CASPER_X402_RECEIPT`
-
-## Full Casper Network Integration
-
-OmniAgent is discoverable and independently verifiable as a Casper network agent:
-
-- Public agent card: `GET /.well-known/casper-agent-card.json`
-- Dashboard/API actions: `POST /api/cycle/run`, `POST /api/loop/start`, `POST /api/loop/stop`, and `POST /api/readback/record`
-- Read-only JSON-RPC fallback for state root, `latest_proof_digest`, and decision receipt reads when `casper-client` is unavailable
-- Optional CSPR.cloud REST probe for account balance, plus latest block height when used as the fallback probe
-- Autonomous loop path: submit -> poll deploy status -> read contract state -> verify digest and receipt
-- Additive contract query entry point: `get_decision_receipt(decision_id: String) -> String`
-
-Signing and submission still require `casper-client`; JSON-RPC and CSPR.cloud are read-only support paths.
-
-## Quick Start
-
-### 1) Install dependencies
+## Run it locally
 
 ```bash
+# install
 uv sync --project backend --group dev
 corepack enable
 pnpm -C frontend install --frozen-lockfile
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
-```
 
-### 2) Start backend (safe mode)
-
-```bash
+# backend (safe — no live submit)
 cd backend
 OMNIAGENT_SKIP_ENV_FILE=true \
 API_OPERATOR_TOKEN=judge-local-operator \
@@ -234,236 +175,93 @@ CASPER_AGENT_LOOP_ENABLED=false \
 CASPER_AGENT_LOOP_DRY_RUN=true \
 CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED=false \
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
-```
 
-### 3) Start frontend
-
-```bash
+# frontend (another terminal)
 VITE_API_URL=http://127.0.0.1:8000 pnpm -C frontend run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173).
 
-## Judge Reproduction
-
-The complete zero-spend reproduction, expected outputs, optional single
-Testnet canary, receipt readback, and Railway rollout are documented in
-[docs/judge-reproduction.md](docs/judge-reproduction.md).
-
-After installing the prerequisites, the release gate is one command:
+Release gate (no Testnet spend by default):
 
 ```bash
-scripts/verify-casper-buildathon-stack.sh
+scripts/verify-casper-buildathon-stack.sh   # expect: [casper] ok
 ```
 
-It must finish with `[casper] ok`. The default path keeps live submission and
-the recurring loop disabled and creates no Casper transaction.
+---
 
-## Runtime Overview
+## Stack we actually use
 
-| Item | Value |
-|------|-------|
-| Network | Casper Testnet |
-| Contract | [casper-decision-proof](contracts/casper-decision-proof) |
-| Adapter | `fastapi-casper-agent` |
-| MCP tools | `casper_agent_cockpit_snapshot`, `casper_get_account`, `casper_runtime_snapshot`, `casper_live_preflight`, `casper_run_autonomous_cycle`, `casper_live_proof_bundle`, `casper_get_deploy_status`, `casper_get_decision_receipt`, `casper_verify_decision_receipt`, `casper_record_decision`, `casper_record_readback` |
-| Explorer | `https://testnet.cspr.live` |
-| Decision log | Receipt stream via `/api/dashboard/receipts`; correlated AI/MCP loop history via `/api/dashboard/cycles` |
-| Evidence graph | Deterministic source graph with per-source hashes, freshness, and graph digest |
-| Receipt trust | Public-safe aggregate readback, policy-block, stale-evidence, and paid-evidence metrics, sampled per decision |
-| Hosting | Railway; backend `api.omniyield.app` and frontend `omniyield.app`, both pinned to `asia-southeast1` |
+We only claim what the code and live proof support:
 
-## Contract Source
+| Item | Status |
+|------|--------|
+| Native Casper Rust (`casper-contract` / `casper-types`) | Yes |
+| Local `casper_*` MCP tools | Yes |
+| React/Vite frontend | Yes |
+| FastAPI + `casper-client` | Yes |
+| x402 paid evidence (verified + bound) | Yes on the public deploy |
+| Odra | No — native Rust |
+| CSPR.cloud | Optional balance/block probes |
+| CSPR.click / CSPR.trade | Not claimed |
 
-- [Casper decision proof contract source](contracts/casper-decision-proof)
-- [Contract build and entrypoint notes](contracts/casper-decision-proof/README.md)
-- Dashboard contract links: set `CASPER_DECISION_CONTRACT_HASH` and `CASPER_DECISION_CONTRACT_PACKAGE_HASH` to embed Casper Testnet contract/package links in the proof console.
+---
 
-## Buildathon Technology Stack
+## Public proof fields worth knowing
 
-Only claim stack items backed by code or verifier evidence:
+| Field | Why it matters |
+|-------|----------------|
+| `evidenceGraph` | Sources, freshness, digest |
+| `policyTemplate` | Deterministic policy id + hash |
+| `trustSummary` | Per-decision rates (readback, blocked, stale, paid) |
+| `decisionLifecycle` | Blocked → approved → enforce with explorer links |
+| `riskVerdict` | Paid sealed offer (price, currency, settle tx) |
+| `llmTrace.roles[]` | Reason codes + hashes (not raw prompts) |
+| `deskStory.rejectVideoUrl` | Reject cut of the walkthrough |
+| `verifier.oneCommand` | Copy-paste live assert |
 
-| Stack item | Status | Evidence |
-|------|------|------|
-| Native Casper Rust SDK | Used | Contract uses `casper-contract` and `casper-types` in `contracts/casper-decision-proof`. |
-| Casper MCP Server | Used as local MCP tool surface | Backend exposes the `casper_*` tool family through the project MCP route. |
-| JavaScript/TypeScript SDK | Used for frontend, not Casper JS SDK | Vite/React/TypeScript proof cockpit in `frontend/`. |
-| Python SDK | Used for backend runtime, not Casper Python SDK | FastAPI backend, JSON-RPC probes, and `casper-client` orchestration in `backend/`. |
-| x402 Facilitator | Verified paid evidence | Public deployment has a successful paid x402 request and `CASPER_X402_RECEIPT` bound by `resourceUrl`; self-hosted deployments fail closed unless receipt metadata is public-safe and bound. |
-| Odra Framework | Not used | Contract is native Casper Rust, not Odra. |
-| CSPR.cloud | Optional REST integration | Used when `CASPER_CSPR_CLOUD_API_KEY` is set for account balance and fallback block-height probes. |
-| CSPR.click / CSPR.trade | Not used | No production dependency or live integration is claimed. |
+**Trust sampling:** we count **decisions**, not every ledger row. Submit + later readback for the same `decisionId` count once; readback is OR-joined across that decision’s rows. Retry spam is not appended. Optional blocked canaries are labeled when seeded.
 
-## Key Environment Variables
+---
+
+## Useful env vars (short list)
 
 | Variable | Purpose |
 |----------|---------|
-| `CASPER_NETWORK` | Casper network name (default: `casper-test`) |
-| `CASPER_RPC_URL` | Casper RPC endpoint |
-| `CASPER_NODE_ADDRESS` | Optional Casper client node address; falls back to `CASPER_RPC_URL` |
-| `CASPER_ACCOUNT_PUBLIC_KEY` | Funded Casper Testnet account public key |
-| `CASPER_SECRET_KEY_PATH` | Local signer path (must stay outside git) |
-| `CASPER_CONTRACT_INSTALL_DEPLOY_HASH` | Optional contract install deploy hash for live proof verification |
-| `CASPER_DECISION_CONTRACT_HASH` | Deployed decision contract hash (pin the active ACL version) |
-| `CASPER_DECISION_CONTRACT_PACKAGE_HASH` | Deployed decision contract package hash (stable across versions) |
-| `CASPER_DECISION_AUTHORIZED_AGENT_HASH` | Bare 64-hex account hash allowed to `record_decision` |
-| `CASPER_DECISION_ACL_ENABLED` | Exposes `authoring.mode=agent_acl` in public proof when true |
-| `CASPER_VAULT_VERIFIED_CONTRACT_HASH` | Active verified vault contract hash (`enforce_verified`) |
-| `CASPER_VAULT_VERIFIED_PACKAGE_HASH` | Verified vault package hash |
-| `CASPER_VAULT_VERIFIED_ENABLED` | Prefer cross-contract enforcement when true |
-| `CASPER_LIVE_SUBMIT_ENABLED` | Enables guarded live-submit prerequisite validation |
-| `CASPER_PAYMENT_AMOUNT_MOTES` | Legacy deploy gas/payment cap; `2500000000` for the measured Testnet canary path |
-| `CASPER_CLIENT_PATH` | Casper CLI binary, default `casper-client` |
-| `CASPER_TRANSACTION_COMMAND` | Casper CLI decision-call command, default `put-deploy` |
-| `CASPER_TRANSACTION_WASM_PATH` | Optional compiled Wasm path for contract install/session mode |
-| `CASPER_DECISION_LEDGER_PATH` | Persistent SQLite decision log and atomic submission-intent guard; mount it on a volume in live mode |
-| `CASPER_LEDGER_MAX_EVENTS` | Ledger retention before rotation; default `2000` so retry rows cannot evict proof history |
-| `CASPER_DECISION_BLOCKED_DECISION_ID` | On-chain blocked decision id surfaced in `decisionLifecycle` and, when absent from the ledger, seeded into `trustSummary` |
-| `CASPER_DECISION_BLOCKED_CANARY_TX_HASH` | Deploy hash for that blocked receipt |
-| `API_TRUSTED_HOSTS` | Hosts allowed to reach the API; must include the public backend domain (`api.omniyield.app`) |
-| `CASPER_DEMO_REJECT_VIDEO_URL` | Optional dedicated reject-only cut; falls back to the desk video deep-linked at the reject segment |
-| `CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED` | Independently arms paid autonomous submissions; default `false` |
-| `CASPER_LIVE_MIN_SUBMIT_INTERVAL_SEC` | Cross-restart/local cooldown; default 21600 (six hours) |
-| `CASPER_LIVE_MAX_SUBMISSIONS_PER_UTC_DAY` | Daily live reservation cap; default 4 |
-| `CASPER_LIVE_DAILY_BUDGET_MOTES` | Daily offered-payment cap; default 10000000000 motes |
-| `CASPER_AGENT_LOOP_AUTO_READBACK` | Enables best-effort deploy polling and readback after loop submits |
-| `CASPER_AGENT_LOOP_POLL_MAX_RETRIES` | Max deploy-status polling attempts after submit |
-| `CASPER_CSPR_CLOUD_API_KEY` | Optional CSPR.cloud API key for balance and fallback block-height probes |
-| `CASPER_MIN_BALANCE_CSPR` | Hard reserve retained after the offered payment; default 50 CSPR |
-| `API_SESSION_SECRET` | Signs browser API sessions; use a random secret outside source control |
-| `API_OPERATOR_TOKEN` | Required only to create an operator API session; anonymous sessions are read-only |
-| `CASPER_X402_EVIDENCE_URL` | Real x402 evidence endpoint; public deployment uses `/api/x402/rwa-evidence` |
-| `CASPER_X402_RECEIPT` | Public x402 receipt metadata with fields such as `receiptId`, `provider`, `resourceUrl`, `paidAt`, `amount`, `currency`, and optional binding fields like `sourceHash` or `requestHash`; leave empty rather than faking receipts |
-| `CASPER_LLM_TRACE_ENABLED` | Enables public-safe OpenRouter trace metadata when provider evidence is captured |
-| `CASPER_LLM_TRACE_PROVIDER` | Public provider label, defaults to `openrouter` |
-| `CASPER_LLM_TRACE_MODEL` | Public model label, defaults to `deepseek/deepseek-v4-flash` |
-| `OPENROUTER_API_KEY` | Rotated OpenRouter key stored only in env/Railway secrets |
-| `OPENROUTER_MODEL` | Primary model, default `deepseek/deepseek-v4-flash` |
-| `OPENROUTER_FALLBACK_MODEL` | Fallback model, default `deepseek/deepseek-v4-pro` |
-| `OPENROUTER_SITE_URL` | Optional OpenRouter app/site attribution header |
-| `OPENROUTER_APP_TITLE` | Optional OpenRouter title header, default `OmniAgent Casper Demo` |
-| `OPENROUTER_TIMEOUT_SEC` | OpenRouter request timeout, default `10` |
-| `CASPER_LLM_TRACE_CAPTURE` | Legacy manual capture; leave empty for no-mock demos |
+| `CASPER_DECISION_CONTRACT_HASH` / `_PACKAGE_HASH` | Live decision contract |
+| `CASPER_DECISION_AUTHORIZED_AGENT_HASH` | Who may author receipts |
+| `CASPER_VAULT_VERIFIED_*` + `CASPER_VAULT_VERIFIED_ENABLED` | Cross-contract enforce |
+| `CASPER_LIVE_SUBMIT_ENABLED` | Allow live deploys |
+| `CASPER_AGENT_LOOP_LIVE_SUBMIT_ENABLED` | Allow the loop to spend |
+| `CASPER_DECISION_LEDGER_PATH` | Persistent SQLite (mount a volume in prod) |
+| `CASPER_LEDGER_MAX_EVENTS` | Retention (default 2000) |
+| `API_OPERATOR_TOKEN` / `API_SESSION_SECRET` | Operator auth |
+| `API_TRUSTED_HOSTS` | Must include `api.omniyield.app` |
+| `CASPER_X402_EVIDENCE_URL` / `CASPER_X402_RECEIPT` | Paid evidence (don’t fake) |
+| `CASPER_LLM_TRACE_ENABLED` + `OPENROUTER_API_KEY` | Public-safe role traces |
+| `CASPER_DEMO_REJECT_VIDEO_URL` | Optional reject-only film |
 
-## Verification
+Full table and ops notes: [`backend/.env.example`](backend/.env.example) · [`docs/finals-ops-runbook.md`](docs/finals-ops-runbook.md)
 
-Run the full buildathon stack verifier when you need a release-quality check:
+---
 
-```bash
-scripts/verify-casper-buildathon-stack.sh
-```
+## Contracts & explorer pins
 
-It validates backend compile/tests, contract check/release build, frontend unit/e2e tests/build, safe backend boot, dashboard proof APIs, readiness, local no-submit MCP cycle behavior, and tracked-source secret hygiene.
-
-Generate or refresh the judge proof artifact from a running backend:
-
-```bash
-PYTHONPATH=backend uv run --project backend python backend/scripts/run-casper-decision-cycle.py \
-  --api-url http://127.0.0.1:8000 \
-  --operator-token judge-local-operator \
-  --dry-run \
-  --write-proof /tmp/omniagent-judge-proof.json
-```
-
-The generated artifact is intentionally status-gated. It may be `blocked` or
-`ready_for_live_submit` when live Casper credentials/readback are unavailable;
-it should only be `live_verified` after the deploy and dictionary receipt
-readback match. The tracked file under `proofs/` is a review snapshot, not a
-guarantee of the current runtime state; the live `/api/public/proof` endpoint
-is authoritative for the deployed service.
-
-The public proof packet now includes additive proof-hardening fields:
-
-- `evidenceGraph` — public summary of source count, freshness state, and graph digest.
-- `policyTemplate` — deterministic policy template id and hash.
-- `trustSummary` — aggregate receipt-history metrics with insufficient-data labeling.
-- `decisionLifecycle` — the paired desk envelope: blocked receipt, approved decision, and cross-contract enforce, each with an explorer link.
-- `riskVerdict` — the sell-side offer (endpoint, price, currency, settlement tx) for a sealed decision id + digest, backed by the live x402 settlement.
-- `llmTrace.roles[].reasonCodes` / `reasonSummary` — the codes behind each proposer, critic, and policy-gate verdict, alongside the existing prompt/output hashes.
-- `deskStory.rejectVideoUrl` — the reject-only cut of the desk walkthrough.
-- `verifier.oneCommand` — a copy-paste command that asserts live status, blocked receipt, and non-zero trust rates.
-- `x402.status == verified` only when public receipt metadata is present and bound; `configured` and `unavailable` are not paid-evidence claims.
-
-### Trust summary sampling
-
-`trustSummary` is **decision-shaped, not row-shaped**. The ledger records several
-rows per decision (submit, duplicate-intent retries, and a later readback row),
-so the aggregate:
-
-- groups rows by `decisionId` and counts each decision once;
-- OR-joins readback verification across every row for that decision, since
-  `readback` is written on a separate follow-up event rather than the submit row;
-- reads the full ledger window instead of the newest N rows, so a burst of retry
-  rows cannot hide real readback and blocked history;
-- may add the env-pinned on-chain blocked canary when that `decisionId` is absent
-  from the ledger, labeled through `sampleSources` and
-  `components.seededBlockedDecisions` so seeded and observed samples stay
-  distinguishable.
-
-Duplicate-intent retry rows that match the previous ledger entry are no longer
-appended, and `CASPER_LEDGER_MAX_EVENTS` defaults to `2000` so proof history is
-not rotated out by loop retries.
-
-Verify a single receipt without `casper-client`:
-
-```bash
-scripts/verify-casper-receipt.sh <decision_id> --use-rpc
-```
-
-Verify a live proof packet when live values are present:
-
-```bash
-scripts/verify-casper-live-proof.sh --proof-file proofs/casper-buildathon-submission-proof.json
-```
-
-Public replay surfaces:
-
-- Step-by-step judge reproduction: [docs/judge-reproduction.md](docs/judge-reproduction.md)
-- Frontend proof console: [https://omniyield.app](https://omniyield.app)
-- Try enforcement (public, no login): [https://omniyield.app/try](https://omniyield.app/try)
-- Backend proof endpoint: [https://api.omniyield.app/api/public/proof](https://api.omniyield.app/api/public/proof)
-- Paywalled x402 evidence endpoint: [https://api.omniyield.app/api/x402/rwa-evidence](https://api.omniyield.app/api/x402/rwa-evidence)
-- Proof artifact: [proofs/casper-buildathon-submission-proof.json](proofs/casper-buildathon-submission-proof.json)
-- Demo video: [https://youtu.be/wcVoqJXqPhc](https://youtu.be/wcVoqJXqPhc)
-- Submission checklist: [docs/casper-buildathon-submission-checklist.md](docs/casper-buildathon-submission-checklist.md)
-- Launch roadmap: [docs/casper-launch-roadmap.md](docs/casper-launch-roadmap.md)
-
-Build both Casper contracts (preferred — MVP Wasm + install-lane size gate):
-
-```bash
-./scripts/build-casper-contracts.sh
-# artifacts: contracts/*/wasm/*.wasm
-```
-
-## Casper Testnet & Blockchain Links
-
-The deployed `/api/public/proof` response is the source of truth for the
-current runtime packet. The tracked proof artifact is a static review snapshot.
-Treat a deploy link as current proof only when the same hash appears in a fresh
-public proof response with verified readback.
+Live `/api/public/proof` is the source of truth. Treat explorer links as current only when they appear in a fresh proof with verified readback.
 
 | Item | Link |
 |------|------|
-| Casper Testnet explorer | [testnet.cspr.live](https://testnet.cspr.live/) |
-| Casper Testnet RPC | [node.testnet.casper.network/rpc](https://node.testnet.casper.network/rpc) |
-| Active decision-proof (ACL) | [5270823ca6fb8c4cf5c1f83af53e889ec1f39bbd3532c2088175bb40ca97fc18](https://testnet.cspr.live/contract/5270823ca6fb8c4cf5c1f83af53e889ec1f39bbd3532c2088175bb40ca97fc18) |
-| Decision package (stable) | [46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea](https://testnet.cspr.live/contract-package/46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea) |
-| Authorized agent | `account-hash-9b62ecfba326c1ab3f249b0f39f457d8fcb0bc7f68f59b7357d4667339ee1f04` |
-| Contract install deploy | [0444471ab96e840e25d69f525341ee95f014137ebda3e3c0a838eb46b31267f1](https://testnet.cspr.live/deploy/0444471ab96e840e25d69f525341ee95f014137ebda3e3c0a838eb46b31267f1) |
-| ACL upgrade + rotation | [303561726e466a9b7ed4915d20212199ee1c335745f33dac38c63d21ab2a21a2](https://testnet.cspr.live/deploy/303561726e466a9b7ed4915d20212199ee1c335745f33dac38c63d21ab2a21a2) |
-| Reference demo decision deploy | [ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736](https://testnet.cspr.live/deploy/ddef65a6d533eecd4c4721a3cb8792c73bb483e2068a03b5a2d86022828a9736) |
-| Contract source | [contracts/casper-decision-proof](contracts/casper-decision-proof) |
-| Collateral vault source | [contracts/collateral-vault](contracts/collateral-vault) |
-| Legacy vault contract | [66969eead67ac3cb07e131dc86bf4e6b7e63d2c2a33fb1779f705d79878bb55f](https://testnet.cspr.live/contract/66969eead67ac3cb07e131dc86bf4e6b7e63d2c2a33fb1779f705d79878bb55f) |
-| Verified vault v3 | [d286dfb5a15f935ee02c415e478fa08e2b4b2d8c35232002028904ba0f39c5b3](https://testnet.cspr.live/contract/d286dfb5a15f935ee02c415e478fa08e2b4b2d8c35232002028904ba0f39c5b3) |
-| Verified vault package | [cd2c2dea8b12da453351090bcd003db38718f301c419c2033701147a897f7883](https://testnet.cspr.live/contract-package/cd2c2dea8b12da453351090bcd003db38718f301c419c2033701147a897f7883) |
-| Vault freeze / unfreeze canaries | [36d1f699…](https://testnet.cspr.live/deploy/36d1f699ebf201e1c2617a16ee9152a56c567351ba733e2e87b944db7c325176) / [39dc155a…](https://testnet.cspr.live/deploy/39dc155aac0a9be1a23aa424d60d5783d5ff75fb2cb9ab51d4a630a7ea245646) |
-| Cross-contract haircut enforce | [599dc698…](https://testnet.cspr.live/deploy/599dc698b0d7c52bd3d0ef86f819a47459100cf289b36db5f3fada0fe4354b1b) |
-| Cheat Lab User(130/131) | [1b6c37f5…](https://testnet.cspr.live/deploy/1b6c37f5839881af4ee0f6e6f53c1061dc6897b09180904e7e404a3660bfd23b) / [c1daf818…](https://testnet.cspr.live/deploy/c1daf818ceae217176270ff0d6a16fc16fc7a3280985619c738e518470056cf8) |
-| Vault install script | [scripts/install-collateral-vault.sh](scripts/install-collateral-vault.sh) |
-| ACL upgrade script | [scripts/upgrade-decision-proof-acl.sh](scripts/upgrade-decision-proof-acl.sh) |
-| Receipt verifier | [scripts/verify-casper-receipt.sh](scripts/verify-casper-receipt.sh) |
+| Explorer | [testnet.cspr.live](https://testnet.cspr.live/) |
+| Decision contract (ACL) | [5270823c…](https://testnet.cspr.live/contract/5270823ca6fb8c4cf5c1f83af53e889ec1f39bbd3532c2088175bb40ca97fc18) |
+| Decision package | [46cf5754…](https://testnet.cspr.live/contract-package/46cf57541f04df822b160dd0e47a8425ec94c310e54a6dda862c46f9b4930bea) |
+| Verified vault v3 | [d286dfb5…](https://testnet.cspr.live/contract/d286dfb5a15f935ee02c415e478fa08e2b4b2d8c35232002028904ba0f39c5b3) |
+| Cross-contract haircut | [599dc698…](https://testnet.cspr.live/deploy/599dc698b0d7c52bd3d0ef86f819a47459100cf289b36db5f3fada0fe4354b1b) |
 
-Full explorer proof table:
-[`docs/dorahacks-finals-description.md`](docs/dorahacks-finals-description.md).
-Ops status: [`docs/finals-ops-runbook.md`](docs/finals-ops-runbook.md).
+Build Wasm (MVP + size gate):
+
+```bash
+./scripts/build-casper-contracts.sh
+```
+
+Contract READMEs: [decision-proof](contracts/casper-decision-proof/README.md) · [vault](contracts/collateral-vault/README.md)  
+Docs index: [docs/README.md](docs/README.md)
