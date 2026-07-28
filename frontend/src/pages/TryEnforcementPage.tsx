@@ -682,13 +682,21 @@ export default function TryEnforcementPage() {
             {cheatScenarios.map((scenario) => {
               const result = cheatResults[scenario.id];
               const busy = cheatBusyId === scenario.id;
+              const verified = Boolean(result);
               const txHash = result?.transactionHash || scenario.transactionHash;
               const explorerUrl = result?.explorerUrl || scenario.explorerUrl;
               const errorLabel =
                 result?.errorMessage || result?.errorLabel || scenario.errorLabel;
-              const shown = Boolean(result) || Boolean(txHash);
+              const canaryReady = Boolean(scenario.transactionHash);
+              const blocked =
+                result?.ok === true ||
+                result?.status === 'reverted' ||
+                Boolean(result?.errorLabel || result?.errorMessage);
               return (
-                <article key={scenario.id} className="flight-panel try-cheat-card">
+                <article
+                  key={scenario.id}
+                  className={`flight-panel try-cheat-card${verified ? ' is-verified' : ''}${busy ? ' is-busy' : ''}`}
+                >
                   <div className="try-card-body">
                     <div className="try-card-kicker">
                       <BanIcon className="h-4 w-4" aria-hidden="true" />
@@ -700,10 +708,13 @@ export default function TryEnforcementPage() {
                       <ShieldXIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                       <span>{scenario.attack}</span>
                     </p>
-                    {shown ? (
+                    {verified ? (
                       <div className="try-cheat-result" aria-live="polite">
-                        <strong translate="no">{errorLabel}</strong>
-                        <span>{scenario.expectedOutcome}</span>
+                        <strong translate="no">
+                          {blocked ? 'Blocked on-chain' : result?.status || 'Checked'}
+                          {errorLabel ? ` · ${errorLabel}` : ''}
+                        </strong>
+                        <span>{result?.expectedOutcome || scenario.expectedOutcome}</span>
                         {txHash && explorerUrl ? (
                           <a
                             className="chain-proof-link"
@@ -716,19 +727,37 @@ export default function TryEnforcementPage() {
                             <ExternalLinkIcon className="h-3 w-3" aria-hidden="true" />
                           </a>
                         ) : (
-                          <span className="chain-proof-missing">Canary pending. Seed script required.</span>
+                          <span className="chain-proof-missing">
+                            {result?.hint || 'Canary pending. Seed script required.'}
+                          </span>
                         )}
                       </div>
-                    ) : null}
+                    ) : canaryReady ? (
+                      <p className="try-cheat-pending">
+                        Explorer canary published — press to verify the revert.
+                      </p>
+                    ) : (
+                      <p className="try-cheat-pending">Press to run this attack against the vault.</p>
+                    )}
                   </div>
                   <button
                     type="button"
                     className="try-cheat-btn"
-                    aria-label={`Try ${scenario.title} attack`}
+                    aria-label={
+                      verified
+                        ? `Re-check ${scenario.title} attack`
+                        : `Try ${scenario.title} attack`
+                    }
                     disabled={busy}
                     onClick={() => void onCheatClick(scenario.id)}
                   >
-                    {busy ? 'Checking chain…' : 'Try to cheat'}
+                    {busy
+                      ? 'Checking chain…'
+                      : verified
+                        ? blocked
+                          ? 'Blocked — try again'
+                          : 'Checked — try again'
+                        : 'Try to cheat'}
                   </button>
                 </article>
               );

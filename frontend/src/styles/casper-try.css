@@ -1073,6 +1073,29 @@
   background:
     radial-gradient(circle at 100% 0, rgba(230, 63, 55, 0.08), transparent 35%),
     rgba(14, 9, 8, 0.76);
+  transition:
+    border-color 400ms var(--try-ease),
+    box-shadow 400ms var(--try-ease);
+}
+
+.try-cheat-card.is-busy {
+  border-color: rgba(230, 191, 105, 0.4);
+}
+
+.try-cheat-card.is-verified {
+  border-color: rgba(230, 63, 55, 0.55);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.04),
+    0 0 0 1px rgba(230, 63, 55, 0.12);
+}
+
+.try-cheat-pending {
+  margin-top: auto;
+  border-top: 1px solid var(--color-glass-border);
+  padding-top: 0.7rem;
+  color: var(--color-casper-faint);
+  font-size: 0.78rem;
+  line-height: 1.4;
 }
 
 .try-cheat-card h3,
@@ -1173,6 +1196,27 @@
   margin-top: auto;
   border-top: 1px solid var(--color-glass-border);
   padding-top: 0.7rem;
+}
+
+.try-cheat-result {
+  animation: try-cheat-reveal 420ms var(--try-ease);
+}
+
+@keyframes try-cheat-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .try-cheat-result {
+    animation: none;
+  }
 }
 
 .try-cheat-result strong {
